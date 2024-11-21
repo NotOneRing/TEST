@@ -1,30 +1,42 @@
-"""
-Implementation of Multi-layer Perception (MLP).
+import tensorflow as tf
+from tensorflow.keras import layers, Model
 
-Residual model is taken from https://github.com/ALRhub/d3il/blob/main/agents/models/common/mlp.py
+# def mish(x):
+#     return x * tf.tanh(tf.math.log(1 + tf.exp(x)))
 
-"""
+# activation_dict = {
+#     "ReLU": layers.ReLU(),
+#     "ELU": layers.ELU(),
+#     "GELU": layers.GELU(),
+#     "Tanh": layers.Tanh(),
+#     # "Mish": layers.Activation("mish"),  # TensorFlow doesn't have Mish natively
+#     # Use the custom Mish activation function
+#     "Mish": tf.keras.layers.Lambda(mish),
+#     "Identity": layers.Lambda(lambda x: x),
+#     "Softplus": layers.Softplus(),
+# }
 
-import torch
-from torch import nn
+import tensorflow as tf
+from tensorflow.keras import layers, models
 from collections import OrderedDict
 import logging
 
 
-activation_dict = nn.ModuleDict(
-    {
-        "ReLU": nn.ReLU(),
-        "ELU": nn.ELU(),
-        "GELU": nn.GELU(),
-        "Tanh": nn.Tanh(),
-        "Mish": nn.Mish(),
-        "Identity": nn.Identity(),
-        "Softplus": nn.Softplus(),
-    }
-)
+activation_dict = {
+    "ReLU": layers.ReLU(),
+    "ELU": layers.ELU(),
+    # "GELU": layers.GELU(),
+    "GELU": layers.Activation(tf.keras.activations.gelu),  # 使用 Activation 层来包装 GELU 函数
+    # "Tanh": layers.Tanh(),
+    "Tanh": layers.Activation(tf.keras.activations.tanh),  # 使用 tf.keras.activations.tanh
+    "Mish": layers.Activation(lambda x: x * tf.tanh(tf.math.log(1 + tf.exp(x)))),  # Custom Mish implementation
+    "Identity": layers.Activation("linear"),
+    # "Softplus": layers.Softplus(),
+    "Softplus": layers.Activation(tf.keras.activations.softplus),  # 使用 tf.keras.activations.softplus
+}
 
 
-class MLP(nn.Module):
+class MLP(models.Model):
     def __init__(
         self,
         dim_list,
@@ -38,63 +50,52 @@ class MLP(nn.Module):
         use_drop_final=False,
         verbose=False,
     ):
-
-        print("mlp.py: MLP.__init__()", flush = True)
+        print("mlp.py: MLP.__init__()", flush=True)
 
         super(MLP, self).__init__()
 
-        # Construct module list: if use `Python List`, the modules are not
-        # added to computation graph. Instead, we should use `nn.ModuleList()`.
-        self.moduleList = nn.ModuleList()
         self.append_layers = append_layers
         num_layer = len(dim_list) - 1
+        self.moduleList = []
+
         for idx in range(num_layer):
             i_dim = dim_list[idx]
             o_dim = dim_list[idx + 1]
             if append_dim > 0 and idx in append_layers:
                 i_dim += append_dim
-            linear_layer = nn.Linear(i_dim, o_dim)
-
-            # Add module components
-            layers = [("linear_1", linear_layer)]
+            layers_list = [("linear_1", layers.Dense(o_dim))]
+            
+            # Add normalization and dropout
             if use_layernorm and (idx < num_layer - 1 or use_layernorm_final):
-                layers.append(("norm_1", nn.LayerNorm(o_dim)))
+                layers_list.append(("norm_1", layers.LayerNormalization()))
             if dropout > 0 and (idx < num_layer - 1 or use_drop_final):
-                layers.append(("dropout_1", nn.Dropout(dropout)))
-
-            # add activation function
+                layers_list.append(("dropout_1", layers.Dropout(dropout)))
+            
+            # Add activation function
             act = (
                 activation_dict[activation_type]
                 if idx != num_layer - 1
                 else activation_dict[out_activation_type]
             )
-            layers.append(("act_1", act))
+            layers_list.append(("act_1", act))
 
-            # re-construct module
-            module = nn.Sequential(OrderedDict(layers))
-            self.moduleList.append(module)
+            # Append to model layers
+            self.moduleList.append(layers.Sequential(OrderedDict(layers_list)))
+
         if verbose:
             logging.info(self.moduleList)
 
-    def forward(self, x, append=None):
-
-        print("mlp.py: MLP.forward()", flush = True)
+    def call(self, x, append=None):
+        print("mlp.py: MLP.call()", flush=True)
 
         for layer_ind, m in enumerate(self.moduleList):
             if append is not None and layer_ind in self.append_layers:
-                x = torch.cat((x, append), dim=-1)
+                x = tf.concat([x, append], axis=-1)
             x = m(x)
         return x
 
 
-class ResidualMLP(nn.Module):
-    """
-    Simple multi layer perceptron network with residual connections for
-    benchmarking the performance of different networks. The resiudal layers
-    are based on the IBC paper implementation, which uses 2 residual lalyers
-    with pre-actication with or without dropout and normalization.
-    """
-
+class ResidualMLP(models.Model):
     def __init__(
         self,
         dim_list,
@@ -104,14 +105,14 @@ class ResidualMLP(nn.Module):
         use_layernorm_final=False,
         dropout=0,
     ):
-
-        print("mlp.py: ResidualMLP.__init__()", flush = True)
+        print("mlp.py: ResidualMLP.__init__()", flush=True)
 
         super(ResidualMLP, self).__init__()
         hidden_dim = dim_list[1]
         num_hidden_layers = len(dim_list) - 3
         assert num_hidden_layers % 2 == 0
-        self.layers = nn.ModuleList([nn.Linear(dim_list[0], hidden_dim)])
+        self.layers = [layers.Dense(hidden_dim)]
+
         self.layers.extend(
             [
                 TwoLayerPreActivationResNetLinear(
@@ -123,33 +124,20 @@ class ResidualMLP(nn.Module):
                 for _ in range(1, num_hidden_layers, 2)
             ]
         )
-        self.layers.append(nn.Linear(hidden_dim, dim_list[-1]))
+        self.layers.append(layers.Dense(dim_list[-1]))
         if use_layernorm_final:
-            self.layers.append(nn.LayerNorm(dim_list[-1]))
+            self.layers.append(layers.LayerNormalization())
         self.layers.append(activation_dict[out_activation_type])
 
-    def forward(self, x):
+    def call(self, x):
+        print("mlp.py: ResidualMLP.call()", flush=True)
 
-        print("mlp.py: ResidualMLP.forward()", flush = True)
-
-        for _, layer in enumerate(self.layers):
+        for layer in self.layers:
             x = layer(x)
         return x
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-class TwoLayerPreActivationResNetLinear(nn.Module):
+class TwoLayerPreActivationResNetLinear(models.Model):
     def __init__(
         self,
         hidden_dim,
@@ -157,22 +145,21 @@ class TwoLayerPreActivationResNetLinear(nn.Module):
         use_layernorm=False,
         dropout=0,
     ):
-
-        print("mlp.py: TwoLayerPreActivationResNetLinear.__init__()", flush = True)
+        print("mlp.py: TwoLayerPreActivationResNetLinear.__init__()", flush=True)
 
         super().__init__()
-        self.l1 = nn.Linear(hidden_dim, hidden_dim)
-        self.l2 = nn.Linear(hidden_dim, hidden_dim)
+        self.l1 = layers.Dense(hidden_dim)
+        self.l2 = layers.Dense(hidden_dim)
         self.act = activation_dict[activation_type]
         if use_layernorm:
-            self.norm1 = nn.LayerNorm(hidden_dim, eps=1e-06)
-            self.norm2 = nn.LayerNorm(hidden_dim, eps=1e-06)
+            self.norm1 = layers.LayerNormalization()
+            self.norm2 = layers.LayerNormalization()
+
         if dropout > 0:
             raise NotImplementedError("Dropout not implemented for residual MLP!")
 
-    def forward(self, x):
-
-        print("mlp.py: TwoLayerPreActivationResNetLinear.forward()", flush = True)
+    def call(self, x):
+        print("mlp.py: TwoLayerPreActivationResNetLinear.call()", flush=True)
 
         x_input = x
         if hasattr(self, "norm1"):
@@ -182,10 +169,3 @@ class TwoLayerPreActivationResNetLinear(nn.Module):
             x = self.norm2(x)
         x = self.l2(self.act(x))
         return x + x_input
-
-
-
-
-
-
-

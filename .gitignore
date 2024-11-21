@@ -1,1 +1,333 @@
-#.txt
+*.txt
+
+# Custom
+learning_code/result/
+learning_code/wandb/
+learning_code/.vscode/
+learning_code/data/
+learning_code/log/
+learning_code/logs/
+learning_code/checkpoints/
+learning_code/.github/
+learning_code/out/
+learning_code/err/
+learning_code/*.pkl
+learning_code/*.sh
+
+# Byte-compiled / optimized / DLL files
+learning_code/__pycache__/
+learning_code/*.py[cod]
+learning_code/*$py.class
+
+# C extensions
+learning_code/*.so
+
+#text files
+learning_code/*.txt
+
+# Distribution / packaging
+learning_code/.Python
+learning_code/build/
+learning_code/develop-eggs/
+learning_code/dist/
+learning_code/downloads/
+learning_code/eggs/
+learning_code/.eggs/
+learning_code/lib/
+learning_code/lib64/
+learning_code/parts/
+learning_code/sdist/
+learning_code/var/
+learning_code/wheels/
+learning_code/pip-wheel-metadata/
+learning_code/share/python-wheels/
+learning_code/*.egg-info/
+learning_code/.installed.cfg
+learning_code/*.egg
+learning_code/MANIFEST
+
+learning_code/run_py_pretrain_hopper_medium_v2_2.txt
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+learning_code/*.manifest
+learning_code/*.spec
+
+# Installer logs
+learning_code/pip-log.txt
+learning_code/pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+learning_code/htmlcov/
+learning_code/.tox/
+learning_code/.nox/
+learning_code/.coverage
+learning_code/.coverage.*
+learning_code/.cache
+learning_code/nosetests.xml
+learning_code/coverage.xml
+learning_code/*.cover
+learning_code/*.py,cover
+learning_code/.hypothesis/
+learning_code/.pytest_cache/
+
+# Translations
+learning_code/*.mo
+learning_code/*.pot
+
+# Django stuff:
+learning_code/*.log
+learning_code/local_settings.py
+learning_code/db.sqlite3
+learning_code/db.sqlite3-journal
+
+# Flask stuff:
+learning_code/instance/
+learning_code/.webassets-cache
+
+# Scrapy stuff:
+learning_code/.scrapy
+
+# Sphinx documentation
+learning_code/docs/_build/
+
+# PyBuilder
+learning_code/target/
+
+# Jupyter Notebook
+learning_code/.ipynb_checkpoints
+
+# IPython
+learning_code/profile_default/
+learning_code/ipython_config.py
+
+# pyenv
+learning_code/.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+learning_code/__pypackages__/
+
+# Celery stuff
+learning_code/celerybeat-schedule
+learning_code/celerybeat.pid
+
+# SageMath parsed files
+learning_code/*.sage.py
+
+# Environments
+learning_code/.env
+learning_code/.venv
+# env/
+learning_code/venv/
+learning_code/ENV/
+learning_code/env.bak/
+learning_code/venv.bak/
+
+# Spyder project settings
+learning_code/.spyderproject
+learning_code/.spyproject
+
+# Rope project settings
+learning_code/.ropeproject
+
+# mkdocs documentation
+learning_code/site
+
+# mypy
+learning_code/.mypy_cache/
+learning_code/.dmypy.json
+learning_code/dmypy.json
+
+# Pyre type checker
+learning_code/.pyre/
+
+learning_code/cfg/robomimic/*.sh
+
+learning_code/*.out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Custom
+learning_code_tf/result/
+learning_code_tf/wandb/
+learning_code_tf/.vscode/
+learning_code_tf/data/
+learning_code_tf/log/
+learning_code_tf/logs/
+learning_code_tf/checkpoints/
+learning_code_tf/.github/
+learning_code_tf/out/
+learning_code_tf/err/
+learning_code_tf/*.pkl
+learning_code_tf/*.sh
+
+# Byte-compiled / optimized / DLL files
+learning_code_tf/__pycache__/
+learning_code_tf/*.py[cod]
+learning_code_tf/*$py.class
+
+# C extensions
+learning_code_tf/*.so
+
+#text files
+learning_code_tf/*.txt
+
+# Distribution / packaging
+learning_code_tf/.Python
+learning_code_tf/build/
+learning_code_tf/develop-eggs/
+learning_code_tf/dist/
+learning_code_tf/downloads/
+learning_code_tf/eggs/
+learning_code_tf/.eggs/
+learning_code_tf/lib/
+learning_code_tf/lib64/
+learning_code_tf/parts/
+learning_code_tf/sdist/
+learning_code_tf/var/
+learning_code_tf/wheels/
+learning_code_tf/pip-wheel-metadata/
+learning_code_tf/share/python-wheels/
+learning_code_tf/*.egg-info/
+learning_code_tf/.installed.cfg
+learning_code_tf/*.egg
+learning_code_tf/MANIFEST
+
+learning_code_tf/run_py_pretrain_hopper_medium_v2_2.txt
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+learning_code_tf/*.manifest
+learning_code_tf/*.spec
+
+# Installer logs
+learning_code_tf/pip-log.txt
+learning_code_tf/pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+learning_code_tf/htmlcov/
+learning_code_tf/.tox/
+learning_code_tf/.nox/
+learning_code_tf/.coverage
+learning_code_tf/.coverage.*
+learning_code_tf/.cache
+learning_code_tf/nosetests.xml
+learning_code_tf/coverage.xml
+learning_code_tf/*.cover
+learning_code_tf/*.py,cover
+learning_code_tf/.hypothesis/
+learning_code_tf/.pytest_cache/
+
+# Translations
+learning_code_tf/*.mo
+learning_code_tf/*.pot
+
+# Django stuff:
+learning_code_tf/*.log
+learning_code_tf/local_settings.py
+learning_code_tf/db.sqlite3
+learning_code_tf/db.sqlite3-journal
+
+# Flask stuff:
+learning_code_tf/instance/
+learning_code_tf/.webassets-cache
+
+# Scrapy stuff:
+learning_code_tf/.scrapy
+
+# Sphinx documentation
+learning_code_tf/docs/_build/
+
+# PyBuilder
+learning_code_tf/target/
+
+# Jupyter Notebook
+learning_code_tf/.ipynb_checkpoints
+
+# IPython
+learning_code_tf/profile_default/
+learning_code_tf/ipython_config.py
+
+# pyenv
+learning_code_tf/.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+learning_code_tf/__pypackages__/
+
+# Celery stuff
+learning_code_tf/celerybeat-schedule
+learning_code_tf/celerybeat.pid
+
+# SageMath parsed files
+learning_code_tf/*.sage.py
+
+# Environments
+learning_code_tf/.env
+learning_code_tf/.venv
+# env/
+learning_code_tf/venv/
+learning_code_tf/ENV/
+learning_code_tf/env.bak/
+learning_code_tf/venv.bak/
+
+# Spyder project settings
+learning_code_tf/.spyderproject
+learning_code_tf/.spyproject
+
+# Rope project settings
+learning_code_tf/.ropeproject
+
+# mkdocs documentation
+learning_code_tf/site
+
+# mypy
+learning_code_tf/.mypy_cache/
+learning_code_tf/.dmypy.json
+learning_code_tf/dmypy.json
+
+# Pyre type checker
+learning_code_tf/.pyre/
+
+learning_code_tf/cfg/robomimic/*.sh
+
+learning_code_tf/*.out
+
+learning_code_tf/log_debug/
+
+learning_code/log_debug/

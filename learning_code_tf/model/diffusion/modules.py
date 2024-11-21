@@ -1,71 +1,55 @@
-"""
-From Diffuser https://github.com/jannerm/diffuser
+import tensorflow as tf
+import numpy as np
 
-For MLP and UNet diffusion models.
-
-"""
-
-import math
-import torch
-import torch.nn as nn
-from einops.layers.torch import Rearrange
-
-
-class SinusoidalPosEmb(nn.Module):
-
+class SinusoidalPosEmb(tf.keras.layers.Layer):
     def __init__(self, dim):
 
-        print("modules.py: SinusoidalPosEmb.__init__()", flush = True)
+        print("modules.py: SinusoidalPosEmb.__init__()", flush=True)
 
-        super().__init__()
+        super(SinusoidalPosEmb, self).__init__()
         self.dim = dim
 
-    def forward(self, x):
+    def call(self, x):
 
-        print("modules.py: SinusoidalPosEmb.forward()", flush = True)
+        print("modules.py: SinusoidalPosEmb.call()", flush=True)
 
-        device = x.device
+        device = x.device  # TensorFlow handles device management automatically
         half_dim = self.dim // 2
-        emb = math.log(10000) / (half_dim - 1)
-        emb = torch.exp(torch.arange(half_dim, device=device) * -emb)
+        emb = np.log(10000) / (half_dim - 1)
+        emb = np.exp(np.arange(half_dim) * -emb)
         emb = x[:, None] * emb[None, :]
-        emb = torch.cat((emb.sin(), emb.cos()), dim=-1)
+        emb = tf.concat([tf.sin(emb), tf.cos(emb)], axis=-1)
         return emb
 
-
-class Downsample1d(nn.Module):
-
+class Downsample1d(tf.keras.layers.Layer):
     def __init__(self, dim):
 
-        print("modules.py: Downsample1d.__init__()", flush = True)
+        print("modules.py: Downsample1d.__init__()", flush=True)
 
-        super().__init__()
-        self.conv = nn.Conv1d(dim, dim, 3, 2, 1)
+        super(Downsample1d, self).__init__()
+        self.conv = tf.keras.layers.Conv1D(dim, 3, strides=2, padding="same")
 
-    def forward(self, x):
+    def call(self, x):
 
-        print("modules.py: Downsample1d.forward()", flush = True)
+        print("modules.py: Downsample1d.call()", flush=True)
 
         return self.conv(x)
 
-
-class Upsample1d(nn.Module):
-
+class Upsample1d(tf.keras.layers.Layer):
     def __init__(self, dim):
 
-        print("modules.py: Upsample1d.__init__()", flush = True)
+        print("modules.py: Upsample1d.__init__()", flush=True)
 
-        super().__init__()
-        self.conv = nn.ConvTranspose1d(dim, dim, 4, 2, 1)
+        super(Upsample1d, self).__init__()
+        self.conv = tf.keras.layers.Conv1DTranspose(dim, 4, strides=2, padding="same")
 
-    def forward(self, x):
+    def call(self, x):
 
-        print("modules.py: Upsample1d.forward()", flush = True)
+        print("modules.py: Upsample1d.call()", flush=True)
 
         return self.conv(x)
 
-
-class Conv1dBlock(nn.Module):
+class Conv1dBlock(tf.keras.layers.Layer):
     """
     Conv1d --> GroupNorm --> Mish
     """
@@ -80,40 +64,32 @@ class Conv1dBlock(nn.Module):
         eps=1e-5,
     ):
 
-        print("modules.py: Conv1dBlock.__init__()", flush = True)
+        print("modules.py: Conv1dBlock.__init__()", flush=True)
 
-        super().__init__()
+        super(Conv1dBlock, self).__init__()
+
+        # Mish activation function implementation in TensorFlow
         if activation_type == "Mish":
-            act = nn.Mish()
+            self.activation = tf.keras.layers.Lambda(lambda x: x * tf.tanh(tf.nn.softplus(x)))
         elif activation_type == "ReLU":
-            act = nn.ReLU()
+            self.activation = tf.keras.layers.ReLU()
         else:
-            raise "Unknown activation type for Conv1dBlock"
+            raise ValueError("Unknown activation type for Conv1dBlock")
 
-        self.block = nn.Sequential(
-            nn.Conv1d(
-                inp_channels, out_channels, kernel_size, padding=kernel_size // 2
-            ),
-            (
-                Rearrange("batch channels horizon -> batch channels 1 horizon")
-                if n_groups is not None
-                else nn.Identity()
-            ),
-            (
-                nn.GroupNorm(n_groups, out_channels, eps=eps)
-                if n_groups is not None
-                else nn.Identity()
-            ),
-            (
-                Rearrange("batch channels 1 horizon -> batch channels horizon")
-                if n_groups is not None
-                else nn.Identity()
-            ),
-            act,
+        self.conv = tf.keras.layers.Conv1D(
+            out_channels, kernel_size, padding="same"
         )
 
-    def forward(self, x):
+        self.group_norm = None
+        if n_groups is not None:
+            self.group_norm = tf.keras.layers.GroupNormalization(groups=n_groups, epsilon=eps)
 
-        print("modules.py: Conv1dBlock.forward()", flush = True)
+    def call(self, x):
 
-        return self.block(x)
+        print("modules.py: Conv1dBlock.call()", flush=True)
+
+        x = self.conv(x)
+        if self.group_norm is not None:
+            x = self.group_norm(x)
+        x = self.activation(x)
+        return x

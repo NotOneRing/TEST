@@ -10,7 +10,9 @@ try:
 except:
     print("Installing cv2")
     os.system("pip install opencv-python")
+
 import torch
+
 import pickle
 import numpy as np
 from tqdm import tqdm

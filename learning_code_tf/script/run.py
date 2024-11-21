@@ -90,13 +90,21 @@ def main(cfg: OmegaConf):
     if "env" in cfg and "env_type" in cfg.env and cfg.env.env_type == "furniture":
         import furniture_bench
 
+
+    import keras
+    print(keras.__version__)
+
     # run agent
     cls = hydra.utils.get_class(cfg._target_)
+
+    print("cls = ", cls, flush = True)
+
+    print("cfg = ", cfg, flush = True)
     
     agent = cls(cfg)
 
     agent.run()
-
+ 
 
 if __name__ == "__main__":
     main()
