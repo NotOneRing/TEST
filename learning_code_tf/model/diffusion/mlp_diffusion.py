@@ -183,6 +183,8 @@ class DiffusionMLP(tf.keras.Model):
 
         super(DiffusionMLP, self).__init__()
 
+        print("before sinusiodalPosEmb()", flush=True)
+        
         output_dim = action_dim * horizon_steps
         self.time_embedding = tf.keras.Sequential([
             SinusoidalPosEmb(time_dim),
@@ -190,10 +192,17 @@ class DiffusionMLP(tf.keras.Model):
             tf.keras.layers.Dense(time_dim),
         ])
 
+
+        print("after sinusiodalPosEmb()", flush=True)
+        
         if residual_style:
             model = ResidualMLP
         else:
             model = MLP
+
+
+        print("after ResidualMLP and MLP", flush=True)
+        
 
         if cond_mlp_dims is not None:
             self.cond_mlp = MLP(
@@ -205,12 +214,21 @@ class DiffusionMLP(tf.keras.Model):
         else:
             input_dim = time_dim + action_dim * horizon_steps + cond_dim
 
+
+        print("after cond_mlp and input_dim", flush=True)
+        
+
         self.mlp_mean = model(
             [input_dim] + mlp_dims + [output_dim],
             activation_type=activation_type,
             out_activation_type=out_activation_type,
             use_layernorm=use_layernorm,
         )
+
+
+        print("after mlp_mean", flush=True)
+        
+
         self.time_dim = time_dim
 
     def call(self, x, time, cond, **kwargs):

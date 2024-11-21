@@ -72,6 +72,8 @@ class DiffusionModel(tf.keras.layers.Layer):
         # Clip epsilon for numerical stability
         self.eps_clip_value = eps_clip_value
 
+        print("before set up models", flush=True)
+
         # Set up models
         self.network = network
         if network_path is not None:
@@ -79,19 +81,37 @@ class DiffusionModel(tf.keras.layers.Layer):
             checkpoint.restore(network_path)
             print(f"Loaded policy from {network_path}", flush=True)
 
+        print("after set up models", flush=True)
+
         """
         DDPM parameters
         """
         self.betas = self._cosine_beta_schedule(denoising_steps)
+
+        print("after betas", flush=True)
+
         self.alphas = 1.0 - self.betas
         self.alphas_cumprod = tf.math.cumprod(self.alphas)
+
+        print("after alphas_cumprod", flush=True)
+
+        # print("tf.ones(1) = ", tf.ones(1, dtype=tf.float64), flush=True)
+
+        # print("self.alphas_cumprod[:-1] = ", self.alphas_cumprod[:-1], flush=True)
+
         self.alphas_cumprod_prev = tf.concat(
-            [tf.ones(1), self.alphas_cumprod[:-1]], axis=0
+            [tf.ones(1, dtype=tf.float64), self.alphas_cumprod[:-1]], axis=0
         )
+
+        print("after alphas_cumprod_prev", flush=True)
+
         self.sqrt_alphas_cumprod = tf.sqrt(self.alphas_cumprod)
         self.sqrt_one_minus_alphas_cumprod = tf.sqrt(1.0 - self.alphas_cumprod)
         self.sqrt_recip_alphas_cumprod = tf.sqrt(1.0 / self.alphas_cumprod)
         self.sqrt_recipm1_alphas_cumprod = tf.sqrt(1.0 / self.alphas_cumprod - 1)
+
+        print("before sqrt_recipm1_alphas_cumprod", flush=True)
+
         self.ddpm_var = (
             self.betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
         )
@@ -103,18 +123,32 @@ class DiffusionModel(tf.keras.layers.Layer):
             (1.0 - self.alphas_cumprod_prev) * tf.sqrt(self.alphas) / (1.0 - self.alphas_cumprod)
         )
 
+        print("before ddpm_mu_coef2", flush=True)
+
         if use_ddim:
+
+            print("after use_ddim", flush=True)
+
             assert predict_epsilon, "DDIM requires predicting epsilon for now."
             if ddim_discretize == "uniform":
                 step_ratio = self.denoising_steps // ddim_steps
                 self.ddim_t = tf.range(0, ddim_steps) * step_ratio
+
+                print("after ddim_discretize == uniform", flush=True)
+
             else:
                 raise ValueError("Unknown discretization method for DDIM.")
+
+            print("after ddim_discretize", flush=True)
+
             self.ddim_alphas = tf.gather(self.alphas_cumprod, self.ddim_t)
             self.ddim_alphas_sqrt = tf.sqrt(self.ddim_alphas)
             self.ddim_alphas_prev = tf.concat(
                 [tf.constant([1.0]), self.alphas_cumprod[:-1]], axis=0
             )
+
+            print("after ddim_alphas_prev", flush=True)
+
             self.ddim_sqrt_one_minus_alphas = tf.sqrt(1.0 - self.ddim_alphas)
             ddim_eta = 0
             self.ddim_sigmas = ddim_eta * (
@@ -122,6 +156,9 @@ class DiffusionModel(tf.keras.layers.Layer):
                 / (1 - self.ddim_alphas)
                 * (1 - self.ddim_alphas / self.ddim_alphas_prev)
             ) ** 0.5
+
+            print("after ddim_sigmas", flush=True)
+
 
     @tf.function
     # def forward(self, cond, deterministic=True):

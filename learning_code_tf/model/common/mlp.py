@@ -1,5 +1,3 @@
-import tensorflow as tf
-from tensorflow.keras import layers, Model
 
 # def mish(x):
 #     return x * tf.tanh(tf.math.log(1 + tf.exp(x)))
@@ -17,22 +15,24 @@ from tensorflow.keras import layers, Model
 # }
 
 import tensorflow as tf
-from tensorflow.keras import layers, models
+# from tensorflow.keras import layers, models
+from tensorflow.keras import models
+
 from collections import OrderedDict
 import logging
 
 
 activation_dict = {
-    "ReLU": layers.ReLU(),
-    "ELU": layers.ELU(),
+    "ReLU": tf.keras.layers.ReLU(),
+    "ELU": tf.keras.layers.ELU(),
     # "GELU": layers.GELU(),
-    "GELU": layers.Activation(tf.keras.activations.gelu),  # 使用 Activation 层来包装 GELU 函数
+    "GELU": tf.keras.layers.Activation(tf.keras.activations.gelu),  # 使用 Activation 层来包装 GELU 函数
     # "Tanh": layers.Tanh(),
-    "Tanh": layers.Activation(tf.keras.activations.tanh),  # 使用 tf.keras.activations.tanh
-    "Mish": layers.Activation(lambda x: x * tf.tanh(tf.math.log(1 + tf.exp(x)))),  # Custom Mish implementation
-    "Identity": layers.Activation("linear"),
+    "Tanh": tf.keras.layers.Activation(tf.keras.activations.tanh),  # 使用 tf.keras.activations.tanh
+    "Mish": tf.keras.layers.Activation(lambda x: x * tf.tanh(tf.math.log(1 + tf.exp(x)))),  # Custom Mish implementation
+    "Identity": tf.keras.layers.Activation("linear"),
     # "Softplus": layers.Softplus(),
-    "Softplus": layers.Activation(tf.keras.activations.softplus),  # 使用 tf.keras.activations.softplus
+    "Softplus": tf.keras.layers.Activation(tf.keras.activations.softplus),  # 使用 tf.keras.activations.softplus
 }
 
 
@@ -63,13 +63,13 @@ class MLP(models.Model):
             o_dim = dim_list[idx + 1]
             if append_dim > 0 and idx in append_layers:
                 i_dim += append_dim
-            layers_list = [("linear_1", layers.Dense(o_dim))]
+            layers_list = [("linear_1", tf.keras.layers.Dense(o_dim))]
             
             # Add normalization and dropout
             if use_layernorm and (idx < num_layer - 1 or use_layernorm_final):
-                layers_list.append(("norm_1", layers.LayerNormalization()))
+                layers_list.append(("norm_1", tf.keras.layers.LayerNormalization()))
             if dropout > 0 and (idx < num_layer - 1 or use_drop_final):
-                layers_list.append(("dropout_1", layers.Dropout(dropout)))
+                layers_list.append(("dropout_1", tf.keras.layers.Dropout(dropout)))
             
             # Add activation function
             act = (
@@ -80,7 +80,7 @@ class MLP(models.Model):
             layers_list.append(("act_1", act))
 
             # Append to model layers
-            self.moduleList.append(layers.Sequential(OrderedDict(layers_list)))
+            self.moduleList.append(tf.keras.layers.Sequential(OrderedDict(layers_list)))
 
         if verbose:
             logging.info(self.moduleList)
@@ -93,6 +93,7 @@ class MLP(models.Model):
                 x = tf.concat([x, append], axis=-1)
             x = m(x)
         return x
+
 
 
 class ResidualMLP(models.Model):
@@ -108,12 +109,20 @@ class ResidualMLP(models.Model):
         print("mlp.py: ResidualMLP.__init__()", flush=True)
 
         super(ResidualMLP, self).__init__()
+
+        print("after super()", flush=True)
+
         hidden_dim = dim_list[1]
         num_hidden_layers = len(dim_list) - 3
         assert num_hidden_layers % 2 == 0
-        self.layers = [layers.Dense(hidden_dim)]
 
-        self.layers.extend(
+        print("after dim", flush=True)
+
+        self.cur_layers = [tf.keras.layers.Dense(hidden_dim)]
+
+        print("after layers", flush=True)
+
+        self.cur_layers.extend(
             [
                 TwoLayerPreActivationResNetLinear(
                     hidden_dim=hidden_dim,
@@ -124,16 +133,28 @@ class ResidualMLP(models.Model):
                 for _ in range(1, num_hidden_layers, 2)
             ]
         )
-        self.layers.append(layers.Dense(dim_list[-1]))
+
+        print("after layers.extend()", flush=True)
+
+        self.cur_layers.append(tf.keras.layers.Dense(dim_list[-1]))
+
+        print("after append()", flush=True)
+
         if use_layernorm_final:
-            self.layers.append(layers.LayerNormalization())
-        self.layers.append(activation_dict[out_activation_type])
+            self.cur_layers.append(tf.keras.layers.LayerNormalization())
+
+        print("after use_layernorm_final", flush=True)
+
+        self.cur_layers.append(activation_dict[out_activation_type])
+
+        print("after append()", flush=True)
+
 
     def call(self, x):
         print("mlp.py: ResidualMLP.call()", flush=True)
 
-        for layer in self.layers:
-            x = layer(x)
+        for cur_layers in self.cur_layers:
+            x = cur_layers(x)
         return x
 
 
@@ -148,12 +169,12 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         print("mlp.py: TwoLayerPreActivationResNetLinear.__init__()", flush=True)
 
         super().__init__()
-        self.l1 = layers.Dense(hidden_dim)
-        self.l2 = layers.Dense(hidden_dim)
+        self.l1 = tf.keras.layers.Dense(hidden_dim)
+        self.l2 = tf.keras.layers.Dense(hidden_dim)
         self.act = activation_dict[activation_type]
         if use_layernorm:
-            self.norm1 = layers.LayerNormalization()
-            self.norm2 = layers.LayerNormalization()
+            self.norm1 = tf.keras.layers.LayerNormalization()
+            self.norm2 = tf.keras.layers.LayerNormalization()
 
         if dropout > 0:
             raise NotImplementedError("Dropout not implemented for residual MLP!")

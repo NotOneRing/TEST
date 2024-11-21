@@ -108,11 +108,54 @@ class PreTrainAgent:
 
         # Build dataset
         self.dataset_train = self.instantiate_dataset(cfg.train_dataset)
+        
+        print("after instantiate_dataset()", flush=True)
+
+        print(type(self.dataset_train))
+        if isinstance(self.dataset_train, tf.Tensor):
+            print(self.dataset_train.shape)
+
+
+        # self.dataloader_train = (
+        #     tf.data.Dataset.from_tensor_slices(self.dataset_train)
+        #     .shuffle(1000)
+        #     .batch(self.batch_size)
+        # )
+
+
+        # self.dataloader_train = (
+        #     tf.data.Dataset.from_generator(
+        #         lambda: (self.dataset_train[i] for i in range(len(self.dataset_train))),
+        #         output_signature=(
+        #             tf.TensorSpec(shape=(self.horizon_steps, self.actions.shape[-1]), dtype=tf.float32),  # actions
+        #             {
+        #                 "state": tf.TensorSpec(shape=(self.cond_steps, self.states.shape[-1]), dtype=tf.float32),
+        #                 "rgb": tf.TensorSpec(shape=(self.img_cond_steps, self.images.shape[-1]) if self.use_img else None, dtype=tf.float32),
+        #             },
+        #         ),
+        #     )
+        #     .shuffle(1000)
+        #     .batch(self.batch_size)
+        # )
+
         self.dataloader_train = (
-            tf.data.Dataset.from_tensor_slices(self.dataset_train)
+            tf.data.Dataset.from_generator(
+                lambda: (self.dataset_train[i] for i in range(len(self.dataset_train))),
+                output_signature=self.dataset_train.element_spec,
+            )
             .shuffle(1000)
             .batch(self.batch_size)
+            .prefetch(tf.data.AUTOTUNE)
         )
+
+        # 打印生成的数据的形状和内容，验证是否正确
+        for batch in self.dataloader_train.take(1):
+            print("Actions shape:", batch[0].shape)
+            print("Conditions shape:", {k: v.shape for k, v in batch[1].items()})
+
+
+        print("after dataloader_train", flush=True)
+
         self.dataloader_val = None
 
         print("after build dataset", flush=True)
@@ -126,9 +169,12 @@ class PreTrainAgent:
                 alpha=cfg.train.lr_scheduler.min_lr / cfg.train.learning_rate,
             ),
         )
+
+        print("after optimizer", flush=True)
+
         self.reset_parameters()
 
-        print("after optimize and scheduler", flush=True)
+        print("after reset_parameters()", flush=True)
 
     def instantiate_model(self, model_cfg):
         print("train_agent.py: instantiate_model()", flush=True)

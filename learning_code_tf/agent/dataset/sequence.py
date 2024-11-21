@@ -85,6 +85,13 @@ class StitchedSequenceDataset(tf.data.Dataset):
             log.info(f"Images shape/type: {self.images.shape, self.images.dtype}")
 
 
+
+
+    def __iter__(self):
+        for idx in range(len(self)):
+            yield self[idx]
+
+
     def __getitem__(self, idx):
         """
         repeat states/images if using history observation at the beginning of the episode
@@ -158,6 +165,10 @@ class StitchedSequenceDataset(tf.data.Dataset):
         return indices
 
 
+    def __len__(self):
+        return len(self.indices)
+
+
     def set_train_val_split(self, train_split):
         """
         Not doing validation right now
@@ -172,12 +183,33 @@ class StitchedSequenceDataset(tf.data.Dataset):
         return val_indices
 
 
-    def __len__(self):
-        return len(self.indices)
+    def _inputs(self):
+        # 数据集没有父数据集作为输入，因此返回 None
+        return None
 
 
-
-
+    @property
+    def element_spec(self):
+        # 定义动作的 TensorSpec
+        action_spec = tf.TensorSpec(
+            shape=(self.horizon_steps, self.actions.shape[-1]),
+            dtype=self.actions.dtype,
+        )
+        # 定义状态的 TensorSpec
+        state_spec = tf.TensorSpec(
+            shape=(self.cond_steps, self.states.shape[-1]),
+            dtype=self.states.dtype,
+        )
+        # 定义 conditions 的字典结构
+        spec = {"state": state_spec}
+        if self.use_img:
+            img_spec = tf.TensorSpec(
+                shape=(self.img_cond_steps,) + self.images.shape[1:],
+                dtype=self.images.dtype,
+            )
+            spec["rgb"] = img_spec
+        # 返回一个 Batch 的 TensorSpec
+        return (action_spec, spec)
 
 
 
