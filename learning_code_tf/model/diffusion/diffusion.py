@@ -175,12 +175,22 @@ class DiffusionModel(tf.keras.layers.Layer):
                 trajectories: (B, Ta, Da)
         """
 
-        tf.print("diffusion.py: DiffusionModel.forward()", output_stream="stderr")
+        print("diffusion.py: DiffusionModel.forward()", flush=True)
 
         # Initialize
         device = self.betas.device
+
+        print("after device", flush=True)
+
         sample_data = cond["state"] if "state" in cond else cond["rgb"]
+
+        print("after sample_data", flush=True)
+
         B = tf.shape(sample_data)[0]
+
+        print("self.horizon_steps = ", self.horizon_steps, flush=True)
+
+        print("self.action_dim = ", self.action_dim, flush=True)
 
         # Starting random noise
         x = tf.random.normal((B, self.horizon_steps, self.action_dim))
@@ -274,7 +284,7 @@ class DiffusionModel(tf.keras.layers.Layer):
 
 
 
-    def p_losses(self, x_start, cond, t):
+    def p_losses(self, x_start, cond, t, training_flag):
         """
         If predicting epsilon: E_{t, x0, ε} [||ε - ε_θ(√α̅ₜx0 + √(1-α̅ₜ)ε, t)||²
 
@@ -287,10 +297,17 @@ class DiffusionModel(tf.keras.layers.Layer):
 
         # Forward process
         noise = tf.random.normal(tf.shape(x_start), dtype=x_start.dtype)
+
+        print("before q_sample", flush=True)
+
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
+        print("type(self.network) = ", type(self.network), flush=True)
+
+        print("self.network = ", self.network, flush=True)
+
         # Predict
-        x_recon = self.network(x_noisy, t, cond=cond)
+        x_recon = self.network(x_noisy, t, cond=cond, training=training_flag)
         if self.predict_epsilon:
             return tf.reduce_mean(tf.square(x_recon - noise))  # Mean squared error
         else:
@@ -302,7 +319,7 @@ class DiffusionModel(tf.keras.layers.Layer):
 
 
 
-    def loss(self, x_start, cond):
+    def loss(self, x_start, cond, training_flag):
         """
         Compute the loss for the given data and condition.
 
@@ -317,16 +334,16 @@ class DiffusionModel(tf.keras.layers.Layer):
 
         batch_size = tf.shape(x_start)[0]
 
-        # Sample timesteps uniformly for each example in the batch
+        # 生成 [0, self.denoising_steps) 范围的随机整数
         t = tf.random.uniform(
-            shape=(batch_size,), 
-            minval=0, 
-            maxval=self.timesteps, 
-            dtype=tf.int32
+            shape=(batch_size,),
+            minval=0,
+            maxval=self.denoising_steps,
+            dtype=tf.int32,
         )
 
         # Compute loss
-        return self.p_losses(x_start, cond, t)
+        return self.p_losses(x_start, cond, t, training_flag)
 
 
 
@@ -339,6 +356,17 @@ class DiffusionModel(tf.keras.layers.Layer):
         q(xₜ | x₀) = 𝒩(xₜ; √ α̅ₜ x₀, (1-α̅ₜ)I)
         xₜ = √ α̅ₜ x₀ + √ (1-α̅ₜ) ε
         """
+
+        # print(f"x_start: {x_start}")
+        # print(f"t: {t}")
+        print(f"x_start.shape: {x_start.shape}")
+        print(f"t.shape: {t.shape}")
+        # print(f"sqrt_alphas_cumprod: {self.sqrt_alphas_cumprod}")
+        # print(f"sqrt_one_minus_alphas_cumprod: {self.sqrt_one_minus_alphas_cumprod}")
+
+        print(f"sqrt_alphas_cumprod.shape: {self.sqrt_alphas_cumprod.shape}")
+        print(f"sqrt_one_minus_alphas_cumprod.shape: {self.sqrt_one_minus_alphas_cumprod.shape}")
+
         if noise is None:
             noise = tf.random.normal(shape=x_start.shape)
         return (

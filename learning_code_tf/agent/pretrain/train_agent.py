@@ -86,6 +86,12 @@ class PreTrainAgent:
 
         self.ema_model = deepcopy(self.model)
 
+        # # 获取 model 的输入形状
+        # input_shape = self.model.input_shape
+
+        # # 去掉批次维度 (None)，构建 ema_model
+        # self.ema_model.build(input_shape)
+
         print("after build model", flush=True)
 
         # Training params
@@ -114,29 +120,6 @@ class PreTrainAgent:
         print(type(self.dataset_train))
         if isinstance(self.dataset_train, tf.Tensor):
             print(self.dataset_train.shape)
-
-
-        # self.dataloader_train = (
-        #     tf.data.Dataset.from_tensor_slices(self.dataset_train)
-        #     .shuffle(1000)
-        #     .batch(self.batch_size)
-        # )
-
-
-        # self.dataloader_train = (
-        #     tf.data.Dataset.from_generator(
-        #         lambda: (self.dataset_train[i] for i in range(len(self.dataset_train))),
-        #         output_signature=(
-        #             tf.TensorSpec(shape=(self.horizon_steps, self.actions.shape[-1]), dtype=tf.float32),  # actions
-        #             {
-        #                 "state": tf.TensorSpec(shape=(self.cond_steps, self.states.shape[-1]), dtype=tf.float32),
-        #                 "rgb": tf.TensorSpec(shape=(self.img_cond_steps, self.images.shape[-1]) if self.use_img else None, dtype=tf.float32),
-        #             },
-        #         ),
-        #     )
-        #     .shuffle(1000)
-        #     .batch(self.batch_size)
-        # )
 
         self.dataloader_train = (
             tf.data.Dataset.from_generator(
@@ -170,20 +153,33 @@ class PreTrainAgent:
             ),
         )
 
-        print("after optimizer", flush=True)
+        # print("self.batch_size = ", self.batch_size)
 
-        self.reset_parameters()
+        # # 使用 `take(1)` 仅获取第一个批次并获取其形状
+        # sample_input = next(iter(self.dataloader_train.take(1)))  # 获取第一个batch的数据
+        # input_shape = sample_input[0].shape  # 获取输入特征的形状
 
-        print("after reset_parameters()", flush=True)
+        # print(f"Input shape: {input_shape}")
+        # # 假设输入是一个张量，初始化一个 dummy variable
+        # dummy_input = tf.zeros(*input_shape)  # 创建一个 shape 为 (input_shape) 的张量
+
+        # print("before model", flush=True)
+        # # # 初始化模型
+        # # self.model.build(dummy_input.shape)
+        # # self.ema_model.build(dummy_input.shape)
+        # self.model(dummy_input)  # 这会触发权重的创建
+        # self.ema_model(dummy_input)  # 同样触发 ema_model 的权重创建
+
+        # print("after optimizer", flush=True)
+
+        # self.reset_parameters()
+
+        # print("after reset_parameters()", flush=True)
 
     def instantiate_model(self, model_cfg):
         print("train_agent.py: instantiate_model()", flush=True)
 
         print(" ", model_cfg, flush=True)
-
-        from model.diffusion.mlp_diffusion import DiffusionMLP
-
-        print("DiffusionMLP = ", DiffusionMLP)
 
         try:
             model = hydra.utils.instantiate(model_cfg)
@@ -216,12 +212,14 @@ class PreTrainAgent:
             return
         self.ema.update_model_average(self.ema_model, self.model)
 
+
     def save_model(self):
         print("train_agent.py: PreTrainAgent.save_model()", flush=True)
         savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.h5")
         self.model.save_weights(savepath)
         self.ema_model.save_weights(savepath.replace(".h5", "_ema.h5"))
         print(f"Saved model to {savepath}")
+
 
     def load(self, epoch):
         print("train_agent.py: PreTrainAgent.load()", flush=True)

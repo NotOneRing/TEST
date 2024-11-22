@@ -141,6 +141,8 @@ class StitchedSequenceDataset(tf.data.Dataset):
         # 创建一个包含动作和条件的批次
         batch = Batch(actions, conditions)
 
+        # print("type(batch) = ", type(batch))
+
         # 返回批次
         return batch
 

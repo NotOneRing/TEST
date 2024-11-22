@@ -24,7 +24,7 @@ class TrainDiffusionAgent(PreTrainAgent):
         print("train_diffusion_agent.py: TrainDiffusionAgent.__init__()", flush=True)
         super().__init__(cfg)
 
-        # # Use tf's model handling
+        # # # Use tf's model handling
         # self.model = self.build_model(cfg)
 
     def build_model(self, cfg):
@@ -32,7 +32,6 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         print("train_diffusion_agent.py: TrainDiffusionAgent.build_model()", flush=True)
 
-        
         model = hydra.utils.instantiate(cfg.model)
         model.build(input_shape=(None, *cfg.model.input_shape))  # Ensure the model is built
         return model
@@ -62,11 +61,11 @@ class TrainDiffusionAgent(PreTrainAgent):
                 print("self.model = ", self.model)
 
                 # Enable training mode
-                self.model.train()
+                # self.model.train()
 
                 with tf.GradientTape() as tape:
                     # Assuming loss is computed as a callable loss function
-                    loss_train = self.model.loss(*batch_train)
+                    loss_train = self.model.loss(*batch_train, training_flag=True)
 
                 gradients = tape.gradient(loss_train, self.model.trainable_variables)
                 self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
@@ -86,7 +85,7 @@ class TrainDiffusionAgent(PreTrainAgent):
                 for batch_val in self.dataloader_val:
                     if self.dataset_val.device == "cpu":
                         batch_val = batch_to_device(batch_val)
-                    loss_val, infos_val = self.model.loss(*batch_val)
+                    loss_val, infos_val = self.model.loss(*batch_val, training_flag=False)
                     loss_val_epoch.append(loss_val.numpy())
                 self.model.train()
 
