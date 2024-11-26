@@ -15,7 +15,7 @@ from agent.pretrain.train_agent import PreTrainAgent, batch_to_device
 class TrainGaussianAgent(PreTrainAgent):
 
     def __init__(self, cfg):
-        print("train_gaussian_agent.py: TrainGaussianAgent.__init__()", flush = True)
+        print("train_gaussian_agent.py: TrainGaussianAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -23,7 +23,7 @@ class TrainGaussianAgent(PreTrainAgent):
         self.ent_coef = cfg.train.get("ent_coef", 0)
 
     def run(self):
-        print("train_gaussian_agent.py: TrainGaussianAgent.run()", flush = True)
+        print("train_gaussian_agent.py: TrainGaussianAgent.run()")
 
         timer = Timer()
         self.epoch = 1

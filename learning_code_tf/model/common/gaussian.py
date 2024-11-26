@@ -22,7 +22,7 @@ class GaussianModel(torch.nn.Module):
         tanh_output=False,
     ):
 
-        print("gaussian.py: GaussianModel.__init__()", flush = True)
+        print("gaussian.py: GaussianModel.__init__()")
 
         super().__init__()
         self.device = device
@@ -57,7 +57,7 @@ class GaussianModel(torch.nn.Module):
     ):
         """no squashing"""
 
-        print("gaussian.py: GaussianModel.loss()", flush = True)
+        print("gaussian.py: GaussianModel.loss()")
 
         B = len(true_action)
         dist = self.forward_train(
@@ -80,7 +80,7 @@ class GaussianModel(torch.nn.Module):
         Calls the MLP to compute the mean, scale, and logits of the GMM. Returns the torch.Distribution object.
         """
 
-        print("gaussian.py: GaussianModel.forward_train()", flush = True)
+        print("gaussian.py: GaussianModel.forward_train()")
 
         if network_override is not None:
             means, scales = network_override(cond)
@@ -100,7 +100,7 @@ class GaussianModel(torch.nn.Module):
         get_logprob=False,
     ):
 
-        print("gaussian.py: GaussianModel.forward()", flush = True)
+        print("gaussian.py: GaussianModel.forward()")
 
         B = len(cond["state"]) if "state" in cond else len(cond["rgb"])
         T = self.horizon_steps

@@ -7,12 +7,12 @@ import hydra
 
 from omegaconf import OmegaConf
 import wandb
-from copy import deepcopy
+
 
 DEVICE = "/GPU:0"
 
 def to_device(x, device=DEVICE):
-    print("train_agent.py: to_device()", flush=True)
+    print("train_agent.py: to_device()")
 
     if isinstance(x, tf.Tensor):
         with tf.device(device):
@@ -24,7 +24,7 @@ def to_device(x, device=DEVICE):
 
 
 def batch_to_device(batch, device="/GPU:0"):
-    print("train_agent.py: batch_to_device()", flush=True)
+    print("train_agent.py: batch_to_device()")
 
     # 使用 tf.device 来转移数据到指定设备
     with tf.device(device):
@@ -39,16 +39,16 @@ class EMA:
     """
 
     def __init__(self, cfg):
-        print("train_agent.py: EMA.__init__()", flush=True)
+        print("train_agent.py: EMA.__init__()")
         self.beta = cfg.decay
 
     def update_model_average(self, ma_model, current_model):
-        print("train_agent.py: EMA.update_model_average()", flush=True)
+        print("train_agent.py: EMA.update_model_average()")
         for ma_weights, current_weights in zip(ma_model.trainable_variables, current_model.trainable_variables):
             ma_weights.assign(self.update_average(ma_weights, current_weights))
 
     def update_average(self, old, new):
-        print("train_agent.py: EMA.update_average()", flush=True)
+        print("train_agent.py: EMA.update_average()")
         if old is None:
             return new
         return old * self.beta + (1 - self.beta) * new
@@ -57,7 +57,7 @@ class EMA:
 class PreTrainAgent:
 
     def __init__(self, cfg):
-        print("train_agent.py: PreTrainAgent.__init__()", flush=True)
+        print("train_agent.py: PreTrainAgent.__init__()")
 
         # Set seeds
         self.seed = cfg.get("seed", 42)
@@ -78,13 +78,14 @@ class PreTrainAgent:
         # Build model
         self.model = self.instantiate_model(cfg.model)
 
-        print("after instantiate_model", flush = True)
+        print("after instantiate_model")
 
         self.ema = EMA(cfg.ema)
 
-        print("self.ema = EMA()", flush = True)
+        print("self.ema = EMA()")
 
-        self.ema_model = deepcopy(self.model)
+        # self.ema_model = deepcopy(self.model)
+        #把这部分拿到train_diffusion_agent里面去
 
         # # 获取 model 的输入形状
         # input_shape = self.model.input_shape
@@ -92,7 +93,7 @@ class PreTrainAgent:
         # # 去掉批次维度 (None)，构建 ema_model
         # self.ema_model.build(input_shape)
 
-        print("after build model", flush=True)
+        print("after build model")
 
         # Training params
         self.n_epochs = cfg.train.n_epochs
@@ -101,7 +102,7 @@ class PreTrainAgent:
         self.update_ema_freq = cfg.train.get("update_ema_freq", 10)
         self.val_freq = cfg.train.get("val_freq", 100)
 
-        print("after training params", flush=True)
+        print("after training params")
 
         # Logging, checkpoints
         self.logdir = cfg.logdir
@@ -110,38 +111,45 @@ class PreTrainAgent:
         self.log_freq = cfg.train.get("log_freq", 1)
         self.save_model_freq = cfg.train.save_model_freq
 
-        print("after logging checkpoints", flush=True)
+        print("after logging checkpoints")
 
         # Build dataset
         self.dataset_train = self.instantiate_dataset(cfg.train_dataset)
         
-        print("after instantiate_dataset()", flush=True)
+        print("after instantiate_dataset()")
 
-        print(type(self.dataset_train))
+        print("type(self.dataset_train) = ", type(self.dataset_train))
+
+        
+
         if isinstance(self.dataset_train, tf.Tensor):
+            print("isinstance(self.dataset_train, tf.Tensor)")
             print(self.dataset_train.shape)
 
-        self.dataloader_train = (
-            tf.data.Dataset.from_generator(
-                lambda: (self.dataset_train[i] for i in range(len(self.dataset_train))),
-                output_signature=self.dataset_train.element_spec,
-            )
-            .shuffle(1000)
-            .batch(self.batch_size)
-            .prefetch(tf.data.AUTOTUNE)
-        )
+        # self.dataloader_train = (
+        #     tf.data.Dataset.from_generator(
+        #         lambda: (self.dataset_train[i] for i in range(len(self.dataset_train))),
+        #         output_signature=self.dataset_train.element_spec,
+        #     )
+        #     # .shuffle(1000)
+        #     .batch(self.batch_size)
+        #     # .prefetch(tf.data.AUTOTUNE)
+        # )
 
-        # 打印生成的数据的形状和内容，验证是否正确
-        for batch in self.dataloader_train.take(1):
-            print("Actions shape:", batch[0].shape)
-            print("Conditions shape:", {k: v.shape for k, v in batch[1].items()})
+        # # 打印生成的数据的形状和内容，验证是否正确
+        # for batch in self.dataloader_train.take(1):
+        #     print("Actions shape:", batch[0].shape)
+        #     print("Conditions shape:", {k: v.shape for k, v in batch[1].items()})
+
+        #     print("take(1): batch = ", batch)
 
 
-        print("after dataloader_train", flush=True)
+
+        print("after dataloader_train")
 
         self.dataloader_val = None
 
-        print("after build dataset", flush=True)
+        print("after build dataset")
 
         # Optimizer and scheduler
         self.optimizer = tf.keras.optimizers.Adam(
@@ -163,23 +171,26 @@ class PreTrainAgent:
         # # 假设输入是一个张量，初始化一个 dummy variable
         # dummy_input = tf.zeros(*input_shape)  # 创建一个 shape 为 (input_shape) 的张量
 
-        # print("before model", flush=True)
+        # print("before model")
         # # # 初始化模型
         # # self.model.build(dummy_input.shape)
         # # self.ema_model.build(dummy_input.shape)
         # self.model(dummy_input)  # 这会触发权重的创建
         # self.ema_model(dummy_input)  # 同样触发 ema_model 的权重创建
 
-        # print("after optimizer", flush=True)
+        # print("after optimizer")
 
         # self.reset_parameters()
 
-        # print("after reset_parameters()", flush=True)
+        # print("after reset_parameters()")
 
     def instantiate_model(self, model_cfg):
-        print("train_agent.py: instantiate_model()", flush=True)
+        print("train_agent.py: instantiate_model()")
 
-        print(" ", model_cfg, flush=True)
+        # print("model_cfg = ", model_cfg)
+        print("model_cfg = ", model_cfg)
+        
+        # from model.diffusion.mlp_diffusion import DiffusionMLP
 
         try:
             model = hydra.utils.instantiate(model_cfg)
@@ -187,34 +198,39 @@ class PreTrainAgent:
             print("Error instantiating model:", e)
 
         return model
+    
         # # Implement model instantiation using tf.keras.Model
         # # Example: return MyModel(**model_cfg)
         # return hydra.utils.instantiate(model_cfg)
 
     def instantiate_dataset(self, dataset_cfg):
-        print("train_agent.py: instantiate_dataset()", flush=True)
+        print("train_agent.py: instantiate_dataset()")
         # Implement dataset instantiation
         # Example: return MyDataset(**dataset_cfg)
         return hydra.utils.instantiate(dataset_cfg)
 
     def run(self):
-        print("train_agent.py: PreTrainAgent.run()", flush=True)
+        print("train_agent.py: PreTrainAgent.run()")
         raise NotImplementedError
 
     def reset_parameters(self):
-        print("train_agent.py: PreTrainAgent.reset_parameters()", flush=True)
+        print("train_agent.py: PreTrainAgent.reset_parameters()")
         self.ema_model.set_weights(self.model.get_weights())
 
+
+
     def step_ema(self):
-        print("train_agent.py: PreTrainAgent.step_ema()", flush=True)
+        print("train_agent.py: PreTrainAgent.step_ema()")
+
         if self.epoch < self.epoch_start_ema:
             self.reset_parameters()
             return
+
         self.ema.update_model_average(self.ema_model, self.model)
 
 
     def save_model(self):
-        print("train_agent.py: PreTrainAgent.save_model()", flush=True)
+        print("train_agent.py: PreTrainAgent.save_model()")
         savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.h5")
         self.model.save_weights(savepath)
         self.ema_model.save_weights(savepath.replace(".h5", "_ema.h5"))
@@ -222,7 +238,7 @@ class PreTrainAgent:
 
 
     def load(self, epoch):
-        print("train_agent.py: PreTrainAgent.load()", flush=True)
+        print("train_agent.py: PreTrainAgent.load()")
         loadpath = os.path.join(self.checkpoint_dir, f"state_{epoch}.h5")
         self.model.load_weights(loadpath)
         self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))

@@ -23,7 +23,7 @@ class TrajectoryDataset(Dataset, abc.ABC):
         window_size: int = 1,
     ):
 
-        print("base_dataset.py: __init__()", flush = True)
+        print("base_dataset.py: __init__()")
 
         self.data_directory = data_directory
         self.device = device
@@ -40,7 +40,7 @@ class TrajectoryDataset(Dataset, abc.ABC):
         Returns the length of the idx-th trajectory.
         """
 
-        print("base_dataset.py: get_seq_length()", flush = True)
+        print("base_dataset.py: get_seq_length()")
 
         raise NotImplementedError
 
@@ -50,7 +50,7 @@ class TrajectoryDataset(Dataset, abc.ABC):
         Returns all actions from all trajectories, concatenated on dim 0 (time).
         """
 
-        print("base_dataset.py: get_all_actions()", flush = True)
+        print("base_dataset.py: get_all_actions()")
 
         raise NotImplementedError
 
@@ -60,7 +60,7 @@ class TrajectoryDataset(Dataset, abc.ABC):
         Returns all actions from all trajectories, concatenated on dim 0 (time).
         """
 
-        print("base_dataset.py: get_all_observations()", flush = True)
+        print("base_dataset.py: get_all_observations()")
         
         raise NotImplementedError
         

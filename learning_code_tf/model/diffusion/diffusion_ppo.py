@@ -35,7 +35,7 @@ class PPODiffusion(VPGDiffusion):
         **kwargs,
     ):
 
-        print("diffusion_ppo.py: PPODiffusion.__init__()", flush = True)
+        print("diffusion_ppo.py: PPODiffusion.__init__()")
 
         super().__init__(**kwargs)
 
@@ -85,7 +85,7 @@ class PPODiffusion(VPGDiffusion):
         reward_horizon: action horizon that backpropagates gradient
         """
 
-        print("diffusion_ppo.py: PPODiffusion.loss()", flush = True)
+        print("diffusion_ppo.py: PPODiffusion.loss()")
 
         # Get new logprobs for denoising steps from T-1 to 0 - entropy is fixed fod diffusion
         newlogprobs, eta = self.get_logprobs_subsample(

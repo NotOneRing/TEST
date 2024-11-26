@@ -19,7 +19,7 @@ from env.gym_utils import make_async
 class TrainAgent:
 
     def __init__(self, cfg):
-        print("train_agent.py: TrainAgent.__init__()", flush = True)
+        print("train_agent.py: TrainAgent.__init__()")
 
         super().__init__()
         self.cfg = cfg
@@ -121,7 +121,7 @@ class TrainAgent:
         )
 
     def run(self):
-        print("train_agent.py: TrainAgent.run()", flush = True)
+        print("train_agent.py: TrainAgent.run()")
         pass
 
     def save_model(self):
@@ -129,7 +129,7 @@ class TrainAgent:
         saves model to disk; no ema
         """
 
-        print("train_agent.py: TrainAgent.save_model()", flush = True)
+        print("train_agent.py: TrainAgent.save_model()")
 
         data = {
             "itr": self.itr,
@@ -144,7 +144,7 @@ class TrainAgent:
         loads model from disk
         """
 
-        print("train_agent.py: TrainAgent.load()", flush = True)
+        print("train_agent.py: TrainAgent.load()")
 
         loadpath = os.path.join(self.checkpoint_dir, f"state_{itr}.pt")
         data = torch.load(loadpath, weights_only=True)
@@ -154,7 +154,7 @@ class TrainAgent:
 
     def reset_env_all(self, verbose=False, options_venv=None, **kwargs):
 
-        print("train_agent.py: TrainAgent.reset_env_all()", flush = True)
+        print("train_agent.py: TrainAgent.reset_env_all()")
 
         if options_venv is None:
             options_venv = [
@@ -176,7 +176,7 @@ class TrainAgent:
 
     def reset_env(self, env_ind, verbose=False):
 
-        print("train_agent.py: TrainAgent.reset_env()", flush = True)
+        print("train_agent.py: TrainAgent.reset_env()")
 
         task = {}
         obs = self.venv.reset_one_arg(env_ind=env_ind, options=task)

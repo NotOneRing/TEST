@@ -25,7 +25,7 @@ class RLPD_Gaussian(GaussianModel):
         **kwargs,
     ):
 
-        print("gaussian_rlpd.py: RLPD_Gaussian.__init__()", flush = True)
+        print("gaussian_rlpd.py: RLPD_Gaussian.__init__()")
 
         super().__init__(network=actor, **kwargs)
         self.n_critics = n_critics
@@ -53,14 +53,14 @@ class RLPD_Gaussian(GaussianModel):
     def critic_wrapper(self, params, buffers, data):
         """for vmap"""
 
-        print("gaussian_rlpd.py: RLPD_Gaussian.critic_wrapper()", flush = True)
+        print("gaussian_rlpd.py: RLPD_Gaussian.critic_wrapper()")
 
         return torch.func.functional_call(self.base_model, (params, buffers), data)
 
     def get_random_indices(self, sz=None, num_ind=2):
         """get num_ind random indices from a set of size sz (used for getting critic targets)"""
 
-        print("gaussian_rlpd.py: RLPD_Gaussian.get_random_indices()", flush = True)
+        print("gaussian_rlpd.py: RLPD_Gaussian.get_random_indices()")
 
         if sz is None:
             sz = len(self.critic_networks)
@@ -79,7 +79,7 @@ class RLPD_Gaussian(GaussianModel):
         alpha,
     ):
 
-        print("gaussian_rlpd.py: RLPD_Gaussian.loss_critic()", flush = True)
+        print("gaussian_rlpd.py: RLPD_Gaussian.loss_critic()")
 
         # get random critic index
         q1_ind, q2_ind = self.get_random_indices()
@@ -111,7 +111,7 @@ class RLPD_Gaussian(GaussianModel):
 
     def loss_actor(self, obs, alpha):
 
-        print("gaussian_rlpd.py: RLPD_Gaussian.loss_actor()", flush = True)
+        print("gaussian_rlpd.py: RLPD_Gaussian.loss_actor()")
 
         action, logprob = self.forward(
             obs,
@@ -128,7 +128,7 @@ class RLPD_Gaussian(GaussianModel):
 
     def loss_temperature(self, obs, alpha, target_entropy):
 
-        print("gaussian_rlpd.py: RLPD_Gaussian.loss_temperature()", flush = True)
+        print("gaussian_rlpd.py: RLPD_Gaussian.loss_temperature()")
 
         with torch.no_grad():
             _, logprob = self.forward(
@@ -142,7 +142,7 @@ class RLPD_Gaussian(GaussianModel):
     def update_target_critic(self, tau):
         """need to use ensemble_params instead of critic_networks"""
 
-        print("gaussian_rlpd.py: RLPD_Gaussian.update_target_critic()", flush = True)
+        print("gaussian_rlpd.py: RLPD_Gaussian.update_target_critic()")
 
         for target_ind, target_critic in enumerate(self.target_networks):
             for target_param_name, target_param in target_critic.named_parameters():

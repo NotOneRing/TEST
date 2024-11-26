@@ -30,7 +30,7 @@ class Sorting_Dataset(TrajectoryDataset):
         num_boxes: int = 2,
     ):
 
-        print("sorting_dataset.py: Sorting_Dataset.__init__()", flush = True)
+        print("sorting_dataset.py: Sorting_Dataset.__init__()")
 
         super().__init__(
             data_directory=data_directory,
@@ -235,7 +235,7 @@ class Sorting_Dataset(TrajectoryDataset):
 
     def get_slices(self):
 
-        print("sorting_dataset.py: Sorting_Dataset.get_slices()", flush = True)
+        print("sorting_dataset.py: Sorting_Dataset.get_slices()")
 
         slices = []
 
@@ -258,13 +258,13 @@ class Sorting_Dataset(TrajectoryDataset):
 
     def get_seq_length(self, idx):
 
-        print("sorting_dataset.py: Sorting_Dataset.get_seq_length()", flush = True)
+        print("sorting_dataset.py: Sorting_Dataset.get_seq_length()")
 
         return int(self.masks[idx].sum().item())
 
     def get_all_actions(self):
 
-        print("sorting_dataset.py: Sorting_Dataset.get_all_actions()", flush = True)
+        print("sorting_dataset.py: Sorting_Dataset.get_all_actions()")
 
         result = []
         # mask out invalid actions
@@ -275,7 +275,7 @@ class Sorting_Dataset(TrajectoryDataset):
 
     def get_all_observations(self):
 
-        print("sorting_dataset.py: Sorting_Dataset.get_all_observations()", flush = True)
+        print("sorting_dataset.py: Sorting_Dataset.get_all_observations()")
 
         result = []
         # mask out invalid observations
@@ -286,13 +286,13 @@ class Sorting_Dataset(TrajectoryDataset):
 
     def __len__(self):
 
-        print("sorting_dataset.py: Sorting_Dataset.__len__()", flush = True)
+        print("sorting_dataset.py: Sorting_Dataset.__len__()")
 
         return len(self.slices)
 
     def __getitem__(self, idx):
 
-        print("sorting_dataset.py: Sorting_Dataset.__getitem__()", flush = True)
+        print("sorting_dataset.py: Sorting_Dataset.__getitem__()")
 
         i, start, end = self.slices[idx]
 
@@ -315,7 +315,7 @@ class Sorting_Img_Dataset(TrajectoryDataset):
         num_boxes: int = 2,
     ):
 
-        print("sorting_dataset.py: Sorting_Img_Dataset.__init__()", flush = True)
+        print("sorting_dataset.py: Sorting_Img_Dataset.__init__()")
 
         super().__init__(
             data_directory=data_directory,
@@ -444,7 +444,7 @@ class Sorting_Img_Dataset(TrajectoryDataset):
 
     def get_slices(self):
 
-        print("sorting_dataset.py: Sorting_Img_Dataset.get_slices()", flush = True)
+        print("sorting_dataset.py: Sorting_Img_Dataset.get_slices()")
 
         slices = []
 
@@ -467,13 +467,13 @@ class Sorting_Img_Dataset(TrajectoryDataset):
 
     def get_seq_length(self, idx):
 
-        print("sorting_dataset.py: Sorting_Img_Dataset.get_seq_length()", flush = True)
+        print("sorting_dataset.py: Sorting_Img_Dataset.get_seq_length()")
 
         return int(self.masks[idx].sum().item())
 
     def get_all_actions(self):
 
-        print("sorting_dataset.py: Sorting_Img_Dataset.get_all_actions()", flush = True)
+        print("sorting_dataset.py: Sorting_Img_Dataset.get_all_actions()")
 
         result = []
         # mask out invalid actions
@@ -484,7 +484,7 @@ class Sorting_Img_Dataset(TrajectoryDataset):
 
     def get_all_observations(self):
 
-        print("sorting_dataset.py: Sorting_Img_Dataset.get_all_observations()", flush = True)
+        print("sorting_dataset.py: Sorting_Img_Dataset.get_all_observations()")
 
         result = []
         # mask out invalid observations
@@ -495,13 +495,13 @@ class Sorting_Img_Dataset(TrajectoryDataset):
 
     def __len__(self):
 
-        print("sorting_dataset.py: Sorting_Img_Dataset.__len__()", flush = True)
+        print("sorting_dataset.py: Sorting_Img_Dataset.__len__()")
 
         return len(self.slices)
 
     def __getitem__(self, idx):
 
-        print("sorting_dataset.py: Sorting_Img_Dataset.__getitem__()", flush = True)
+        print("sorting_dataset.py: Sorting_Img_Dataset.__getitem__()")
 
         i, start, end = self.slices[idx]
 

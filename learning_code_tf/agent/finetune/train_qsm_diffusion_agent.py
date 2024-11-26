@@ -25,7 +25,7 @@ class TrainQSMDiffusionAgent(TrainAgent):
 
     def __init__(self, cfg):
 
-        print("train_qsm_diffusion_agent.py: TrainQSMDiffusionAgent.__init__()", flush = True)
+        print("train_qsm_diffusion_agent.py: TrainQSMDiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -77,7 +77,7 @@ class TrainQSMDiffusionAgent(TrainAgent):
         self.q_grad_coeff = cfg.train.q_grad_coeff
 
     def run(self):
-        print("train_qsm_diffusion_agent.py: TrainQSMDiffusionAgent.run()", flush = True)
+        print("train_qsm_diffusion_agent.py: TrainQSMDiffusionAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

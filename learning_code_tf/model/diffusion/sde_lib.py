@@ -27,14 +27,14 @@ def get_score_fn(
       A score function.
     """
 
-    print("sde_lib.py: get_score_fn()", flush = True)
+    print("sde_lib.py: get_score_fn()")
 
     def score_fn(x, t, **kwargs):
         """
         Use [:, None, None] to add two dimensions (horizon and transition)
         """
 
-        print("sde_lib.py: score_fn()", flush = True)
+        print("sde_lib.py: score_fn()")
         
         score = model(x, t, **kwargs)
 
@@ -60,7 +60,7 @@ class SDE(abc.ABC):
           N: number of discretization time steps.
         """
 
-        print("sde_lib.py: SDE.__init__()", flush = True)
+        print("sde_lib.py: SDE.__init__()")
 
         super().__init__()
         self.N = N
@@ -70,14 +70,14 @@ class SDE(abc.ABC):
     def T(self):
         """End time of the SDE."""
 
-        print("sde_lib.py: SDE.T()", flush = True)
+        print("sde_lib.py: SDE.T()")
 
         pass
 
     @abc.abstractmethod
     def sde(self, x, t):
 
-        print("sde_lib.py: SDE.sde()", flush = True)
+        print("sde_lib.py: SDE.sde()")
 
         pass
 
@@ -85,7 +85,7 @@ class SDE(abc.ABC):
     def marginal_prob(self, x, t):
         """Parameters to determine the marginal distribution of the SDE, $p_t(x)$."""
 
-        print("sde_lib.py: SDE.marginal_prob()", flush = True)
+        print("sde_lib.py: SDE.marginal_prob()")
 
         pass
 
@@ -93,7 +93,7 @@ class SDE(abc.ABC):
     def prior_sampling(self, shape):
         """Generate one sample from the prior distribution, $p_T(x)$."""
 
-        print("sde_lib.py: SDE.prior_sampling()", flush = True)
+        print("sde_lib.py: SDE.prior_sampling()")
 
         pass
 
@@ -109,7 +109,7 @@ class SDE(abc.ABC):
           log probability density
         """
 
-        print("sde_lib.py: SDE.prior_logp()", flush = True)
+        print("sde_lib.py: SDE.prior_logp()")
 
         pass
 
@@ -127,7 +127,7 @@ class SDE(abc.ABC):
           f, G
         """
 
-        print("sde_lib.py: SDE.discretize()", flush = True)
+        print("sde_lib.py: SDE.discretize()")
 
         dt = 1 / self.N
         drift, diffusion = self.sde(x, t)
@@ -143,7 +143,7 @@ class SDE(abc.ABC):
           probability_flow: If `True`, create the reverse-time ODE used for probability flow sampling.
         """
 
-        print("sde_lib.py: SDE.reverse()", flush = True)
+        print("sde_lib.py: SDE.reverse()")
 
         N = self.N
         T = self.T
@@ -154,7 +154,7 @@ class SDE(abc.ABC):
         class RSDE(self.__class__):
             def __init__(self):
 
-                print("sde_lib.py: RSDE.__init__()", flush = True)
+                print("sde_lib.py: RSDE.__init__()")
 
                 self.N = N
                 self.probability_flow = probability_flow
@@ -162,14 +162,14 @@ class SDE(abc.ABC):
             @property
             def T(self):
 
-                print("sde_lib.py: RSDE.T()", flush = True)
+                print("sde_lib.py: RSDE.T()")
 
                 return T
 
             def sde(self, x, t, **kwargs):
                 """Create the drift and diffusion functions for the reverse SDE/ODE."""
 
-                print("sde_lib.py: RSDE.sde()", flush = True)
+                print("sde_lib.py: RSDE.sde()")
 
                 drift, diffusion = sde_fn(x, t)
                 score = score_fn(x, t, **kwargs)
@@ -183,7 +183,7 @@ class SDE(abc.ABC):
             def discretize(self, x, t):
                 """Create discretized iteration rules for the reverse diffusion sampler."""
 
-                print("sde_lib.py: RSDE.discretize()", flush = True)
+                print("sde_lib.py: RSDE.discretize()")
 
                 f, G = discretize_fn(x, t)
                 rev_f = f - G[:, None] ** 2 * score_fn(x, t) * (
@@ -205,13 +205,13 @@ class VPSDE(SDE):
           N: number of discretization steps
         """
 
-        print("sde_lib.py: VPSDE.__init__()", flush = True)
+        print("sde_lib.py: VPSDE.__init__()")
 
         super().__init__(N)
 
     def set_betas(self, betas, min_beta=0.01):
 
-        print("sde_lib.py: VPSDE.set_betas()", flush = True)
+        print("sde_lib.py: VPSDE.set_betas()")
 
         self.discrete_betas = betas.clamp(min=min_beta)  # cosine schedule from our DDPM
         self.alphas = 1.0 - self.discrete_betas
@@ -222,13 +222,13 @@ class VPSDE(SDE):
     @property
     def T(self):
 
-        print("sde_lib.py: VPSDE.T()", flush = True)
+        print("sde_lib.py: VPSDE.T()")
 
         return 1
 
     def sde(self, x, t):
 
-        print("sde_lib.py: VPSDE.sde()", flush = True)
+        print("sde_lib.py: VPSDE.sde()")
 
         # dx = - 1/2 beta(t) x dt + sqrt(beta(t)) dW
         beta_t = self.discrete_betas[t]
@@ -238,7 +238,7 @@ class VPSDE(SDE):
 
     def marginal_prob(self, x, t):
 
-        print("sde_lib.py: VPSDE.marginal_prob()", flush = True)
+        print("sde_lib.py: VPSDE.marginal_prob()")
 
         raise NotImplementedError
         # log_mean_coeff = (
@@ -250,13 +250,13 @@ class VPSDE(SDE):
 
     def prior_sampling(self, shape):
 
-        print("sde_lib.py: VPSDE.prior_sampling()", flush = True)
+        print("sde_lib.py: VPSDE.prior_sampling()")
 
         return torch.randn(*shape)
 
     def prior_logp(self, z):
 
-        print("sde_lib.py: VPSDE.prior_logp()", flush = True)
+        print("sde_lib.py: VPSDE.prior_logp()")
 
         shape = z.shape
         N = np.prod(shape[1:])
@@ -266,7 +266,7 @@ class VPSDE(SDE):
     def discretize(self, x, t):
         """DDPM discretization."""
 
-        print("sde_lib.py: VPSDE.discretize()", flush = True)
+        print("sde_lib.py: VPSDE.discretize()")
 
         timestep = (t * (self.N - 1) / self.T).long()
         beta = self.discrete_betas.to(x.device)[timestep]

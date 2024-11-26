@@ -53,7 +53,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
         last_epoch: int = -1,
     ):
 
-        print("scheduler.py: CosineAnnealingWarmupRestarts.__init__()", flush = True)
+        print("scheduler.py: CosineAnnealingWarmupRestarts.__init__()")
 
         assert warmup_steps < first_cycle_steps
 
@@ -76,7 +76,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
 
     def init_lr(self):
 
-        print("scheduler.py: CosineAnnealingWarmupRestarts.init_lr()", flush = True)
+        print("scheduler.py: CosineAnnealingWarmupRestarts.init_lr()")
 
         self.base_lrs = []
         for param_group in self.optimizer.param_groups:
@@ -85,7 +85,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
 
     def get_lr(self):
 
-        print("scheduler.py: CosineAnnealingWarmupRestarts.get_lr()", flush = True)
+        print("scheduler.py: CosineAnnealingWarmupRestarts.get_lr()")
 
         if self.step_in_cycle == -1:
             return self.base_lrs
@@ -113,7 +113,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
 
     def step(self, epoch=None):
 
-        print("scheduler.py: CosineAnnealingWarmupRestarts.step()", flush = True)
+        print("scheduler.py: CosineAnnealingWarmupRestarts.step()")
 
         if epoch is None:
             epoch = self.last_epoch + 1

@@ -23,7 +23,7 @@ class TrainCalQLAgent(TrainAgent):
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        print("train_calql_agent.py: TrainCalQLAgent.__init__()", flush = True)
+        print("train_calql_agent.py: TrainCalQLAgent.__init__()")
 
         assert self.n_envs == 1, "Cal-QL only supports single env for now"
 
@@ -105,7 +105,7 @@ class TrainCalQLAgent(TrainAgent):
 
     def run(self):
 
-        print("train_calql_agent.py: TrainCalQLAgent.run()", flush = True)
+        print("train_calql_agent.py: TrainCalQLAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

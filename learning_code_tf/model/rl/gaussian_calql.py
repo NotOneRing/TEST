@@ -28,7 +28,7 @@ class CalQL_Gaussian(GaussianModel):
         **kwargs,
     ):
 
-        print("gaussian_calql.py: CalQL_Gaussian.__init__()", flush = True)
+        print("gaussian_calql.py: CalQL_Gaussian.__init__()")
 
         super().__init__(network=actor, network_path=None, **kwargs)
         self.cql_clip_diff_min = cql_clip_diff_min
@@ -68,7 +68,7 @@ class CalQL_Gaussian(GaussianModel):
         gamma,
     ):
 
-        print("gaussian_calql.py: CalQL_Gaussian.loss_critic()", flush = True)
+        print("gaussian_calql.py: CalQL_Gaussian.loss_critic()")
 
         B = len(actions)
 
@@ -178,7 +178,7 @@ class CalQL_Gaussian(GaussianModel):
 
     def loss_actor(self, obs, alpha):
 
-        print("gaussian_calql.py: CalQL_Gaussian.loss_actor()", flush = True)
+        print("gaussian_calql.py: CalQL_Gaussian.loss_actor()")
 
         action, logprob = self.forward(
             obs,
@@ -192,7 +192,7 @@ class CalQL_Gaussian(GaussianModel):
 
     def loss_temperature(self, obs, alpha, target_entropy):
 
-        print("gaussian_calql.py: CalQL_Gaussian.loss_temperature()", flush = True)
+        print("gaussian_calql.py: CalQL_Gaussian.loss_temperature()")
 
         with torch.no_grad():
             _, logprob = self.forward(
@@ -205,7 +205,7 @@ class CalQL_Gaussian(GaussianModel):
 
     def update_target_critic(self, tau):
 
-        print("gaussian_calql.py: CalQL_Gaussian.update_target_critic()", flush = True)
+        print("gaussian_calql.py: CalQL_Gaussian.update_target_critic()")
 
         for target_param, param in zip(
             self.target_critic.parameters(), self.critic.parameters()

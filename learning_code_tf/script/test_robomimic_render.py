@@ -11,7 +11,7 @@ import robosuite as suite
 os.environ["MUJOCO_GL"] = "egl"
 if __name__ == "__main__":
 
-    print("test_robomimic_render.py: main()", flush = True)
+    print("test_robomimic_render.py: main()")
 
     env = suite.make(
         env_name="TwoArmTransport",

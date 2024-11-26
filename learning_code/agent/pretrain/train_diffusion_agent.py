@@ -26,26 +26,30 @@ class TrainDiffusionAgent(PreTrainAgent):
         self.epoch = 1
         cnt_batch = 0
 
-        print("self.n_epochs = ", self.n_epochs)
+        print("self.n_epochs = ", self.n_epochs, flush = True)
 
         # for _ in range(self.n_epochs):
         for epoch_index in range(self.n_epochs):
 
-            print("epoch = ", epoch_index)
+            print("epoch = ", epoch_index, flush = True)
+            # print("epoch = ", epoch_index, flush = True)
 
             # print("type(self.dataloader_train) = ", type(self.dataloader_train))
             # print("(self.dataloader_train).shape = ", (self.dataloader_train).shape)
+
+
+            print("Code version: debug 1", flush = True)
 
             # train
             loss_train_epoch = []
             for batch_train in self.dataloader_train:
 
-                # print("batch_train = ", batch_train)
+                print("batch_train = ", batch_train)
 
                 if self.dataset_train.device == "cpu":
                     batch_train = batch_to_device(batch_train)
 
-                print("self.model = ", self.model)
+                print("self.model = ", self.model, flush = True)
                 
                 # model.eval()  # train() is to change the model's mode
                 # print(model.training)  # False
@@ -53,9 +57,16 @@ class TrainDiffusionAgent(PreTrainAgent):
                 # print(model.training)  # True
                 # for example, in some cases, train is to open Dropout, eval is to close Dropout
 
+                # print("Batch train content:", batch_train, flush = True)
+
                 self.model.train()
 
+                print("before loss", flush = True)
+
                 loss_train = self.model.loss(*batch_train)
+
+                print("after loss", flush = True)
+                
 
                 # Following condition to start loss.backward()：
                 # 1.forward() with PyTorch Tensor

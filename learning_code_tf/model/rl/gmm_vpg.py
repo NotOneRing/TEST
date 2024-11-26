@@ -11,7 +11,7 @@ class VPG_GMM(GMMModel):
         **kwargs,
     ):
 
-        print("gmm_vpg.py: VPG_GMM.__init__()", flush = True)
+        print("gmm_vpg.py: VPG_GMM.__init__()")
 
         super().__init__(network=actor, **kwargs)
 
@@ -26,7 +26,7 @@ class VPG_GMM(GMMModel):
     @torch.no_grad()
     def forward(self, cond, deterministic=False):
 
-        print("gmm_vpg.py: VPG_GMM.forward()", flush = True)
+        print("gmm_vpg.py: VPG_GMM.forward()")
 
         return super().forward(
             cond=cond,
@@ -41,7 +41,7 @@ class VPG_GMM(GMMModel):
         actions,
     ):
 
-        print("gmm_vpg.py: VPG_GMM.get_logprobs()", flush = True)
+        print("gmm_vpg.py: VPG_GMM.get_logprobs()")
 
         B = len(actions)
         dist, entropy, std = self.forward_train(
@@ -53,6 +53,6 @@ class VPG_GMM(GMMModel):
 
     def loss(self, obs, chains, reward):
 
-        print("gmm_vpg.py: VPG_GMM.loss()", flush = True)
+        print("gmm_vpg.py: VPG_GMM.loss()")
 
         raise NotImplementedError

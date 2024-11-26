@@ -19,14 +19,14 @@ class AWR_Gaussian(RWR_Gaussian):
         **kwargs,
     ):
 
-        print("gaussian_awr.py: AWR_Gaussian.__init__()", flush = True)
+        print("gaussian_awr.py: AWR_Gaussian.__init__()")
 
         super().__init__(actor=actor, **kwargs)
         self.critic = critic.to(self.device)
 
     def loss_critic(self, obs, advantages):
 
-        print("gaussian_awr.py: AWR_Gaussian.loss_critic()", flush = True)
+        print("gaussian_awr.py: AWR_Gaussian.loss_critic()")
 
         # get advantage
         adv = self.critic(obs)

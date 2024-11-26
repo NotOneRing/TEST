@@ -23,7 +23,7 @@ class QSMDiffusion(RWRDiffusion):
         **kwargs,
     ):
 
-        print("diffusion_qsm.py: QSMDiffusion.__init__()", flush = True)
+        print("diffusion_qsm.py: QSMDiffusion.__init__()")
 
         super().__init__(network=actor, **kwargs)
         self.critic_q = critic.to(self.device)
@@ -38,7 +38,7 @@ class QSMDiffusion(RWRDiffusion):
 
     def loss_actor(self, obs, actions, q_grad_coeff):
 
-        print("diffusion_qsm.py: QSMDiffusion.loss_actor()", flush = True)
+        print("diffusion_qsm.py: QSMDiffusion.loss_actor()")
 
         x_start = actions
         device = x_start.device
@@ -70,7 +70,7 @@ class QSMDiffusion(RWRDiffusion):
 
     def loss_critic(self, obs, next_obs, actions, rewards, terminated, gamma):
 
-        print("diffusion_qsm.py: QSMDiffusion.loss_critic()", flush = True)
+        print("diffusion_qsm.py: QSMDiffusion.loss_critic()")
 
         # get current Q-function
         current_q1, current_q2 = self.critic_q(obs, actions)
@@ -104,7 +104,7 @@ class QSMDiffusion(RWRDiffusion):
 
     def update_target_critic(self, tau):
 
-        print("diffusion_qsm.py: QSMDiffusion.update_target_critic()", flush = True)
+        print("diffusion_qsm.py: QSMDiffusion.update_target_critic()")
 
         for target_param, source_param in zip(
             self.target_q.parameters(), self.critic_q.parameters()

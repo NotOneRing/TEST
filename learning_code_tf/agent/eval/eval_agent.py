@@ -18,7 +18,7 @@ class EvalAgent:
 
     def __init__(self, cfg):
 
-        print("eval_agent.py: EvalAgent.__init__()", flush = True)
+        print("eval_agent.py: EvalAgent.__init__()")
 
         super().__init__()
         self.cfg = cfg
@@ -90,12 +90,12 @@ class EvalAgent:
         ), "Need to set n_render > 0 if saving video"
 
     def run(self):
-        print("eval_agent.py: EvalAgent.run()", flush = True)
+        print("eval_agent.py: EvalAgent.run()")
         pass
 
     def reset_env_all(self, verbose=False, options_venv=None, **kwargs):
         
-        print("eval_agent.py: EvalAgent.reset_env_all()", flush = True)
+        print("eval_agent.py: EvalAgent.reset_env_all()")
 
         if options_venv is None:
             options_venv = [
@@ -117,7 +117,7 @@ class EvalAgent:
 
     def reset_env(self, env_ind, verbose=False):
 
-        print("eval_agent.py: EvalAgent.reset_env()", flush = True)
+        print("eval_agent.py: EvalAgent.reset_env()")
 
         task = {}
         obs = self.venv.reset_one_arg(env_ind=env_ind, options=task)

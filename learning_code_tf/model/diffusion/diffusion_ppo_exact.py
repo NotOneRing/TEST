@@ -39,7 +39,7 @@ class PPOExactDiffusion(VPGDiffusion):
         **kwargs,
     ):
 
-        print("diffusion_ppo_exact.py: PPOExactDiffusion.__init__()", flush = True)
+        print("diffusion_ppo_exact.py: PPOExactDiffusion.__init__()")
         
         super().__init__(**kwargs)
         self.sde = sde
@@ -72,7 +72,7 @@ class PPOExactDiffusion(VPGDiffusion):
         samples: (B x Ta x Da)
         """
 
-        print("diffusion_ppo_exact.py: PPOExactDiffusion.get_exact_logprobs()", flush = True)
+        print("diffusion_ppo_exact.py: PPOExactDiffusion.get_exact_logprobs()")
 
         return self.likelihood_fn(
             self.actor,
@@ -106,7 +106,7 @@ class PPOExactDiffusion(VPGDiffusion):
         oldlogprobs: (B, )
         """
 
-        print("diffusion_ppo_exact.py: PPOExactDiffusion.loss()", flush = True)
+        print("diffusion_ppo_exact.py: PPOExactDiffusion.loss()")
 
         # Get new logprobs for final x
         newlogprobs = self.get_exact_logprobs(obs, samples)

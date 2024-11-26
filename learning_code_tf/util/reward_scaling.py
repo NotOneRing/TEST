@@ -17,7 +17,7 @@ class RunningMeanStd:
         shape=(),  # unbatched shape of data, shape[0] is the batch size
     ):
 
-        print("reward_scaling.py: RunningMeanStd.__init__()", flush = True)
+        print("reward_scaling.py: RunningMeanStd.__init__()")
 
         super().__init__()
         self.mean = np.zeros(shape)
@@ -26,7 +26,7 @@ class RunningMeanStd:
 
     def update(self, x):
 
-        print("reward_scaling.py: RunningMeanStd.update()", flush = True)
+        print("reward_scaling.py: RunningMeanStd.update()")
 
         batch_mean = np.mean(x, axis=0)
         batch_var = np.var(x, axis=0)
@@ -35,7 +35,7 @@ class RunningMeanStd:
 
     def update_from_moments(self, batch_mean, batch_var, batch_count):
 
-        print("reward_scaling.py: RunningMeanStd.update_from_moments()", flush = True)
+        print("reward_scaling.py: RunningMeanStd.update_from_moments()")
 
         delta = batch_mean - self.mean
         tot_count = self.count + batch_count
@@ -59,7 +59,7 @@ class RunningRewardScaler:
 
     def __init__(self, num_envs, cliprew=10.0, gamma=0.99, epsilon=1e-8, per_env=False):
 
-        print("reward_scaling.py: RunningRewardScaler.__init__()", flush = True)
+        print("reward_scaling.py: RunningRewardScaler.__init__()")
 
         ret_rms_shape = (num_envs,) if per_env else ()
         self.ret_rms = RunningMeanStd(shape=ret_rms_shape)
@@ -71,7 +71,7 @@ class RunningRewardScaler:
 
     def __call__(self, reward, first):
 
-        print("reward_scaling.py: RunningRewardScaler.__call__()", flush = True)
+        print("reward_scaling.py: RunningRewardScaler.__call__()")
 
         rets = backward_discounted_sum(
             prevret=self.ret, reward=reward, first=first, gamma=self.gamma
@@ -82,7 +82,7 @@ class RunningRewardScaler:
 
     def transform(self, reward):
 
-        print("reward_scaling.py: RunningRewardScaler.transform()", flush = True)
+        print("reward_scaling.py: RunningRewardScaler.transform()")
 
         return np.clip(
             reward / np.sqrt(self.ret_rms.var + self.epsilon),
@@ -98,7 +98,7 @@ def backward_discounted_sum(
     gamma,  # discount
 ):
 
-    print("reward_scaling.py: backward_discounted_sum()", flush = True)
+    print("reward_scaling.py: backward_discounted_sum()")
 
     assert first.ndim == 2
     _, nstep = reward.shape

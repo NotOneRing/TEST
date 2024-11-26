@@ -10,7 +10,7 @@ import torch.nn as nn
 class SpatialEmb(nn.Module):
     def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout):
 
-        print("modules.py: SpatialEmb.__init__()", flush = True)
+        print("modules.py: SpatialEmb.__init__()")
 
         super().__init__()
 
@@ -30,13 +30,13 @@ class SpatialEmb(nn.Module):
 
     def extra_repr(self) -> str:
 
-        print("modules.py: SpatialEmb.extra_repr()", flush = True)
+        print("modules.py: SpatialEmb.extra_repr()")
 
         return f"weight: nn.Parameter ({self.weight.size()})"
 
     def forward(self, feat: torch.Tensor, prop: torch.Tensor):
 
-        print("modules.py: SpatialEmb.forward()", flush = True)
+        print("modules.py: SpatialEmb.forward()")
 
         feat = feat.transpose(1, 2)
 
@@ -53,13 +53,13 @@ class SpatialEmb(nn.Module):
 class RandomShiftsAug:
     def __init__(self, pad):
         
-        print("modules.py: RandomShiftsAug.__init__()", flush = True)
+        print("modules.py: RandomShiftsAug.__init__()")
 
         self.pad = pad
 
     def __call__(self, x):
 
-        print("modules.py: RandomShiftsAug.__call__()", flush = True)
+        print("modules.py: RandomShiftsAug.__call__()")
 
         n, c, h, w = x.size()
         assert h == w
@@ -87,7 +87,7 @@ class RandomShiftsAug:
 # test random shift
 if __name__ == "__main__":
 
-    print("modules.py: main()", flush = True)
+    print("modules.py: main()")
 
     from PIL import Image
     import requests

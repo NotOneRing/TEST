@@ -42,7 +42,7 @@ def td_values(
     :return: The TD estimates.
     """
 
-    print("train_awr_diffusion_agent.py: td_values()", flush = True)
+    print("train_awr_diffusion_agent.py: td_values()")
 
 
     sample_count = len(states)
@@ -70,7 +70,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
     def __init__(self, cfg):
 
-        print("train_awr_diffusion_agent.py: TrainAWRDiffusionAgent.__init__()", flush = True)
+        print("train_awr_diffusion_agent.py: TrainAWRDiffusionAgent.__init__()")
 
         super().__init__(cfg)
         self.logprob_batch_size = cfg.train.get("logprob_batch_size", 10000)
@@ -129,7 +129,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
     def run(self):
 
-        print("train_awr_diffusion_agent.py: TrainAWRDiffusionAgent.run()", flush = True)
+        print("train_awr_diffusion_agent.py: TrainAWRDiffusionAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

@@ -13,6 +13,7 @@ def cosine_beta_schedule(timesteps, s=0.008, dtype=torch.float32):
     """
 
     print("sampling.py: cosine_beta_schedule()", flush = True)
+    # print("sampling.py: cosine_beta_schedule()", flush = True)
 
     steps = timesteps + 1
     x = np.linspace(0, steps, steps)
@@ -26,10 +27,30 @@ def cosine_beta_schedule(timesteps, s=0.008, dtype=torch.float32):
 def extract(a, t, x_shape):
 
     print("sampling.py: extract()", flush = True)
+    # print("11111", flush=True)
+    # print("1a = ", a, flush=True)
+    # print("1type(a) = ", type(a), flush=True)
 
     b, *_ = t.shape
+    print("a = ", a, flush=True)
+    print("type(a) = ", type(a), flush=True)
+    print("a.shape = ", a.shape, flush=True)
+
+    print("t = ", t, flush=True)
+    print("type(t) = ", type(t), flush=True)
+    print("t.shape = ", t.shape, flush=True)
+
+    print("x_shape = ", x_shape, flush=True)
+    print("type(x_shape) = ", type(x_shape), flush=True)
+    # print("x_shape.shape = ", x_shape.shape, flush=True)
+
+
     out = a.gather(-1, t)
+    print("out = ", out, flush=True)
     return out.reshape(b, *((1,) * (len(x_shape) - 1)))
+
+
+
 
 
 def make_timesteps(batch_size, i, device):
@@ -38,3 +59,8 @@ def make_timesteps(batch_size, i, device):
 
     t = torch.full((batch_size,), i, device=device, dtype=torch.long)
     return t
+
+
+
+
+

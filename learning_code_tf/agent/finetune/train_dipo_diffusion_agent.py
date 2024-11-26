@@ -26,7 +26,7 @@ from util.scheduler import CosineAnnealingWarmupRestarts
 class TrainDIPODiffusionAgent(TrainAgent):
 
     def __init__(self, cfg):
-        print("train_dipo_diffusion_agent.py: TrainDIPODiffusionAgent.__init__()", flush = True)
+        print("train_dipo_diffusion_agent.py: TrainDIPODiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -89,7 +89,7 @@ class TrainDIPODiffusionAgent(TrainAgent):
         self.action_grad_norm = self.action_dim * self.act_steps * 0.1
 
     def run(self):
-        print("train_dipo_diffusion_agent.py: TrainDIPODiffusionAgent.run()", flush = True)
+        print("train_dipo_diffusion_agent.py: TrainDIPODiffusionAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

@@ -77,6 +77,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
     def init_lr(self):
 
         print("scheduler.py: CosineAnnealingWarmupRestarts.init_lr()", flush = True)
+        print("scheduler.py: CosineAnnealingWarmupRestarts.init_lr()", flush = True)
 
         self.base_lrs = []
         for param_group in self.optimizer.param_groups:

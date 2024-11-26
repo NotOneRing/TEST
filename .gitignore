@@ -331,3 +331,6 @@ learning_code_tf/*.out
 learning_code_tf/log_debug/
 
 learning_code/log_debug/
+
+
+*.pyc

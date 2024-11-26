@@ -11,14 +11,14 @@ import torch.nn as nn
 class LinearNormalizer(nn.Module):
     def __init__(self):
 
-        print("furniture_normalizer.py: LinearNormalizer.__init__()", flush = True)
+        print("furniture_normalizer.py: LinearNormalizer.__init__()")
 
         super().__init__()
         self.stats = nn.ParameterDict()
 
     def fit(self, data_dict):
 
-        print("furniture_normalizer.py: LinearNormalizer.fit()", flush = True)
+        print("furniture_normalizer.py: LinearNormalizer.fit()")
 
         for key, tensor in data_dict.items():
             min_value = tensor.min(dim=0)[0]
@@ -42,7 +42,7 @@ class LinearNormalizer(nn.Module):
 
     def _normalize(self, x, key):
 
-        print("furniture_normalizer.py: LinearNormalizer._normalize()", flush = True)
+        print("furniture_normalizer.py: LinearNormalizer._normalize()")
 
         stats = self.stats[key]
         x = (x - stats["min"]) / (stats["max"] - stats["min"])
@@ -51,7 +51,7 @@ class LinearNormalizer(nn.Module):
 
     def _denormalize(self, x, key):
 
-        print("furniture_normalizer.py: LinearNormalizer._denormalize()", flush = True)
+        print("furniture_normalizer.py: LinearNormalizer._denormalize()")
 
         stats = self.stats[key]
         x = (x + 1) / 2
@@ -60,7 +60,7 @@ class LinearNormalizer(nn.Module):
 
     def forward(self, x, key, forward=True):
 
-        print("furniture_normalizer.py: LinearNormalizer.forward()", flush = True)
+        print("furniture_normalizer.py: LinearNormalizer.forward()")
  
         if forward:
             return self._normalize(x, key)
@@ -69,7 +69,7 @@ class LinearNormalizer(nn.Module):
 
     def _turn_off_gradients(self):
 
-        print("furniture_normalizer.py: LinearNormalizer._turn_off_gradients()", flush = True)
+        print("furniture_normalizer.py: LinearNormalizer._turn_off_gradients()")
 
         for key in self.stats.keys():
             for stat in self.stats[key].keys():
@@ -77,7 +77,7 @@ class LinearNormalizer(nn.Module):
 
     def load_state_dict(self, state_dict):
 
-        print("furniture_normalizer.py: LinearNormalizer.load_state_dict()", flush = True)
+        print("furniture_normalizer.py: LinearNormalizer.load_state_dict()")
 
         stats = nn.ParameterDict()
         for key, value in state_dict.items():
@@ -98,6 +98,6 @@ class LinearNormalizer(nn.Module):
 
     def keys(self):
 
-        print("furniture_normalizer.py: LinearNormalizer.keys()", flush = True)
+        print("furniture_normalizer.py: LinearNormalizer.keys()")
 
         return self.stats.keys()

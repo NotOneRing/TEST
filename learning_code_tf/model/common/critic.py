@@ -25,7 +25,7 @@ class CriticObs(torch.nn.Module):
         **kwargs,
     ):
 
-        print("critic.py: CriticObs.__init__()", flush = True)
+        print("critic.py: CriticObs.__init__()")
 
         super().__init__()
         mlp_dims = [cond_dim] + mlp_dims + [1]
@@ -47,7 +47,7 @@ class CriticObs(torch.nn.Module):
             or (B, num_feature) from ViT encoder
         """
 
-        print("critic.py: CriticObs.forward()", flush = True)
+        print("critic.py: CriticObs.forward()")
 
         if isinstance(cond, dict):
             B = len(cond["state"])
@@ -76,7 +76,7 @@ class CriticObsAct(torch.nn.Module):
         **kwargs,
     ):
 
-        print("critic.py: CriticObsAct.__init__()", flush = True)
+        print("critic.py: CriticObsAct.__init__()")
 
         super().__init__()
         mlp_dims = [cond_dim + action_dim * action_steps] + mlp_dims + [1]
@@ -105,7 +105,7 @@ class CriticObsAct(torch.nn.Module):
         action: (B, Ta, Da)
         """
 
-        print("critic.py: CriticObsAct.forward()", flush = True)
+        print("critic.py: CriticObsAct.forward()")
 
         B = len(cond["state"])
 
@@ -140,7 +140,7 @@ class ViTCritic(CriticObs):
         **kwargs,
     ):
 
-        print("critic.py: ViTCritic.__init__()", flush = True)
+        print("critic.py: ViTCritic.__init__()")
 
         # update input dim to mlp
         mlp_obs_dim = spatial_emb * num_img + cond_dim
@@ -183,7 +183,7 @@ class ViTCritic(CriticObs):
         TODO long term: more flexible handling of cond
         """
 
-        print("critic.py: ViTCritic.forward()", flush = True)
+        print("critic.py: ViTCritic.forward()")
 
         B, T_rgb, C, H, W = cond["rgb"].shape
 

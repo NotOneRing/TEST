@@ -50,7 +50,7 @@ class MLP(models.Model):
         use_drop_final=False,
         verbose=False,
     ):
-        print("mlp.py: MLP.__init__()", flush=True)
+        print("mlp.py: MLP.__init__()")
 
         super(MLP, self).__init__()
 
@@ -86,7 +86,7 @@ class MLP(models.Model):
             logging.info(self.moduleList)
 
     def call(self, x, append=None):
-        print("mlp.py: MLP.call()", flush=True)
+        print("mlp.py: MLP.call()")
 
         for layer_ind, m in enumerate(self.moduleList):
             if append is not None and layer_ind in self.append_layers:
@@ -106,21 +106,21 @@ class ResidualMLP(models.Model):
         use_layernorm_final=False,
         dropout=0,
     ):
-        print("mlp.py: ResidualMLP.__init__()", flush=True)
+        print("mlp.py: ResidualMLP.__init__()")
 
         super(ResidualMLP, self).__init__()
 
-        print("after super()", flush=True)
+        print("after super()")
 
         hidden_dim = dim_list[1]
         num_hidden_layers = len(dim_list) - 3
         assert num_hidden_layers % 2 == 0
 
-        print("after dim", flush=True)
+        print("after dim")
 
         self.cur_layers = [tf.keras.layers.Dense(hidden_dim)]
 
-        print("after layers", flush=True)
+        print("after layers")
 
         self.cur_layers.extend(
             [
@@ -134,24 +134,24 @@ class ResidualMLP(models.Model):
             ]
         )
 
-        print("after layers.extend()", flush=True)
+        print("after layers.extend()")
 
         self.cur_layers.append(tf.keras.layers.Dense(dim_list[-1]))
 
-        print("after append()", flush=True)
+        print("after append()")
 
         if use_layernorm_final:
             self.cur_layers.append(tf.keras.layers.LayerNormalization())
 
-        print("after use_layernorm_final", flush=True)
+        print("after use_layernorm_final")
 
         self.cur_layers.append(activation_dict[out_activation_type])
 
-        print("after append()", flush=True)
+        print("after append()")
 
 
     def call(self, x):
-        print("mlp.py: ResidualMLP.call()", flush=True)
+        print("mlp.py: ResidualMLP.call()")
 
         for cur_layers in self.cur_layers:
             x = cur_layers(x)
@@ -166,7 +166,7 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         use_layernorm=False,
         dropout=0,
     ):
-        print("mlp.py: TwoLayerPreActivationResNetLinear.__init__()", flush=True)
+        print("mlp.py: TwoLayerPreActivationResNetLinear.__init__()")
 
         super().__init__()
         self.l1 = tf.keras.layers.Dense(hidden_dim)
@@ -180,7 +180,7 @@ class TwoLayerPreActivationResNetLinear(models.Model):
             raise NotImplementedError("Dropout not implemented for residual MLP!")
 
     def call(self, x):
-        print("mlp.py: TwoLayerPreActivationResNetLinear.call()", flush=True)
+        print("mlp.py: TwoLayerPreActivationResNetLinear.call()")
 
         x_input = x
         if hasattr(self, "norm1"):

@@ -18,7 +18,7 @@ env = make_("avoiding-v0", render=True)
 env.reset()
 print(env.action_space)
 
-print("test_d3il_render.py", flush = True)
+print("test_d3il_render.py")
 
 # video_writer = imageio.get_writer("test_d3il.mp4", fps=30)
 while 1:

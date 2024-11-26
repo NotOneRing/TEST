@@ -25,7 +25,7 @@ class DIPODiffusion(DiffusionModel):
         **kwargs,
     ):
 
-        print("diffusion_dipo.py: DIPODiffusion.__init__()", flush = True)
+        print("diffusion_dipo.py: DIPODiffusion.__init__()")
 
         super().__init__(network=actor, use_ddim=use_ddim, **kwargs)
         assert not self.use_ddim, "DQL does not support DDIM"
@@ -47,7 +47,7 @@ class DIPODiffusion(DiffusionModel):
 
     def loss_critic(self, obs, next_obs, actions, rewards, terminated, gamma):
 
-        print("diffusion_dipo.py: DIPODiffusion.loss_critic()", flush = True)
+        print("diffusion_dipo.py: DIPODiffusion.loss_critic()")
 
         # get current Q-function
         current_q1, current_q2 = self.critic(obs, actions)
@@ -80,7 +80,7 @@ class DIPODiffusion(DiffusionModel):
 
     def update_target_critic(self, tau):
 
-        print("diffusion_dipo.py: DIPODiffusion.update_target_critic()", flush = True)
+        print("diffusion_dipo.py: DIPODiffusion.update_target_critic()")
 
         for target_param, source_param in zip(
             self.critic_target.parameters(), self.critic.parameters()
@@ -91,7 +91,7 @@ class DIPODiffusion(DiffusionModel):
 
     def update_target_actor(self, tau):
 
-        print("diffusion_dipo.py: DIPODiffusion.update_target_actor()", flush = True)
+        print("diffusion_dipo.py: DIPODiffusion.update_target_actor()")
 
         for target_param, source_param in zip(
             self.actor_target.parameters(), self.actor.parameters()
@@ -111,7 +111,7 @@ class DIPODiffusion(DiffusionModel):
     ):
         """Use target actor"""
 
-        print("diffusion_dipo.py: DIPODiffusion.forward()", flush = True)
+        print("diffusion_dipo.py: DIPODiffusion.forward()")
 
         device = self.betas.device
         B = len(cond["state"])

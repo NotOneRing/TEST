@@ -21,7 +21,7 @@ class GMMModel(torch.nn.Module):
         **kwargs,
     ):
 
-        print("gmm.py: GMMModel.__init__()", flush = True)
+        print("gmm.py: GMMModel.__init__()")
 
         super().__init__()
         self.device = device
@@ -47,7 +47,7 @@ class GMMModel(torch.nn.Module):
         **kwargs,
     ):
 
-        print("gmm.py: GMMModel.loss()", flush = True)
+        print("gmm.py: GMMModel.loss()")
 
         B = len(true_action)
         dist, entropy, _ = self.forward_train(
@@ -68,7 +68,7 @@ class GMMModel(torch.nn.Module):
         Calls the MLP to compute the mean, scale, and logits of the GMM. Returns the torch.Distribution object.
         """
 
-        print("gmm.py: GMMModel.forward_train()", flush = True)
+        print("gmm.py: GMMModel.forward_train()")
 
         means, scales, logits = self.network(cond)
         if deterministic:
@@ -96,7 +96,7 @@ class GMMModel(torch.nn.Module):
 
     def forward(self, cond, deterministic=False):
 
-        print("gmm.py: GMMModel.forward()", flush = True)
+        print("gmm.py: GMMModel.forward()")
 
         B = len(cond["state"]) if "state" in cond else len(cond["rgb"])
         T = self.horizon_steps

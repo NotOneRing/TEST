@@ -43,7 +43,7 @@ def get_likelihood_fn(
         the latent code, and the number of function evaluations cost by computation.
     """
 
-    print("exact_likelihood.py: get_likelihood_fn()", flush = True)
+    print("exact_likelihood.py: get_likelihood_fn()")
 
 
     def drift_fn(
@@ -54,7 +54,7 @@ def get_likelihood_fn(
     ):
         """The drift function of the reverse-time SDE."""
 
-        print("exact_likelihood.py: drift_fn()", flush = True)
+        print("exact_likelihood.py: drift_fn()")
 
         score_fn = get_score_fn(
             sde,
@@ -76,7 +76,7 @@ def get_likelihood_fn(
         **kwargs,
     ):
 
-        print("exact_likelihood.py: div_fn()", flush = True)
+        print("exact_likelihood.py: div_fn()")
 
         with torch.enable_grad():
             x.requires_grad_(True)
@@ -110,7 +110,7 @@ def get_likelihood_fn(
             logprob: (B,)
         """
 
-        print("exact_likelihood.py: likelihood_fn()", flush = True)
+        print("exact_likelihood.py: likelihood_fn()")
 
         shape = data.shape
         B, H, A = shape
@@ -137,7 +137,7 @@ def get_likelihood_fn(
 
         def ode_func(t, x):
 
-            print("exact_likelihood.py: ode_func()", flush = True)
+            print("exact_likelihood.py: ode_func()")
 
             x = x[:, :-1]
             vec_t = torch.full(

@@ -37,7 +37,7 @@ class Gaussian_VisionMLP(nn.Module):
         augment=False,
     ):
 
-        print("mlp_gaussian.py: Gaussian_VisionMLP.__init__()", flush = True)
+        print("mlp_gaussian.py: Gaussian_VisionMLP.__init__()")
 
         super().__init__()
 
@@ -115,7 +115,7 @@ class Gaussian_VisionMLP(nn.Module):
 
     def forward(self, cond):
 
-        print("mlp_gaussian.py: Gaussian_VisionMLP.forward()", flush = True)
+        print("mlp_gaussian.py: Gaussian_VisionMLP.forward()")
 
         B = len(cond["rgb"])
         device = cond["rgb"].device
@@ -202,7 +202,7 @@ class Gaussian_MLP(nn.Module):
         std_max=1,
     ):
 
-        print("mlp_gaussian.py: Gaussian_MLP.__init__()", flush = True)
+        print("mlp_gaussian.py: Gaussian_MLP.__init__()")
 
         super().__init__()
         self.action_dim = action_dim
@@ -259,7 +259,7 @@ class Gaussian_MLP(nn.Module):
 
     def forward(self, cond):
 
-        print("mlp_gaussian.py: Gaussian_MLP.forward()", flush = True)
+        print("mlp_gaussian.py: Gaussian_MLP.forward()")
 
         B = len(cond["state"])
         device = cond["state"].device

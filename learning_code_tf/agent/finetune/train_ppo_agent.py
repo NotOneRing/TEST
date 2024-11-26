@@ -17,7 +17,7 @@ class TrainPPOAgent(TrainAgent):
 
     def __init__(self, cfg):
 
-        print("train_ppo_agent.py: TrainPPOAgent.run()", flush = True)
+        print("train_ppo_agent.py: TrainPPOAgent.run()")
 
         super().__init__(cfg)
 
@@ -92,7 +92,7 @@ class TrainPPOAgent(TrainAgent):
         self.bc_loss_coeff: float = cfg.train.get("bc_loss_coeff", 0)
 
     def reset_actor_optimizer(self):
-        print("train_ppo_agent.py: TrainPPOAgent.reset_actor_optimizer()", flush = True)
+        print("train_ppo_agent.py: TrainPPOAgent.reset_actor_optimizer()")
 
         """Not used anywhere currently"""
         new_optimizer = torch.optim.AdamW(

@@ -18,7 +18,7 @@ class VPG_Gaussian(GaussianModel):
         **kwargs,
     ):
 
-        print("gaussian_vpg.py: VPG_Gaussian.__init__()", flush = True)
+        print("gaussian_vpg.py: VPG_Gaussian.__init__()")
 
         super().__init__(network=actor, **kwargs)
 
@@ -43,7 +43,7 @@ class VPG_Gaussian(GaussianModel):
         use_base_policy=False,
     ):
 
-        print("gaussian_vpg.py: VPG_Gaussian.forward()", flush = True)
+        print("gaussian_vpg.py: VPG_Gaussian.forward()")
 
         return super().forward(
             cond=cond,
@@ -60,7 +60,7 @@ class VPG_Gaussian(GaussianModel):
         use_base_policy=False,
     ):
 
-        print("gaussian_vpg.py: VPG_Gaussian.get_logprobs()", flush = True)
+        print("gaussian_vpg.py: VPG_Gaussian.get_logprobs()")
 
         B = len(actions)
         dist = self.forward_train(
@@ -76,6 +76,6 @@ class VPG_Gaussian(GaussianModel):
 
     def loss(self, obs, actions, reward):
 
-        print("gaussian_vpg.py: VPG_Gaussian.loss()", flush = True)
+        print("gaussian_vpg.py: VPG_Gaussian.loss()")
 
         raise NotImplementedError

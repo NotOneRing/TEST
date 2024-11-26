@@ -12,7 +12,7 @@ from functools import partial
 class TrajPlotter:
 
     def __init__(self, env_type, **kwargs):
-        print("plot_traj.py: TrajPlotter.__init__()", flush = True)
+        print("plot_traj.py: TrajPlotter.__init__()")
 
         if env_type == "toy":
             self.save_traj = save_toy_traj
@@ -22,14 +22,14 @@ class TrajPlotter:
             self.save_traj = dummy
 
     def __call__(self, **kwargs):
-        print("plot_traj.py: TrajPlotter.__call__()", flush = True)
+        print("plot_traj.py: TrajPlotter.__call__()")
 
         self.save_traj(**kwargs)
 
 
 def dummy(*args, **kwargs):
 
-    print("plot_traj.py: dummy()", flush = True)
+    print("plot_traj.py: dummy()")
 
     pass
 
@@ -43,7 +43,7 @@ def save_avoid_traj(
     normalization_path,
 ):
 
-    print("plot_traj.py: save_avoid_traj()", flush = True)
+    print("plot_traj.py: save_avoid_traj()")
     
     normalization = np.load(normalization_path)
     obs_min = normalization["obs_min"]
@@ -53,14 +53,14 @@ def save_avoid_traj(
     # action_max = normalization['action_max']
     def unnormalize_obs(obs):
 
-        print("plot_traj.py: unnormalize_obs()", flush = True)
+        print("plot_traj.py: unnormalize_obs()")
 
         obs = (obs + 1) / 2  # [-1, 1] -> [0, 1]
         return obs * (obs_max - obs_min) + obs_min
 
     def get_obj_xy_list():
 
-        print("plot_traj.py: get_obj_xy_list()", flush = True)
+        print("plot_traj.py: get_obj_xy_list()")
 
         mid_pos = 0.5
         offset = 0.075
@@ -131,7 +131,7 @@ def save_toy_traj(
     itr,
 ):
 
-    print("plot_traj.py: save_toy_traj()", flush = True)
+    print("plot_traj.py: save_toy_traj()")
 
     chosen_i = np.random.choice(
         range(obs_full_trajs.shape[1]),

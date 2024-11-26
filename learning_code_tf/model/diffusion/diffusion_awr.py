@@ -20,7 +20,7 @@ class AWRDiffusion(RWRDiffusion):
         **kwargs,
     ):
 
-        print("diffusion_awr.py: AWRDiffusion.__init__()", flush = True)
+        print("diffusion_awr.py: AWRDiffusion.__init__()")
 
         super().__init__(network=actor, **kwargs)
         self.critic = critic.to(self.device)
@@ -30,7 +30,7 @@ class AWRDiffusion(RWRDiffusion):
 
     def loss_critic(self, obs, advantages):
 
-        print("diffusion_awr.py: AWRDiffusion.loss_critic()", flush = True)
+        print("diffusion_awr.py: AWRDiffusion.loss_critic()")
 
         # get advantage
         adv = self.critic(obs)

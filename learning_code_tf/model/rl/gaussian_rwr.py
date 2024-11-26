@@ -19,7 +19,7 @@ class RWR_Gaussian(GaussianModel):
         **kwargs,
     ):
 
-        print("gaussian_rwr.py: RWR_Gaussian.__init__()", flush = True)
+        print("gaussian_rwr.py: RWR_Gaussian.__init__()")
 
         super().__init__(network=actor, **kwargs)
 
@@ -29,7 +29,7 @@ class RWR_Gaussian(GaussianModel):
     # override
     def loss(self, actions, obs, reward_weights):
 
-        print("gaussian_rwr.py: RWR_Gaussian.loss()", flush = True)
+        print("gaussian_rwr.py: RWR_Gaussian.loss()")
 
         B = len(obs)
         means, scales = self.network(obs)
@@ -44,7 +44,7 @@ class RWR_Gaussian(GaussianModel):
     @torch.no_grad()
     def forward(self, cond, deterministic=False, **kwargs):
 
-        print("gaussian_rwr.py: RWR_Gaussian.forward()", flush = True)
+        print("gaussian_rwr.py: RWR_Gaussian.forward()")
 
         actions = super().forward(
             cond=cond,

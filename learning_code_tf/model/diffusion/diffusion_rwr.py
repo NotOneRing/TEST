@@ -24,7 +24,7 @@ class RWRDiffusion(DiffusionModel):
         **kwargs,
     ):
 
-        print("diffusion_rwr.py: RWRDiffusion.__init__()", flush = True)
+        print("diffusion_rwr.py: RWRDiffusion.__init__()")
 
         super().__init__(use_ddim=use_ddim, **kwargs)
         assert not self.use_ddim, "RWR does not support DDIM"
@@ -44,7 +44,7 @@ class RWRDiffusion(DiffusionModel):
     ):
         """reward-weighted"""
 
-        print("diffusion_rwr.py: RWRDiffusion.p_losses()", flush = True)
+        print("diffusion_rwr.py: RWRDiffusion.p_losses()")
 
         device = x_start.device
 
@@ -75,7 +75,7 @@ class RWRDiffusion(DiffusionModel):
     ):
         """Modifying denoising schedule"""
 
-        print("diffusion_rwr.py: RWRDiffusion.forward()", flush = True)
+        print("diffusion_rwr.py: RWRDiffusion.forward()")
 
         device = self.betas.device
         B = len(cond["state"])

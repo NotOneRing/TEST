@@ -17,7 +17,7 @@ from model.diffusion.diffusion_rwr import RWRDiffusion
 
 def expectile_loss(diff, expectile=0.8):
 
-    print("diffusion_idql.py: expectile_loss()", flush = True)
+    print("diffusion_idql.py: expectile_loss()")
 
     weight = torch.where(diff > 0, expectile, (1 - expectile))
     return weight * (diff**2)
@@ -33,7 +33,7 @@ class IDQLDiffusion(RWRDiffusion):
         **kwargs,
     ):
 
-        print("diffusion_idql.py: IDQLDiffusion.__init__()", flush = True)
+        print("diffusion_idql.py: IDQLDiffusion.__init__()")
 
         super().__init__(network=actor, **kwargs)
         self.critic_q = critic_q.to(self.device)
@@ -47,7 +47,7 @@ class IDQLDiffusion(RWRDiffusion):
 
     def compute_advantages(self, obs, actions):
 
-        print("diffusion_idql.py: IDQLDiffusion.compute_advantages()", flush = True)
+        print("diffusion_idql.py: IDQLDiffusion.compute_advantages()")
 
         # get current Q-function, stop gradient
         with torch.no_grad():
@@ -63,7 +63,7 @@ class IDQLDiffusion(RWRDiffusion):
 
     def loss_critic_v(self, obs, actions):
 
-        print("diffusion_idql.py: IDQLDiffusion.loss_critic_v()", flush = True)
+        print("diffusion_idql.py: IDQLDiffusion.loss_critic_v()")
 
         adv = self.compute_advantages(obs, actions)
 
@@ -73,7 +73,7 @@ class IDQLDiffusion(RWRDiffusion):
 
     def loss_critic_q(self, obs, next_obs, actions, rewards, terminated, gamma):
 
-        print("diffusion_idql.py: IDQLDiffusion.loss_critic_q()", flush = True)
+        print("diffusion_idql.py: IDQLDiffusion.loss_critic_q()")
 
         # get current Q-function
         current_q1, current_q2 = self.critic_q(obs, actions)
@@ -101,7 +101,7 @@ class IDQLDiffusion(RWRDiffusion):
 
     def update_target_critic(self, tau):
 
-        print("diffusion_idql.py: IDQLDiffusion.update_target_critic()", flush = True)
+        print("diffusion_idql.py: IDQLDiffusion.update_target_critic()")
 
         for target_param, source_param in zip(
             self.target_q.parameters(), self.critic_q.parameters()
@@ -119,7 +119,7 @@ class IDQLDiffusion(RWRDiffusion):
     ):
         """not reward-weighted, same as diffusion.py"""
 
-        print("diffusion_idql.py: IDQLDiffusion.p_losses()", flush = True)
+        print("diffusion_idql.py: IDQLDiffusion.p_losses()")
 
         device = x_start.device
 
@@ -151,7 +151,7 @@ class IDQLDiffusion(RWRDiffusion):
     ):
         """assume state-only, no rgb in cond"""
 
-        print("diffusion_idql.py: IDQLDiffusion.forward()", flush = True)
+        print("diffusion_idql.py: IDQLDiffusion.forward()")
 
         # repeat obs num_sample times along dim 0
         cond_shape_repeat_dims = tuple(1 for _ in cond["state"].shape)

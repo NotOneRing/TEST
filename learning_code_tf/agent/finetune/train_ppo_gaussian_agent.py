@@ -21,12 +21,12 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
 
     def __init__(self, cfg):
 
-        print("train_ppo_gaussian_agent.py: TrainPPOGaussianAgent.__init__()", flush = True)
+        print("train_ppo_gaussian_agent.py: TrainPPOGaussianAgent.__init__()")
 
         super().__init__(cfg)
 
     def run(self):
-        print("train_ppo_gaussian_agent.py: TrainPPOGaussianAgent.run()", flush = True)
+        print("train_ppo_gaussian_agent.py: TrainPPOGaussianAgent.run()")
 
         # Start training loop
         timer = Timer()

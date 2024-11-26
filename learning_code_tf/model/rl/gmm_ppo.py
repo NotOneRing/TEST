@@ -26,7 +26,7 @@ class PPO_GMM(VPG_GMM):
         **kwargs,
     ):
 
-        print("gmm_ppo.py: PPO_GMM.__init__()", flush = True)
+        print("gmm_ppo.py: PPO_GMM.__init__()")
 
         super().__init__(**kwargs)
 
@@ -62,7 +62,7 @@ class PPO_GMM(VPG_GMM):
         oldlogprobs: (B, )
         """
 
-        print("gmm_ppo.py: PPO_GMM.loss()", flush = True)
+        print("gmm_ppo.py: PPO_GMM.loss()")
 
         newlogprobs, entropy, std = self.get_logprobs(obs, actions)
         newlogprobs = newlogprobs.clamp(min=-5, max=2)

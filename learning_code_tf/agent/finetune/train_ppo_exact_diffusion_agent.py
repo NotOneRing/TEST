@@ -22,7 +22,7 @@ from agent.finetune.train_ppo_diffusion_agent import TrainPPODiffusionAgent
 class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
 
     def __init__(self, cfg):
-        print("train_ppo_exact_diffusion_agent.py: TrainPPOExactDiffusionAgent.__init__()", flush = True)
+        print("train_ppo_exact_diffusion_agent.py: TrainPPOExactDiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -31,7 +31,7 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
         For exact likelihood, we do not need to save the chains.
         """
 
-        print("train_ppo_exact_diffusion_agent.py: TrainPPOExactDiffusionAgent.run()", flush = True)
+        print("train_ppo_exact_diffusion_agent.py: TrainPPOExactDiffusionAgent.run()")
 
         # Start training loop
         timer = Timer()

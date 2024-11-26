@@ -26,7 +26,7 @@ class GMM_MLP(nn.Module):
         std_max=1,
     ):
 
-        print("mlp_gmm.py: GMM_MLP.__init__()", flush = True)
+        print("mlp_gmm.py: GMM_MLP.__init__()")
 
         super().__init__()
         self.action_dim = action_dim
@@ -82,7 +82,7 @@ class GMM_MLP(nn.Module):
 
     def forward(self, cond):
 
-        print("mlp_gmm.py: GMM_MLP.forward()", flush = True)
+        print("mlp_gmm.py: GMM_MLP.forward()")
 
         B = len(cond["state"])
         device = cond["state"].device

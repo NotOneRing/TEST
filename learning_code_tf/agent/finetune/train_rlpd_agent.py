@@ -21,7 +21,7 @@ from util.scheduler import CosineAnnealingWarmupRestarts
 
 class TrainRLPDAgent(TrainAgent):
     def __init__(self, cfg):
-        print("train_rlpd_agent.py: TrainRLPDAgent.__init__()", flush = True)
+        print("train_rlpd_agent.py: TrainRLPDAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -90,7 +90,7 @@ class TrainRLPDAgent(TrainAgent):
         )
 
     def run(self):
-        print("train_rlpd_agent.py: TrainRLPDAgent.run()", flush = True)
+        print("train_rlpd_agent.py: TrainRLPDAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

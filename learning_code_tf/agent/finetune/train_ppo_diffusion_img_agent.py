@@ -21,7 +21,7 @@ from model.common.modules import RandomShiftsAug
 class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
 
     def __init__(self, cfg):
-        print("train_ppo_diffusion_img_agent.py: TrainPPOImgDiffusionAgent.__init__()", flush = True)
+        print("train_ppo_diffusion_img_agent.py: TrainPPOImgDiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -38,7 +38,7 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
         self.grad_accumulate = cfg.train.grad_accumulate
 
     def run(self):
-        print("train_ppo_diffusion_img_agent.py: TrainPPOImgDiffusionAgent.run()", flush = True)
+        print("train_ppo_diffusion_img_agent.py: TrainPPOImgDiffusionAgent.run()")
 
         # Start training loop
         timer = Timer()

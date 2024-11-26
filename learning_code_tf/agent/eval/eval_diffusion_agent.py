@@ -16,12 +16,12 @@ from agent.eval.eval_agent import EvalAgent
 class EvalDiffusionAgent(EvalAgent):
 
     def __init__(self, cfg):
-        print("eval_diffusion_agent.py: EvalDiffusionAgent.__init__()", flush = True)
+        print("eval_diffusion_agent.py: EvalDiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
     def run(self):
-        print("eval_diffusion_agent.py: EvalDiffusionAgent.run()", flush = True)
+        print("eval_diffusion_agent.py: EvalDiffusionAgent.run()")
 
         # Start training loop
         timer = Timer()

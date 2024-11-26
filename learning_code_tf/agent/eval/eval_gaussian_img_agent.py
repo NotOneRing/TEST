@@ -17,7 +17,7 @@ class EvalImgGaussianAgent(EvalAgent):
 
     def __init__(self, cfg):
 
-        print("eval_gaussian_img_agent.py: EvalImgGaussianAgent.__init__()", flush = True)
+        print("eval_gaussian_img_agent.py: EvalImgGaussianAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -27,7 +27,7 @@ class EvalImgGaussianAgent(EvalAgent):
 
     def run(self):
 
-        print("eval_gaussian_img_agent.py: EvalImgGaussianAgent.run()", flush = True)
+        print("eval_gaussian_img_agent.py: EvalImgGaussianAgent.run()")
 
         # Start training loop
         timer = Timer()

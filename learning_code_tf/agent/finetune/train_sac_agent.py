@@ -19,7 +19,7 @@ from agent.finetune.train_agent import TrainAgent
 
 class TrainSACAgent(TrainAgent):
     def __init__(self, cfg):
-        print("train_sac_agent.py: TrainSACAgent.__init__()", flush = True)
+        print("train_sac_agent.py: TrainSACAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -71,7 +71,7 @@ class TrainSACAgent(TrainAgent):
 
     def run(self):
 
-        print("train_sac_agent.py: TrainSACAgent.run()", flush = True)
+        print("train_sac_agent.py: TrainSACAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

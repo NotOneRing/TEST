@@ -21,7 +21,7 @@ class SAC_Gaussian(GaussianModel):
         **kwargs,
     ):
 
-        print("gaussian_sac.py: SAC_Gaussian.__init__()", flush = True)
+        print("gaussian_sac.py: SAC_Gaussian.__init__()")
 
         super().__init__(network=actor, **kwargs)
 
@@ -42,7 +42,7 @@ class SAC_Gaussian(GaussianModel):
         alpha,
     ):
 
-        print("gaussian_sac.py: SAC_Gaussian.loss_critic()", flush = True)
+        print("gaussian_sac.py: SAC_Gaussian.loss_critic()")
 
         with torch.no_grad():
             next_actions, next_logprobs = self.forward(
@@ -66,7 +66,7 @@ class SAC_Gaussian(GaussianModel):
 
     def loss_actor(self, obs, alpha):
 
-        print("gaussian_sac.py: SAC_Gaussian.loss_actor()", flush = True)
+        print("gaussian_sac.py: SAC_Gaussian.loss_actor()")
 
         action, logprob = self.forward(
             obs,
@@ -80,7 +80,7 @@ class SAC_Gaussian(GaussianModel):
 
     def loss_temperature(self, obs, alpha, target_entropy):
 
-        print("gaussian_sac.py: SAC_Gaussian.loss_temperature()", flush = True)
+        print("gaussian_sac.py: SAC_Gaussian.loss_temperature()")
 
         with torch.no_grad():
             _, logprob = self.forward(
@@ -93,7 +93,7 @@ class SAC_Gaussian(GaussianModel):
 
     def update_target_critic(self, tau):
 
-        print("gaussian_sac.py: SAC_Gaussian.update_target_critic()", flush = True)
+        print("gaussian_sac.py: SAC_Gaussian.update_target_critic()")
 
         for target_param, source_param in zip(
             self.target_critic.parameters(), self.critic.parameters()

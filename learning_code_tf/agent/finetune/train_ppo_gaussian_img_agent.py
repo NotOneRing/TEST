@@ -21,7 +21,7 @@ from model.common.modules import RandomShiftsAug
 class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
 
     def __init__(self, cfg):
-        print("train_ppo_gaussian_img_agent.py: TrainPPOImgGaussianAgent.__init__()", flush = True)
+        print("train_ppo_gaussian_img_agent.py: TrainPPOImgGaussianAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -38,7 +38,7 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
         self.grad_accumulate = cfg.train.grad_accumulate
 
     def run(self):
-        print("train_ppo_gaussian_img_agent.py: TrainPPOImgGaussianAgent.run()", flush = True)
+        print("train_ppo_gaussian_img_agent.py: TrainPPOImgGaussianAgent.run()")
 
         # Start training loop
         timer = Timer()

@@ -433,6 +433,13 @@ class DiffusionModel(nn.Module):
 
         print("diffusion.py: DiffusionModel.q_sample()", flush = True)
 
+
+
+        print("extract function module:", extract.__module__, flush=True)
+        print("extract function name:", extract.__name__, flush=True)
+
+
+
         if noise is None:
             device = x_start.device
             noise = torch.randn_like(x_start, device=device)

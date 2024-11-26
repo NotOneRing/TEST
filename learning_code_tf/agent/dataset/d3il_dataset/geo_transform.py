@@ -21,7 +21,7 @@ def get_quaternion_error(curr_quat, des_quat):
     :return: difference between current quaternion and desired quaternion
     """
 
-    print("geo_transform.py: get_quaternion_error()", flush = True)
+    print("geo_transform.py: get_quaternion_error()")
 
     quatError = np.zeros((3,))
 
@@ -52,7 +52,7 @@ def get_quaternion_error(curr_quat, des_quat):
 def euler2mat(euler):
     """Convert Euler Angles to Rotation Matrix.  See rotation.py for notes"""
 
-    print("geo_transform.py: euler2mat()", flush = True)
+    print("geo_transform.py: euler2mat()")
 
     euler = np.asarray(euler, dtype=np.float64)
     assert euler.shape[-1] == 3, "Invalid shaped euler {}".format(euler)
@@ -79,7 +79,7 @@ def euler2mat(euler):
 def euler2quat(euler):
     """Convert Euler Angles to Quaternions.  See rotation.py for notes"""
 
-    print("geo_transform.py: euler2quat()", flush = True)
+    print("geo_transform.py: euler2quat()")
 
     euler = np.asarray(euler, dtype=np.float64)
     assert euler.shape[-1] == 3, "Invalid shape euler {}".format(euler)
@@ -101,7 +101,7 @@ def euler2quat(euler):
 def mat2euler(mat):
     """Convert Rotation Matrix to Euler Angles.  See rotation.py for notes"""
 
-    print("geo_transform.py: mat2euler()", flush = True)
+    print("geo_transform.py: mat2euler()")
 
     mat = np.asarray(mat, dtype=np.float64)
     assert mat.shape[-2:] == (3, 3), "Invalid shape matrix {}".format(mat)
@@ -126,7 +126,7 @@ def mat2euler(mat):
 def mat2quat(mat):
     """Convert Rotation Matrix to Quaternion.  See rotation.py for notes"""
 
-    print("geo_transform.py: mat2quat()", flush = True)
+    print("geo_transform.py: mat2quat()")
 
     mat = np.asarray(mat, dtype=np.float64)
     assert mat.shape[-2:] == (3, 3), "Invalid shape matrix {}".format(mat)
@@ -166,14 +166,14 @@ def mat2quat(mat):
 def quat2euler(quat):
     """Convert Quaternion to Euler Angles.  See rotation.py for notes"""
 
-    print("geo_transform.py: quat2euler()", flush = True)
+    print("geo_transform.py: quat2euler()")
 
     return mat2euler(quat2mat(quat))
 
 
 def subtract_euler(e1, e2):
 
-    print("geo_transform.py: subtract_euler()", flush = True)
+    print("geo_transform.py: subtract_euler()")
 
     assert e1.shape == e2.shape
     assert e1.shape[-1] == 3
@@ -186,7 +186,7 @@ def subtract_euler(e1, e2):
 def quat2mat(quat):
     """Convert Quaternion to Euler Angles.  See rotation.py for notes"""
 
-    print("geo_transform.py: quat2mat()", flush = True)
+    print("geo_transform.py: quat2mat()")
 
     quat = np.asarray(quat, dtype=np.float64)
     assert quat.shape[-1] == 4, "Invalid shape quat {}".format(quat)
@@ -214,7 +214,7 @@ def quat2mat(quat):
 
 def quat_conjugate(q):
 
-    print("geo_transform.py: quat_conjugate()", flush = True)
+    print("geo_transform.py: quat_conjugate()")
 
     inv_q = -q
     inv_q[..., 0] *= -1
@@ -223,7 +223,7 @@ def quat_conjugate(q):
 
 def quat_mul(q0, q1):
 
-    print("geo_transform.py: quat_mul()", flush = True)
+    print("geo_transform.py: quat_mul()")
 
     assert q0.shape == q1.shape
     assert q0.shape[-1] == 4
@@ -252,7 +252,7 @@ def quat_mul(q0, q1):
 
 def quat_rot_vec(q, v0):
 
-    print("geo_transform.py: quat_rot_vec()", flush = True)
+    print("geo_transform.py: quat_rot_vec()")
 
     q_v0 = np.array([0, v0[0], v0[1], v0[2]])
     q_v = quat_mul(q, quat_mul(q_v0, quat_conjugate(q)))
@@ -262,14 +262,14 @@ def quat_rot_vec(q, v0):
 
 def quat_identity():
 
-    print("geo_transform.py: quat_identity()", flush = True)
+    print("geo_transform.py: quat_identity()")
 
     return np.array([1, 0, 0, 0])
 
 
 def quat2axisangle(quat):
 
-    print("geo_transform.py: quat2axisangle()", flush = True)
+    print("geo_transform.py: quat2axisangle()")
 
     theta = 0
     axis = np.array([0, 0, 1])
@@ -285,7 +285,7 @@ def quat2axisangle(quat):
 
 def euler2point_euler(euler):
 
-    print("geo_transform.py: euler2point_euler()", flush = True)
+    print("geo_transform.py: euler2point_euler()")
 
     _euler = euler.copy()
     if len(_euler.shape) < 2:
@@ -298,7 +298,7 @@ def euler2point_euler(euler):
 
 def point_euler2euler(euler):
 
-    print("geo_transform.py: point_euler2euler()", flush = True)
+    print("geo_transform.py: point_euler2euler()")
 
     _euler = euler.copy()
     if len(_euler.shape) < 2:
@@ -312,7 +312,7 @@ def point_euler2euler(euler):
 def quat2point_quat(quat):
     # Should be in qw, qx, qy, qz
 
-    print("geo_transform.py: quat2point_quat()", flush = True)
+    print("geo_transform.py: quat2point_quat()")
 
     _quat = quat.copy()
     if len(_quat.shape) < 2:
@@ -328,7 +328,7 @@ def quat2point_quat(quat):
 
 def point_quat2quat(quat):
 
-    print("geo_transform.py: point_quat2quat()", flush = True)
+    print("geo_transform.py: point_quat2quat()")
 
     _quat = quat.copy()
     if len(_quat.shape) < 2:
@@ -347,7 +347,7 @@ def point_quat2quat(quat):
 def normalize_angles(angles):
     """Puts angles in [-pi, pi] range."""
 
-    print("geo_transform.py: normalize_angles()", flush = True)
+    print("geo_transform.py: normalize_angles()")
 
     angles = angles.copy()
     if angles.size > 0:
@@ -359,7 +359,7 @@ def normalize_angles(angles):
 def round_to_straight_angles(angles):
     """Returns closest angle modulo 90 degrees"""
 
-    print("geo_transform.py: round_to_straight_angles()", flush = True)
+    print("geo_transform.py: round_to_straight_angles()")
 
     angles = np.round(angles / (np.pi / 2)) * (np.pi / 2)
     return normalize_angles(angles)
@@ -367,7 +367,7 @@ def round_to_straight_angles(angles):
 
 def get_parallel_rotations():
 
-    print("geo_transform.py: get_parallel_rotations()", flush = True)
+    print("geo_transform.py: get_parallel_rotations()")
 
     mult90 = [0, np.pi / 2, -np.pi / 2, np.pi]
     parallel_rotations = []
@@ -388,7 +388,7 @@ def get_parallel_rotations():
 def posRotMat2TFMat(pos, rot_mat):
     """Converts a position and a 3x3 rotation matrix to a 4x4 transformation matrix"""
 
-    print("geo_transform.py: posRotMat2TFMat()", flush = True)
+    print("geo_transform.py: posRotMat2TFMat()")
 
     t_mat = np.eye(4)
     t_mat[:3, :3] = rot_mat
@@ -399,7 +399,7 @@ def posRotMat2TFMat(pos, rot_mat):
 def mat2posQuat(mat):
     """Converts a 4x4 rotation matrix to a position and a quaternion"""
 
-    print("geo_transform.py: mat2posQuat()", flush = True)
+    print("geo_transform.py: mat2posQuat()")
 
     pos = mat[:3, 3]
     quat = mat2quat(mat[:3, :3])
@@ -409,7 +409,7 @@ def mat2posQuat(mat):
 def wxyz_to_xyzw(quat):
     """Converts WXYZ Quaternions to XYZW Quaternions"""
 
-    print("geo_transform.py: wxyz_to_xyzw()", flush = True)
+    print("geo_transform.py: wxyz_to_xyzw()")
 
     return np.roll(quat, -1)
 
@@ -417,6 +417,6 @@ def wxyz_to_xyzw(quat):
 def xyzw_to_wxyz(quat):
     """Converts XYZW Quaternions to WXYZ Quaternions"""
 
-    print("geo_transform.py: xyzw_to_wxyz()", flush = True)
+    print("geo_transform.py: xyzw_to_wxyz()")
 
     return np.roll(quat, 1)

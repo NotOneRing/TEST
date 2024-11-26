@@ -16,6 +16,6 @@ def sim_framework_path(*args) -> str:
 
     """
 
-    print("__init__.py: sim_framework_path()", flush = True)
+    print("__init__.py: sim_framework_path()")
 
     return os.path.abspath(os.path.join(FRAMEWORK_DIR, *args))

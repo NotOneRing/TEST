@@ -26,7 +26,7 @@ class PPO_Gaussian(VPG_Gaussian):
         **kwargs,
     ):
 
-        print("gaussian_ppo.py: PPO_Gaussian.__init__()", flush = True)
+        print("gaussian_ppo.py: PPO_Gaussian.__init__()")
 
         super().__init__(**kwargs)
 
@@ -62,7 +62,7 @@ class PPO_Gaussian(VPG_Gaussian):
         oldlogprobs: (B, )
         """
 
-        print("gaussian_ppo.py: PPO_Gaussian.loss()", flush = True)
+        print("gaussian_ppo.py: PPO_Gaussian.loss()")
 
         newlogprobs, entropy, std = self.get_logprobs(obs, actions)
         newlogprobs = newlogprobs.clamp(min=-5, max=2)

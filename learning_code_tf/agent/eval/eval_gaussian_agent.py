@@ -17,13 +17,13 @@ class EvalGaussianAgent(EvalAgent):
 
     def __init__(self, cfg):
 
-        print("eval_gaussian_agent.py: EvalGaussianAgent.__init__()", flush = True)
+        print("eval_gaussian_agent.py: EvalGaussianAgent.__init__()")
 
         super().__init__(cfg)
 
     def run(self):
 
-        print("eval_gaussian_agent.py: EvalGaussianAgent.run()", flush = True)
+        print("eval_gaussian_agent.py: EvalGaussianAgent.run()")
 
         # Start training loop
         timer = Timer()

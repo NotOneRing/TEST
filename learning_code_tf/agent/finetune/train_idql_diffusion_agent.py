@@ -25,7 +25,7 @@ class TrainIDQLDiffusionAgent(TrainAgent):
 
     def __init__(self, cfg):
 
-        print("train_idql_diffusion_agent.py: TrainIDQLDiffusionAgent.__init__()", flush = True)
+        print("train_idql_diffusion_agent.py: TrainIDQLDiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -99,7 +99,7 @@ class TrainIDQLDiffusionAgent(TrainAgent):
         self.num_sample = cfg.train.eval_sample_num
 
     def run(self):
-        print("train_idql_diffusion_agent.py: TrainIDQLDiffusionAgent.run()", flush = True)
+        print("train_idql_diffusion_agent.py: TrainIDQLDiffusionAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

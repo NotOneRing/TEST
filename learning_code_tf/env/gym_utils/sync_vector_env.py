@@ -55,7 +55,7 @@ class SyncVectorEnv(VectorEnv):
 
     def __init__(self, env_fns, observation_space=None, action_space=None, copy=True):
 
-        print("sync_vector_env.py: SyncVectorEnv.__init__()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv.__init__()")
 
         self.env_fns = env_fns
         self.envs = [env_fn() for env_fn in env_fns]
@@ -82,7 +82,7 @@ class SyncVectorEnv(VectorEnv):
 
     def seed(self, seed=None):
 
-        print("sync_vector_env.py: SyncVectorEnv.seed()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv.seed()")
 
         super().seed(seed=seed)
         if seed is None:
@@ -101,7 +101,7 @@ class SyncVectorEnv(VectorEnv):
         options: Optional[dict] = None,
     ):
 
-        print("sync_vector_env.py: SyncVectorEnv.reset_wait()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv.reset_wait()")
 
         if seed is None:
             seed = [None for _ in range(self.num_envs)]
@@ -143,13 +143,13 @@ class SyncVectorEnv(VectorEnv):
 
     def step_async(self, actions):
 
-        print("sync_vector_env.py: SyncVectorEnv.step_async()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv.step_async()")
 
         self._actions = iterate(self.action_space, actions)
 
     def step_wait(self):
 
-        print("sync_vector_env.py: SyncVectorEnv.step_wait()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv.step_wait()")
 
         observations, infos = [], []
         for i, (env, action) in enumerate(zip(self.envs, self._actions)):
@@ -176,7 +176,7 @@ class SyncVectorEnv(VectorEnv):
 
     def call(self, name, *args, **kwargs):
 
-        print("sync_vector_env.py: SyncVectorEnv.call()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv.call()")
 
         results = []
         for env in self.envs:
@@ -190,7 +190,7 @@ class SyncVectorEnv(VectorEnv):
 
     def set_attr(self, name, values):
 
-        print("sync_vector_env.py: SyncVectorEnv.set_attr()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv.set_attr()")
 
         if not isinstance(values, (list, tuple)):
             values = [values for _ in range(self.num_envs)]
@@ -206,14 +206,14 @@ class SyncVectorEnv(VectorEnv):
 
     def close_extras(self, **kwargs):
 
-        print("sync_vector_env.py: SyncVectorEnv.close_extras()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv.close_extras()")
 
         """Close the environments."""
         [env.close() for env in self.envs]
 
     def _check_spaces(self):
 
-        print("sync_vector_env.py: SyncVectorEnv._check_spaces()", flush = True)
+        print("sync_vector_env.py: SyncVectorEnv._check_spaces()")
 
         for env in self.envs:
             if not (env.observation_space == self.single_observation_space):

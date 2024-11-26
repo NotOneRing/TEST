@@ -43,7 +43,7 @@ class VPGDiffusion(DiffusionModel):
         **kwargs,
     ):
 
-        print("diffusion_vpg.py: VPGDiffusion.__init__()", flush = True)
+        print("diffusion_vpg.py: VPGDiffusion.__init__()")
 
         super().__init__(
             network=actor,
@@ -109,7 +109,7 @@ class VPGDiffusion(DiffusionModel):
         Current configs do not apply annealing
         """
 
-        print("diffusion_vpg.py: VPGDiffusion.step()", flush = True)
+        print("diffusion_vpg.py: VPGDiffusion.step()")
 
         # anneal min_sampling_denoising_std
         if type(self.min_sampling_denoising_std) is not float:
@@ -137,7 +137,7 @@ class VPGDiffusion(DiffusionModel):
 
     def get_min_sampling_denoising_std(self):
 
-        print("diffusion_vpg.py: VPGDiffusion.get_min_sampling_denoising_std()", flush = True)
+        print("diffusion_vpg.py: VPGDiffusion.get_min_sampling_denoising_std()")
 
         if type(self.min_sampling_denoising_std) is float:
             return self.min_sampling_denoising_std
@@ -155,7 +155,7 @@ class VPGDiffusion(DiffusionModel):
         deterministic=False,
     ):
 
-        print("diffusion_vpg.py: VPGDiffusion.p_mean_var()", flush = True)
+        print("diffusion_vpg.py: VPGDiffusion.p_mean_var()")
 
         noise = self.actor(x, t, cond=cond)
         if self.use_ddim:
@@ -260,7 +260,7 @@ class VPGDiffusion(DiffusionModel):
                 chain: (B, K + 1, Ta, Da)
         """
 
-        print("diffusion_vpg.py: VPGDiffusion.forward()", flush = True)
+        print("diffusion_vpg.py: VPGDiffusion.forward()")
 
         device = self.betas.device
         sample_data = cond["state"] if "state" in cond else cond["rgb"]
@@ -354,7 +354,7 @@ class VPGDiffusion(DiffusionModel):
             entropy (if get_ent=True):  (B x K, Ta)
         """
 
-        print("diffusion_vpg.py: VPGDiffusion.get_logprobs()", flush = True)
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs()")
 
         # Repeat cond for denoising_steps, flatten batch and time dimensions
         cond = {
@@ -439,7 +439,7 @@ class VPGDiffusion(DiffusionModel):
             denoising_indices: (B, )
         """
 
-        print("diffusion_vpg.py: VPGDiffusion.get_logprobs_subsample()", flush = True)
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs_subsample()")
 
         # Sample t for batch dim, keep it 1-dim
         if self.use_ddim:
@@ -493,7 +493,7 @@ class VPGDiffusion(DiffusionModel):
             reward (to go): (b,)
         """
 
-        print("diffusion_vpg.py: VPGDiffusion.loss()", flush = True)
+        print("diffusion_vpg.py: VPGDiffusion.loss()")
 
         # Get advantage
         with torch.no_grad():

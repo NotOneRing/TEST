@@ -37,7 +37,7 @@ class ResidualBlock1D(nn.Module):
         groupnorm_eps=1e-5,
     ):
 
-        print("unet.py: ResidualBlock1D.__init__()", flush = True)
+        print("unet.py: ResidualBlock1D.__init__()")
 
         super().__init__()
 
@@ -107,7 +107,7 @@ class ResidualBlock1D(nn.Module):
         out : [ batch_size x out_channels x horizon_steps ]
         """
 
-        print("unet.py: ResidualBlock1D.forward()", flush = True)
+        print("unet.py: ResidualBlock1D.forward()")
 
         out = self.blocks[0](x)
         embed = self.cond_encoder(cond)
@@ -140,7 +140,7 @@ class Unet1D(nn.Module):
         groupnorm_eps=1e-5,
     ):
 
-        print("unet.py: Unet1D.__init__()", flush = True)
+        print("unet.py: Unet1D.__init__()")
 
         super().__init__()
         dims = [action_dim, *map(lambda m: dim * m, dim_mults)]
@@ -285,7 +285,7 @@ class Unet1D(nn.Module):
             state: (B, To, obs_dim)
         """
 
-        print("unet.py: Unet1D.forward()", flush = True)
+        print("unet.py: Unet1D.forward()")
 
         B = len(x)
 

@@ -34,7 +34,7 @@ class VitEncoder(nn.Module):
         img_w=96,
     ):
 
-        print("vit.py: VitEncoder.__init__()", flush = True)
+        print("vit.py: VitEncoder.__init__()")
 
         super().__init__()
         self.obs_shape = obs_shape
@@ -57,7 +57,7 @@ class VitEncoder(nn.Module):
 
     def forward(self, obs, flatten=False) -> torch.Tensor:
 
-        print("vit.py: VitEncoder.forward()", flush = True)
+        print("vit.py: VitEncoder.forward()")
 
         # assert obs.max() > 5
         obs = obs / 255.0 - 0.5
@@ -70,7 +70,7 @@ class VitEncoder(nn.Module):
 class PatchEmbed1(nn.Module):
     def __init__(self, embed_dim, num_channel=3, img_h=96, img_w=96):
 
-        print("vit.py: PatchEmbed1.__init__()", flush = True)
+        print("vit.py: PatchEmbed1.__init__()")
 
         super().__init__()
         self.conv = nn.Conv2d(num_channel, embed_dim, kernel_size=8, stride=8)
@@ -80,7 +80,7 @@ class PatchEmbed1(nn.Module):
 
     def forward(self, x: torch.Tensor):
 
-        print("vit.py: PatchEmbed1.forward()", flush = True)
+        print("vit.py: PatchEmbed1.forward()")
 
         y = self.conv(x)
         y = einops.rearrange(y, "b c h w -> b (h  w) c")
@@ -90,7 +90,7 @@ class PatchEmbed1(nn.Module):
 class PatchEmbed2(nn.Module):
     def __init__(self, embed_dim, use_norm, num_channel=3, img_h=96, img_w=96):
 
-        print("vit.py: PatchEmbed2.__init__()", flush = True)
+        print("vit.py: PatchEmbed2.__init__()")
 
         super().__init__()
         layers = [
@@ -110,7 +110,7 @@ class PatchEmbed2(nn.Module):
 
     def forward(self, x: torch.Tensor):
 
-        print("vit.py: PatchEmbed2.forward()", flush = True)
+        print("vit.py: PatchEmbed2.forward()")
 
         y = self.embed(x)
         y = einops.rearrange(y, "b c h w -> b (h  w) c")
@@ -120,7 +120,7 @@ class PatchEmbed2(nn.Module):
 class MultiHeadAttention(nn.Module):
     def __init__(self, embed_dim, num_head):
 
-        print("vit.py: MultiHeadAttention.__init__()", flush = True)
+        print("vit.py: MultiHeadAttention.__init__()")
 
         super().__init__()
         assert embed_dim % num_head == 0
@@ -134,7 +134,7 @@ class MultiHeadAttention(nn.Module):
         x: [batch, seq, embed_dim]
         """
 
-        print("vit.py: MultiHeadAttention.forward()", flush = True)
+        print("vit.py: MultiHeadAttention.forward()")
 
         qkv = self.qkv_proj(x)
         q, k, v = einops.rearrange(
@@ -152,7 +152,7 @@ class MultiHeadAttention(nn.Module):
 class TransformerLayer(nn.Module):
     def __init__(self, embed_dim, num_head, dropout):
 
-        print("vit.py: TransformerLayer.__init__()", flush = True)
+        print("vit.py: TransformerLayer.__init__()")
 
         super().__init__()
 
@@ -166,7 +166,7 @@ class TransformerLayer(nn.Module):
 
     def forward(self, x, attn_mask=None):
 
-        print("vit.py: TransformerLayer.forward()", flush = True)
+        print("vit.py: TransformerLayer.forward()")
 
         x = x + self.dropout(self.mha(self.layer_norm1(x), attn_mask))
         x = x + self.dropout(self._ff_block(self.layer_norm2(x)))
@@ -174,7 +174,7 @@ class TransformerLayer(nn.Module):
 
     def _ff_block(self, x):
 
-        print("vit.py: TransformerLayer._ff_block()", flush = True)
+        print("vit.py: TransformerLayer._ff_block()")
 
         x = self.linear2(nn.functional.gelu(self.linear1(x)))
         return x
@@ -193,7 +193,7 @@ class MinVit(nn.Module):
         img_w=96,
     ):
 
-        print("vit.py: MinVit.__init__()", flush = True)
+        print("vit.py: MinVit.__init__()")
 
         super().__init__()
 
@@ -232,7 +232,7 @@ class MinVit(nn.Module):
 
     def forward(self, x):
 
-        print("vit.py: MinVit.forward()", flush = True)
+        print("vit.py: MinVit.forward()")
 
         x = self.patch_embed(x)
         x = x + self.pos_embed
@@ -243,7 +243,7 @@ class MinVit(nn.Module):
 def init_weights_vit_timm(module: nn.Module, name: str = ""):
     """ViT weight initialization, original timm impl (for reproducibility)"""
 
-    print("vit.py: init_weights_vit_timm()", flush = True)
+    print("vit.py: init_weights_vit_timm()")
 
     if isinstance(module, nn.Linear):
         trunc_normal_(module.weight, std=0.02)
@@ -255,7 +255,7 @@ def named_apply(
     fn, module: nn.Module, name="", depth_first=True, include_root=False
 ) -> nn.Module:
 
-    print("vit.py: named_apply()", flush = True)
+    print("vit.py: named_apply()")
 
     if not depth_first and include_root:
         fn(module=module, name=name)
@@ -275,7 +275,7 @@ def named_apply(
 
 def test_patch_embed():
 
-    print("vit.py: test_patch_embed()", flush = True)
+    print("vit.py: test_patch_embed()")
 
     print("embed 1")
     embed = PatchEmbed1(128)
@@ -292,7 +292,7 @@ def test_patch_embed():
 
 def test_transformer_layer():
 
-    print("vit.py: test_transformer_layer()", flush = True)
+    print("vit.py: test_transformer_layer()")
 
     embed = PatchEmbed1(128)
     x = torch.rand(10, 3, 96, 96)
@@ -306,7 +306,7 @@ def test_transformer_layer():
 
 if __name__ == "__main__":
 
-    print("vit.py: main()", flush = True)
+    print("vit.py: main()")
 
     obs_shape = [6, 128, 128]
     enc = VitEncoder(

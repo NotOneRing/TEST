@@ -26,7 +26,7 @@ class DQLDiffusion(DiffusionModel):
         **kwargs,
     ):
 
-        print("diffusion_dql.py: DQLDiffusion.__init__()", flush = True)
+        print("diffusion_dql.py: DQLDiffusion.__init__()")
 
         super().__init__(network=actor, use_ddim=use_ddim, **kwargs)
         assert not self.use_ddim, "DQL does not support DDIM"
@@ -45,7 +45,7 @@ class DQLDiffusion(DiffusionModel):
 
     def loss_critic(self, obs, next_obs, actions, rewards, terminated, gamma):
 
-        print("diffusion_dql.py: DQLDiffusion.loss_critic()", flush = True)
+        print("diffusion_dql.py: DQLDiffusion.loss_critic()")
 
         # get current Q-function
         current_q1, current_q2 = self.critic(obs, actions)
@@ -78,7 +78,7 @@ class DQLDiffusion(DiffusionModel):
 
     def loss_actor(self, obs, eta, act_steps):
 
-        print("diffusion_dql.py: DQLDiffusion.loss_actor()", flush = True)
+        print("diffusion_dql.py: DQLDiffusion.loss_actor()")
 
         action_new = self.forward_train(
             cond=obs,
@@ -97,7 +97,7 @@ class DQLDiffusion(DiffusionModel):
 
     def update_target_critic(self, tau):
 
-        print("diffusion_dql.py: DQLDiffusion.update_target_critic()", flush = True)
+        print("diffusion_dql.py: DQLDiffusion.update_target_critic()")
 
         for target_param, source_param in zip(
             self.critic_target.parameters(), self.critic.parameters()
@@ -116,7 +116,7 @@ class DQLDiffusion(DiffusionModel):
         deterministic=False,
     ):
 
-        print("diffusion_dql.py: DQLDiffusion.forward()", flush = True)
+        print("diffusion_dql.py: DQLDiffusion.forward()")
 
         device = self.betas.device
         B = len(cond["state"])
@@ -161,7 +161,7 @@ class DQLDiffusion(DiffusionModel):
         Differentiable forward pass used in actor training.
         """
 
-        print("diffusion_dql.py: DQLDiffusion.forward_train()", flush = True)
+        print("diffusion_dql.py: DQLDiffusion.forward_train()")
 
         device = self.betas.device
         B = len(cond["state"])

@@ -24,7 +24,7 @@ class IBRL_Gaussian(GaussianModel):
         **kwargs,
     ):
 
-        print("gaussian_ibrl.py: IBRL_Gaussian.__init__()", flush = True)
+        print("gaussian_ibrl.py: IBRL_Gaussian.__init__()")
 
         super().__init__(network=actor, **kwargs)
         self.soft_action_sample = soft_action_sample
@@ -60,14 +60,14 @@ class IBRL_Gaussian(GaussianModel):
     def critic_wrapper(self, params, buffers, data):
         """for vmap"""
 
-        print("gaussian_ibrl.py: IBRL_Gaussian.critic_wrapper()", flush = True)
+        print("gaussian_ibrl.py: IBRL_Gaussian.critic_wrapper()")
 
         return torch.func.functional_call(self.base_model, (params, buffers), data)
 
     def get_random_indices(self, sz=None, num_ind=2):
         """get num_ind random indices from a set of size sz (used for getting critic targets)"""
 
-        print("gaussian_ibrl.py: IBRL_Gaussian.get_random_indices()", flush = True)
+        print("gaussian_ibrl.py: IBRL_Gaussian.get_random_indices()")
 
         if sz is None:
             sz = len(self.critic_networks)
@@ -85,7 +85,7 @@ class IBRL_Gaussian(GaussianModel):
         gamma,
     ):
 
-        print("gaussian_ibrl.py: IBRL_Gaussian.loss_critic()", flush = True)
+        print("gaussian_ibrl.py: IBRL_Gaussian.loss_critic()")
 
         # get random critic index
         q1_ind, q2_ind = self.get_random_indices()
@@ -126,7 +126,7 @@ class IBRL_Gaussian(GaussianModel):
 
     def loss_actor(self, obs):
 
-        print("gaussian_ibrl.py: IBRL_Gaussian.loss_actor()", flush = True)
+        print("gaussian_ibrl.py: IBRL_Gaussian.loss_actor()")
 
         action = super().forward(
             obs,
@@ -145,7 +145,7 @@ class IBRL_Gaussian(GaussianModel):
     def update_target_critic(self, tau):
         """need to use ensemble_params instead of critic_networks"""
 
-        print("gaussian_ibrl.py: IBRL_Gaussian.update_target_critic()", flush = True)
+        print("gaussian_ibrl.py: IBRL_Gaussian.update_target_critic()")
 
         for target_ind, target_critic in enumerate(self.target_networks):
             for target_param_name, target_param in target_critic.named_parameters():
@@ -156,7 +156,7 @@ class IBRL_Gaussian(GaussianModel):
 
     def update_target_actor(self, tau):
 
-        print("gaussian_ibrl.py: IBRL_Gaussian.update_target_actor()", flush = True)
+        print("gaussian_ibrl.py: IBRL_Gaussian.update_target_actor()")
 
         for target_param, source_param in zip(
             self.target_actor.parameters(), self.network.parameters()
@@ -175,7 +175,7 @@ class IBRL_Gaussian(GaussianModel):
     ):
         """use both pre-trained and online policies"""
 
-        print("gaussian_ibrl.py: IBRL_Gaussian.forward()", flush = True)
+        print("gaussian_ibrl.py: IBRL_Gaussian.forward()")
 
         q1_ind, q2_ind = self.get_random_indices()
 

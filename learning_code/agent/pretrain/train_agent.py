@@ -47,6 +47,7 @@ class EMA:
     def __init__(self, cfg):
 
         print("train_agent.py: EMA.__init__()", flush = True)
+        print("train_agent.py: EMA.__init__()", flush = True)
 
         super().__init__()
         self.beta = cfg.decay
@@ -153,7 +154,7 @@ class PreTrainAgent:
         print("train_agent.py: PreTrainAgent.reset_parameters()", flush = True)
 
         self.ema_model.load_state_dict(self.model.state_dict())
-
+        
     def step_ema(self):
         print("train_agent.py: PreTrainAgent.step_ema()", flush = True)
 

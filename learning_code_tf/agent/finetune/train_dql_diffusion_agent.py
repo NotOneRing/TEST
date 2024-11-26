@@ -27,7 +27,7 @@ from util.scheduler import CosineAnnealingWarmupRestarts
 class TrainDQLDiffusionAgent(TrainAgent):
 
     def __init__(self, cfg):
-        print("train_dql_diffusion_agent.py: TrainDQLDiffusionAgent.__init__()", flush = True)
+        print("train_dql_diffusion_agent.py: TrainDQLDiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -83,7 +83,7 @@ class TrainDQLDiffusionAgent(TrainAgent):
         self.target_ema_rate = cfg.train.target_ema_rate
 
     def run(self):
-        print("train_dql_diffusion_agent.py: TrainDQLDiffusionAgent.run()", flush = True)
+        print("train_dql_diffusion_agent.py: TrainDQLDiffusionAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

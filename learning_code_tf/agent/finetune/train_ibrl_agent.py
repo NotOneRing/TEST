@@ -22,7 +22,7 @@ from util.scheduler import CosineAnnealingWarmupRestarts
 class TrainIBRLAgent(TrainAgent):
     def __init__(self, cfg):
 
-        print("train_ibrl_agent.py: TrainIBRLAgent.__init__()", flush = True)
+        print("train_ibrl_agent.py: TrainIBRLAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -84,7 +84,7 @@ class TrainIBRLAgent(TrainAgent):
         self.n_explore_steps = cfg.train.n_explore_steps
 
     def run(self):
-        print("train_ibrl_agent.py: TrainIBRLAgent.run()", flush = True)
+        print("train_ibrl_agent.py: TrainIBRLAgent.run()")
 
         # make a FIFO replay buffer for obs, action, and reward
         obs_buffer = deque(maxlen=self.buffer_size)

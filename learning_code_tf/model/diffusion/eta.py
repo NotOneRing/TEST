@@ -19,7 +19,7 @@ class EtaFixed(torch.nn.Module):
         **kwargs,
     ):
 
-        print("eta.py: EtaFixed.__init__()", flush = True)
+        print("eta.py: EtaFixed.__init__()")
 
         super().__init__()
         self.eta_logit = torch.nn.Parameter(torch.ones(1))
@@ -34,7 +34,7 @@ class EtaFixed(torch.nn.Module):
     def __call__(self, cond):
         """Match input batch size, but do not depend on input"""
 
-        print("eta.py: EtaFixed.__call__()", flush = True)
+        print("eta.py: EtaFixed.__call__()")
 
         sample_data = cond["state"] if "state" in cond else cond["rgb"]
         B = len(sample_data)
@@ -57,7 +57,7 @@ class EtaAction(torch.nn.Module):
         **kwargs,
     ):
 
-        print("eta.py: EtaAction.__init__()", flush = True)
+        print("eta.py: EtaAction.__init__()")
 
         super().__init__()
         # initialize such that eta = base_eta
@@ -73,7 +73,7 @@ class EtaAction(torch.nn.Module):
     def __call__(self, cond):
         """Match input batch size, but do not depend on input"""
 
-        print("eta.py: EtaAction.__call__()", flush = True)
+        print("eta.py: EtaAction.__call__()")
 
         sample_data = cond["state"] if "state" in cond else cond["rgb"]
         B = len(sample_data)
@@ -100,7 +100,7 @@ class EtaState(torch.nn.Module):
         **kwargs,
     ):
 
-        print("eta.py: EtaState.__init__()", flush = True)
+        print("eta.py: EtaState.__init__()")
 
         super().__init__()
         self.base = base_eta
@@ -120,7 +120,7 @@ class EtaState(torch.nn.Module):
 
     def __call__(self, cond):
 
-        print("eta.py: EtaState.__call__()", flush = True)
+        print("eta.py: EtaState.__call__()")
 
         if "rgb" in cond:
             raise NotImplementedError(
@@ -153,7 +153,7 @@ class EtaStateAction(torch.nn.Module):
         **kwargs,
     ):
 
-        print("eta.py: EtaStateAction.__init__()", flush = True)
+        print("eta.py: EtaStateAction.__init__()")
 
         super().__init__()
         self.base = base_eta
@@ -173,7 +173,7 @@ class EtaStateAction(torch.nn.Module):
 
     def __call__(self, cond):
 
-        print("eta.py: EtaStateAction.__call__()", flush = True)
+        print("eta.py: EtaStateAction.__call__()")
 
         if "rgb" in cond:
             raise NotImplementedError(

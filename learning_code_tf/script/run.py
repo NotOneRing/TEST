@@ -18,6 +18,33 @@ from download_url import (
     get_checkpoint_download_url,
 )
 
+import tensorflow as tf
+
+tf.config.run_functions_eagerly(True)
+
+tf.data.experimental.enable_debug_mode()
+
+
+import logging
+
+# get TF logger
+log = logging.getLogger('tensorflow')
+log.setLevel(logging.DEBUG)
+
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# create file handler which logs even debug messages
+fh = logging.FileHandler('tensorflow.log')
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+log.addHandler(fh)
+
+
+import sys
+import tensorflow as tf
+
+
 
 # DPPO_WANDB_ENTITY=None
 
@@ -48,7 +75,7 @@ sys.stderr = open(sys.stderr.fileno(), mode="w", buffering=1)
 )
 def main(cfg: OmegaConf):
 
-    print("run.py: main()", flush = True)
+    print("run.py: main()")
 
     # resolve immediately so all the ${now:} resolvers will use the same time.
     OmegaConf.resolve(cfg)
@@ -94,12 +121,16 @@ def main(cfg: OmegaConf):
     import keras
     print(keras.__version__)
 
+    import tensorflow.keras.backend as K
+    K.clear_session()
+
     # run agent
     cls = hydra.utils.get_class(cfg._target_)
 
-    print("cls = ", cls, flush = True)
+    print("cls = ", cls)
 
-    print("cfg = ", cfg, flush = True)
+    # print("cfg = ", cfg)
+    print("cfg = ", cfg)
     
     agent = cls(cfg)
 

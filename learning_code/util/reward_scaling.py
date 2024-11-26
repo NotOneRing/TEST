@@ -106,3 +106,7 @@ def backward_discounted_sum(
     for t in range(nstep):
         prevret = ret[:, t] = reward[:, t] + (1 - first[:, t]) * gamma * prevret
     return ret
+
+
+
+

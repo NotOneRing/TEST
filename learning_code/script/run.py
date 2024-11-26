@@ -40,6 +40,9 @@ sys.stdout = open(sys.stdout.fileno(), mode="w", buffering=1)
 sys.stderr = open(sys.stderr.fileno(), mode="w", buffering=1)
 
 
+print("This is a unique test message", flush=True)
+
+
 @hydra.main(
     version_base=None,
     config_path=os.path.join(
@@ -89,7 +92,8 @@ def main(cfg: OmegaConf):
     # Deal with isaacgym needs to be imported before torch
     if "env" in cfg and "env_type" in cfg.env and cfg.env.env_type == "furniture":
         import furniture_bench
-
+    
+    
     # run agent
     cls = hydra.utils.get_class(cfg._target_)
     

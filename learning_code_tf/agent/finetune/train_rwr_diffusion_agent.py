@@ -20,7 +20,7 @@ from util.scheduler import CosineAnnealingWarmupRestarts
 
 class TrainRWRDiffusionAgent(TrainAgent):
     def __init__(self, cfg):
-        print("train_rwr_diffusion_agent.py: TrainRWRDiffusionAgent.__init__()", flush = True)
+        print("train_rwr_diffusion_agent.py: TrainRWRDiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -53,7 +53,7 @@ class TrainRWRDiffusionAgent(TrainAgent):
         self.update_epochs = cfg.train.update_epochs
 
     def run(self):
-        print("train_rwr_diffusion_agent.py: TrainRWRDiffusionAgent.run()", flush = True)
+        print("train_rwr_diffusion_agent.py: TrainRWRDiffusionAgent.run()")
 
         # Start training loop
         timer = Timer()

@@ -20,7 +20,7 @@ from util.scheduler import CosineAnnealingWarmupRestarts
 
 class TrainPPODiffusionAgent(TrainPPOAgent):
     def __init__(self, cfg):
-        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__()", flush = True)
+        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -47,7 +47,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
             )
 
     def run(self):
-        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.run()", flush = True)
+        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.run()")
 
         # Start training loop
         timer = Timer()

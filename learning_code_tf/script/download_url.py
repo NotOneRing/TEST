@@ -1,5 +1,5 @@
 def get_dataset_download_url(cfg):
-    print("download_url.py: get_dataset_download_url()", flush = True)
+    print("download_url.py: get_dataset_download_url()")
 
     env = cfg.env
     # Gym
@@ -71,7 +71,7 @@ def get_dataset_download_url(cfg):
 
 
 def get_normalization_download_url(cfg):
-    print("download_url.py: get_normalization_download_url()", flush = True)
+    print("download_url.py: get_normalization_download_url()")
 
     env = cfg.env_name
     # Gym
@@ -143,7 +143,7 @@ def get_normalization_download_url(cfg):
 
 
 def get_checkpoint_download_url(cfg):
-    print("download_url.py: get_checkpoint_download_url()", flush = True)
+    print("download_url.py: get_checkpoint_download_url()")
 
     path = cfg.base_policy_path
     ######################################

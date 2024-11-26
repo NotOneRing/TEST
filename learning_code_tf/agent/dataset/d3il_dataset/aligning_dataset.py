@@ -32,7 +32,7 @@ class Aligning_Dataset(TrajectoryDataset):
         window_size: int = 1,
     ):
 
-        print("aligning_dataset.py: __init__()", flush = True)
+        print("aligning_dataset.py: __init__()")
 
         super().__init__(
             data_directory=data_directory,
@@ -119,7 +119,7 @@ class Aligning_Dataset(TrajectoryDataset):
 
     def get_slices(self):
 
-        print("aligning_dataset.py: get_slices()", flush = True)
+        print("aligning_dataset.py: get_slices()")
 
         slices = []
 
@@ -142,13 +142,13 @@ class Aligning_Dataset(TrajectoryDataset):
 
     def get_seq_length(self, idx):
 
-        print("aligning_dataset.py: get_seq_length()", flush = True)
+        print("aligning_dataset.py: get_seq_length()")
 
         return int(self.masks[idx].sum().item())
 
     def get_all_actions(self):
 
-        print("aligning_dataset.py: get_all_actions()", flush = True)
+        print("aligning_dataset.py: get_all_actions()")
 
         result = []
         # mask out invalid actions
@@ -159,7 +159,7 @@ class Aligning_Dataset(TrajectoryDataset):
 
     def get_all_observations(self):
 
-        print("aligning_dataset.py: get_all_observations()", flush = True)
+        print("aligning_dataset.py: get_all_observations()")
 
         result = []
         # mask out invalid observations
@@ -170,13 +170,13 @@ class Aligning_Dataset(TrajectoryDataset):
 
     def __len__(self):
 
-        print("aligning_dataset.py: __len__()", flush = True)
+        print("aligning_dataset.py: __len__()")
 
         return len(self.slices)
 
     def __getitem__(self, idx):
 
-        print("aligning_dataset.py: __getitem__()", flush = True)
+        print("aligning_dataset.py: __getitem__()")
 
         i, start, end = self.slices[idx]
 
@@ -198,7 +198,7 @@ class Aligning_Img_Dataset(TrajectoryDataset):
         window_size: int = 1,
     ):
 
-        print("aligning_dataset.py: Aligning_Img_Dataset.__init__()", flush = True)
+        print("aligning_dataset.py: Aligning_Img_Dataset.__init__()")
 
         super().__init__(
             data_directory=data_directory,
@@ -311,7 +311,7 @@ class Aligning_Img_Dataset(TrajectoryDataset):
 
     def get_slices(self):
 
-        print("aligning_dataset.py: Aligning_Img_Dataset.get_slices()", flush = True)
+        print("aligning_dataset.py: Aligning_Img_Dataset.get_slices()")
 
         slices = []
 
@@ -334,13 +334,13 @@ class Aligning_Img_Dataset(TrajectoryDataset):
 
     def get_seq_length(self, idx):
 
-        print("aligning_dataset.py: Aligning_Img_Dataset.get_seq_length()", flush = True)
+        print("aligning_dataset.py: Aligning_Img_Dataset.get_seq_length()")
 
         return int(self.masks[idx].sum().item())
 
     def get_all_actions(self):
 
-        print("aligning_dataset.py: Aligning_Img_Dataset.get_all_actions()", flush = True)
+        print("aligning_dataset.py: Aligning_Img_Dataset.get_all_actions()")
 
         result = []
         # mask out invalid actions
@@ -351,7 +351,7 @@ class Aligning_Img_Dataset(TrajectoryDataset):
 
     def get_all_observations(self):
 
-        print("aligning_dataset.py: Aligning_Img_Dataset.get_all_observations()", flush = True)
+        print("aligning_dataset.py: Aligning_Img_Dataset.get_all_observations()")
 
         result = []
         # mask out invalid observations
@@ -362,13 +362,13 @@ class Aligning_Img_Dataset(TrajectoryDataset):
 
     def __len__(self):
 
-        print("aligning_dataset.py: Aligning_Img_Dataset.__len__()", flush = True)
+        print("aligning_dataset.py: Aligning_Img_Dataset.__len__()")
 
         return len(self.slices)
 
     def __getitem__(self, idx):
 
-        print("aligning_dataset.py: Aligning_Img_Dataset.__getitem__()", flush = True)
+        print("aligning_dataset.py: Aligning_Img_Dataset.__getitem__()")
 
         i, start, end = self.slices[idx]
 

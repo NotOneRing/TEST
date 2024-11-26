@@ -31,7 +31,7 @@ class Gaussian_Transformer(nn.Module):
         std_max=1,
     ):
         
-        print("transformer.py: Gaussian_Transformer.__init__()", flush = True)
+        print("transformer.py: Gaussian_Transformer.__init__()")
 
         super().__init__()
         self.action_dim = action_dim
@@ -73,7 +73,7 @@ class Gaussian_Transformer(nn.Module):
 
     def forward(self, cond):
 
-        print("transformer.py: Gaussian_Transformer.forward()", flush = True)
+        print("transformer.py: Gaussian_Transformer.forward()")
 
         B = len(cond["state"])
         device = cond["state"].device
@@ -123,7 +123,7 @@ class GMM_Transformer(nn.Module):
         std_max=1,
     ):
 
-        print("transformer.py: GMM_Transformer.__init__()", flush = True)
+        print("transformer.py: GMM_Transformer.__init__()")
 
         super().__init__()
         self.num_modes = num_modes
@@ -173,7 +173,7 @@ class GMM_Transformer(nn.Module):
 
     def forward(self, cond):
 
-        print("transformer.py: GMM_Transformer.forward()", flush = True)
+        print("transformer.py: GMM_Transformer.forward()")
 
         B = len(cond["state"])
         device = cond["state"].device
@@ -241,7 +241,7 @@ class Transformer(nn.Module):
         activation="gelu",
     ):
 
-        print("transformer.py: Transformer.__init__()", flush = True)
+        print("transformer.py: Transformer.__init__()")
 
         super().__init__()
 
@@ -328,7 +328,7 @@ class Transformer(nn.Module):
 
     def _init_weights(self, module):
 
-        print("transformer.py: Transformer._init_weights()", flush = True)
+        print("transformer.py: Transformer._init_weights()")
 
         ignore_types = (
             nn.Dropout,
@@ -384,7 +384,7 @@ class Transformer(nn.Module):
         output: (B, T, output_dim)
         """
 
-        print("transformer.py: Transformer.forward()", flush = True)
+        print("transformer.py: Transformer.forward()")
 
         # encoder
         cond_embeddings = self.cond_obs_emb(cond)  # (B,To,n_emb)
@@ -423,7 +423,7 @@ class Transformer(nn.Module):
 
 if __name__ == "__main__":
 
-    print("transformer.py: main()", flush = True)
+    print("transformer.py: main()")
 
     transformer = Transformer(
         output_dim=10,

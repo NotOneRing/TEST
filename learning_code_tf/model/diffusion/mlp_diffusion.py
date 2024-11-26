@@ -7,10 +7,13 @@ from model.common.mlp import MLP, ResidualMLP
 from model.diffusion.modules import SinusoidalPosEmb
 from model.common.modules import SpatialEmb, RandomShiftsAug
 
+# from tensorflow.keras.layers import Layers
+
 log = tf.get_logger()
 
 
-class VisionDiffusionMLP(tf.keras.Model):
+class VisionDiffusionMLP(tf.keras.layers.Layer):
+# class VisionDiffusionMLP(tf.keras.Model):
     """With ViT backbone"""
 
     def __init__(
@@ -32,7 +35,7 @@ class VisionDiffusionMLP(tf.keras.Model):
         num_img=1,
         augment=False,
     ):
-        print("mlp_diffusion.py: VisionDiffusionMLP.__init__()", flush=True)
+        print("mlp_diffusion.py: VisionDiffusionMLP.__init__()")
 
         super(VisionDiffusionMLP, self).__init__()
 
@@ -102,7 +105,7 @@ class VisionDiffusionMLP(tf.keras.Model):
             rgb: (B, To, C, H, W)
         """
 
-        print("mlp_diffusion.py: VisionDiffusionMLP.call()", flush=True)
+        print("mlp_diffusion.py: VisionDiffusionMLP.call()")
 
         B, Ta, Da = x.shape
         _, T_rgb, C, H, W = cond["rgb"].shape
@@ -162,9 +165,59 @@ class VisionDiffusionMLP(tf.keras.Model):
         return tf.reshape(out, [B, Ta, Da])
 
 
+import math
 
 
-class DiffusionMLP(tf.keras.Model):
+class KaimingUniformInitializer(tf.keras.initializers.Initializer):
+    def __init__(self, fan_in):
+        self.fan_in = fan_in
+
+    def __call__(self, shape, dtype=None):
+        limit = math.sqrt(3.0 / self.fan_in)  # PyTorch 的 Kaiming Uniform 范围
+        return tf.random.uniform(shape, -limit, limit, dtype=dtype)
+
+    def get_config(self):  # 必须实现以支持序列化
+        return {'fan_in': self.fan_in}
+
+
+class CustomDense(tf.keras.layers.Layer):
+    def __init__(self, units, input_dim, **kwargs):
+        super(CustomDense, self).__init__(**kwargs)
+        self.units = units
+        self.input_dim = input_dim
+        self.kernel_initializer = KaimingUniformInitializer(fan_in=input_dim)
+        self.bias_initializer = tf.keras.initializers.Zeros()
+
+    def build(self, input_shape):
+        self.kernel = self.add_weight(
+            shape=(self.input_dim, self.units),
+            initializer=self.kernel_initializer,
+            name='kernel',
+        )
+        self.bias = self.add_weight(
+            shape=(self.units,),
+            initializer=self.bias_initializer,
+            name='bias',
+        )
+
+    def call(self, inputs):
+        return tf.matmul(inputs, self.kernel) + self.bias
+
+    def get_config(self):
+        config = super(CustomDense, self).get_config()
+        config.update({
+            "units": self.units,
+            "input_dim": self.input_dim,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
+
+class DiffusionMLP(tf.keras.layers.Layer):
+# class DiffusionMLP(tf.keras.Model):
 
     def __init__(
         self,
@@ -179,21 +232,51 @@ class DiffusionMLP(tf.keras.Model):
         use_layernorm=False,
         residual_style=False,
     ):
-        print("mlp_diffusion.py: DiffusionMLP.__init__()", flush=True)
+        print("mlp_diffusion.py: DiffusionMLP.__init__()")
 
         super(DiffusionMLP, self).__init__()
 
-        print("before sinusiodalPosEmb()", flush=True)
-        
-        output_dim = action_dim * horizon_steps
+        print("before sinusiodalPosEmb()")
+
+        self.action_dim = action_dim
+        self.horizon_steps = horizon_steps
+        self.cond_dim = cond_dim
+        self.time_dim = time_dim
+        self.mlp_dims = mlp_dims
+        self.cond_mlp_dims = cond_mlp_dims
+        self.activation_type = activation_type
+        self.out_activation_type = out_activation_type
+        self.use_layernorm = use_layernorm
+        self.residual_style = residual_style
+
+
+        self.output_dim = self.action_dim * self.horizon_steps
+
         self.time_embedding = tf.keras.Sequential([
             SinusoidalPosEmb(time_dim),
-            tf.keras.layers.Dense(time_dim * 2, activation="mish"),
-            tf.keras.layers.Dense(time_dim),
+            tf.keras.layers.Dense(time_dim * 2),      # 等效于 nn.Linear
+            tf.keras.layers.Activation('mish'),       # Mish 激活函数
+            tf.keras.layers.Dense(time_dim),        
         ])
 
 
-        print("after sinusiodalPosEmb()", flush=True)
+        # self.time_embedding = tf.keras.Sequential([
+        #     SinusoidalPosEmb(time_dim),
+        #     CustomDense(units=time_dim * 2, input_dim=time_dim),  # 自定义初始化的 Dense 层
+        #     tf.keras.layers.Activation('mish'),
+        #     CustomDense(units=time_dim, input_dim=time_dim * 2),  # 自定义初始化的 Dense 层
+        # ])
+
+
+
+
+        print("time_dim = ", self.time_dim)
+
+        
+
+
+
+        print("after sinusiodalPosEmb()")
         
         if residual_style:
             model = ResidualMLP
@@ -201,35 +284,38 @@ class DiffusionMLP(tf.keras.Model):
             model = MLP
 
 
-        print("after ResidualMLP and MLP", flush=True)
+        print("after ResidualMLP and MLP")
         
 
-        if cond_mlp_dims is not None:
+        if self.cond_mlp_dims is not None:
             self.cond_mlp = MLP(
-                [cond_dim] + cond_mlp_dims,
-                activation_type=activation_type,
+                [self.cond_dim] + self.cond_mlp_dims,
+                activation_type=self.activation_type,
                 out_activation_type="Identity",
             )
-            input_dim = time_dim + action_dim * horizon_steps + cond_mlp_dims[-1]
+            self.input_dim = self.time_dim + self.action_dim * self.horizon_steps + self.cond_mlp_dims[-1]
         else:
-            input_dim = time_dim + action_dim * horizon_steps + cond_dim
+            self.input_dim = self.time_dim + self.action_dim * self.horizon_steps + self.cond_dim
 
 
-        print("after cond_mlp and input_dim", flush=True)
+        print("after cond_mlp and input_dim")
         
 
         self.mlp_mean = model(
-            [input_dim] + mlp_dims + [output_dim],
-            activation_type=activation_type,
-            out_activation_type=out_activation_type,
-            use_layernorm=use_layernorm,
+            [self.input_dim] + self.mlp_dims + [self.output_dim],
+            activation_type=self.activation_type,
+            out_activation_type=self.out_activation_type,
+            use_layernorm=self.use_layernorm,
         )
 
 
-        print("after mlp_mean", flush=True)
+        print("after mlp_mean")
         
 
         self.time_dim = time_dim
+
+
+
 
     def call(self, x, time, cond, **kwargs):
         """
@@ -239,7 +325,7 @@ class DiffusionMLP(tf.keras.Model):
             state: (B, To, Do)
         """
 
-        print("mlp_diffusion.py: DiffusionMLP.call()", flush=True)
+        print("mlp_diffusion.py: DiffusionMLP.call()")
 
         B, Ta, Da = x.shape
 
@@ -255,12 +341,98 @@ class DiffusionMLP(tf.keras.Model):
 
         # append time and cond
         time = tf.reshape(time, [B, 1])
+
+        print("B = ", B)
+
+        print("time = ", time)
+        print("1time.shape = ", time.shape)
+
+        # time = tf.squeeze(time, axis=1)
+        # time = tf.squeeze(time, axis=-1)
+        # time = tf.reshape(time, [B])
+
+        print("2time.shape = ", time.shape)
+
+
         time_emb = self.time_embedding(time)
+
+        print("time_emb = ", time_emb)
+
+        print("time_emb.shape = ", time_emb.shape)
+
+        time_emb = tf.squeeze(time_emb, axis=1)
+
+        print("after tf.squeeze")
+
+        for layer in self.time_embedding.layers:
+            if isinstance(layer, CustomDense):
+                print("TensorFlow Dense weights:", layer.kernel.numpy())
+                print("TensorFlow Dense bias:", layer.bias.numpy())
+
+
+        print("x = ", x)
+
+        print("time_emb = ", time_emb)
+
+        print("state = ", state)
+        
+
+        print("x.shape = ", x.shape)
+
+        print("time_emb.shape = ", time_emb.shape)
+
+        print("state.shape = ", state.shape)
+
+
         x = tf.concat([x, time_emb, state], axis=-1)
 
         # mlp head
         out = self.mlp_mean(x)
         return tf.reshape(out, [B, Ta, Da])
+
+
+
+
+
+
+
+    def get_config(self):
+        config = super(DiffusionMLP, self).get_config()
+        config.update({
+            "action_dim": self.action_dim,
+            "horizon_steps": self.horizon_steps,
+            "cond_dim": self.cond_dim,
+            "time_dim": self.time_dim,
+            "mlp_dims": self.mlp_dims,
+            "cond_mlp_dims": self.cond_mlp_dims,
+            "activation_type": self.activation_type,
+            "out_activation_type": self.out_activation_type,
+            "use_layernorm": self.use_layernorm,
+            "residual_style": self.residual_style,
+            "output_dim": self.output_dim,
+            "input_dim": self.input_dim,
+            "time_dim": self.time_dim,
+        })
+        return config
+
+
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

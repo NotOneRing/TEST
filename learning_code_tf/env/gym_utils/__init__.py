@@ -69,7 +69,7 @@ def make_async(
           dtype=float32)
     """
 
-    print("gym_utils:__init__.py: make_async()", flush = True)
+    print("gym_utils:__init__.py: make_async()")
 
 
     if env_type == "furniture":
@@ -135,7 +135,7 @@ def make_async(
 
     def _make_env():
 
-        print("gym_utils:__init__.py: _make_env()", flush = True)
+        print("gym_utils:__init__.py: _make_env()")
 
         if robomimic_env_cfg_path is not None:
             obs_modality_dict = {
@@ -184,7 +184,7 @@ def make_async(
     def dummy_env_fn():
         """TODO(allenzren): does this dummy env allow camera obs for other envs besides robomimic?"""
 
-        print("gym_utils:__init__.py: dummy_env_fn()", flush = True)
+        print("gym_utils:__init__.py: dummy_env_fn()")
 
         import gym
         import numpy as np

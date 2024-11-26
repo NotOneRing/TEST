@@ -17,7 +17,7 @@ class EvalImgDiffusionAgent(EvalAgent):
 
     def __init__(self, cfg):
 
-        print("eval_diffusion_img_agent.py: EvalImgDiffusionAgent.__init__()", flush = True)
+        print("eval_diffusion_img_agent.py: EvalImgDiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -26,7 +26,7 @@ class EvalImgDiffusionAgent(EvalAgent):
         self.obs_dims = {k: shape_meta.obs[k]["shape"] for k in shape_meta.obs}
 
     def run(self):
-        print("eval_diffusion_img_agent.py: EvalImgDiffusionAgent.run()", flush = True)
+        print("eval_diffusion_img_agent.py: EvalImgDiffusionAgent.run()")
 
         # Start training loop
         timer = Timer()

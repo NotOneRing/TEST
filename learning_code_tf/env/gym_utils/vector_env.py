@@ -35,7 +35,7 @@ class VectorEnv(gym.Env):
 
     def __init__(self, num_envs, observation_space, action_space):
 
-        print("vector_env.py: VectorEnv.__init__()", flush = True)
+        print("vector_env.py: VectorEnv.__init__()")
 
         self.num_envs = num_envs
         self.is_vector_env = True
@@ -56,7 +56,7 @@ class VectorEnv(gym.Env):
         return_info: bool = False,
         options: Optional[dict] = None,
     ):
-        print("vector_env.py: VectorEnv.reset_async()", flush = True)
+        print("vector_env.py: VectorEnv.reset_async()")
 
         pass
 
@@ -66,7 +66,7 @@ class VectorEnv(gym.Env):
         return_info: bool = False,
         options: Optional[dict] = None,
     ):
-        print("vector_env.py: VectorEnv.reset_wait()", flush = True)
+        print("vector_env.py: VectorEnv.reset_wait()")
 
         raise NotImplementedError()
 
@@ -85,20 +85,20 @@ class VectorEnv(gym.Env):
             A batch of observations from the vectorized environment.
         """
 
-        print("vector_env.py: VectorEnv.reset()", flush = True)
+        print("vector_env.py: VectorEnv.reset()")
 
         self.reset_async(seed=seed, return_info=return_info, options=options)
         return self.reset_wait(seed=seed, return_info=return_info, options=options)
 
     def step_async(self, actions):
 
-        print("vector_env.py: VectorEnv.step_async()", flush = True)
+        print("vector_env.py: VectorEnv.step_async()")
 
         pass
 
     def step_wait(self, **kwargs):
 
-        print("vector_env.py: VectorEnv.step_wait()", flush = True)
+        print("vector_env.py: VectorEnv.step_wait()")
 
         raise NotImplementedError()
 
@@ -128,20 +128,20 @@ class VectorEnv(gym.Env):
             A list of auxiliary diagnostic information dicts from sub-environments.
         """
 
-        print("vector_env.py: VectorEnv.step()", flush = True)
+        print("vector_env.py: VectorEnv.step()")
 
         self.step_async(actions)
         return self.step_wait()
 
     def call_async(self, name, *args, **kwargs):
 
-        print("vector_env.py: VectorEnv.call_async()", flush = True)
+        print("vector_env.py: VectorEnv.call_async()")
 
         pass
 
     def call_wait(self, **kwargs):
 
-        print("vector_env.py: VectorEnv.call_wait()", flush = True)
+        print("vector_env.py: VectorEnv.call_wait()")
 
         raise NotImplementedError()
 
@@ -166,7 +166,7 @@ class VectorEnv(gym.Env):
             property for each environment.
         """
 
-        print("vector_env.py: VectorEnv.call()", flush = True)
+        print("vector_env.py: VectorEnv.call()")
 
         self.call_async(name, *args, **kwargs)
         return self.call_wait()
@@ -180,7 +180,7 @@ class VectorEnv(gym.Env):
             Name of the property to be get from each individual environment.
         """
 
-        print("vector_env.py: VectorEnv.get_attr()", flush = True)
+        print("vector_env.py: VectorEnv.get_attr()")
 
         return self.call(name)
 
@@ -197,14 +197,14 @@ class VectorEnv(gym.Env):
             tuple, then it corresponds to the values for each individual
             environment, otherwise a single value is set for all environments.
         """
-        print("vector_env.py: VectorEnv.set_attr()", flush = True)
+        print("vector_env.py: VectorEnv.set_attr()")
 
         raise NotImplementedError()
 
     def close_extras(self, **kwargs):
         r"""Clean up the extra resources e.g. beyond what's in this base class."""
 
-        print("vector_env.py: VectorEnv.close_extras()", flush = True)
+        print("vector_env.py: VectorEnv.close_extras()")
 
         pass
 
@@ -226,7 +226,7 @@ class VectorEnv(gym.Env):
 
         """
 
-        print("vector_env.py: VectorEnv.close()", flush = True)
+        print("vector_env.py: VectorEnv.close()")
 
         if self.closed:
             return
@@ -248,7 +248,7 @@ class VectorEnv(gym.Env):
             (between ``0`` and ``num_envs - 1``).
         """
 
-        print("vector_env.py: VectorEnv.seed()", flush = True)
+        print("vector_env.py: VectorEnv.seed()")
 
         deprecation(
             "Function `env.seed(seed)` is marked as deprecated and will be removed in the future. "
@@ -257,14 +257,14 @@ class VectorEnv(gym.Env):
 
     def __del__(self):
 
-        print("vector_env.py: VectorEnv.__del__()", flush = True)
+        print("vector_env.py: VectorEnv.__del__()")
 
         if not getattr(self, "closed", True):
             self.close()
 
     def __repr__(self):
 
-        print("vector_env.py: VectorEnv.__repr__()", flush = True)
+        print("vector_env.py: VectorEnv.__repr__()")
 
         if self.spec is None:
             return f"{self.__class__.__name__}({self.num_envs})"
@@ -287,7 +287,7 @@ class VectorEnvWrapper(VectorEnv):
 
     def __init__(self, env):
 
-        print("vector_env.py: VectorEnvWrapper.__init__()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.__init__()")
 
         assert isinstance(env, VectorEnv)
         self.env = env
@@ -296,50 +296,50 @@ class VectorEnvWrapper(VectorEnv):
     # to self.env (instead of the base class)
     def reset_async(self, **kwargs):
 
-        print("vector_env.py: VectorEnvWrapper.reset_async()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.reset_async()")
 
         return self.env.reset_async(**kwargs)
 
     def reset_wait(self, **kwargs):
 
-        print("vector_env.py: VectorEnvWrapper.reset_wait()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.reset_wait()")
 
         return self.env.reset_wait(**kwargs)
 
     def step_async(self, actions):
 
-        print("vector_env.py: VectorEnvWrapper.stop_async()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.stop_async()")
 
         return self.env.step_async(actions)
 
     def step_wait(self):
 
-        print("vector_env.py: VectorEnvWrapper.step_wait()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.step_wait()")
 
         return self.env.step_wait()
 
     def close(self, **kwargs):
 
-        print("vector_env.py: VectorEnvWrapper.close()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.close()")
 
         return self.env.close(**kwargs)
 
     def close_extras(self, **kwargs):
 
-        print("vector_env.py: VectorEnvWrapper.close_extras()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.close_extras()")
 
         return self.env.close_extras(**kwargs)
 
     def seed(self, seed=None):
 
-        print("vector_env.py: VectorEnvWrapper.seed()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.seed()")
 
         return self.env.seed(seed)
 
     # implicitly forward all other methods and attributes to self.env
     def __getattr__(self, name):
 
-        print("vector_env.py: VectorEnvWrapper.__getattr__()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.__getattr__()")
 
         if name.startswith("_"):
             raise AttributeError(f"attempted to get missing private attribute '{name}'")
@@ -348,12 +348,12 @@ class VectorEnvWrapper(VectorEnv):
     @property
     def unwrapped(self):
 
-        print("vector_env.py: VectorEnvWrapper.unwrapped()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.unwrapped()")
 
         return self.env.unwrapped
 
     def __repr__(self):
 
-        print("vector_env.py: VectorEnvWrapper.__repr__()", flush = True)
+        print("vector_env.py: VectorEnvWrapper.__repr__()")
 
         return f"<{self.__class__.__name__}, {self.env}>"

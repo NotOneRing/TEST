@@ -140,7 +140,7 @@ class AsyncVectorEnv(VectorEnv):
         delay_init=False,
     ):
 
-        print("async_vector_env.py: AsyncVectorEnv.__init__()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.__init__()")
 
         ctx = mp.get_context(context)
         self.env_fns = env_fns
@@ -222,7 +222,7 @@ class AsyncVectorEnv(VectorEnv):
 
     def seed(self, seed=None):
 
-        print("async_vector_env.py: AsyncVectorEnv.seed()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.seed()")
 
         super().seed(seed=seed)
         self._assert_is_running()
@@ -263,7 +263,7 @@ class AsyncVectorEnv(VectorEnv):
             between.
         """
 
-        print("async_vector_env.py: AsyncVectorEnv.reset_async()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.reset_async()")
 
         self._assert_is_running()
 
@@ -326,7 +326,7 @@ class AsyncVectorEnv(VectorEnv):
             If :meth:`reset_wait` timed out.
         """
 
-        print("async_vector_env.py: AsyncVectorEnv.reset_wait()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.reset_wait()")
 
         self._assert_is_running()
         if self._state != AsyncState.WAITING_RESET:
@@ -385,7 +385,7 @@ class AsyncVectorEnv(VectorEnv):
             between.
         """
 
-        print("async_vector_env.py: AsyncVectorEnv.step_async()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.step_async()")
 
         self._assert_is_running()
         if self._state != AsyncState.DEFAULT:
@@ -438,7 +438,7 @@ class AsyncVectorEnv(VectorEnv):
             If :meth:`step_wait` timed out.
         """
 
-        print("async_vector_env.py: AsyncVectorEnv.step_wait()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.step_wait()")
 
         self._assert_is_running()
         if self._state != AsyncState.WAITING_STEP:
@@ -487,7 +487,7 @@ class AsyncVectorEnv(VectorEnv):
             Keywoard arguments to apply to the method call.
         """
 
-        print("async_vector_env.py: AsyncVectorEnv.call_async()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.call_async()")
 
         self._assert_is_running()
         if self._state != AsyncState.DEFAULT:
@@ -516,7 +516,7 @@ class AsyncVectorEnv(VectorEnv):
             property for each environment.
         """
 
-        print("async_vector_env.py: AsyncVectorEnv.call_wait()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.call_wait()")
 
         self._assert_is_running()
         if self._state != AsyncState.WAITING_CALL:
@@ -550,7 +550,7 @@ class AsyncVectorEnv(VectorEnv):
             environment, otherwise a single value is set for all environments.
         """
 
-        print("async_vector_env.py: AsyncVectorEnv.set_attr()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.set_attr()")
 
         self._assert_is_running()
         if not isinstance(values, (list, tuple)):
@@ -595,7 +595,7 @@ class AsyncVectorEnv(VectorEnv):
             If :meth:`close` timed out.
         """
   
-        print("async_vector_env.py: AsyncVectorEnv.close_extras()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.close_extras()")
 
         timeout = 0 if terminate else timeout
         try:
@@ -628,7 +628,7 @@ class AsyncVectorEnv(VectorEnv):
 
     def _poll(self, timeout=None):
 
-        print("async_vector_env.py: AsyncVectorEnv._poll()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv._poll()")
 
         self._assert_is_running()
         if timeout is None:
@@ -645,7 +645,7 @@ class AsyncVectorEnv(VectorEnv):
 
     def _check_spaces(self):
 
-        print("async_vector_env.py: AsyncVectorEnv._check_spaces()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv._check_spaces()")
 
         self._assert_is_running()
         spaces = (self.single_observation_space, self.single_action_space)
@@ -669,7 +669,7 @@ class AsyncVectorEnv(VectorEnv):
 
     def _assert_is_running(self):
 
-        print("async_vector_env.py: AsyncVectorEnv._assert_is_running()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv._assert_is_running()")
 
         if self.closed:
             raise ClosedEnvironmentError(
@@ -678,7 +678,7 @@ class AsyncVectorEnv(VectorEnv):
 
     def _raise_if_errors(self, successes):
 
-        print("async_vector_env.py: AsyncVectorEnv._raise_if_errors()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv._raise_if_errors()")
 
         if all(successes):
             return
@@ -699,7 +699,7 @@ class AsyncVectorEnv(VectorEnv):
 
     def __del__(self):
 
-        print("async_vector_env.py: AsyncVectorEnv.__del__()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.__del__()")
 
         if not getattr(self, "closed", True):
             self.close(terminate=True)
@@ -707,7 +707,7 @@ class AsyncVectorEnv(VectorEnv):
     ######################### Added #########################
     def call_sync(self, method_name, indices=None, **method_kwargs):
 
-        print("async_vector_env.py: AsyncVectorEnv.call_sync()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.call_sync()")
 
         """Call instance methods of vectorized environments."""
         target_remotes = self._get_target_remotes(indices)
@@ -720,7 +720,7 @@ class AsyncVectorEnv(VectorEnv):
     ):
         """Call instance methods of vectorized environments with args."""
 
-        print("async_vector_env.py: AsyncVectorEnv.call_sync_arg()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.call_sync_arg()")
 
         target_remotes = self._get_target_remotes(indices)
         for method_arg, remote in zip(method_arg_list, target_remotes):
@@ -732,7 +732,7 @@ class AsyncVectorEnv(VectorEnv):
         """Get the connection object needed to communicate with the wanted
         envs that are in subprocesses."""
 
-        print("async_vector_env.py: AsyncVectorEnv._get_target_remotes()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv._get_target_remotes()")
 
         if indices is None:
             indices = range(self.n_envs)
@@ -740,7 +740,7 @@ class AsyncVectorEnv(VectorEnv):
 
     def reset_arg(self, options_list, **kwargs):
 
-        print("async_vector_env.py: AsyncVectorEnv.reset_arg()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.reset_arg()")
 
         results = self.call_sync_arg("reset", "options", options_list)
         obs = [result[0] for result in results]
@@ -755,7 +755,7 @@ class AsyncVectorEnv(VectorEnv):
         Reset one environment with options.
         """
 
-        print("async_vector_env.py: AsyncVectorEnv.reset_one_arg()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.reset_one_arg()")
 
         obs, success = self.call_sync(
             "reset",
@@ -766,14 +766,14 @@ class AsyncVectorEnv(VectorEnv):
 
     def render(self, *args, **kwargs):
 
-        print("async_vector_env.py: AsyncVectorEnv.render()", flush = True)
+        print("async_vector_env.py: AsyncVectorEnv.render()")
 
         return self.call("render", *args, **kwargs)
 
 
 def _worker(index, env_fn, pipe, parent_pipe, shared_memory, error_queue):
 
-    print("async_vector_env.py: AsyncVectorEnv._worker()", flush = True)
+    print("async_vector_env.py: AsyncVectorEnv._worker()")
 
     assert shared_memory is None
     env = env_fn()
@@ -839,7 +839,7 @@ def _worker(index, env_fn, pipe, parent_pipe, shared_memory, error_queue):
 
 def _worker_shared_memory(index, env_fn, pipe, parent_pipe, shared_memory, error_queue):
 
-    print("async_vector_env.py: AsyncVectorEnv._worker_shared_memory()", flush = True)
+    print("async_vector_env.py: AsyncVectorEnv._worker_shared_memory()")
 
     assert shared_memory is not None
     env = env_fn()
