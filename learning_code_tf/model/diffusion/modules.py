@@ -13,7 +13,7 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
 
         print("modules.py: SinusoidalPosEmb.call()")
 
-        device = x.device  # TensorFlow handles device management automatically
+
         half_dim = self.dim // 2
 
 

@@ -12,8 +12,8 @@ from model.common.modules import SpatialEmb, RandomShiftsAug
 log = tf.get_logger()
 
 
-class VisionDiffusionMLP(tf.keras.layers.Layer):
-# class VisionDiffusionMLP(tf.keras.Model):
+# class VisionDiffusionMLP(tf.keras.layers.Layer):
+class VisionDiffusionMLP(tf.keras.Model):
     """With ViT backbone"""
 
     def __init__(
@@ -216,8 +216,39 @@ class CustomDense(tf.keras.layers.Layer):
         return cls(**config)
 
 
-class DiffusionMLP(tf.keras.layers.Layer):
-# class DiffusionMLP(tf.keras.Model):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# class DiffusionMLP(tf.keras.layers.Layer):
+class DiffusionMLP(tf.keras.Model):
 
     def __init__(
         self,
@@ -241,6 +272,11 @@ class DiffusionMLP(tf.keras.layers.Layer):
         self.action_dim = action_dim
         self.horizon_steps = horizon_steps
         self.cond_dim = cond_dim
+
+        print("self.cond_dim = ", self.cond_dim)
+
+        # print("self.time_dim = ", time_dim)
+
         self.time_dim = time_dim
         self.mlp_dims = mlp_dims
         self.cond_mlp_dims = cond_mlp_dims
@@ -251,6 +287,8 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
 
         self.output_dim = self.action_dim * self.horizon_steps
+
+        print("self.time_dim = ", self.time_dim)
 
         self.time_embedding = tf.keras.Sequential([
             SinusoidalPosEmb(time_dim),
@@ -299,6 +337,9 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
 
         print("after cond_mlp and input_dim")
+
+
+        print("[self.input_dim] + self.mlp_dims + [self.output_dim] = ", [self.input_dim] + self.mlp_dims + [self.output_dim])
         
 
         self.mlp_mean = model(
@@ -312,12 +353,13 @@ class DiffusionMLP(tf.keras.layers.Layer):
         print("after mlp_mean")
         
 
-        self.time_dim = time_dim
+        # self.time_dim = time_dim
 
 
 
 
-    def call(self, x, time, cond, **kwargs):
+    # def call(self, x, time, cond, **kwargs):
+    def call(self, x, time, state, **kwargs):
         """
         x: (B, Ta, Da)
         time: (B,) or int, diffusion step
@@ -327,25 +369,43 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         print("mlp_diffusion.py: DiffusionMLP.call()")
 
-        B, Ta, Da = x.shape
+        print("x.shape = ", x.shape)
 
-        # flatten chunk
-        x = tf.reshape(x, [B, -1])
+        print("time.shape = ", time.shape)
 
-        # flatten history
-        state = tf.reshape(cond["state"], [B, -1])
+        # • cond={'state': 'tf.Tensor(shape=(128, 1, 11), dtype=float32)'}
+        # • kwargs={'training': 'True'}
+        # print("cond.shape = ", cond.shape)
+
+        # B, Ta, Da = x.shape
+        # B, Ta, Da = x_shape
+
+        B = x.shape[0]
+        Ta = self.horizon_steps
+        Da = self.action_dim
+
+
+        # # flatten chunk
+        # x = tf.reshape(x, [B, -1])
+
+        # # flatten history
+        # state = tf.reshape(cond["state"], [B, -1])
+
+        # # append time and cond
+        # time = tf.reshape(time, [B, 1])
 
         # obs encoder
         if hasattr(self, "cond_mlp"):
             state = self.cond_mlp(state)
 
-        # append time and cond
-        time = tf.reshape(time, [B, 1])
 
         print("B = ", B)
 
         print("time = ", time)
-        print("1time.shape = ", time.shape)
+
+        print("state = ", state)
+        
+        # print("1time.shape = ", time.shape)
 
         # time = tf.squeeze(time, axis=1)
         # time = tf.squeeze(time, axis=-1)
@@ -388,11 +448,79 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         # mlp head
         out = self.mlp_mean(x)
-        return tf.reshape(out, [B, Ta, Da])
 
 
+        print("out.shape[0] = ", out.shape[0])
+        print("out.shape = ", out.shape)
+
+        if out.shape[0]:
+            print("branch1")
+            # print("out.shape[0] = ", out.shape[0])
+            final_out = tf.reshape(out, [-1, Ta, Da])
+        else:
+            print("branch2")
+            # print("out.shape[0] = ", out.shape[0])
+            # final_out = tf.reshape(out, [None, Ta, Da])
+            final_out = tf.reshape(out, [-1, Ta, Da])
+
+        print("final_out.shape = ", final_out.shape)
+
+        # return tf.reshape(out, [B, Ta, Da])
+        return final_out
 
 
+    
+    # def summary(self):
+    #     from tensorflow.keras import Input, Model
+
+    #     if self.cond_mlp_dims is not None:
+    #         input_dim = self.time_dim + self.action_dim * self.horizon_steps + self.cond_mlp_dims[-1]
+    #     else:
+    #         input_dim = self.time_dim + self.action_dim * self.horizon_steps + self.cond_dim
+
+    #     input_shape = (input_dim,)  
+
+    #     x = Input(shape=input_shape)
+
+    #     output = self.call(x)
+
+    #     model = Model(inputs=x, outputs=output)
+
+    #     # 返回模型的 summary
+    #     return model.summary()
+
+
+    def summary(self):
+        from tensorflow.keras import Input, Model
+
+        # 假设x的形状为 (self.action_dim * self.horizon_steps,)
+        x_input = Input(shape=(self.action_dim * self.horizon_steps,), name='x_input')
+
+        print("self.action_dim * self.horizon_steps = ", self.action_dim * self.horizon_steps)
+
+        # 假设time的形状为 (time_dim,) 
+        time_input = Input(shape=(1,), name='time_input')
+
+
+        if self.cond_mlp_dims is not None:
+            # 假设cond的形状为 (cond_dim,)
+            cond_input = Input(shape=(self.cond_mlp_dims[-1],), name='cond_input')
+            print("self.cond_mlp_dims[-1] = ", self.cond_mlp_dims[-1])
+        else:
+            cond_input = Input(shape=(self.cond_dim,), name='cond_input')
+            print("self.cond_dim = ", self.cond_dim)
+
+        print("[x_input, time_input, cond_input] = ", [x_input, time_input, cond_input])
+
+        # 调用模型的 call 方法获取输出
+        output = self.call(x_input, time_input, cond_input)
+
+
+        # 创建模型
+        model = Model(inputs=[x_input, time_input, cond_input], outputs=output)
+
+        # 返回模型的 summary
+        return model.summary()
 
 
 

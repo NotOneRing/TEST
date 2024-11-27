@@ -6,7 +6,8 @@ Parent fine-tuning agent class.
 import os
 import numpy as np
 from omegaconf import OmegaConf
-import torch
+# import torch
+import tensorflow as tf
 import hydra
 import logging
 import wandb
@@ -27,7 +28,8 @@ class TrainAgent:
         self.seed = cfg.get("seed", 42)
         random.seed(self.seed)
         np.random.seed(self.seed)
-        torch.manual_seed(self.seed)
+        # torch.manual_seed(self.seed)
+        tf.manual_seed(self.seed)
 
         # Wandb
         self.use_wandb = cfg.wandb is not None
@@ -124,33 +126,54 @@ class TrainAgent:
         print("train_agent.py: TrainAgent.run()")
         pass
 
+
     def save_model(self):
         """
-        saves model to disk; no ema
+        Saves model to disk.
         """
-
         print("train_agent.py: TrainAgent.save_model()")
 
-        data = {
-            "itr": self.itr,
-            "model": self.model.state_dict(),
-        }
-        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.pt")
-        torch.save(data, savepath)
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.h5")
+        self.model.save_weights(savepath)
         log.info(f"Saved model to {savepath}")
+
+    # def save_model(self):
+    #     """
+    #     saves model to disk; no ema
+    #     """
+
+    #     print("train_agent.py: TrainAgent.save_model()")
+
+    #     data = {
+    #         "itr": self.itr,
+    #         "model": self.model.state_dict(),
+    #     }
+    #     savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.pt")
+    #     torch.save(data, savepath)
+    #     log.info(f"Saved model to {savepath}")
+
 
     def load(self, itr):
         """
-        loads model from disk
+        Loads model from disk.
         """
-
         print("train_agent.py: TrainAgent.load()")
 
-        loadpath = os.path.join(self.checkpoint_dir, f"state_{itr}.pt")
-        data = torch.load(loadpath, weights_only=True)
+        loadpath = os.path.join(self.checkpoint_dir, f"state_{itr}.h5")
+        self.model.load_weights(loadpath)
 
-        self.itr = data["itr"]
-        self.model.load_state_dict(data["model"])
+    # def load(self, itr):
+    #     """
+    #     loads model from disk
+    #     """
+
+    #     print("train_agent.py: TrainAgent.load()")
+
+    #     loadpath = os.path.join(self.checkpoint_dir, f"state_{itr}.pt")
+    #     data = torch.load(loadpath, weights_only=True)
+
+    #     self.itr = data["itr"]
+    #     self.model.load_state_dict(data["model"])
 
     def reset_env_all(self, verbose=False, options_venv=None, **kwargs):
 

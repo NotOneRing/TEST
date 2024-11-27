@@ -17,13 +17,16 @@ from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 
-Batch = namedtuple("Batch", "actions conditions")
-Transition = namedtuple("Transition", "actions conditions rewards dones")
-TransitionWithReturn = namedtuple(
-    "Transition", "actions conditions rewards dones reward_to_gos"
-)
+# Batch = namedtuple("Batch", "actions conditions")
+# Transition = namedtuple("Transition", "actions conditions rewards dones")
+# TransitionWithReturn = namedtuple(
+#     "Transition", "actions conditions rewards dones reward_to_gos"
+# )
 
-class StitchedSequenceDataset(tf.data.Dataset):
+
+
+# class StitchedSequenceDataset(tf.data.Dataset):
+class StitchedSequenceDataset:
     """
     Load stitched trajectories of states/actions/images, and 1-D array of traj_lengths, from npz or pkl file.
 
@@ -249,30 +252,30 @@ class StitchedSequenceDataset(tf.data.Dataset):
         return None
 
 
-    @property
-    def element_spec(self):
-        # 定义动作的 TensorSpec
-        action_spec = tf.TensorSpec(
-            shape=(self.horizon_steps, self.actions.shape[-1]),
-            dtype=self.actions.dtype,
-        )
+    # @property
+    # def element_spec(self):
+    #     # 定义动作的 TensorSpec
+    #     action_spec = tf.TensorSpec(
+    #         shape=(self.horizon_steps, self.actions.shape[-1]),
+    #         dtype=self.actions.dtype,
+    #     )
 
-        # 定义状态的 TensorSpec
-        state_spec = tf.TensorSpec(
-            shape=(self.cond_steps, self.states.shape[-1]),
-            dtype=self.states.dtype,
-        )
+    #     # 定义状态的 TensorSpec
+    #     state_spec = tf.TensorSpec(
+    #         shape=(self.cond_steps, self.states.shape[-1]),
+    #         dtype=self.states.dtype,
+    #     )
 
-        # 定义 conditions 的字典结构
-        spec = {"state": state_spec}
-        if self.use_img:
-            img_spec = tf.TensorSpec(
-                shape=(self.img_cond_steps,) + self.images.shape[1:],
-                dtype=self.images.dtype,
-            )
-            spec["rgb"] = img_spec
-        # 返回一个 Batch 的 TensorSpec
-        return (action_spec, spec)
+    #     # 定义 conditions 的字典结构
+    #     spec = {"state": state_spec}
+    #     if self.use_img:
+    #         img_spec = tf.TensorSpec(
+    #             shape=(self.img_cond_steps,) + self.images.shape[1:],
+    #             dtype=self.images.dtype,
+    #         )
+    #         spec["rgb"] = img_spec
+    #     # 返回一个 Batch 的 TensorSpec
+    #     return (action_spec, spec)
 
 
 
@@ -352,12 +355,25 @@ class StitchedSequenceQLearningDataset(tf.data.Dataset):
         
         conditions = {"state": states}
         if self.use_img:
+            raise NotImplementedError("use_img is not implemented now.")
+
             images = self.images[(start - num_before_start):end]
             images = tf.stack([images[max(num_before_start - t, 0)] for t in reversed(range(self.img_cond_steps))])
             conditions["rgb"] = images
-        
-        batch = (actions, rewards, next_states, conditions)
-        return batch
+
+
+        returned_dict = {"actions": actions}
+
+        returned_dict = {"states": states}
+
+        returned_dict["rewards"] = rewards
+        returned_dict["next_states"] = next_states
+        returned_dict['conditions'] = conditions
+
+        # batch = (actions, rewards, next_states, conditions)
+        # return batch
+        return returned_dict
+
 
     def __len__(self):
         return len(self.indices)

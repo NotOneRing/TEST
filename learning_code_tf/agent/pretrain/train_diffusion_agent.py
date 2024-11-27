@@ -9,7 +9,8 @@ import wandb
 import numpy as np
 import tensorflow as tf
 
-from agent.pretrain.train_agent import PreTrainAgent, batch_to_device
+from agent.pretrain.train_agent import PreTrainAgent
+# , batch_to_device
 
 log = logging.getLogger(__name__)
 from util.timer import Timer
@@ -24,6 +25,8 @@ import io
 from copy import deepcopy
 
 
+DEBUG = True
+
 
 
 class TrainDiffusionAgent(PreTrainAgent):
@@ -31,6 +34,7 @@ class TrainDiffusionAgent(PreTrainAgent):
     def __init__(self, cfg):
         print("train_diffusion_agent.py: TrainDiffusionAgent.__init__()")
         super().__init__(cfg)
+        self.model.batch_size = self.batch_size
 
         # # # Use tf's model handling
         # self.model = self.build_model(cfg)
@@ -64,7 +68,20 @@ class TrainDiffusionAgent(PreTrainAgent):
             "rgb": [],
         }
 
+
+
+        print("self.batch_size = ", self.batch_size)
+
+        print("self.n_epochs = ", self.n_epochs)
+
+        print("len(self.dataset_train = ", len(self.dataset_train))
+
+
         for i in range(len(self.dataset_train)):
+            if DEBUG:
+                if i == self.batch_size * 10:
+                    break
+
             batch_train = self.dataset_train[i]
             # actions = batch_train.actions
             # conditions = batch_train.conditions
@@ -98,15 +115,20 @@ class TrainDiffusionAgent(PreTrainAgent):
         # 构造 Dataset
         dataset = tf.data.Dataset.from_tensor_slices(data_before_generator)
 
+        if DEBUG:
+            self.n_epochs = 2
+
         dataset = dataset.batch(
             self.batch_size, drop_remainder=True
         ).repeat(self.n_epochs)
+
 
 
         loss_train_epoch = []
 
         #最终的，但是太慢了，不适合调试网络结构
         for epoch, item in enumerate(dataset):
+            
 
         # #临时的            
         # for epoch in range(len(self.dataset_train)):
@@ -119,21 +141,18 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
             print( f"Epoch {epoch + 1}" )
+
+            # continue
             
-            # Train
-            print(item)
-            print("State:", item["states"].numpy())
-            print("Action:", item["actions"].numpy())
+            # # Train
+            # print(item)
+            # print("State:", item["states"].numpy())
+            # print("Action:", item["actions"].numpy())
 
             cond = {}
             cond['state'] = item["states"]
 
-            print("self.model = ", self.model)
 
-            # print("self.model.network = ", self.model.network)
-
-            # # Print the summary
-            # self.model.network.summary()
 
             with tf.GradientTape() as tape:
                 # Assuming loss is computed as a callable loss function
@@ -181,9 +200,10 @@ class TrainDiffusionAgent(PreTrainAgent):
             # # Update lr scheduler
             # self.lr_scheduler.step()
 
-            # Save model
-            if self.epoch % self.save_model_freq == 0 or self.epoch == self.n_epochs:
-                self.save_model()
+            # # Save model
+            # if self.epoch % self.save_model_freq == 0 or self.epoch == self.n_epochs:
+            #     self.save_model()
+            self.save_model()
 
             # Log loss
             if self.epoch % self.log_freq == 0:
@@ -202,6 +222,30 @@ class TrainDiffusionAgent(PreTrainAgent):
                 #         step=self.epoch,
                 #         commit=True,
                 #     )
+
+
+            print("self.model = ", self.model)
+
+            print("self.model.network = ", self.model.network)
+
+            print("before summary")
+
+            # Print the summary
+            self.model.network.summary()
+
+
+            print("after summary")
+
+            # tf.keras.utils.plot_model(
+            #     self.model.network,
+            #     show_shapes=True,
+            #     to_file="model_structure.png"  # 保存路径
+            # )
+
+            # print("after plot_model")
+
+            # if epoch == 2:
+            #     break
 
             # Increment epoch count
             # self.epoch += 1

@@ -55,27 +55,27 @@ def extract(a, t, x_shape):
     
     # print("t.shape = ", t.shape)
 
-    print("b = ", b)
-    print("a = ", a)
-    print("type(a) = ", type(a))
-    print("a.shape = ", a.shape)
+    # print("b = ", b)
+    # print("a = ", a)
+    # print("type(a) = ", type(a))
+    # print("a.shape = ", a.shape)
 
-    print("t = ", t)
-    print("type(t) = ", type(t))
-    print("t.shape = ", t.shape)
+    # print("t = ", t)
+    # print("type(t) = ", type(t))
+    # print("t.shape = ", t.shape)
 
-    print("x_shape = ", x_shape)
-    print("type(x_shape) = ", type(x_shape))
+    # print("x_shape = ", x_shape)
+    # print("type(x_shape) = ", type(x_shape))
 
 
     out = tf.gather(a, t, axis=-1)
 
-    print("out = ", out)
-    print("out.shape = ", out.shape)
+    # print("out = ", out)
+    # print("out.shape = ", out.shape)
     
 
     reshape_shape = [b] + [1] * (len(x_shape) - 1)
-    print("reshape_shape = ", reshape_shape)
+    # print("reshape_shape = ", reshape_shape)
 
     # Reshape the output to match x_shape
     return tf.reshape(out, reshape_shape)
@@ -86,3 +86,15 @@ def make_timesteps(batch_size, i, device):
     print("sampling.py: make_timesteps()")
     t = tf.constant([i] * batch_size, dtype=tf.int64)
     return t
+
+
+
+
+
+
+
+
+
+
+
+

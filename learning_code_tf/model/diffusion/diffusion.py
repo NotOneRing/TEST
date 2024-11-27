@@ -80,6 +80,8 @@ class DiffusionModel(tf.keras.Model):
         # Set up models
         self.network = network
 
+        # self.network.batch_size = 
+
         self.network_path = network_path
 
         if self.network_path is not None:
@@ -198,8 +200,7 @@ class DiffusionModel(tf.keras.Model):
     def get_config(self):
         config = super(DiffusionModel, self).get_config()
 
-        super(DiffusionModel, self).__init__()
-        print("diffusion.py: DiffusionModel.__init__()")
+        print("get_config: diffusion.py: DiffusionModel.get_config()")
 
         config.update({
             "ddim_discretize": self.ddim_discretize,
@@ -367,15 +368,17 @@ class DiffusionModel(tf.keras.Model):
         """
         print("diffusion.py: DiffusionModel.loss()")
 
-        print("x_start = ", x_start)
+        # print("x_start = ", x_start)
         
-        print("cond = ", cond)
+        # print("cond = ", cond)
 
 
         # batch_size = tf.shape(x_start)[0]
         # batch_size = x_start.get_shape().as_list()[0]
         batch_size = x_start.shape[0]
 
+        self.batch_size = batch_size
+        self.network.batch_size = batch_size
 
         # print("tf.shape(x_start):", tf.shape(x_start))  # 返回形状
         # print("tf.shape(x_start)[0]:", tf.shape(x_start)[0])  # 直接获取第一个维度
@@ -388,14 +391,14 @@ class DiffusionModel(tf.keras.Model):
         print("batch_size = ", batch_size)
 
         # # 生成 [0, self.denoising_steps) 范围的随机整数
-        # t = tf.random.uniform(
-        #     shape=(batch_size,),
-        #     minval=0,
-        #     maxval=self.denoising_steps,
-        #     dtype=tf.int32,
-        # )
+        t = tf.random.uniform(
+            shape=(batch_size,),
+            minval=0,
+            maxval=self.denoising_steps,
+            dtype=tf.int32,
+        )
 
-        t = tf.fill([batch_size], 3)  # 固定为 3
+        # t = tf.fill([batch_size], 3)  # 固定为 3
 
 
 
@@ -417,17 +420,18 @@ class DiffusionModel(tf.keras.Model):
         print("diffusion.py: DiffusionModel.p_losses()")
 
         # # Forward process
-        # noise = tf.random.normal(tf.shape(x_start), dtype=x_start.dtype)
+        noise = tf.random.normal(tf.shape(x_start), dtype=x_start.dtype)
 
-        # 假设 x_start 是一个已定义的张量
-        fixed_value = 1.0  # 固定数值
-        # noise = tf.fill(tf.shape(x_start), fixed_value)  # 使用 tf.fill 填充固定值
-        noise = tf.fill(x_start.shape, fixed_value)
-        print("x_start = ", x_start)
+        # # 假设 x_start 是一个已定义的张量
+        # fixed_value = 1.0  # 固定数值
+        # # noise = tf.fill(tf.shape(x_start), fixed_value)  # 使用 tf.fill 填充固定值
+        # noise = tf.fill(x_start.shape, fixed_value)
+
+        # print("x_start = ", x_start)
         
-        print("t = ", t)
+        # print("t = ", t)
 
-        print("noise = ", noise)
+        # print("noise = ", noise)
 
         print("before q_sample")
 
@@ -437,15 +441,41 @@ class DiffusionModel(tf.keras.Model):
         print("self.network = ", self.network)
 
 
+        print("x_start.shape = ", x_start.shape)
+
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+
+        print("x_noisy.shape = ", x_noisy.shape)
 
 
         print("type(self.network) = ", type(self.network))
 
         print("self.network = ", self.network)
 
+        B, Ta, Da = x_noisy.shape
+
+        assert Ta == self.horizon_steps, "Ta != self.horizon_steps"
+        assert Da == self.action_dim, "Da != self.action_dim"
+
+        # flatten chunk
+        x_noisy = tf.reshape(x_noisy, [B, -1])
+
+        # flatten history
+        state = tf.reshape(cond["state"], [B, -1])
+
+        print("t.shape = ", t.shape)
+
+        # append time and cond
+        time = tf.reshape(t, [B, 1])
+
+        # 提前展平 Batch * -1
+        # # # Predict
+        # x_recon = self.network(x_noisy, t, cond=cond, training=training_flag)
+
+
+
         # Predict
-        x_recon = self.network(x_noisy, t, cond=cond, training=training_flag)
+        x_recon = self.network(x_noisy, time, state, training=training_flag)
 
         
         if self.predict_epsilon:
@@ -476,6 +506,9 @@ class DiffusionModel(tf.keras.Model):
 
         print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
         print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
+
+        print("x_start.shape = ", x_start.shape)
+        print("noise.shape = ", noise.shape)
 
         # Compute x_t
         return (

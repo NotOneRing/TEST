@@ -118,12 +118,39 @@ class ResidualMLP(models.Model):
 
         print("after dim")
 
-        self.cur_layers = [tf.keras.layers.Dense(hidden_dim)]
+        # self.cur_layers = [tf.keras.layers.Dense(hidden_dim)]
 
-        print("after layers")
+        # print("after layers")
 
-        self.cur_layers.extend(
-            [
+        # self.cur_layers.extend(
+        #     [
+        #         TwoLayerPreActivationResNetLinear(
+        #             hidden_dim=hidden_dim,
+        #             activation_type=activation_type,
+        #             use_layernorm=use_layernorm,
+        #             dropout=dropout,
+        #         )
+        #         for _ in range(1, num_hidden_layers, 2)
+        #     ]
+        # )
+
+        # print("after layers.extend()")
+
+        # self.cur_layers.append(tf.keras.layers.Dense(dim_list[-1]))
+
+        # print("after append()")
+
+        # if use_layernorm_final:
+        #     self.cur_layers.append(tf.keras.layers.LayerNormalization())
+
+        # print("after use_layernorm_final")
+
+        # self.cur_layers.append(activation_dict[out_activation_type])
+
+
+        self.cur_layers = tf.keras.Sequential([
+            tf.keras.layers.Dense(hidden_dim),
+            *[
                 TwoLayerPreActivationResNetLinear(
                     hidden_dim=hidden_dim,
                     activation_type=activation_type,
@@ -131,32 +158,29 @@ class ResidualMLP(models.Model):
                     dropout=dropout,
                 )
                 for _ in range(1, num_hidden_layers, 2)
-            ]
-        )
-
-        print("after layers.extend()")
-
-        self.cur_layers.append(tf.keras.layers.Dense(dim_list[-1]))
-
-        print("after append()")
+            ],
+            tf.keras.layers.Dense(dim_list[-1]),
+        ])
 
         if use_layernorm_final:
-            self.cur_layers.append(tf.keras.layers.LayerNormalization())
+            self.cur_layers.add(tf.keras.layers.LayerNormalization())
 
-        print("after use_layernorm_final")
+        self.cur_layers.add(activation_dict[out_activation_type])
 
-        self.cur_layers.append(activation_dict[out_activation_type])
 
-        print("after append()")
+
+        # print("after append()")
 
 
     def call(self, x):
         print("mlp.py: ResidualMLP.call()")
 
-        for cur_layers in self.cur_layers:
-            x = cur_layers(x)
-        return x
-
+        # for cur_layers in self.cur_layers:
+        #     x = cur_layers(x)
+        # x = self.cur_layers(x)
+        # return x
+        return self.cur_layers(x)
+    
 
 class TwoLayerPreActivationResNetLinear(models.Model):
     def __init__(
@@ -189,4 +213,6 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         if hasattr(self, "norm2"):
             x = self.norm2(x)
         x = self.l2(self.act(x))
-        return x + x_input
+        result = x + x_input
+        return result
+
