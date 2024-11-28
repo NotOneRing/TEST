@@ -75,7 +75,7 @@ class DiffusionModel(tf.keras.Model):
         # Clip epsilon for numerical stability
         self.eps_clip_value = eps_clip_value
 
-        print("before set up models")
+        # print("before set up models")
 
         # Set up models
         self.network = network
@@ -89,25 +89,25 @@ class DiffusionModel(tf.keras.Model):
             checkpoint.restore(network_path)
             print(f"Loaded policy from {network_path}")
 
-        print("after set up models")
+        # print("after set up models")
 
         """
         DDPM parameters
         """
         self.betas = cosine_beta_schedule(denoising_steps)
 
-        print("self.betas = ", self.betas)
-        print("self.betas.shape = ", self.betas.shape)
+        # print("self.betas = ", self.betas)
+        # print("self.betas.shape = ", self.betas.shape)
 
-        print("after betas")
+        # print("after betas")
 
         self.alphas = 1.0 - self.betas
 
-        print("self.alphas = ", self.alphas)
+        # print("self.alphas = ", self.alphas)
 
         self.alphas_cumprod = tf.math.cumprod(self.alphas)
 
-        print("self.alphas_cumprod = ", self.alphas_cumprod)
+        # print("self.alphas_cumprod = ", self.alphas_cumprod)
         
         # 创建一个值为1的Tensor，数据类型和设备与 self.alphas_cumprod 相同
         ones_tensor = tf.ones([1], dtype=self.alphas_cumprod.dtype)
@@ -118,9 +118,9 @@ class DiffusionModel(tf.keras.Model):
         # 将 ones_tensor 和 alphas_cumprod_truncated 进行拼接
         self.alphas_cumprod_prev = tf.concat([ones_tensor, alphas_cumprod_truncated], axis=0)
 
-        print("self.alphas_cumprod_prev = ", self.alphas_cumprod_prev)
+        # print("self.alphas_cumprod_prev = ", self.alphas_cumprod_prev)
 
-        print("after alphas_cumprod_prev")
+        # print("after alphas_cumprod_prev")
 
 
 
@@ -135,8 +135,8 @@ class DiffusionModel(tf.keras.Model):
         self.sqrt_one_minus_alphas_cumprod = tf.sqrt(1.0 - self.alphas_cumprod)
         
         
-        print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
-        print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
+        # print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
+        # print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
         
         
         
@@ -144,7 +144,7 @@ class DiffusionModel(tf.keras.Model):
         self.sqrt_recip_alphas_cumprod = tf.sqrt(1.0 / self.alphas_cumprod)
         self.sqrt_recipm1_alphas_cumprod = tf.sqrt(1.0 / self.alphas_cumprod - 1)
 
-        print("before sqrt_recipm1_alphas_cumprod")
+        # print("before sqrt_recipm1_alphas_cumprod")
 
         self.ddpm_var = (
             self.betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
@@ -157,7 +157,7 @@ class DiffusionModel(tf.keras.Model):
             (1.0 - self.alphas_cumprod_prev) * tf.sqrt(self.alphas) / (1.0 - self.alphas_cumprod)
         )
 
-        print("before ddpm_mu_coef2")
+        # print("before ddpm_mu_coef2")
 
         if use_ddim:
 
@@ -433,24 +433,24 @@ class DiffusionModel(tf.keras.Model):
 
         # print("noise = ", noise)
 
-        print("before q_sample")
+        # print("before q_sample")
 
 
-        print("type(self.network) = ", type(self.network))
+        # print("type(self.network) = ", type(self.network))
 
-        print("self.network = ", self.network)
+        # print("self.network = ", self.network)
 
 
-        print("x_start.shape = ", x_start.shape)
+        # print("x_start.shape = ", x_start.shape)
 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
-        print("x_noisy.shape = ", x_noisy.shape)
+        # print("x_noisy.shape = ", x_noisy.shape)
 
 
-        print("type(self.network) = ", type(self.network))
+        # print("type(self.network) = ", type(self.network))
 
-        print("self.network = ", self.network)
+        # print("self.network = ", self.network)
 
         B, Ta, Da = x_noisy.shape
 
@@ -463,7 +463,7 @@ class DiffusionModel(tf.keras.Model):
         # flatten history
         state = tf.reshape(cond["state"], [B, -1])
 
-        print("t.shape = ", t.shape)
+        # print("t.shape = ", t.shape)
 
         # append time and cond
         time = tf.reshape(t, [B, 1])
@@ -491,12 +491,12 @@ class DiffusionModel(tf.keras.Model):
         q(xₜ | x₀) = 𝒩(xₜ; √ α̅ₜ x₀, (1-α̅ₜ)I)
         xₜ = √ α̅ₜ xₒ + √ (1-α̅ₜ) ε
         """
-        print("diffusion.py: DiffusionModel.q_sample()")
+        # print("diffusion.py: DiffusionModel.q_sample()")
 
-        print("t = ", t)
+        # print("t = ", t)
 
-        print("extract function module:", extract.__module__)
-        print("extract function name:", extract.__name__)
+        # print("extract function module:", extract.__module__)
+        # print("extract function name:", extract.__name__)
 
 
         # Generate noise if not provided
@@ -504,11 +504,11 @@ class DiffusionModel(tf.keras.Model):
             # noise = tf.random.normal(shape=tf.shape(x_start), dtype=x_start.dtype)
             noise = tf.random.normal(shape = x_start.shape, dtype=x_start.dtype)
 
-        print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
-        print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
+        # print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
+        # print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
 
-        print("x_start.shape = ", x_start.shape)
-        print("noise.shape = ", noise.shape)
+        # print("x_start.shape = ", x_start.shape)
+        # print("noise.shape = ", noise.shape)
 
         # Compute x_t
         return (

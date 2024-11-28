@@ -5,7 +5,7 @@ Pre-training diffusion policy
 
 
 import logging
-import wandb
+# import wandb
 import numpy as np
 import tensorflow as tf
 
@@ -25,7 +25,8 @@ import io
 from copy import deepcopy
 
 
-DEBUG = True
+# DEBUG = True
+DEBUG = False
 
 
 
@@ -76,6 +77,13 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         print("len(self.dataset_train = ", len(self.dataset_train))
 
+        print("self.save_model_freq = ", self.save_model_freq)
+        
+        print("len(self.dataset_train) // self.batch_size) = ", len(self.dataset_train) // self.batch_size)
+
+        print("(self.save_model_freq * (len(self.dataset_train) // self.batch_size)) = ", (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) )
+
+        print("(self.n_epochs * (len(self.dataset_train) // self.batch_size)) = ", (self.n_epochs * (len(self.dataset_train) // self.batch_size) ) )
 
         for i in range(len(self.dataset_train)):
             if DEBUG:
@@ -122,7 +130,7 @@ class TrainDiffusionAgent(PreTrainAgent):
             self.batch_size, drop_remainder=True
         ).repeat(self.n_epochs)
 
-
+    
 
         loss_train_epoch = []
 
@@ -201,15 +209,18 @@ class TrainDiffusionAgent(PreTrainAgent):
             # self.lr_scheduler.step()
 
             # # Save model
-            # if self.epoch % self.save_model_freq == 0 or self.epoch == self.n_epochs:
-            #     self.save_model()
-            self.save_model()
+            if epoch % (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) == 0 or epoch == (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 ):
+                self.save_model()
+
+            if DEBUG:
+                self.save_model()
 
             # Log loss
-            if self.epoch % self.log_freq == 0:
+            if epoch % self.log_freq == 0:
                 log.info(
-                    f"{self.epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
+                    f"{epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
                 )
+
                 # if self.use_wandb:
                 #     if loss_val is not None:
                 #         wandb.log(
@@ -224,25 +235,17 @@ class TrainDiffusionAgent(PreTrainAgent):
                 #     )
 
 
-            print("self.model = ", self.model)
+            # print("self.model = ", self.model)
 
-            print("self.model.network = ", self.model.network)
+            # print("self.model.network = ", self.model.network)
 
-            print("before summary")
+            # print("before summary")
 
-            # Print the summary
-            self.model.network.summary()
+            # # Print the summary
+            # self.model.network.summary()
 
 
-            print("after summary")
-
-            # tf.keras.utils.plot_model(
-            #     self.model.network,
-            #     show_shapes=True,
-            #     to_file="model_structure.png"  # 保存路径
-            # )
-
-            # print("after plot_model")
+            # print("after summary")
 
             # if epoch == 2:
             #     break

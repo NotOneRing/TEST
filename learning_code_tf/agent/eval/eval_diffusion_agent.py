@@ -5,7 +5,8 @@ Evaluate pre-trained/DPPO-fine-tuned diffusion policy.
 
 import os
 import numpy as np
-import torch
+# import torch
+import tensorflow as tf
 import logging
 
 log = logging.getLogger(__name__)
@@ -35,7 +36,17 @@ class EvalDiffusionAgent(EvalAgent):
                 )
 
         # Reset env before iteration starts
-        self.model.eval()
+        # self.model.eval()
+
+        print("self.n_envs = ", self.n_envs)
+
+        print("self.n_render = ", self.n_render)
+
+        print("self.n_steps = ", self.n_steps)
+
+        print("self.act_steps = ", self.act_steps)
+
+
         firsts_trajs = np.zeros((self.n_steps + 1, self.n_envs))
         prev_obs_venv = self.reset_env_all(options_venv=options_venv)
         firsts_trajs[0] = 1
@@ -47,16 +58,19 @@ class EvalDiffusionAgent(EvalAgent):
                 print(f"Processed step {step} of {self.n_steps}")
 
             # Select action
-            with torch.no_grad():
-                cond = {
-                    "state": torch.from_numpy(prev_obs_venv["state"])
-                    .float()
-                    .to(self.device)
-                }
-                samples = self.model(cond=cond, deterministic=True)
-                output_venv = (
-                    samples.trajectories.cpu().numpy()
-                )  # n_env x horizon x act
+            # with torch.no_grad():
+            cond = {
+                # "state": torch.from_numpy(prev_obs_venv["state"])
+                # .float()
+                # .to(self.device)
+            "state": tf.convert_to_tensor(prev_obs_venv["state"], dtype=tf.float32)
+            }
+            samples = self.model(cond=cond, deterministic=True)
+            output_venv = (
+                # samples.trajectories.cpu().numpy()
+                samples.trajectories.numpy()
+            )  # n_env x horizon x act
+
             action_venv = output_venv[:, : self.act_steps]
 
             # Apply multi-step action

@@ -11,7 +11,7 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
 
     def call(self, x):
 
-        print("modules.py: SinusoidalPosEmb.call()")
+        # print("modules.py: SinusoidalPosEmb.call()")
 
 
         half_dim = self.dim // 2
@@ -19,42 +19,42 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
 
         emb = np.log(10000) / (half_dim - 1)
 
-        print("1emb.shape = ", emb.shape)
-        print("type(emb) = ", type(emb))
-        print("emb = ", emb)
+        # print("1emb.shape = ", emb.shape)
+        # print("type(emb) = ", type(emb))
+        # print("emb = ", emb)
 
         emb = np.exp(np.arange(half_dim) * -emb)
 
         emb = tf.convert_to_tensor(emb, dtype=tf.float32)
 
-        print("2emb.shape = ", emb.shape)
-        print("type(emb) = ", type(emb))
-        print("emb = ", emb)
+        # print("2emb.shape = ", emb.shape)
+        # print("type(emb) = ", type(emb))
+        # print("emb = ", emb)
 
-        print("x = ", x)
+        # print("x = ", x)
         
         x_float32 = tf.cast(x, tf.float32)
 
 
-        print("x_float32[:, None] = ", x_float32[:, None])
+        # print("x_float32[:, None] = ", x_float32[:, None])
 
-        print("emb[None, :] = ", emb[None, :])
+        # print("emb[None, :] = ", emb[None, :])
 
         
         emb = x_float32[:, None] * emb[None, :]
         # emb = x[:, None].float() * emb[None, :]
 
-        print("3emb.shape = ", emb.shape)
-        print("type(emb) = ", type(emb))
-        print("emb = ", emb)
+        # print("3emb.shape = ", emb.shape)
+        # print("type(emb) = ", type(emb))
+        # print("emb = ", emb)
 
-        print("sin(emb).shape = ", tf.sin(emb).shape)
-        print("cos(emb).shape = ", tf.cos(emb).shape)
+        # print("sin(emb).shape = ", tf.sin(emb).shape)
+        # print("cos(emb).shape = ", tf.cos(emb).shape)
 
         emb = tf.concat([tf.sin(emb), tf.cos(emb)], axis=-1)
 
-        print("4emb.shape = ", emb.shape)
-        print("emb = ", emb)
+        # print("4emb.shape = ", emb.shape)
+        # print("emb = ", emb)
 
         return emb
 

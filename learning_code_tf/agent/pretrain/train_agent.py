@@ -6,7 +6,7 @@ import tensorflow as tf
 import hydra
 
 from omegaconf import OmegaConf
-import wandb
+# import wandb
 
 
 # DEVICE = "/GPU:0"
@@ -65,15 +65,15 @@ class PreTrainAgent:
         np.random.seed(self.seed)
         tf.random.set_seed(self.seed)
 
-        # Wandb
-        self.use_wandb = cfg.wandb is not None
-        if self.use_wandb:
-            wandb.init(
-                entity=cfg.wandb.entity,
-                project=cfg.wandb.project,
-                name=cfg.wandb.run,
-                config=OmegaConf.to_container(cfg, resolve=True),
-            )
+        # # Wandb
+        # self.use_wandb = cfg.wandb is not None
+        # if self.use_wandb:
+        #     wandb.init(
+        #         entity=cfg.wandb.entity,
+        #         project=cfg.wandb.project,
+        #         name=cfg.wandb.run,
+        #         config=OmegaConf.to_container(cfg, resolve=True),
+        #     )
 
         # Build model
         self.model = self.instantiate_model(cfg.model)
@@ -239,6 +239,16 @@ class PreTrainAgent:
         loadpath = os.path.join(self.checkpoint_dir, f"state_{epoch}.h5")
         self.model.load_weights(loadpath)
         self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
+
+
+
+
+
+
+
+
+
+
 
 
 

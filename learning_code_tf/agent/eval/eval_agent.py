@@ -5,7 +5,8 @@ Parent eval agent class.
 
 import os
 import numpy as np
-import torch
+# import torch
+import tensorflow as tf
 import hydra
 import logging
 import random
@@ -26,7 +27,12 @@ class EvalAgent:
         self.seed = cfg.get("seed", 42)
         random.seed(self.seed)
         np.random.seed(self.seed)
-        torch.manual_seed(self.seed)
+        # torch.manual_seed(self.seed)
+        tf.manual_seed(self.seed)
+
+
+        print("cfg = ", cfg)
+
 
         # Make vectorized env
         self.env_name = cfg.env.name
