@@ -61,6 +61,7 @@ class EvalImgDiffusionAgent(EvalAgent):
                 output_venv = (
                     samples.trajectories.cpu().numpy()
                 )  # n_env x horizon x act
+            
             action_venv = output_venv[:, : self.act_steps]
 
             # Apply multi-step action

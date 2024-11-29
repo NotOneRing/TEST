@@ -63,13 +63,16 @@ class MLP(models.Model):
             o_dim = dim_list[idx + 1]
             if append_dim > 0 and idx in append_layers:
                 i_dim += append_dim
-            layers_list = [("linear_1", tf.keras.layers.Dense(o_dim))]
+            # layers_list = [("linear_1", tf.keras.layers.Dense(o_dim))]
+            layers_list = [tf.keras.layers.Dense(o_dim)]
             
             # Add normalization and dropout
             if use_layernorm and (idx < num_layer - 1 or use_layernorm_final):
-                layers_list.append(("norm_1", tf.keras.layers.LayerNormalization()))
+                # layers_list.append(("norm_1", tf.keras.layers.LayerNormalization()))
+                layers_list.append( tf.keras.layers.LayerNormalization() )
             if dropout > 0 and (idx < num_layer - 1 or use_drop_final):
-                layers_list.append(("dropout_1", tf.keras.layers.Dropout(dropout)))
+                # layers_list.append(("dropout_1", tf.keras.layers.Dropout(dropout)))
+                layers_list.append( tf.keras.layers.Dropout(dropout) )
             
             # Add activation function
             act = (
@@ -77,10 +80,21 @@ class MLP(models.Model):
                 if idx != num_layer - 1
                 else activation_dict[out_activation_type]
             )
-            layers_list.append(("act_1", act))
+            # layers_list.append(("act_1", act))
+            layers_list.append(act)
+
+            print('before self.moduleList.append')
+
+            # temp = OrderedDict(layers_list)
+
+            # print("temp = ", temp)
 
             # Append to model layers
-            self.moduleList.append(tf.keras.layers.Sequential(OrderedDict(layers_list)))
+            self.moduleList.append(tf.keras.Sequential(layers_list))
+
+            # layers = []
+            # for layer in layers_list:
+            #     layers.append()
 
         if verbose:
             logging.info(self.moduleList)

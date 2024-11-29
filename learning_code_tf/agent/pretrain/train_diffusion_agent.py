@@ -123,6 +123,10 @@ class TrainDiffusionAgent(PreTrainAgent):
         # 构造 Dataset
         dataset = tf.data.Dataset.from_tensor_slices(data_before_generator)
 
+        buffer_size = len(data_before_generator)
+        dataset = dataset.shuffle(buffer_size=buffer_size, seed=self.seed)
+
+        
         if DEBUG:
             self.n_epochs = 2
 
@@ -136,15 +140,6 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         #最终的，但是太慢了，不适合调试网络结构
         for epoch, item in enumerate(dataset):
-            
-
-        # #临时的            
-        # for epoch in range(len(self.dataset_train)):
-        #     batch_train = self.dataset_train[epoch]
-        #     item = {}
-        #     item['states'] = batch_train['states']
-        #     item["actions"] = batch_train['actions']
-
 
 
 
@@ -191,6 +186,21 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             loss_train = np.mean(loss_train_epoch)
 
+
+            # # Save model
+            if epoch % (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) == 0 or epoch == (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 ):
+                self.save_model()
+
+            if DEBUG:
+                self.save_model()
+
+            # Log loss
+            if epoch % self.log_freq == 0:
+                log.info(
+                    f"{epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
+                )
+
+
             # # Validate
             # loss_val_epoch = []
             # if self.dataloader_val is not None and self.epoch % self.val_freq == 0:
@@ -208,18 +218,6 @@ class TrainDiffusionAgent(PreTrainAgent):
             # # Update lr scheduler
             # self.lr_scheduler.step()
 
-            # # Save model
-            if epoch % (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) == 0 or epoch == (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 ):
-                self.save_model()
-
-            if DEBUG:
-                self.save_model()
-
-            # Log loss
-            if epoch % self.log_freq == 0:
-                log.info(
-                    f"{epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
-                )
 
                 # if self.use_wandb:
                 #     if loss_val is not None:

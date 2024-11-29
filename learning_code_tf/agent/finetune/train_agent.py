@@ -29,17 +29,17 @@ class TrainAgent:
         random.seed(self.seed)
         np.random.seed(self.seed)
         # torch.manual_seed(self.seed)
-        tf.manual_seed(self.seed)
+        tf.random.set_seed(self.seed)
 
-        # Wandb
-        self.use_wandb = cfg.wandb is not None
-        if cfg.wandb is not None:
-            wandb.init(
-                entity=cfg.wandb.entity,
-                project=cfg.wandb.project,
-                name=cfg.wandb.run,
-                config=OmegaConf.to_container(cfg, resolve=True),
-            )
+        # # Wandb
+        # self.use_wandb = cfg.wandb is not None
+        # if cfg.wandb is not None:
+        #     wandb.init(
+        #         entity=cfg.wandb.entity,
+        #         project=cfg.wandb.project,
+        #         name=cfg.wandb.run,
+        #         config=OmegaConf.to_container(cfg, resolve=True),
+        #     )
 
         # Make vectorized env
         self.env_name = cfg.env.name

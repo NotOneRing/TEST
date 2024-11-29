@@ -27,18 +27,18 @@ tf.data.experimental.enable_debug_mode()
 
 import logging
 
-# get TF logger
-log = logging.getLogger('tensorflow')
-log.setLevel(logging.DEBUG)
+# # get TF logger
+# log = logging.getLogger('tensorflow')
+# log.setLevel(logging.DEBUG)
 
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# # create formatter and add it to the handlers
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# create file handler which logs even debug messages
-fh = logging.FileHandler('tensorflow.log')
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-log.addHandler(fh)
+# # create file handler which logs even debug messages
+# fh = logging.FileHandler('tensorflow.log')
+# fh.setLevel(logging.DEBUG)
+# fh.setFormatter(formatter)
+# log.addHandler(fh)
 
 
 import sys
@@ -46,7 +46,8 @@ import tensorflow as tf
 
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,4,5,6,7"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,4,5,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,4,5,6,7"
 
 
 # DPPO_WANDB_ENTITY=None
@@ -58,6 +59,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,4,5,6,7"
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 OmegaConf.register_new_resolver("round_up", math.ceil)
 OmegaConf.register_new_resolver("round_down", math.floor)
+
+
 
 # suppress d4rl import error
 os.environ["D4RL_SUPPRESS_IMPORT_ERROR"] = "1"
