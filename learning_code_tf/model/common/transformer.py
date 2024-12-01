@@ -6,14 +6,19 @@ Modified from https://github.com/real-stanford/diffusion_policy/blob/main/diffus
 """
 
 import logging
-import torch
-import torch.nn as nn
+
+import tensorflow as tf
+from tensorflow.keras import layers, models
+
+import numpy as np
+
 from model.diffusion.modules import SinusoidalPosEmb
 
 logger = logging.getLogger(__name__)
 
 
-class Gaussian_Transformer(nn.Module):
+# class Gaussian_Transformer(nn.Module):
+class Gaussian_Transformer(tf.keras.Model):
     def __init__(
         self,
         action_dim,
@@ -42,19 +47,19 @@ class Gaussian_Transformer(nn.Module):
             output_dim *= 2  # mean and logvar
             logger.info("Using learned std")
         elif learn_fixed_std:  # learn logvar
-            self.logvar = torch.nn.Parameter(
-                torch.log(torch.tensor([fixed_std**2 for _ in range(action_dim)])),
-                requires_grad=True,
+            self.logvar = tf.Variable(
+                initial_value=np.log(fixed_std ** 2) * np.ones(action_dim, dtype=np.float32),
+                trainable=True,
             )
             logger.info(f"Using fixed std {fixed_std} with learning")
         else:
             logger.info(f"Using fixed std {fixed_std} without learning")
-        self.logvar_min = torch.nn.Parameter(
-            torch.log(torch.tensor(std_min**2)), requires_grad=False
-        )
-        self.logvar_max = torch.nn.Parameter(
-            torch.log(torch.tensor(std_max**2)), requires_grad=False
-        )
+
+
+        self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
+        self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
+
+
         self.learn_fixed_std = learn_fixed_std
         self.fixed_std = fixed_std
 
@@ -71,40 +76,45 @@ class Gaussian_Transformer(nn.Module):
             activation=transformer_activation,
         )
 
-    def forward(self, cond):
+    def call(self, cond):
 
         print("transformer.py: Gaussian_Transformer.forward()")
 
         B = len(cond["state"])
-        device = cond["state"].device
 
         # flatten history
-        state = cond["state"].view(B, -1)
+        state = tf.reshape(cond["state"], (B, -1))
 
         # input to transformer
-        state = state.unsqueeze(1)  # (B,1,cond_dim)
+        state = tf.expand_dims(state, axis=1)  # (B,1,cond_dim)
         out, _ = self.transformer(state)  # (B,horizon,output_dim)
 
-        # use the first half of the output as mean
-        out_mean = torch.tanh(out[:, :, : self.action_dim])
-        out_mean = out_mean.view(B, self.horizon_steps * self.action_dim)
+        # # use the first half of the output as mean
+        assert self.num_modes == 1, "self.num_modes != 1, the code is not congruent with the PyTorch Version!"
+        out_mean = tf.tanh(out[:, :, : self.action_dim])
+        out_mean = tf.reshape(out_mean, (B, self.horizon_steps * self.action_dim))
+
+
 
         if self.learn_fixed_std:
-            out_logvar = torch.clamp(self.logvar, self.logvar_min, self.logvar_max)
-            out_scale = torch.exp(0.5 * out_logvar)
-            out_scale = out_scale.view(1, self.action_dim)
-            out_scale = out_scale.repeat(B, self.horizon_steps)
+            out_logvar = tf.clip_by_value(self.logvar, self.logvar_min, self.logvar_max)
+            out_scale = tf.exp(0.5 * out_logvar)
+            out_scale = tf.reshape(out_scale, (1, self.action_dim))
+            out_scale = tf.tile(out_scale, [B, self.horizon_steps])  
+
         elif self.fixed_std is not None:
-            out_scale = torch.ones_like(out_mean).to(device) * self.fixed_std
+            out_scale = tf.ones_like(out_mean) * self.fixed_std
         else:
-            out_logvar = out[:, :, self.action_dim :]
-            out_logvar = out_logvar.reshape(B, self.horizon_steps * self.action_dim)
-            out_logvar = torch.clamp(out_logvar, self.logvar_min, self.logvar_max)
-            out_scale = torch.exp(0.5 * out_logvar)
+            out_logvar = out[:, :, self.action_dim:]
+            out_logvar = tf.reshape(out_logvar, (B, self.horizon_steps * self.action_dim))
+            out_logvar = tf.clip_by_value(out_logvar, self.logvar_min, self.logvar_max)
+            out_scale = tf.exp(0.5 * out_logvar)
+
         return out_mean, out_scale
 
 
-class GMM_Transformer(nn.Module):
+# class GMM_Transformer(nn.Module):
+class GMM_Transformer(tf.keras.Model):
     def __init__(
         self,
         action_dim,
@@ -137,23 +147,16 @@ class GMM_Transformer(nn.Module):
         elif (
             learn_fixed_std
         ):  # initialize to fixed_std, separate for each action and mode, but same along horizon
-            self.logvar = torch.nn.Parameter(
-                torch.log(
-                    torch.tensor(
-                        [fixed_std**2 for _ in range(num_modes * action_dim)]
-                    )
-                ),
-                requires_grad=True,
+            self.logvar = tf.Variable(
+                initial_value=np.log(fixed_std ** 2) * np.ones(num_modes * action_dim, dtype=np.float32),
+                trainable=True,
             )
             logger.info(f"Using fixed std {fixed_std} with learning")
         else:
             logger.info(f"Using fixed std {fixed_std} without learning")
-        self.logvar_min = torch.nn.Parameter(
-            torch.log(torch.tensor(std_min**2)), requires_grad=False
-        )
-        self.logvar_max = torch.nn.Parameter(
-            torch.log(torch.tensor(std_max**2)), requires_grad=False
-        )
+
+        self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
+        self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
         self.fixed_std = fixed_std
         self.learn_fixed_std = learn_fixed_std
 
@@ -169,14 +172,15 @@ class GMM_Transformer(nn.Module):
             p_drop_attn=p_drop_attn,
             activation=transformer_activation,
         )
-        self.modes_head = nn.Linear(horizon_steps * transformer_embed_dim, num_modes)
 
-    def forward(self, cond):
+        #输入维度horizon_steps * transformer_embed_dim
+        self.modes_head = layers.Dense(num_modes)
 
-        print("transformer.py: GMM_Transformer.forward()")
+    def call(self, cond):
+
+        print("transformer.py: GMM_Transformer.call()")
 
         B = len(cond["state"])
-        device = cond["state"].device
 
         # flatten history
         state = cond["state"].view(B, -1)
@@ -188,22 +192,22 @@ class GMM_Transformer(nn.Module):
         )  # (B,horizon,output_dim), (B,horizon,emb_dim)
 
         # use the first half of the output as mean
-        out_mean = torch.tanh(out[:, :, : self.num_modes * self.action_dim])
-        out_mean = out_mean.reshape(
-            B, self.horizon_steps, self.num_modes, self.action_dim
-        )
-        out_mean = out_mean.permute(0, 2, 1, 3)  # flip horizons and modes
-        out_mean = out_mean.reshape(
-            B, self.num_modes, self.horizon_steps * self.action_dim
-        )
+        out_mean = tf.tanh(out[:, :, :self.num_modes * self.action_dim])
+
+        out_mean = tf.reshape(out_mean, (B, self.horizon_steps, self.num_modes, self.action_dim))
+
+        out_mean = tf.transpose(out_mean, (0, 2, 1, 3))  # flip horizons and modes
+
+        out_mean = tf.reshape(out_mean, (B, self.num_modes, self.horizon_steps * self.action_dim))
 
         if self.learn_fixed_std:
-            out_logvar = torch.clamp(self.logvar, self.logvar_min, self.logvar_max)
-            out_scale = torch.exp(0.5 * out_logvar)
-            out_scale = out_scale.view(1, self.num_modes, self.action_dim)
-            out_scale = out_scale.repeat(B, 1, self.horizon_steps)
+            out_logvar = tf.clip_by_value(self.logvar, self.logvar_min, self.logvar_max)
+            out_scale = tf.exp(0.5 * out_logvar)
+            out_scale = tf.reshape(out_scale, (1, self.num_modes, self.action_dim))
+            out_scale = tf.tile(out_scale, [B, 1, self.horizon_steps])
+
         elif self.fixed_std is not None:
-            out_scale = torch.ones_like(out_mean).to(device) * self.fixed_std
+            out_scale = tf.ones_like(out_mean) * self.fixed_std
         else:
             out_logvar = out[
                 :, :, self.num_modes * self.action_dim : -self.num_modes
@@ -211,20 +215,133 @@ class GMM_Transformer(nn.Module):
             out_logvar = out_logvar.reshape(
                 B, self.horizon_steps, self.num_modes, self.action_dim
             )
-            out_logvar = out_logvar.permute(0, 2, 1, 3)  # flip horizons and modes
-            out_logvar = out_logvar.reshape(
-                B, self.num_modes, self.horizon_steps * self.action_dim
-            )
-            out_logvar = torch.clamp(out_logvar, self.logvar_min, self.logvar_max)
-            out_scale = torch.exp(0.5 * out_logvar)
+
+            out_logvar = tf.transpose(out_logvar, (0, 2, 1, 3))  # flip horizons and modes
+
+            out_logvar = tf.reshape(out_logvar, (B, self.num_modes, self.horizon_steps * self.action_dim))
+
+            out_logvar = tf.clip_by_value(out_logvar, self.logvar_min, self.logvar_max)
+            out_scale = tf.exp(0.5 * out_logvar)
 
         # use last horizon step as the mode weights - as it depends on the entire context
-        # out_weights = out[:, -1, -self.num_modes :]  # (B,num_modes)
-        out_weights = self.modes_head(out_prehead.view(B, -1))
+        out_weights = self.modes_head(tf.reshape(out_prehead, (B, -1)))
+
         return out_mean, out_scale, out_weights
 
 
-class Transformer(nn.Module):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class TransformerEncoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
+        super(TransformerEncoderLayer, self).__init__()
+        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.ffn = tf.keras.Sequential([
+            tf.keras.layers.Dense(dim_feedforward, activation=activation),
+            tf.keras.layers.Dropout(dropout),
+            tf.keras.layers.Dense(d_model),
+        ])
+        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+
+    def call(self, x, training):
+        # Self-attention
+        attn_output = self.self_attn(x, x, training=training)
+        x = x + self.dropout1(attn_output, training=training)
+        x = self.norm1(x)
+
+        # Feedforward network
+        ffn_output = self.ffn(x, training=training)
+        x = x + self.dropout2(ffn_output, training=training)
+        x = self.norm2(x)
+        return x
+
+
+class TransformerEncoder(tf.keras.layers.Layer):
+    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
+        super(TransformerEncoder, self).__init__()
+        self.layers = [
+            TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+            for _ in range(n_layers)
+        ]
+
+    def call(self, x, training):
+        for layer in self.layers:
+            x = layer(x, training=training)
+        return x
+
+
+
+class Mish(tf.keras.layers.Layer):
+    def call(self, x):
+        return x * tf.math.tanh(tf.math.softplus(x))
+
+
+class TransformerDecoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
+        super(TransformerDecoderLayer, self).__init__()
+        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.ffn = tf.keras.Sequential([
+            tf.keras.layers.Dense(dim_feedforward, activation=activation),
+            tf.keras.layers.Dropout(dropout),
+            tf.keras.layers.Dense(d_model),
+        ])
+        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+        self.dropout3 = tf.keras.layers.Dropout(dropout)
+
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+        # Self-attention on target
+        tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
+        tgt = tgt + self.dropout1(tgt2, training=training)
+        tgt = self.norm1(tgt)
+
+        # Cross-attention between target and memory
+        tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
+        tgt = tgt + self.dropout2(tgt2, training=training)
+        tgt = self.norm2(tgt)
+
+        # Feedforward network
+        tgt2 = self.ffn(tgt, training=training)
+        tgt = tgt + self.dropout3(tgt2, training=training)
+        tgt = self.norm3(tgt)
+
+        return tgt
+
+class TransformerDecoder(tf.keras.layers.Layer):
+    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
+        super(TransformerDecoder, self).__init__()
+        self.layers = [
+            TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+            for _ in range(n_layers)
+        ]
+        self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+        for layer in self.layers:
+            tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
+        return self.norm(tgt)
+
+        
+
+class Transformer(tf.keras.Model):
     def __init__(
         self,
         output_dim,
@@ -246,28 +363,29 @@ class Transformer(nn.Module):
         super().__init__()
 
         # encoder for observations
-        self.cond_obs_emb = nn.Linear(cond_dim, n_emb)
-        self.cond_pos_emb = nn.Parameter(torch.zeros(1, T_cond, n_emb))
+        #输入维度cond_dim
+        self.cond_obs_emb = layers.Dense(n_emb)
+        self.cond_pos_emb = tf.Variable(tf.zeros([1, T_cond, n_emb]))
+
+
         if n_cond_layers > 0:
-            encoder_layer = nn.TransformerEncoderLayer(
+            self.encoder = TransformerEncoder(
+                n_layers=n_cond_layers,
                 d_model=n_emb,
                 nhead=n_head,
                 dim_feedforward=4 * n_emb,
                 dropout=p_drop_attn,
                 activation=activation,
-                batch_first=True,
-                norm_first=True,
             )
-            self.encoder = nn.TransformerEncoder(
-                encoder_layer=encoder_layer,
-                num_layers=n_cond_layers,
-            )
+
+
         else:
-            self.encoder = nn.Sequential(
-                nn.Linear(n_emb, 4 * n_emb),
-                nn.Mish(),
-                nn.Linear(4 * n_emb, n_emb),
-            )
+            # 输入n_emb
+            self.encoder = tf.keras.Sequential([
+                tf.keras.layers.Dense(4 * n_emb),
+                Mish(),
+                tf.keras.layers.Dense(n_emb),
+            ])
 
         # decoder
         self.pos_emb = nn.Parameter(torch.zeros(1, horizon, n_emb))

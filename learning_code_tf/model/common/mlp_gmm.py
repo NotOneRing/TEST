@@ -3,12 +3,12 @@ MLP models for GMM policy.
 
 """
 
-import torch
-import torch.nn as nn
+import tensorflow as tf
+
 from model.common.mlp import MLP, ResidualMLP
 
 
-class GMM_MLP(nn.Module):
+class GMM_MLP(tf.keras.Model):
 
     def __init__(
         self,
@@ -44,6 +44,7 @@ class GMM_MLP(nn.Module):
             out_activation_type="Identity",
             use_layernorm=use_layernorm,
         )
+
         if fixed_std is None:
             self.mlp_logvar = model(
                 [input_dim] + mlp_dims + [output_dim],
@@ -53,21 +54,26 @@ class GMM_MLP(nn.Module):
             )
         elif (
             learn_fixed_std
-        ):  # initialize to fixed_std, separate for each action and mode
-            self.logvar = torch.nn.Parameter(
-                torch.log(
-                    torch.tensor(
-                        [fixed_std**2 for _ in range(action_dim * num_modes)]
-                    )
+        ):  # initialize to fixed_std, separate for each action and mode            
+            # Learnable fixed_std
+            self.logvar = self.add_weight(
+                shape=(action_dim * num_modes,),
+                initializer=tf.constant_initializer(
+                    tf.math.log([fixed_std**2] * (action_dim * num_modes))
                 ),
-                requires_grad=True,
+                trainable=True,
+                name="logvar",
             )
-        self.logvar_min = torch.nn.Parameter(
-            torch.log(torch.tensor(std_min**2)), requires_grad=False
+
+
+        self.logvar_min = tf.constant(
+            tf.math.log(std_min**2), dtype=tf.float32, name="logvar_min"
         )
-        self.logvar_max = torch.nn.Parameter(
-            torch.log(torch.tensor(std_max**2)), requires_grad=False
+        self.logvar_max = tf.constant(
+            tf.math.log(std_max**2), dtype=tf.float32, name="logvar_max"
         )
+
+
         self.use_fixed_std = fixed_std is not None
         self.fixed_std = fixed_std
         self.learn_fixed_std = learn_fixed_std
@@ -80,37 +86,48 @@ class GMM_MLP(nn.Module):
             use_layernorm=use_layernorm,
         )
 
-    def forward(self, cond):
 
-        print("mlp_gmm.py: GMM_MLP.forward()")
+    def call(self, cond):
+
+        print("mlp_gmm.py: GMM_MLP.call()")
 
         B = len(cond["state"])
         device = cond["state"].device
 
         # flatten history
-        state = cond["state"].view(B, -1)
+        state = tf.reshape(cond["state"], [B, -1])
 
         # mlp
         out_mean = self.mlp_mean(state)
-        out_mean = torch.tanh(out_mean).view(
-            B, self.num_modes, self.horizon_steps * self.action_dim
-        )  # tanh squashing in [-1, 1]
+
+        out_mean = tf.tanh(out_mean)
+        out_mean = tf.reshape(
+            out_mean, [B, self.num_modes, self.horizon_steps * self.action_dim]
+        ) # tanh squashing in [-1, 1]
+
 
         if self.learn_fixed_std:
-            out_logvar = torch.clamp(self.logvar, self.logvar_min, self.logvar_max)
-            out_scale = torch.exp(0.5 * out_logvar)
-            out_scale = out_scale.view(1, self.num_modes, self.action_dim)
-            out_scale = out_scale.repeat(B, 1, self.horizon_steps)
-        elif self.use_fixed_std:
-            out_scale = torch.ones_like(out_mean).to(device) * self.fixed_std
-        else:
-            out_logvar = self.mlp_logvar(state).view(
-                B, self.num_modes, self.horizon_steps * self.action_dim
+            out_logvar = tf.clip_by_value(self.logvar, self.logvar_min, self.logvar_max)
+            out_scale = tf.exp(0.5 * out_logvar)
+            out_scale = tf.reshape(
+                out_scale, [1, self.num_modes, self.action_dim]
             )
-            out_logvar = torch.clamp(out_logvar, self.logvar_min, self.logvar_max)
-            out_scale = torch.exp(0.5 * out_logvar)
+            out_scale = tf.tile(out_scale, [B, 1, self.horizon_steps])
+
+        elif self.use_fixed_std:
+            out_scale = tf.ones_like(out_mean) * self.fixed_std
+        else:
+            out_logvar = tf.reshape(
+                out_logvar, [B, self.num_modes, self.horizon_steps * self.action_dim]
+            )
+            out_logvar = tf.clip_by_value(out_logvar, self.logvar_min, self.logvar_max)
+            out_scale = tf.exp(0.5 * out_logvar)
 
         out_weights = self.mlp_weights(state)
-        out_weights = out_weights.view(B, self.num_modes)
+
+        out_weights = tf.reshape(out_weights, [B, self.num_modes])
 
         return out_mean, out_scale, out_weights
+
+
+

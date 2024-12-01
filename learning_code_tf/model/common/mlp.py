@@ -1,18 +1,4 @@
 
-# def mish(x):
-#     return x * tf.tanh(tf.math.log(1 + tf.exp(x)))
-
-# activation_dict = {
-#     "ReLU": layers.ReLU(),
-#     "ELU": layers.ELU(),
-#     "GELU": layers.GELU(),
-#     "Tanh": layers.Tanh(),
-#     # "Mish": layers.Activation("mish"),  # TensorFlow doesn't have Mish natively
-#     # Use the custom Mish activation function
-#     "Mish": tf.keras.layers.Lambda(mish),
-#     "Identity": layers.Lambda(lambda x: x),
-#     "Softplus": layers.Softplus(),
-# }
 
 import tensorflow as tf
 # from tensorflow.keras import layers, models
@@ -25,13 +11,10 @@ import logging
 activation_dict = {
     "ReLU": tf.keras.layers.ReLU(),
     "ELU": tf.keras.layers.ELU(),
-    # "GELU": layers.GELU(),
     "GELU": tf.keras.layers.Activation(tf.keras.activations.gelu),  # 使用 Activation 层来包装 GELU 函数
-    # "Tanh": layers.Tanh(),
     "Tanh": tf.keras.layers.Activation(tf.keras.activations.tanh),  # 使用 tf.keras.activations.tanh
     "Mish": tf.keras.layers.Activation(lambda x: x * tf.tanh(tf.math.log(1 + tf.exp(x)))),  # Custom Mish implementation
     "Identity": tf.keras.layers.Activation("linear"),
-    # "Softplus": layers.Softplus(),
     "Softplus": tf.keras.layers.Activation(tf.keras.activations.softplus),  # 使用 tf.keras.activations.softplus
 }
 

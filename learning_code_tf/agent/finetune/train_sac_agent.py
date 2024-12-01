@@ -7,7 +7,10 @@ Does not support image observations right now.
 import os
 import pickle
 import numpy as np
-import torch
+# import torch
+
+import tensorflow as tf
+
 import logging
 import wandb
 from collections import deque
@@ -23,18 +26,14 @@ class TrainSACAgent(TrainAgent):
 
         super().__init__(cfg)
 
+
+        # Configuration and hyperparameters
+        self.cfg = cfg
+                
+        
         # note the discount factor gamma here is applied to reward every act_steps, instead of every env step
         self.gamma = cfg.train.gamma
 
-        # Optimizer
-        self.actor_optimizer = torch.optim.Adam(
-            self.model.network.parameters(),
-            lr=cfg.train.actor_lr,
-        )
-        self.critic_optimizer = torch.optim.Adam(
-            self.model.critic.parameters(),
-            lr=cfg.train.critic_lr,
-        )
 
         # Perturbation scale
         self.target_ema_rate = cfg.train.target_ema_rate
@@ -58,6 +57,27 @@ class TrainSACAgent(TrainAgent):
 
         # Exploration steps at the beginning - using randomly sampled action
         self.n_explore_steps = cfg.train.n_explore_steps
+
+
+
+        
+        # Initialize model, optimizers, and buffers
+        self.model = self.initialize_model(cfg)  # Placeholder for model
+        
+        self.actor_optimizer = tf.keras.optimizers.Adam(cfg.train.actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(cfg.train.critic_lr)
+
+        self.log_alpha = tf.Variable(np.log(cfg.train.init_temperature), dtype=tf.float32, trainable=True)
+        self.log_alpha_optimizer = tf.keras.optimizers.Adam(cfg.train.critic_lr)
+
+        # Replay buffers
+        self.obs_buffer = deque(maxlen=self.buffer_size)
+        self.next_obs_buffer = deque(maxlen=self.buffer_size)
+        self.action_buffer = deque(maxlen=self.buffer_size)
+        self.reward_buffer = deque(maxlen=self.buffer_size)
+        self.terminated_buffer = deque(maxlen=self.buffer_size)
+
+
 
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
@@ -338,3 +358,6 @@ class TrainSACAgent(TrainAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+

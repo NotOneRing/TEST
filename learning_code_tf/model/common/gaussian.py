@@ -3,14 +3,18 @@ Gaussian policy parameterization.
 
 """
 
-import torch
-import torch.distributions as D
+
+import tensorflow as tf
+import tensorflow_probability as tfp
+
+import numpy as np
+
 import logging
 
 log = logging.getLogger(__name__)
 
 
-class GaussianModel(torch.nn.Module):
+class GaussianModel(tf.keras.Model):
 
     def __init__(
         self,
@@ -25,22 +29,21 @@ class GaussianModel(torch.nn.Module):
         print("gaussian.py: GaussianModel.__init__()")
 
         super().__init__()
-        self.device = device
-        self.network = network.to(device)
+        # self.device = device
+        self.network = network
+        # .to(device)
+
         if network_path is not None:
-            checkpoint = torch.load(
-                network_path,
-                map_location=self.device,
-                weights_only=True,
-            )
-            self.load_state_dict(
-                checkpoint["model"],
-                strict=False,
-            )
+            checkpoint = tf.train.Checkpoint(model=self)
+            checkpoint.restore(network_path).expect_partial()
             log.info("Loaded actor from %s", network_path)
-        log.info(
-            f"Number of network parameters: {sum(p.numel() for p in self.parameters())}"
-        )
+
+
+        # Log number of parameters in the network
+        num_params = sum(np.prod(var.shape) for var in self.network.trainable_variables)
+        log.info(f"Number of network parameters: {num_params}")
+
+
         self.horizon_steps = horizon_steps
 
         # Clip sampled randn (from standard deviation) such that the sampled action is not too far away from mean
@@ -48,6 +51,8 @@ class GaussianModel(torch.nn.Module):
 
         # Whether to apply tanh to the **sampled** action --- used in SAC
         self.tanh_output = tanh_output
+
+
 
     def loss(
         self,
@@ -60,15 +65,14 @@ class GaussianModel(torch.nn.Module):
         print("gaussian.py: GaussianModel.loss()")
 
         B = len(true_action)
-        dist = self.forward_train(
-            cond,
-            deterministic=False,
-        )
-        true_action = true_action.view(B, -1)
-        loss = -dist.log_prob(true_action)  # [B]
-        entropy = dist.entropy().mean()
-        loss = loss.mean() - entropy * ent_coef
+        dist = self.forward_train(cond, deterministic=False)
+        true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
+        log_prob = dist.log_prob(true_action)
+        entropy = tf.reduce_mean(dist.entropy())
+        loss = -tf.reduce_mean(log_prob) - entropy * ent_coef
         return loss, {"entropy": entropy}
+
+
 
     def forward_train(
         self,
@@ -88,10 +92,13 @@ class GaussianModel(torch.nn.Module):
             means, scales = self.network(cond)
         if deterministic:
             # low-noise for all Gaussian dists
-            scales = torch.ones_like(means) * 1e-4
-        return D.Normal(loc=means, scale=scales)
+            scales = tf.ones_like(means) * 1e-4
 
-    def forward(
+        dist = tfp.distributions.Normal(loc=means, scale=scales)
+
+        return dist
+
+    def call(
         self,
         cond,
         deterministic=False,
@@ -109,24 +116,34 @@ class GaussianModel(torch.nn.Module):
             deterministic=deterministic,
             network_override=network_override,
         )
+
         if reparameterize:
-            sampled_action = dist.rsample()
+            sampled_action = dist.sample()  # reparameterized sample
         else:
-            sampled_action = dist.sample()
-        sampled_action.clamp_(
-            dist.loc - self.randn_clip_value * dist.scale,
-            dist.loc + self.randn_clip_value * dist.scale,
-        )
+            sampled_action = dist.sample()  # standard sample
+
+
+        # Clipping the sampled action (similar to PyTorch clamp_)
+        sampled_action = tf.clip_by_value(sampled_action, dist.loc - self.randn_clip_value * dist.scale,
+                                          dist.loc + self.randn_clip_value * dist.scale)
 
         if get_logprob:
             log_prob = dist.log_prob(sampled_action)
 
             # For SAC/RLPD, squash mean after sampling here instead of right after model output as in PPO
             if self.tanh_output:
-                sampled_action = torch.tanh(sampled_action)
-                log_prob -= torch.log(1 - sampled_action.pow(2) + 1e-6)
-            return sampled_action.view(B, T, -1), log_prob.sum(1, keepdim=False)
+                sampled_action = tf.tanh(sampled_action)
+                log_prob -= tf.log(1 - tf.square(sampled_action) + 1e-6)
+
+            return tf.reshape(sampled_action, (B, T, -1)), tf.reduce_sum(log_prob, axis=1)
         else:
             if self.tanh_output:
-                sampled_action = torch.tanh(sampled_action)
-            return sampled_action.view(B, T, -1)
+                sampled_action = tf.tanh(sampled_action)
+            return tf.reshape(sampled_action, (B, T, -1))
+
+            
+
+
+
+
+

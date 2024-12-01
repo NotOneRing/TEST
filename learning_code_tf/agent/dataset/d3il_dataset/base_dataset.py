@@ -1,10 +1,9 @@
 import abc
 import os
 
-from torch.utils.data import Dataset
 
 
-class TrajectoryDataset(Dataset, abc.ABC):
+class TrajectoryDataset(abc.ABC):
     """
     A dataset containing trajectories.
     TrajectoryDataset[i] returns: (observations, actions, mask)

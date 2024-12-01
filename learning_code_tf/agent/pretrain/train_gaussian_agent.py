@@ -181,3 +181,10 @@ class TrainGaussianAgent(PreTrainAgent):
                     f"{epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
                 )
 
+
+
+
+
+
+
+

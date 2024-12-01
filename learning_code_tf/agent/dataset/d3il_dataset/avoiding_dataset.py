@@ -1,7 +1,9 @@
 import logging
 
 import os
-import torch
+# import torch
+import tensorflow as tf
+
 import pickle
 import numpy as np
 
@@ -67,9 +69,10 @@ class Avoiding_Dataset(TrajectoryDataset):
             masks.append(zero_mask)
 
         # shape: B, T, n
-        self.observations = torch.from_numpy(np.concatenate(inputs)).to(device).float()
-        self.actions = torch.from_numpy(np.concatenate(actions)).to(device).float()
-        self.masks = torch.from_numpy(np.concatenate(masks)).to(device).float()
+        # Convert to TensorFlow tensors
+        self.observations = tf.convert_to_tensor(np.concatenate(inputs), dtype=tf.float32)
+        self.actions = tf.convert_to_tensor(np.concatenate(actions), dtype=tf.float32)
+        self.masks = tf.convert_to_tensor(np.concatenate(masks), dtype=tf.float32)
 
         self.num_data = len(self.observations)
 
@@ -98,39 +101,44 @@ class Avoiding_Dataset(TrajectoryDataset):
 
         return slices
 
+
+
     def get_seq_length(self, idx):
-
         print("avoiding_dataset.py: get_seq_length()")
+        return int(tf.reduce_sum(self.masks[idx]).numpy())
 
-        return int(self.masks[idx].sum().item())
+
+
+
 
     def get_all_actions(self):
-
         print("avoiding_dataset.py: get_all_actions()")
-
         result = []
-        # mask out invalid actions
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = self.get_seq_length(i)
             result.append(self.actions[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+
+
 
     def get_all_observations(self):
-
         print("avoiding_dataset.py: get_all_observations()")
-
         result = []
-        # mask out invalid observations
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = self.get_seq_length(i)
             result.append(self.observations[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+
+
 
     def __len__(self):
 
         print("avoiding_dataset.py: __len__()")
 
         return len(self.slices)
+
+
+
 
     def __getitem__(self, idx):
 

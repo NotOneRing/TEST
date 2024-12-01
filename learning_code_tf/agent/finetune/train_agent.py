@@ -44,6 +44,7 @@ class TrainAgent:
         # Make vectorized env
         self.env_name = cfg.env.name
         env_type = cfg.env.get("env_type", None)
+        
         self.venv = make_async(
             cfg.env.name,
             env_type=env_type,
@@ -60,6 +61,8 @@ class TrainAgent:
             action_dim=cfg.action_dim,
             **cfg.env.specific if "specific" in cfg.env else {},
         )
+
+
         if not env_type == "furniture":
             self.venv.seed(
                 [self.seed + i for i in range(cfg.env.n_envs)]

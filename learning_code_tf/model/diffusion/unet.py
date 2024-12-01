@@ -341,27 +341,20 @@ class Unet1D(tf.keras.Model):
 
 
         # 1. time
-        # if not torch.is_tensor(time):
-        #     time = torch.tensor([time], dtype=torch.long, device=x.device)
-        # elif torch.is_tensor(time) and len(time.shape) == 0:
-        #     time = time[None].to(x.device)
-
         if not tf.is_tensor(time):
             time = tf.convert_to_tensor([time], dtype=tf.int64)
         elif tf.is_tensor(time) and len(time.shape) == 0:
             time = tf.expand_dims(time, axis=0)
 
-        # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
-        time = time.expand(x.shape[0])
 
+        # Broadcast to batch dimension
+        time = tf.broadcast_to(time, [tf.shape(x)[0]])
         global_feature = self.time_mlp(time)
-
-
-        global_feature = torch.cat([global_feature, state], axis=-1)
+        global_feature = tf.concat([global_feature, state], axis=-1)
 
 
         # encode local features
-        h_local = list()
+        h_local = []
         h = []
         for idx, (resnet, resnet2, downsample) in enumerate(self.down_modules):
             x = resnet(x, global_feature)
@@ -376,7 +369,7 @@ class Unet1D(tf.keras.Model):
 
         for idx, (resnet, resnet2, upsample) in enumerate(self.up_modules):
 
-            x = torch.cat((x, h.pop()), dim=1)
+            x = tf.concat([x, h.pop()], axis=1)  # Concatenate along channel dimension
 
             x = resnet(x, global_feature)
             if idx == len(self.up_modules) and len(h_local) > 0:

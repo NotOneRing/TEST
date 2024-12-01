@@ -4,7 +4,10 @@ Critic networks.
 """
 
 from typing import Union
-import torch
+
+import tensorflow as tf
+from tensorflow.keras import layers, Model
+
 import einops
 from copy import deepcopy
 
@@ -12,7 +15,7 @@ from model.common.mlp import MLP, ResidualMLP
 from model.common.modules import SpatialEmb, RandomShiftsAug
 
 
-class CriticObs(torch.nn.Module):
+class CriticObs(tf.keras.Model):
     """State-only critic network."""
 
     def __init__(
@@ -40,7 +43,8 @@ class CriticObs(torch.nn.Module):
             use_layernorm=use_layernorm,
         )
 
-    def forward(self, cond: Union[dict, torch.Tensor]):
+
+    def call(self, cond):
         """
         cond: dict with key state/rgb; more recent obs at the end
             state: (B, To, Do)
@@ -50,17 +54,21 @@ class CriticObs(torch.nn.Module):
         print("critic.py: CriticObs.forward()")
 
         if isinstance(cond, dict):
-            B = len(cond["state"])
+            # B = len(cond["state"])
+            B = tf.shape(cond["state"])[0]
 
             # flatten history
-            state = cond["state"].view(B, -1)
+            state = tf.reshape(cond["state"], [B, -1])
         else:
             state = cond
         q1 = self.Q1(state)
         return q1
 
 
-class CriticObsAct(torch.nn.Module):
+
+
+
+class CriticObsAct(tf.keras.Model):
     """State-action double critic network."""
 
     def __init__(
@@ -90,6 +98,7 @@ class CriticObsAct(torch.nn.Module):
             out_activation_type="Identity",
             use_layernorm=use_layernorm,
         )
+
         if double_q:
             self.Q2 = model(
                 mlp_dims,
@@ -98,31 +107,33 @@ class CriticObsAct(torch.nn.Module):
                 use_layernorm=use_layernorm,
             )
 
-    def forward(self, cond: dict, action):
+    def call(self, cond: dict, action):
         """
         cond: dict with key state/rgb; more recent obs at the end
             state: (B, To, Do)
         action: (B, Ta, Da)
         """
 
-        print("critic.py: CriticObsAct.forward()")
+        print("critic.py: CriticObsAct.call()")
 
-        B = len(cond["state"])
+        B = tf.shape(cond["state"])[0]
 
         # flatten history
-        state = cond["state"].view(B, -1)
+        state = tf.reshape(cond["state"], [B, -1])
 
         # flatten action
-        action = action.view(B, -1)
+        action = tf.reshape(action, [B, -1])
 
-        x = torch.cat((state, action), dim=-1)
-        if hasattr(self, "Q2"):
-            q1 = self.Q1(x)
+        x = tf.concat([state, action], axis=-1)
+        
+        q1 = self.Q1(x)
+        if hasattr(self, 'Q2'):
             q2 = self.Q2(x)
-            return q1.squeeze(1), q2.squeeze(1)
+            return tf.squeeze(q1, axis=1), tf.squeeze(q2, axis=1)
         else:
-            q1 = self.Q1(x)
-            return q1.squeeze(1)
+            return tf.squeeze(q1, axis=1)
+
+
 
 
 class ViTCritic(CriticObs):
@@ -169,7 +180,7 @@ class ViTCritic(CriticObs):
             self.aug = RandomShiftsAug(pad=4)
         self.augment = augment
 
-    def forward(
+    def call(
         self,
         cond: dict,
         no_augment=False,
@@ -183,9 +194,9 @@ class ViTCritic(CriticObs):
         TODO long term: more flexible handling of cond
         """
 
-        print("critic.py: ViTCritic.forward()")
+        print("critic.py: ViTCritic.call()")
 
-        B, T_rgb, C, H, W = cond["rgb"].shape
+        B, T_rgb, C, H, W = cond["rgb"].shape.as_list()
 
         # flatten history
         state = cond["state"].view(B, -1)
@@ -195,10 +206,19 @@ class ViTCritic(CriticObs):
 
         # concatenate images in cond by channels
         if self.num_img > 1:
-            rgb = rgb.reshape(B, T_rgb, self.num_img, 3, H, W)
+            rgb = tf.reshape(rgb, [B, T_rgb, self.num_img, 3, H, W])
+
             rgb = einops.rearrange(rgb, "b t n c h w -> b n (t c) h w")
         else:
             rgb = einops.rearrange(rgb, "b t c h w -> b (t c) h w")
+
+        
+        if self.num_img > 1:
+            rgb = tf.reshape(rgb, [-1, self.num_img, 3, rgb.shape[-2], rgb.shape[-1]])
+            rgb = tf.transpose(rgb, perm=[0, 1, 2, 3, 4])
+        else:
+            rgb = tf.reshape(rgb, [-1, rgb.shape[1], 3, rgb.shape[-2], rgb.shape[-1]])
+        
 
         # convert rgb to float32 for augmentation
         rgb = rgb.float()
@@ -212,13 +232,40 @@ class ViTCritic(CriticObs):
                 rgb2 = self.aug(rgb2)
             feat1 = self.backbone(rgb1)
             feat2 = self.backbone(rgb2)
-            feat1 = self.compress1.forward(feat1, state)
-            feat2 = self.compress2.forward(feat2, state)
-            feat = torch.cat([feat1, feat2], dim=-1)
+            feat1 = self.compress1(feat1, state)
+            feat2 = self.compress2(feat2, state)
+            feat = tf.concat([feat1, feat2], axis=-1)
         else:  # single image
             if self.augment and not no_augment:
                 rgb = self.aug(rgb)  # uint8 -> float32
             feat = self.backbone(rgb)
             feat = self.compress.forward(feat, state)
-        feat = torch.cat([feat, state], dim=-1)
-        return super().forward(feat)
+        feat = tf.concat([feat, state], axis=-1)
+        return super().call(feat)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

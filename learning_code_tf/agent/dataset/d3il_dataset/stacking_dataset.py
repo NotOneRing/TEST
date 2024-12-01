@@ -3,12 +3,15 @@ import logging
 import os
 import glob
 
+import tensorflow as tf
+
 try:
     import cv2  # not included in pyproject.toml
 except:
     print("Installing cv2")
     os.system("pip install opencv-python")
-import torch
+
+
 import pickle
 import numpy as np
 from tqdm import tqdm
@@ -161,9 +164,10 @@ class Stacking_Dataset(TrajectoryDataset):
             masks.append(zero_mask)
 
         # shape: B, T, n
-        self.observations = torch.from_numpy(np.concatenate(inputs)).to(device).float()
-        self.actions = torch.from_numpy(np.concatenate(actions)).to(device).float()
-        self.masks = torch.from_numpy(np.concatenate(masks)).to(device).float()
+        self.observations = tf.convert_to_tensor(np.concatenate(inputs), dtype=tf.float32)
+        self.actions = tf.convert_to_tensor(np.concatenate(actions), dtype=tf.float32)
+        self.masks = tf.convert_to_tensor(np.concatenate(masks), dtype=tf.float32)
+
 
         self.num_data = len(self.observations)
 
@@ -196,35 +200,38 @@ class Stacking_Dataset(TrajectoryDataset):
 
         print("stacking_dataset.py: Stacking_Dataset.get_seq_length()")
 
-        return int(self.masks[idx].sum().item())
+        return int(self.masks[idx].numpy().sum())
+
 
     def get_all_actions(self):
 
         print("stacking_dataset.py: Stacking_Dataset.get_all_actions()")
 
         result = []
-        # mask out invalid actions
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = int(self.masks[i].numpy().sum())
             result.append(self.actions[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
 
     def get_all_observations(self):
 
         print("stacking_dataset.py: Stacking_Dataset.get_all_observations()")
 
         result = []
-        # mask out invalid observations
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = int(self.masks[i].numpy().sum())
             result.append(self.observations[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+
+
 
     def __len__(self):
 
         print("stacking_dataset.py: Stacking_Dataset.__len__()")
 
         return len(self.slices)
+
+
 
     def __getitem__(self, idx):
 
@@ -314,11 +321,13 @@ class Stacking_Img_Dataset(TrajectoryDataset):
                 image = cv2.imread(img).astype(np.float32)
                 image = image.transpose((2, 0, 1)) / 255.0
 
-                image = torch.from_numpy(image).to(self.device).float().unsqueeze(0)
+                image = tf.convert_to_tensor(image, dtype=tf.float32)
+                image = tf.expand_dims(image, axis=0)                
 
                 bp_images.append(image)
 
-            bp_images = torch.concatenate(bp_images, dim=0)
+            bp_images = tf.concat(bp_images, axis=0)
+
             ################################################################
             inhand_imgs = glob.glob(data_dir + "/images/inhand-cam/" + file_name + "/*")
             inhand_imgs.sort(key=lambda x: int(os.path.basename(x).split(".")[0]))
@@ -327,10 +336,12 @@ class Stacking_Img_Dataset(TrajectoryDataset):
                 image = cv2.imread(img).astype(np.float32)
                 image = image.transpose((2, 0, 1)) / 255.0
 
-                image = torch.from_numpy(image).to(self.device).float().unsqueeze(0)
+                image = tf.convert_to_tensor(image, dtype=tf.float32)
+                image = tf.expand_dims(image, axis=0)                
 
                 inhand_images.append(image)
-            inhand_images = torch.concatenate(inhand_images, dim=0)
+
+            inhand_images = tf.concat(inhand_images, axis=0)
             ##################################################################
 
             input_state = np.concatenate((robot_des_j_pos, robot_gripper), axis=-1)
@@ -355,9 +366,10 @@ class Stacking_Img_Dataset(TrajectoryDataset):
         self.inhand_cam_imgs = inhand_cam_imgs
 
         # shape: B, T, n
-        self.observations = torch.from_numpy(np.concatenate(inputs)).to(device).float()
-        self.actions = torch.from_numpy(np.concatenate(actions)).to(device).float()
-        self.masks = torch.from_numpy(np.concatenate(masks)).to(device).float()
+        # Convert lists to tensors
+        self.observations = tf.convert_to_tensor(np.concatenate(inputs), dtype=tf.float32)
+        self.actions = tf.convert_to_tensor(np.concatenate(actions), dtype=tf.float32)
+        self.masks = tf.convert_to_tensor(np.concatenate(masks), dtype=tf.float32)
 
         self.num_data = len(self.observations)
 
@@ -388,31 +400,35 @@ class Stacking_Img_Dataset(TrajectoryDataset):
 
     def get_seq_length(self, idx):
 
-        print("stacking_dataset.py: Stacking_Dataset.get_seq_length()")
+        print("stacking_dataset.py: Stacking_Img_Dataset.get_seq_length()")
 
-        return int(self.masks[idx].sum().item())
+        return int(self.masks[idx].numpy().sum())
+    
 
     def get_all_actions(self):
 
-        print("stacking_dataset.py: Stacking_Dataset.get_all_actions()")
+        print("stacking_dataset.py: Stacking_Img_Dataset.get_all_actions()")
 
         result = []
         # mask out invalid actions
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = int(self.masks[i].numpy().sum())
             result.append(self.actions[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+
 
     def get_all_observations(self):
 
-        print("stacking_dataset.py: Stacking_Dataset.get_all_observations()")
+        print("stacking_dataset.py: Stacking_Img_Dataset.get_all_observations()")
 
         result = []
         # mask out invalid observations
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = int(self.masks[i].numpy().sum())
             result.append(self.observations[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+    
+
 
     def __len__(self):
 

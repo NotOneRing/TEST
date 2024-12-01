@@ -183,6 +183,7 @@ class StitchedSequenceDataset:
         if self.use_img:
             raise NotImplementedError("use_img: dimension check is not implemented now.")
             
+            print("images.shape = ", images.shape)
             images = self.images[(start - num_before_start) : end]
 
             # 将图像按时间倒序堆叠，因此最近的图像在最后
@@ -281,7 +282,8 @@ class StitchedSequenceDataset:
 
 
 
-class StitchedSequenceQLearningDataset(tf.data.Dataset):
+# class StitchedSequenceQLearningDataset(tf.data.Dataset):
+class StitchedSequenceQLearningDataset:
     def __init__(self, dataset_path, horizon_steps=64, cond_steps=1, img_cond_steps=1, max_n_episodes=10000, use_img=False, device="/GPU:0"):
         print("sequence.py: StitchedSequenceQLearningDataset.__init__()")
 

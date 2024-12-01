@@ -10,8 +10,9 @@ try:
 except:
     print("Installing cv2")
     os.system("pip install opencv-python")
+    import cv2
 
-import torch
+import tensorflow as tf
 
 import pickle
 import numpy as np
@@ -109,9 +110,9 @@ class Aligning_Dataset(TrajectoryDataset):
             masks.append(zero_mask)
 
         # shape: B, T, n
-        self.observations = torch.from_numpy(np.concatenate(inputs)).to(device).float()
-        self.actions = torch.from_numpy(np.concatenate(actions)).to(device).float()
-        self.masks = torch.from_numpy(np.concatenate(masks)).to(device).float()
+        self.observations = tf.convert_to_tensor(np.concatenate(inputs), dtype=tf.float32)
+        self.actions = tf.convert_to_tensor(np.concatenate(actions), dtype=tf.float32)
+        self.masks = tf.convert_to_tensor(np.concatenate(masks), dtype=tf.float32)
 
         self.num_data = len(self.observations)
 
@@ -146,27 +147,27 @@ class Aligning_Dataset(TrajectoryDataset):
 
         return int(self.masks[idx].sum().item())
 
-    def get_all_actions(self):
 
+
+    def get_all_actions(self):
         print("aligning_dataset.py: get_all_actions()")
 
         result = []
-        # mask out invalid actions
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = int(self.masks[i].numpy().sum())
             result.append(self.actions[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+
 
     def get_all_observations(self):
-
         print("aligning_dataset.py: get_all_observations()")
 
         result = []
-        # mask out invalid observations
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = int(self.masks[i].numpy().sum())
             result.append(self.observations[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+
 
     def __len__(self):
 
@@ -250,11 +251,13 @@ class Aligning_Img_Dataset(TrajectoryDataset):
                 image = cv2.imread(img).astype(np.float32)
                 image = image.transpose((2, 0, 1)) / 255.0
 
-                image = torch.from_numpy(image).to(self.device).float().unsqueeze(0)
+                image = tf.convert_to_tensor(image, dtype=tf.float32)
+                image = tf.expand_dims(image, axis=0)
 
                 bp_images.append(image)
 
-            bp_images = torch.concatenate(bp_images, dim=0)
+            bp_images = tf.concat(bp_images, axis=0)
+
             ################################################################
             inhand_imgs = glob.glob(data_dir + "/images/inhand-cam/" + file_name + "/*")
             inhand_imgs.sort(key=lambda x: int(os.path.basename(x).split(".")[0]))
@@ -263,10 +266,12 @@ class Aligning_Img_Dataset(TrajectoryDataset):
                 image = cv2.imread(img).astype(np.float32)
                 image = image.transpose((2, 0, 1)) / 255.0
 
-                image = torch.from_numpy(image).to(self.device).float().unsqueeze(0)
+                image = tf.convert_to_tensor(image, dtype=tf.float32)
+                image = tf.expand_dims(image, axis=0)
 
                 inhand_images.append(image)
-            inhand_images = torch.concatenate(inhand_images, dim=0)
+
+            inhand_images = tf.concat(inhand_images, axis=0)
             ##################################################################
 
             # push_box_pos = env_state['push-box']['pos']
@@ -301,9 +306,9 @@ class Aligning_Img_Dataset(TrajectoryDataset):
         self.inhand_cam_imgs = inhand_cam_imgs
 
         # shape: B, T, n
-        self.observations = torch.from_numpy(np.concatenate(inputs)).to(device).float()
-        self.actions = torch.from_numpy(np.concatenate(actions)).to(device).float()
-        self.masks = torch.from_numpy(np.concatenate(masks)).to(device).float()
+        self.observations = tf.convert_to_tensor(np.concatenate(inputs), dtype=tf.float32)
+        self.actions = tf.convert_to_tensor(np.concatenate(actions), dtype=tf.float32)
+        self.masks = tf.convert_to_tensor(np.concatenate(masks), dtype=tf.float32)
 
         self.num_data = len(self.observations)
 
@@ -336,35 +341,40 @@ class Aligning_Img_Dataset(TrajectoryDataset):
 
         print("aligning_dataset.py: Aligning_Img_Dataset.get_seq_length()")
 
-        return int(self.masks[idx].sum().item())
+        return int(tf.reduce_sum(self.masks[idx]).numpy())
+
+
 
     def get_all_actions(self):
-
-        print("aligning_dataset.py: Aligning_Img_Dataset.get_all_actions()")
-
+        print("AligningImgDataset.get_all_actions()")
         result = []
-        # mask out invalid actions
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = self.get_seq_length(i)
             result.append(self.actions[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+
+
 
     def get_all_observations(self):
-
-        print("aligning_dataset.py: Aligning_Img_Dataset.get_all_observations()")
-
+        print("AligningImgDataset.get_all_observations()")
         result = []
-        # mask out invalid observations
         for i in range(len(self.masks)):
-            T = int(self.masks[i].sum().item())
+            T = self.get_seq_length(i)
             result.append(self.observations[i, :T, :])
-        return torch.cat(result, dim=0)
+        return tf.concat(result, axis=0)
+
+
+
+
 
     def __len__(self):
 
         print("aligning_dataset.py: Aligning_Img_Dataset.__len__()")
 
         return len(self.slices)
+
+
+
 
     def __getitem__(self, idx):
 
