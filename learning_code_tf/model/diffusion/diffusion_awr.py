@@ -4,7 +4,8 @@ Advantage-weighted regression (AWR) for diffusion policy.
 """
 
 import logging
-import torch
+
+import tensorflow as tf
 
 log = logging.getLogger(__name__)
 
@@ -23,8 +24,8 @@ class AWRDiffusion(RWRDiffusion):
         print("diffusion_awr.py: AWRDiffusion.__init__()")
 
         super().__init__(network=actor, **kwargs)
-        self.critic = critic.to(self.device)
-
+        self.critic = critic
+        
         # assign actor
         self.actor = self.network
 
@@ -36,5 +37,6 @@ class AWRDiffusion(RWRDiffusion):
         adv = self.critic(obs)
 
         # Update critic
-        loss_critic = torch.mean((adv - advantages) ** 2)
+        loss_critic = tf.reduce_mean(tf.square(adv - advantages))
+
         return loss_critic

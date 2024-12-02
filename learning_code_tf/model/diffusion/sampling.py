@@ -82,7 +82,7 @@ def extract(a, t, x_shape):
 
 
 
-def make_timesteps(batch_size, i, device):
+def make_timesteps(batch_size, i):
     print("sampling.py: make_timesteps()")
     t = tf.constant([i] * batch_size, dtype=tf.int64)
     return t
