@@ -3,7 +3,7 @@ Advantage-weighted regression (AWR) for Gaussian policy.
 
 """
 
-import torch
+import tensorflow as tf
 import logging
 from model.rl.gaussian_rwr import RWR_Gaussian
 
@@ -22,7 +22,8 @@ class AWR_Gaussian(RWR_Gaussian):
         print("gaussian_awr.py: AWR_Gaussian.__init__()")
 
         super().__init__(actor=actor, **kwargs)
-        self.critic = critic.to(self.device)
+
+        self.critic = critic
 
     def loss_critic(self, obs, advantages):
 
@@ -32,5 +33,8 @@ class AWR_Gaussian(RWR_Gaussian):
         adv = self.critic(obs)
 
         # Update critic
-        loss_critic = torch.mean((adv - advantages) ** 2)
+        loss_critic = tf.reduce_mean( tf.square(adv - advantages) )
+
         return loss_critic
+
+

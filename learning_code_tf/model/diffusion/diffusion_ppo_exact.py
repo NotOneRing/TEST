@@ -10,7 +10,8 @@ Da: action dimension
 
 """
 
-import torch
+import tensorflow as tf
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -110,8 +111,9 @@ class PPOExactDiffusion(VPGDiffusion):
 
         # Get new logprobs for final x
         newlogprobs = self.get_exact_logprobs(obs, samples)
-        newlogprobs = newlogprobs.clamp(min=-5, max=2)
-        oldlogprobs = oldlogprobs.clamp(min=-5, max=2)
+        newlogprobs = tf.clip_by_value(newlogprobs, clip_value_min=-5, clip_value_max=2)
+        oldlogprobs = tf.clip_by_value(oldlogprobs, clip_value_min=-5, clip_value_max=2)
+
 
         bc_loss = 0
         if use_bc_loss:
@@ -119,43 +121,39 @@ class PPOExactDiffusion(VPGDiffusion):
 
         # get ratio
         logratio = newlogprobs - oldlogprobs
-        ratio = logratio.exp()
+        ratio = tf.exp(logratio)
+
 
         # get kl difference and whether value clipped
-        with torch.no_grad():
-            # old_approx_kl: the approximate Kullback–Leibler divergence, measured by (-logratio).mean(), which corresponds to the k1 estimator in John Schulman’s blog post on approximating KL http://joschu.net/blog/kl-approx.html
-            # approx_kl: better alternative to old_approx_kl measured by (logratio.exp() - 1) - logratio, which corresponds to the k3 estimator in approximating KL http://joschu.net/blog/kl-approx.html
-            # old_approx_kl = (-logratio).mean()
-            approx_kl = ((ratio - 1) - logratio).mean()
-            clipfrac = (
-                ((ratio - 1.0).abs() > self.clip_ploss_coef).float().mean().item()
-            )
+        # old_approx_kl: the approximate Kullback–Leibler divergence, measured by (-logratio).mean(), which corresponds to the k1 estimator in John Schulman’s blog post on approximating KL http://joschu.net/blog/kl-approx.html
+        # approx_kl: better alternative to old_approx_kl measured by (logratio.exp() - 1) - logratio, which corresponds to the k3 estimator in approximating KL http://joschu.net/blog/kl-approx.html
+        # old_approx_kl = (-logratio).mean()
+        approx_kl = tf.reduce_mean((ratio - 1) - logratio)
+        clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
 
-        # normalize advantages
+
+        # Normalize advantages
         if self.norm_adv:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+            advantages = (advantages - tf.reduce_mean(advantages)) / (tf.reduce_std(advantages) + 1e-8)
 
         # Policy loss with clipping
         pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * torch.clamp(
-            ratio, 1 - self.clip_ploss_coef, 1 + self.clip_ploss_coef
-        )
-        pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+        pg_loss2 = -advantages * tf.clip_by_value(ratio, 1 - self.clip_ploss_coef, 1 + self.clip_ploss_coef)
+        pg_loss = tf.reduce_mean(tf.maximum(pg_loss1, pg_loss2))
+
 
         # Value loss optionally with clipping
-        newvalues = self.critic(obs).view(-1)
+        newvalues = self.critic(obs)
+        newvalues = tf.reshape(newvalues, [-1])
         if self.clip_vloss_coef is not None:
-            v_loss_unclipped = (newvalues - returns) ** 2
-            v_clipped = oldvalues + torch.clamp(
-                newvalues - oldvalues,
-                -self.clip_vloss_coef,
-                self.clip_vloss_coef,
-            )
-            v_loss_clipped = (v_clipped - returns) ** 2
-            v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-            v_loss = 0.5 * v_loss_max.mean()
+            v_loss_unclipped = tf.square(newvalues - returns)
+            v_clipped = oldvalues + tf.clip_by_value(newvalues - oldvalues, -self.clip_vloss_coef, self.clip_vloss_coef)
+            v_loss_clipped = tf.square(v_clipped - returns)
+            v_loss_max = tf.maximum(v_loss_unclipped, v_loss_clipped)
+            v_loss = 0.5 * tf.reduce_mean(v_loss_max)
         else:
-            v_loss = 0.5 * ((newvalues - returns) ** 2).mean()
+            v_loss = 0.5 * tf.reduce_mean(tf.square(newvalues - returns))
+
 
         # entropy is maximized - only effective if residual is learned
         return (

@@ -13,9 +13,13 @@ H, W: image height and width
 """
 
 from typing import Optional
-import torch
+
 import logging
 import math
+
+import tensorflow as tf
+import tensorflow_probability as tfp
+
 
 log = logging.getLogger(__name__)
 from model.diffusion.diffusion_vpg import VPGDiffusion
@@ -95,17 +99,21 @@ class PPODiffusion(VPGDiffusion):
             denoising_inds,
             get_ent=True,
         )
-        entropy_loss = -eta.mean()
-        newlogprobs = newlogprobs.clamp(min=-5, max=2)
-        oldlogprobs = oldlogprobs.clamp(min=-5, max=2)
+
+        entropy_loss = -tf.reduce_mean(eta)
+        newlogprobs = tf.clip_by_value(newlogprobs, clip_value_min=-5, clip_value_max=2)
+        oldlogprobs = tf.clip_by_value(oldlogprobs, clip_value_min=-5, clip_value_max=2)
 
         # only backpropagate through the earlier steps (e.g., ones actually executed in the environment)
         newlogprobs = newlogprobs[:, :reward_horizon, :]
         oldlogprobs = oldlogprobs[:, :reward_horizon, :]
 
         # Get the logprobs - batch over B and denoising steps
-        newlogprobs = newlogprobs.mean(dim=(-1, -2)).view(-1)
-        oldlogprobs = oldlogprobs.mean(dim=(-1, -2)).view(-1)
+        newlogprobs = tf.reduce_mean(newlogprobs, axis=(-1, -2))
+        oldlogprobs = tf.reduce_mean(oldlogprobs, axis=(-1, -2))
+        newlogprobs = tf.reshape(newlogprobs, [-1])
+        oldlogprobs = tf.reshape(oldlogprobs, [-1])
+
 
         bc_loss = 0
         if use_bc_loss:
@@ -127,18 +135,27 @@ class PPODiffusion(VPGDiffusion):
                 get_ent=False,
                 use_base_policy=False,
             )
-            bc_logprobs = bc_logprobs.clamp(min=-5, max=2)
-            bc_logprobs = bc_logprobs.mean(dim=(-1, -2)).view(-1)
-            bc_loss = -bc_logprobs.mean()
+
+            bc_logprobs = tf.clip_by_value(bc_logprobs, clip_value_min=-5, clip_value_max=2)
+            bc_logprobs = tf.reduce_mean(bc_logprobs, axis=(-1, -2))
+            bc_logprobs = tf.reshape(bc_logprobs, [-1])
+            bc_loss = -tf.reduce_mean(bc_logprobs)
+
 
         # normalize advantages
-        if self.norm_adv:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # Clip advantages by 5th and 95th percentile
         advantage_min = torch.quantile(advantages, self.clip_advantage_lower_quantile)
         advantage_max = torch.quantile(advantages, self.clip_advantage_upper_quantile)
         advantages = advantages.clamp(min=advantage_min, max=advantage_max)
+
+        if self.norm_adv:
+            advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-8)
+
+        advantage_min = tfp.stats.percentile(advantages, self.clip_advantage_lower_quantile * 100)
+        advantage_max = tfp.stats.percentile(advantages, self.clip_advantage_upper_quantile * 100)
+        advantages = tf.clip_by_value(advantages, advantage_min, advantage_max)
+
 
         # denoising discount
         discount = torch.tensor(

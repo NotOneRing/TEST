@@ -3,7 +3,8 @@ Policy gradient for Gaussian policy
 
 """
 
-import torch
+import tensorflow as tf
+
 from copy import deepcopy
 import logging
 from model.common.gaussian import GaussianModel
@@ -23,29 +24,34 @@ class VPG_Gaussian(GaussianModel):
         super().__init__(network=actor, **kwargs)
 
         # Value function for obs - simple MLP
-        self.critic = critic.to(self.device)
+        self.critic = critic
+        # .to(self.device)
 
         # Re-name network to actor
         self.actor_ft = actor
 
         # Save a copy of original actor
         self.actor = deepcopy(actor)
-        for param in self.actor.parameters():
-            param.requires_grad = False
+        # for param in self.actor.parameters():
+        #     param.requires_grad = False
+
+        for layer in self.actor.layers:
+            layer.trainable = False
+
 
     # ---------- Sampling ----------#
 
-    @torch.no_grad()
-    def forward(
+    # @torch.no_grad()
+    def call(
         self,
         cond,
         deterministic=False,
         use_base_policy=False,
     ):
 
-        print("gaussian_vpg.py: VPG_Gaussian.forward()")
+        print("gaussian_vpg.py: VPG_Gaussian.call()")
 
-        return super().forward(
+        return super().call(
             cond=cond,
             deterministic=deterministic,
             network_override=self.actor if use_base_policy else None,
@@ -62,16 +68,22 @@ class VPG_Gaussian(GaussianModel):
 
         print("gaussian_vpg.py: VPG_Gaussian.get_logprobs()")
 
-        B = len(actions)
+        B = tf.shape(actions)[0]
+
         dist = self.forward_train(
             cond,
             deterministic=False,
             network_override=self.actor if use_base_policy else None,
         )
-        log_prob = dist.log_prob(actions.view(B, -1))
-        log_prob = log_prob.mean(-1)
-        entropy = dist.entropy().mean()
-        std = dist.scale.mean()
+
+        # Compute log probability
+        log_prob = dist.log_prob(tf.reshape(actions, [B, -1]))
+        log_prob = tf.reduce_mean(log_prob, axis=-1)
+
+        # Compute entropy and standard deviation
+        entropy = tf.reduce_mean(dist.entropy())
+        std = tf.reduce_mean(dist.stddev())
+
         return log_prob, entropy, std
 
     def loss(self, obs, actions, reward):

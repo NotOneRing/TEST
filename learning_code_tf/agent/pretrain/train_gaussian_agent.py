@@ -11,6 +11,7 @@ import tensorflow as tf
 
 log = logging.getLogger(__name__)
 from util.timer import Timer
+
 from agent.pretrain.train_agent import PreTrainAgent
 
 # , batch_to_device

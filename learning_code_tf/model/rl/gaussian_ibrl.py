@@ -3,8 +3,9 @@ Imitation Bootstrapped Reinforcement Learning (IBRL) for Gaussian policy.
 
 """
 
-import torch
-import torch.nn as nn
+import tensorflow as tf
+import numpy as np
+
 import logging
 from copy import deepcopy
 
@@ -33,29 +34,35 @@ class IBRL_Gaussian(GaussianModel):
         # Set up target actor
         self.target_actor = deepcopy(actor)
 
+
+
         # Frozen pre-trained policy
         self.bc_policy = deepcopy(actor)
-        for param in self.bc_policy.parameters():
-            param.requires_grad = False
+        self.bc_policy.trainable = False
+
 
         # initialize critic networks
         self.critic_networks = [
-            deepcopy(critic).to(self.device) for _ in range(n_critics)
+            deepcopy(critic) for _ in range(n_critics)
         ]
-        self.critic_networks = nn.ModuleList(self.critic_networks)
+        # self.critic_networks = nn.ModuleList(self.critic_networks)
 
         # initialize target networks
         self.target_networks = [
-            deepcopy(critic).to(self.device) for _ in range(n_critics)
+            deepcopy(critic) for _ in range(n_critics)
         ]
-        self.target_networks = nn.ModuleList(self.target_networks)
+        # self.target_networks = nn.ModuleList(self.target_networks)
 
         # Construct a "stateless" version of one of the models. It is "stateless" in the sense that the parameters are meta Tensors and do not have storage.
         base_model = deepcopy(self.critic_networks[0])
         self.base_model = base_model.to("meta")
+
         self.ensemble_params, self.ensemble_buffers = torch.func.stack_module_state(
             self.critic_networks
         )
+
+        self.ensemble_params = [critic.trainable_weights for critic in self.critic_networks]
+
 
     def critic_wrapper(self, params, buffers, data):
         """for vmap"""
@@ -71,7 +78,9 @@ class IBRL_Gaussian(GaussianModel):
 
         if sz is None:
             sz = len(self.critic_networks)
-        perm = torch.randperm(sz)
+
+        perm = tf.random.shuffle(tf.range(sz))
+
         ind = perm[:num_ind].to(self.device)
         return ind
 
@@ -89,33 +98,40 @@ class IBRL_Gaussian(GaussianModel):
 
         # get random critic index
         q1_ind, q2_ind = self.get_random_indices()
-        with torch.no_grad():
-            next_actions_bc = super().forward(
+
+        with tf.GradientTape(persistent=True) as tape:
+            next_actions_bc = super().call(
                 cond=next_obs,
                 deterministic=True,
                 network_override=self.bc_policy,
             )
-            next_actions_rl = super().forward(
+
+            next_actions_rl = super().call(
                 cond=next_obs,
                 deterministic=False,
                 network_override=self.target_actor,
             )
 
-            # get the BC Q value
+            # BC Q value
             next_q1_bc = self.target_networks[q1_ind](next_obs, next_actions_bc)
             next_q2_bc = self.target_networks[q2_ind](next_obs, next_actions_bc)
-            next_q_bc = torch.min(next_q1_bc, next_q2_bc)
+            next_q_bc = tf.minimum(next_q1_bc, next_q2_bc)
 
-            # get the RL Q value
+            # RL Q value
             next_q1_rl = self.target_networks[q1_ind](next_obs, next_actions_rl)
             next_q2_rl = self.target_networks[q2_ind](next_obs, next_actions_rl)
-            next_q_rl = torch.min(next_q1_rl, next_q2_rl)
+            next_q_rl = tf.minimum(next_q1_rl, next_q2_rl)
 
-            # take the max Q value
-            next_q = torch.where(next_q_bc > next_q_rl, next_q_bc, next_q_rl)
+            # Target Q value
+            next_q = tf.where(next_q_bc > next_q_rl, next_q_bc, next_q_rl)
+            target_q = rewards + gamma * (1 - terminated) * next_q
 
-            # target value
-            target_q = rewards + gamma * (1 - terminated) * next_q  # (B,)
+        # Current Q value
+        current_q_list = [
+            critic(obs, actions) for critic in self.critic_networks
+        ]
+        current_q = tf.stack(current_q_list, axis=0)  # Shape: (n_critics, batch_size)
+        loss_critic = tf.reduce_mean((current_q - target_q[None, :]) ** 2)
 
         # run all critics in batch
         current_q = torch.vmap(self.critic_wrapper, in_dims=(0, 0, None))(
@@ -128,14 +144,16 @@ class IBRL_Gaussian(GaussianModel):
 
         print("gaussian_ibrl.py: IBRL_Gaussian.loss_actor()")
 
-        action = super().forward(
+        action = super().call(
             obs,
             deterministic=False,
             reparameterize=True,
         )  # use online policy only, also IBRL does not use tanh squashing
+        
         current_q = torch.vmap(self.critic_wrapper, in_dims=(0, 0, None))(
             self.ensemble_params, self.ensemble_buffers, (obs, action)
         )  # (n_critics, B)
+
         current_q = current_q.min(
             dim=0
         ).values  # unlike RLPD, IBRL uses the min Q value for actor update
@@ -167,7 +185,7 @@ class IBRL_Gaussian(GaussianModel):
 
     # ---------- Sampling ----------#
 
-    def forward(
+    def call(
         self,
         cond,
         deterministic=False,
@@ -180,28 +198,28 @@ class IBRL_Gaussian(GaussianModel):
         q1_ind, q2_ind = self.get_random_indices()
 
         # sample an action from the BC policy
-        bc_action = super().forward(
+        bc_action = super().call(
             cond=cond,
             deterministic=True,
             network_override=self.bc_policy,
         )
 
         # sample an action from the RL policy
-        rl_action = super().forward(
+        rl_action = super().call(
             cond=cond,
             deterministic=deterministic,
             reparameterize=reparameterize,
         )
 
         # compute Q value of BC policy
-        q_bc_1 = self.critic_networks[q1_ind](cond, bc_action)  # (B,)
+        q_bc_1 = self.critic_networks[q1_ind](cond, bc_action)
         q_bc_2 = self.critic_networks[q2_ind](cond, bc_action)
-        q_bc = torch.min(q_bc_1, q_bc_2)
+        q_bc = tf.minimum(q_bc_1, q_bc_2)
 
         # compute Q value of RL policy
         q_rl_1 = self.critic_networks[q1_ind](cond, rl_action)
         q_rl_2 = self.critic_networks[q2_ind](cond, rl_action)
-        q_rl = torch.min(q_rl_1, q_rl_2)
+        q_rl = tf.minimum(q_rl_1, q_rl_2)
 
         # soft sample or greedy
         if deterministic or not self.soft_action_sample:
@@ -210,10 +228,15 @@ class IBRL_Gaussian(GaussianModel):
                 bc_action,
                 rl_action,
             )
+
+            action = tf.where(q_bc > q_rl, bc_action, rl_action)
+
         else:
             # compute the Q weights with probability proportional to exp(\beta * Q(a))
-            qw_bc = torch.exp(q_bc * self.soft_action_sample_beta)
-            qw_rl = torch.exp(q_rl * self.soft_action_sample_beta)
+            qw_bc = tf.exp(q_bc * self.soft_action_sample_beta)
+            qw_rl = tf.exp(q_rl * self.soft_action_sample_beta)
+
+
             q_weights = torch.softmax(
                 torch.stack([qw_bc, qw_rl], dim=-1),
                 dim=-1,
@@ -226,4 +249,12 @@ class IBRL_Gaussian(GaussianModel):
                 bc_action,
                 rl_action,
             )
+
+            q_weights = tf.nn.softmax(tf.stack([qw_bc, qw_rl], axis=-1), axis=-1)
+
+            q_indices = tf.random.categorical(tf.math.log(q_weights), num_samples=1)
+            
+            action = tf.where(q_indices == 0, bc_action, rl_action)
+
+
         return action

@@ -3,8 +3,11 @@ Calibrated Conservative Q-Learning (CalQL) for Gaussian policy.
 
 """
 
-import torch
-import torch.nn as nn
+# import torch
+# import torch.nn as nn
+
+import tensorflow as tf
+
 import logging
 from copy import deepcopy
 import numpy as np
@@ -37,24 +40,35 @@ class CalQL_Gaussian(GaussianModel):
         self.cql_n_actions = cql_n_actions
 
         # initialize critic networks
-        self.critic = critic.to(self.device)
-        self.target_critic = deepcopy(critic).to(self.device)
+        self.critic = critic
+        self.target_critic = deepcopy(critic)
+        
+        # # Load pre-trained checkpoint - note we are also loading the pre-trained critic here
+        # if network_path is not None:
+        #     checkpoint = torch.load(
+        #         network_path,
+        #         map_location=self.device,
+        #         weights_only=True,
+        #     )
 
-        # Load pre-trained checkpoint - note we are also loading the pre-trained critic here
+        #     self.load_state_dict(
+        #         checkpoint["model"],
+        #         strict=True,
+        #     )
+
+        #     log.info("Loaded actor from %s", network_path)
+
+        # Load pretrained weights if specified
         if network_path is not None:
-            checkpoint = torch.load(
-                network_path,
-                map_location=self.device,
-                weights_only=True,
-            )
-            self.load_state_dict(
-                checkpoint["model"],
-                strict=True,
-            )
-            log.info("Loaded actor from %s", network_path)
+            checkpoint = tf.keras.models.load_model(network_path)
+            self.actor.set_weights(checkpoint["actor_weights"])
+            self.critic.set_weights(checkpoint["critic_weights"])
+            log.info("Loaded actor and critic from %s", network_path)
+
         log.info(
-            f"Number of network parameters: {sum(p.numel() for p in self.parameters())}"
+            f"Number of network parameters: {np.sum([np.prod(v.shape) for v in self.actor.trainable_variables])}"
         )
+
 
     def loss_critic(
         self,

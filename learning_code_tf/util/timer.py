@@ -23,3 +23,5 @@ class Timer:
         if reset:
             self._start = now
         return diff
+
+

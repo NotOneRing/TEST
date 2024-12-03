@@ -19,7 +19,8 @@ class VPG_GMM(GMMModel):
         self.actor_ft = actor
 
         # Value function for obs - simple MLP
-        self.critic = critic.to(self.device)
+        self.critic = critic
+        # .to(self.device)
 
     # ---------- Sampling ----------#
 

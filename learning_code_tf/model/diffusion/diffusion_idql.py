@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 
 from model.diffusion.diffusion_rwr import RWRDiffusion
 
+from util.torch_to_tf import tf_index_gather
 
 def expectile_loss(diff, expectile=0.8):
 
@@ -189,11 +190,7 @@ class IDQLDiffusion(RWRDiffusion):
             sample_indices = best_indices[None, :, None, None]  # [1, B, 1, 1]
             sample_indices = tf.tile(sample_indices, [S, 1, H, A])
 
-            # samples_best = torch.gather(samples_expanded, 0, sample_indices)
-
-            # samples_best = tf.gather(samples_expanded, sample_indices, axis=0)
-
-            samples_best = tf.gather(samples_expanded, sample_indices, axis=0, batch_dims=1)
+            samples_best = tf_index_gather(samples_expanded, 0, sample_indices)
 
         # Sample as an implicit policy for exploration
         else:
@@ -204,15 +201,6 @@ class IDQLDiffusion(RWRDiffusion):
 
             adv = q - v
 
-            # select a sample from DP probabilistically -- sample index per batch and compile
-            sample_indices = torch.multinomial(tau_weights.T, 1)  # [B, 1]
-
-            # dummy dimension @ dim 0 for batched indexing
-            sample_indices = sample_indices[None, :, None]  # [1, B, 1, 1]
-            sample_indices = sample_indices.repeat(S, 1, H, A)
-
-            samples_best = torch.gather(samples_expanded, 0, sample_indices)
-
             # Compute weights for sampling
             samples_expanded = tf.reshape(samples, [S, B, H, A])
 
@@ -220,14 +208,18 @@ class IDQLDiffusion(RWRDiffusion):
             tau_weights = tf.where(adv > 0, critic_hyperparam, 1 - critic_hyperparam)
             tau_weights = tau_weights / tf.reduce_sum(tau_weights, axis=0)  # normalize
 
+            assert len( tau_weights.shape.as_list() ) >= 2, "tau_weights.shape.as_list() should be at least 2"
+
             # select a sample from DP probabilistically -- sample index per batch and compile
             sample_indices = tf.random.categorical(tau_weights.T, 1)  # [B, 1]
 
             # dummy dimension @ dim 0 for batched indexing
-            sample_indices = tf.expand_dims(sample_indices, 0)  # [1, B, 1, 1]
+            sample_indices = tf.expand_dims(sample_indices, 0)  # [1, B, 1]
+            sample_indices = tf.expand_dims(sample_indices, -1)  # [1, B, 1, 1]
+
             sample_indices = tf.tile(sample_indices, [S, 1, H, A])
 
-            samples_best = tf.gather(samples_expanded, sample_indices, axis=0)
+            samples_best = tf_index_gather(samples_expanded, 0, sample_indices)
 
 
         # squeeze dummy dimension

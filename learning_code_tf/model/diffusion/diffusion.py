@@ -176,6 +176,8 @@ class DiffusionModel(tf.keras.Model):
             print("after ddim_discretize")
 
             self.ddim_alphas = tf.gather(self.alphas_cumprod, self.ddim_t)
+            # self.ddim_alphas = tf_index_gather(self.alphas_cumprod, self.ddim_t)
+            
             self.ddim_alphas_sqrt = tf.sqrt(self.ddim_alphas)
             self.ddim_alphas_prev = tf.concat(
                 [tf.constant([1.0]), self.alphas_cumprod[:-1]], axis=0

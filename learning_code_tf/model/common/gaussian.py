@@ -107,7 +107,7 @@ class GaussianModel(tf.keras.Model):
         get_logprob=False,
     ):
 
-        print("gaussian.py: GaussianModel.forward()")
+        print("gaussian.py: GaussianModel.call()")
 
         B = len(cond["state"]) if "state" in cond else len(cond["rgb"])
         T = self.horizon_steps

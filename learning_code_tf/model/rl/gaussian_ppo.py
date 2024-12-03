@@ -12,7 +12,10 @@ H, W: image height and width
 """
 
 from typing import Optional
-import torch
+
+import tensorflow as tf
+
+
 from model.rl.gaussian_vpg import VPG_Gaussian
 
 
@@ -64,11 +67,12 @@ class PPO_Gaussian(VPG_Gaussian):
 
         print("gaussian_ppo.py: PPO_Gaussian.loss()")
 
+        # Get new log probabilities and entropy
         newlogprobs, entropy, std = self.get_logprobs(obs, actions)
-        newlogprobs = newlogprobs.clamp(min=-5, max=2)
-        oldlogprobs = oldlogprobs.clamp(min=-5, max=2)
+        newlogprobs = tf.clip_by_value(newlogprobs, -5.0, 2.0)
+        oldlogprobs = tf.clip_by_value(oldlogprobs, -5.0, 2.0)
         entropy_loss = -entropy
-
+        
         bc_loss = 0.0
         if use_bc_loss:
             # See Eqn. 2 of https://arxiv.org/pdf/2403.03949.pdf
@@ -76,59 +80,70 @@ class PPO_Gaussian(VPG_Gaussian):
             # Actions are chosen along trajectory induced by current policy.
 
             # Get counterfactual teacher actions
-            samples = self.forward(
+            samples = self.call(
                 cond=obs,
                 deterministic=False,
                 use_base_policy=True,
             )
+
             # Get logprobs of teacher actions under this policy
             bc_logprobs, _, _ = self.get_logprobs(obs, samples, use_base_policy=False)
-            bc_logprobs = bc_logprobs.clamp(min=-5, max=2)
-            bc_loss = -bc_logprobs.mean()
+
+            bc_logprobs = tf.clip_by_value(bc_logprobs, -5.0, 2.0)
+            bc_loss = -tf.reduce_mean(bc_logprobs)
 
         # get ratio
         logratio = newlogprobs - oldlogprobs
-        ratio = logratio.exp()
+
+        ratio = tf.exp(logratio)
 
         # get kl difference and whether value clipped
-        with torch.no_grad():
-            approx_kl = ((ratio - 1) - logratio).nanmean()
-            clipfrac = (
-                ((ratio - 1.0).abs() > self.clip_ploss_coef).float().mean().item()
-            )
+        approx_kl = tf.reduce_mean(
+            tf.boolean_mask((ratio - 1) - logratio, ~tf.is_nan((ratio - 1) - logratio))
+        )
 
-        # normalize advantages
+        clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
+
+        # Normalize advantages
         if self.norm_adv:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+            advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-8)
+
 
         # Policy loss with clipping
         pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * torch.clamp(
-            ratio, 1 - self.clip_ploss_coef, 1 + self.clip_ploss_coef
-        )
-        pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+        pg_loss2 = -advantages * tf.clip_by_value(ratio, 1 - self.clip_ploss_coef, 1 + self.clip_ploss_coef)
+        pg_loss = tf.reduce_mean(tf.maximum(pg_loss1, pg_loss2))
+
 
         # Value loss optionally with clipping
-        newvalues = self.critic(obs).view(-1)
+        newvalues = self.critic(obs)
+        newvalues = tf.reshape(newvalues, [-1])
         if self.clip_vloss_coef is not None:
             v_loss_unclipped = (newvalues - returns) ** 2
-            v_clipped = oldvalues + torch.clamp(
-                newvalues - oldvalues,
-                -self.clip_vloss_coef,
-                self.clip_vloss_coef,
-            )
+            v_clipped = oldvalues + tf.clip_by_value(newvalues - oldvalues, -self.clip_vloss_coef, self.clip_vloss_coef)
             v_loss_clipped = (v_clipped - returns) ** 2
-            v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-            v_loss = 0.5 * v_loss_max.mean()
+            v_loss = 0.5 * tf.reduce_mean(tf.maximum(v_loss_unclipped, v_loss_clipped))
         else:
-            v_loss = 0.5 * ((newvalues - returns) ** 2).mean()
+            v_loss = 0.5 * tf.reduce_mean((newvalues - returns) ** 2)
+
         return (
             pg_loss,
             entropy_loss,
             v_loss,
             clipfrac,
-            approx_kl.item(),
-            ratio.mean().item(),
+            approx_kl,
+            tf.reduce_mean(ratio),
             bc_loss,
-            std.item(),
+            std,
         )
+
+
+
+
+
+
+
+
+
+
+
