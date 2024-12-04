@@ -131,10 +131,10 @@ class PPO_Gaussian(VPG_Gaussian):
             entropy_loss,
             v_loss,
             clipfrac,
-            approx_kl,
-            tf.reduce_mean(ratio),
+            int( approx_kl.numpy() ),
+            int( tf.reduce_mean(ratio).numpy() ),
             bc_loss,
-            std,
+            int( std.numpy() ),
         )
 
 

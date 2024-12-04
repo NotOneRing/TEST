@@ -18,7 +18,9 @@ import logging
 import math
 
 import tensorflow as tf
-import tensorflow_probability as tfp
+
+from util.torch_to_tf import tf_quantile
+# import tensorflow_probability as tfp
 
 
 log = logging.getLogger(__name__)
@@ -143,80 +145,81 @@ class PPODiffusion(VPGDiffusion):
 
 
         # normalize advantages
-
-        # Clip advantages by 5th and 95th percentile
-        advantage_min = torch.quantile(advantages, self.clip_advantage_lower_quantile)
-        advantage_max = torch.quantile(advantages, self.clip_advantage_upper_quantile)
-        advantages = advantages.clamp(min=advantage_min, max=advantage_max)
-
         if self.norm_adv:
             advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-8)
 
-        advantage_min = tfp.stats.percentile(advantages, self.clip_advantage_lower_quantile * 100)
-        advantage_max = tfp.stats.percentile(advantages, self.clip_advantage_upper_quantile * 100)
+        # Clip advantages by 5th and 95th percentile
+        advantage_min = tf_quantile(advantages, self.clip_advantage_lower_quantile)
+        advantage_max = tf_quantile(advantages, self.clip_advantage_upper_quantile)
+
         advantages = tf.clip_by_value(advantages, advantage_min, advantage_max)
 
 
         # denoising discount
-        discount = torch.tensor(
+        discount = tf.convert_to_tensor(
             [
                 self.gamma_denoising ** (self.ft_denoising_steps - i - 1)
                 for i in denoising_inds
             ]
-        ).to(self.device)
+        )
+        # .to(self.device)
         advantages *= discount
 
         # get ratio
         logratio = newlogprobs - oldlogprobs
-        ratio = logratio.exp()
+        ratio = tf.exp(logratio)
 
         # exponentially interpolate between the base and the current clipping value over denoising steps and repeat
-        t = (denoising_inds.float() / (self.ft_denoising_steps - 1)).to(self.device)
+        t = tf.cast(denoising_inds, tf.float32) / (self.ft_denoising_steps - 1)
+
         if self.ft_denoising_steps > 1:
             clip_ploss_coef = self.clip_ploss_coef_base + (
                 self.clip_ploss_coef - self.clip_ploss_coef_base
-            ) * (torch.exp(self.clip_ploss_coef_rate * t) - 1) / (
+            ) * (tf.math.exp(self.clip_ploss_coef_rate * t) - 1) / (
                 math.exp(self.clip_ploss_coef_rate) - 1
             )
         else:
             clip_ploss_coef = t
 
         # get kl difference and whether value clipped
-        with torch.no_grad():
-            # old_approx_kl: the approximate Kullback–Leibler divergence, measured by (-logratio).mean(), which corresponds to the k1 estimator in John Schulman’s blog post on approximating KL http://joschu.net/blog/kl-approx.html
-            # approx_kl: better alternative to old_approx_kl measured by (logratio.exp() - 1) - logratio, which corresponds to the k3 estimator in approximating KL http://joschu.net/blog/kl-approx.html
-            # old_approx_kl = (-logratio).mean()
-            approx_kl = ((ratio - 1) - logratio).mean()
-            clipfrac = ((ratio - 1.0).abs() > clip_ploss_coef).float().mean().item()
+        # old_approx_kl: the approximate Kullback–Leibler divergence, measured by (-logratio).mean(), which corresponds to the k1 estimator in John Schulman’s blog post on approximating KL http://joschu.net/blog/kl-approx.html
+        # approx_kl: better alternative to old_approx_kl measured by (logratio.exp() - 1) - logratio, which corresponds to the k3 estimator in approximating KL http://joschu.net/blog/kl-approx.html
+        # old_approx_kl = (-logratio).mean()
+
+        approx_kl = tf.reduce_mean((ratio - 1) - logratio)
+        clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > clip_ploss_coef, tf.float32))
 
         # Policy loss with clipping
         pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * torch.clamp(
-            ratio, 1 - clip_ploss_coef, 1 + clip_ploss_coef
-        )
-        pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+        pg_loss2 = -advantages * tf.clip_by_value(ratio, 1 - clip_ploss_coef, 1 + clip_ploss_coef)
+        pg_loss = tf.reduce_mean(tf.maximum(pg_loss1, pg_loss2))
+
 
         # Value loss optionally with clipping
-        newvalues = self.critic(obs).view(-1)
+        newvalues = self.critic(obs)
+        newvalues = tf.reshape(newvalues, [-1])
+
         if self.clip_vloss_coef is not None:
-            v_loss_unclipped = (newvalues - returns) ** 2
-            v_clipped = oldvalues + torch.clamp(
-                newvalues - oldvalues,
-                -self.clip_vloss_coef,
-                self.clip_vloss_coef,
+            v_loss_unclipped = tf.square(newvalues - returns)
+            v_clipped = oldvalues + tf.clip_by_value(
+                newvalues - oldvalues, -self.clip_vloss_coef, self.clip_vloss_coef
             )
-            v_loss_clipped = (v_clipped - returns) ** 2
-            v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-            v_loss = 0.5 * v_loss_max.mean()
+            v_loss_clipped = tf.square(v_clipped - returns)
+            v_loss = 0.5 * tf.reduce_mean(tf.maximum(v_loss_unclipped, v_loss_clipped))
+
         else:
-            v_loss = 0.5 * ((newvalues - returns) ** 2).mean()
+            v_loss = 0.5 * tf.reduce_mean(tf.square(newvalues - returns))
+
+
         return (
             pg_loss,
             entropy_loss,
             v_loss,
             clipfrac,
-            approx_kl.item(),
-            ratio.mean().item(),
+            approx_kl.numpy(),
+            tf.reduce_mean(ratio).numpy(),
             bc_loss,
-            eta.mean().item(),
+            tf.reduce_mean(eta).numpy(),
         )
+
+

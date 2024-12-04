@@ -2,13 +2,25 @@ import tensorflow as tf
 
 import torch
 
-# feats = 
 
+def tf_flatten(input_tensor, start_dim = 0, end_dim = -1):
+    tensor_shape_list = input_tensor.shape.as_list()
 
+    if end_dim == -1:
+        end_dim = len(tensor_shape_list) - 1
 
-# feats = feats.flatten(1, 2)
+    middle_dim = 1
+    for i in range(start_dim, end_dim + 1):
+        middle_dim *= tensor_shape_list[i]
+    shape_list = []
+    for i in range(0, start_dim):
+        shape_list.append(tensor_shape_list[i])
+    shape_list.append(middle_dim)
+    for i in range(end_dim + 1, len(tensor_shape_list)):
+        shape_list.append(tensor_shape_list[i])
 
-# feats = tf.reshape(feats, [feats.shape[0], -1])
+    output_tensor = tf.reshape(input_tensor, shape_list)
+    return output_tensor
 
 
 import numpy as np
@@ -20,6 +32,7 @@ batch_size = 10
 height = 6
 width = 6
 channels = 128
+
 feats = np.random.rand(batch_size, height, width, channels).astype(np.float32)
 
 # Step 2: Convert to TensorFlow tensor
@@ -35,6 +48,10 @@ feats_np_flatten = feats.reshape(feats.shape[0], -1, feats.shape[-1])
 # TensorFlow
 feats_tf_flatten = tf.reshape(feats_tf, [feats_tf.shape[0], -1, feats_tf.shape[-1]])
 
+output = tf_flatten(feats_tf, 1, 2)
+
+print("output = ", output)
+
 # PyTorch
 feats_torch_flatten = feats_torch.flatten(start_dim=1, end_dim=2)
 
@@ -48,8 +65,14 @@ print("NumPy vs TensorFlow:", np.allclose(feats_np_flatten, feats_tf_flatten_np)
 print("NumPy vs PyTorch:", np.allclose(feats_np_flatten, feats_torch_flatten_np))
 print("TensorFlow vs PyTorch:", np.allclose(feats_tf_flatten_np, feats_torch_flatten_np))
 
+print("numpy vs Mine:", np.allclose(feats_np_flatten, output.numpy()))
+
+
 # Print the shape for verification
 print("Shape after flattening:")
 print("NumPy:", feats_np_flatten.shape)
 print("TensorFlow:", feats_tf_flatten.shape)
 print("PyTorch:", feats_torch_flatten.shape)
+
+
+

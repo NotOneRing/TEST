@@ -3,10 +3,14 @@ Reward-weighted regression (RWR) for Gaussian policy.
 
 """
 
-import torch
+import tensorflow as tf
+
 import logging
 from model.common.gaussian import GaussianModel
-import torch.distributions as D
+
+
+from util.torch_to_tf import Normal
+
 
 log = logging.getLogger(__name__)
 
@@ -31,23 +35,44 @@ class RWR_Gaussian(GaussianModel):
 
         print("gaussian_rwr.py: RWR_Gaussian.loss()")
 
-        B = len(obs)
+        B= obs.shape.as_list()[0]
         means, scales = self.network(obs)
 
-        dist = D.Normal(loc=means, scale=scales)
-        log_prob = dist.log_prob(actions.view(B, -1)).mean(-1)
+        dist = Normal(means, scales)
+        log_prob = dist.log_prob(tf.reshape(actions, [B, -1]))
+        log_prob = tf.reduce_mean(log_prob, axis = -1)
+
         log_prob = log_prob * reward_weights
-        log_prob = -log_prob.mean()
+        log_prob = -tf.reduce_mean(log_prob)
         return log_prob
 
     # override
-    @torch.no_grad()
-    def forward(self, cond, deterministic=False, **kwargs):
+    # @torch.no_grad()
+    def call(self, cond, deterministic=False, **kwargs):
 
-        print("gaussian_rwr.py: RWR_Gaussian.forward()")
+        print("gaussian_rwr.py: RWR_Gaussian.call()")
 
-        actions = super().forward(
+        actions = super().call(
             cond=cond,
             deterministic=deterministic,
         )
         return actions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

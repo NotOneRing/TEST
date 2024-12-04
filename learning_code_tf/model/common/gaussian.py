@@ -5,13 +5,14 @@ Gaussian policy parameterization.
 
 
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 import numpy as np
 
 import logging
 
 log = logging.getLogger(__name__)
+
+from util.torch_to_tf import Normal
 
 
 class GaussianModel(tf.keras.Model):
@@ -94,7 +95,8 @@ class GaussianModel(tf.keras.Model):
             # low-noise for all Gaussian dists
             scales = tf.ones_like(means) * 1e-4
 
-        dist = tfp.distributions.Normal(loc=means, scale=scales)
+        # dist = tfp.distributions.Normal(loc=means, scale=scales)
+        dist = Normal(means, scales)
 
         return dist
 
@@ -135,7 +137,7 @@ class GaussianModel(tf.keras.Model):
                 sampled_action = tf.tanh(sampled_action)
                 log_prob -= tf.log(1 - tf.square(sampled_action) + 1e-6)
 
-            return tf.reshape(sampled_action, (B, T, -1)), tf.reduce_sum(log_prob, axis=1)
+            return tf.reshape(sampled_action, [B, T, -1]), tf.reduce_sum(log_prob, axis=1)
         else:
             if self.tanh_output:
                 sampled_action = tf.tanh(sampled_action)

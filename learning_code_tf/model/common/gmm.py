@@ -4,11 +4,14 @@ GMM policy parameterization.
 """
 
 import tensorflow as tf
-import tensorflow_probability as tfp
+# import tensorflow_probability as tfp
 
 import logging
 
 log = logging.getLogger(__name__)
+
+from util.torch_to_tf import Normal, Categorical
+
 
 
 class GMMModel(tf.keras.Model):
@@ -78,8 +81,11 @@ class GMMModel(tf.keras.Model):
 
         # mixture components - make sure that `batch_shape` for the distribution is equal to (batch_size, num_modes) since MixtureSameFamily expects this shape
         # Each mode has mean vector of dim T*D
-        component_distribution = tfp.distributions.Normal(loc=means, scale=scales)
-        component_distribution = tfp.distributions.Independent(component_distribution, 1)
+
+        # component_distribution = tfp.distributions.Normal(loc=means, scale=scales)
+        component_distribution = Normal(means, scales)
+
+        component_distribution = Independent(component_distribution, 1)
 
         component_entropy = component_distribution.entropy()
 
@@ -91,11 +97,13 @@ class GMMModel(tf.keras.Model):
         std = tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(logits, axis=-1) * tf.reduce_mean(scales, axis=-1), axis=-1))
 
         # Unnormalized logits to categorical distribution for mixing the modes
-        mixture_distribution = tfp.distributions.Categorical(logits=logits)
-        dist = tfp.distributions.MixtureSameFamily(
+        mixture_distribution = Categorical(logits=logits)
+        dist = MixtureSameFamily(
             mixture_distribution=mixture_distribution,
             component_distribution=component_distribution,
         )
+        
+        
         return dist, approx_entropy, std
     
 
@@ -117,6 +125,12 @@ class GMMModel(tf.keras.Model):
         sampled_action = tf.reshape(sampled_action, [B, T, -1])
         return sampled_action
     
+
+
+
+
+
+
 
 
 

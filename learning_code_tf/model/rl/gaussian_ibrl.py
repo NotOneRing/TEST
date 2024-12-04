@@ -14,6 +14,8 @@ from model.common.gaussian import GaussianModel
 log = logging.getLogger(__name__)
 
 
+
+
 class IBRL_Gaussian(GaussianModel):
     def __init__(
         self,
@@ -134,10 +136,10 @@ class IBRL_Gaussian(GaussianModel):
         loss_critic = tf.reduce_mean((current_q - target_q[None, :]) ** 2)
 
         # run all critics in batch
-        current_q = torch.vmap(self.critic_wrapper, in_dims=(0, 0, None))(
+        current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
             self.ensemble_params, self.ensemble_buffers, (obs, actions)
         )  # (n_critics, B)
-        loss_critic = torch.mean((current_q - target_q[None]) ** 2)
+        loss_critic = torch_mean((current_q - target_q[None]) ** 2)
         return loss_critic
 
     def loss_actor(self, obs):
@@ -150,14 +152,14 @@ class IBRL_Gaussian(GaussianModel):
             reparameterize=True,
         )  # use online policy only, also IBRL does not use tanh squashing
         
-        current_q = torch.vmap(self.critic_wrapper, in_dims=(0, 0, None))(
+        current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
             self.ensemble_params, self.ensemble_buffers, (obs, action)
         )  # (n_critics, B)
 
         current_q = current_q.min(
             dim=0
         ).values  # unlike RLPD, IBRL uses the min Q value for actor update
-        loss_actor = -torch.mean(current_q)
+        loss_actor = -torch_mean(current_q)
         return loss_actor
 
     def update_target_critic(self, tau):
@@ -223,7 +225,7 @@ class IBRL_Gaussian(GaussianModel):
 
         # soft sample or greedy
         if deterministic or not self.soft_action_sample:
-            action = torch.where(
+            action = torch_where(
                 (q_bc > q_rl)[:, None, None],
                 bc_action,
                 rl_action,
@@ -237,24 +239,18 @@ class IBRL_Gaussian(GaussianModel):
             qw_rl = tf.exp(q_rl * self.soft_action_sample_beta)
 
 
-            q_weights = torch.softmax(
-                torch.stack([qw_bc, qw_rl], dim=-1),
+            q_weights = torch_softmax(
+                torch_stack([qw_bc, qw_rl], dim=-1),
                 dim=-1,
             )
 
             # sample according to the weights
-            q_indices = torch.multinomial(q_weights, 1)
-            action = torch.where(
+            q_indices = torch_multinomial(q_weights, 1)
+            action = torch_where(
                 (q_indices == 0)[:, None],
                 bc_action,
                 rl_action,
             )
-
-            q_weights = tf.nn.softmax(tf.stack([qw_bc, qw_rl], axis=-1), axis=-1)
-
-            q_indices = tf.random.categorical(tf.math.log(q_weights), num_samples=1)
-            
-            action = tf.where(q_indices == 0, bc_action, rl_action)
 
 
         return action

@@ -20,3 +20,15 @@ samples = tf.random.categorical(logits, num_samples=5)
 print(samples)  # 输出将是可重复的
 
 
+
+
+
+
+
+
+
+
+
+
+
+

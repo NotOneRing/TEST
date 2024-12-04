@@ -5,11 +5,6 @@ Set `smaller_encoder` to False for using larger observation encoder in ResidualB
 
 """
 
-# import torch
-# import torch.nn as nn
-# import einops
-# from einops.layers.torch import Rearrange
-
 import tensorflow as tf
 
 import einops
@@ -310,7 +305,7 @@ class Unet1D(tf.keras.Model):
 
 
 
-    def forward(
+    def call(
         self,
         x,
         time,
@@ -326,13 +321,13 @@ class Unet1D(tf.keras.Model):
 
         print("unet.py: Unet1D.forward()")
 
-        B = len(x)
+        B = x.shape.as_list[0]
 
         # move chunk dim to the end
         x = einops.rearrange(x, "b h t -> b t h")
 
         # flatten history
-        state = cond["state"].view(B, -1)
+        state = tf.reshape( cond["state"], [B, -1] )
 
         # obs encoder
         if hasattr(self, "cond_mlp"):
@@ -381,3 +376,22 @@ class Unet1D(tf.keras.Model):
 
         x = einops.rearrange(x, "b t h -> b h t")
         return x
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

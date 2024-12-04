@@ -1,4 +1,5 @@
-import torch
+import tensorflow as tf
+
 import logging
 from model.common.gmm import GMMModel
 
@@ -24,12 +25,12 @@ class VPG_GMM(GMMModel):
 
     # ---------- Sampling ----------#
 
-    @torch.no_grad()
-    def forward(self, cond, deterministic=False):
+    # @torch.no_grad()
+    def call(self, cond, deterministic=False):
 
-        print("gmm_vpg.py: VPG_GMM.forward()")
+        print("gmm_vpg.py: VPG_GMM.call()")
 
-        return super().forward(
+        return super().call(
             cond=cond,
             deterministic=deterministic,
         )
@@ -44,12 +45,13 @@ class VPG_GMM(GMMModel):
 
         print("gmm_vpg.py: VPG_GMM.get_logprobs()")
 
-        B = len(actions)
+        # B = len(actions)
+        B = actions.shape().as_list()[0]
         dist, entropy, std = self.forward_train(
             cond,
             deterministic=False,
         )
-        log_prob = dist.log_prob(actions.view(B, -1))
+        log_prob = dist.log_prob( tf.reshape(actions, [B, -1]) )
         return log_prob, entropy, std
 
     def loss(self, obs, chains, reward):

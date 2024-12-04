@@ -70,69 +70,6 @@ print("temp.shape = ", temp.shape)
 
 
 
-def tf_quantile(input_tensor, q, dim=None, interpolation='linear'):
-    """
-    Compute the quantile of the input_tensor along a specified axis using TensorFlow.
-
-    Args:
-        input_tensor (tf.Tensor): Input tensor.
-        q (float or list): Quantile value(s) in [0, 1]. Can be a single float or a list of floats.
-        axis (int, optional): The axis along which to compute the quantile. Default is None (flatten the tensor).
-        interpolation (str, optional): Interpolation method. Options are 'linear', 'lower', 'higher', 'nearest', 'midpoint'.
-
-    Returns:
-        tf.Tensor: Tensor of quantile values.
-    """
-    # Ensure q is a tensor
-    # q = tf.convert_to_tensor(q, dtype=tf.float32)
-    
-    # Flatten the input if axis is None
-    if dim is None:
-        input_tensor = tf.reshape(input_tensor, [-1])
-        dim = 0
-
-    # Sort the tensor along the given axis
-    sorted_tensor = tf.sort(input_tensor, axis=dim)
-
-    print("sorted_tensor = ", sorted_tensor)
-    
-    # Get the size of the specified axis
-    n = tf.cast(tf.shape(sorted_tensor)[dim], tf.float32)
-    
-    # Compute the indices for quantiles
-    indices = q * (n - 1)
-    lower_indices = tf.math.floor(indices)
-    upper_indices = tf.math.ceil(indices)
-
-    print("lower_indices = ", lower_indices)
-    print("upper_indices = ", upper_indices)
-
-    # Gather values at lower and upper indices
-    lower_values = tf.gather(sorted_tensor, tf.cast(lower_indices, tf.int32), axis=dim)
-    upper_values = tf.gather(sorted_tensor, tf.cast(upper_indices, tf.int32), axis=dim)
-
-    print("lower_values = ", lower_values)
-    print("upper_values = ", upper_values)
-    
-    # Compute weights for linear interpolation
-    weights = indices - lower_indices
-
-    # Interpolation methods
-    if interpolation == 'linear':
-        result = (1 - weights) * lower_values + weights * upper_values
-    elif interpolation == 'lower':
-        result = lower_values
-    elif interpolation == 'higher':
-        result = upper_values
-    elif interpolation == 'nearest':
-        result = tf.where(weights < 0.5, lower_values, upper_values)
-    elif interpolation == 'midpoint':
-        result = (lower_values + upper_values) / 2
-    else:
-        raise ValueError("Unsupported interpolation method: {}".format(interpolation))
-    
-    return result
-
 a = tf.convert_to_tensor(a.numpy())
 
 q = tf.convert_to_tensor(q.numpy())

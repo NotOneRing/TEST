@@ -4,10 +4,12 @@ QSM (Q-Score Matching) for diffusion policy.
 """
 
 import logging
-import torch
 import copy
 
-import torch.nn.functional as F
+# import torch
+# import torch.nn.functional as F
+
+import tensorflow as tf
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +28,8 @@ class QSMDiffusion(RWRDiffusion):
         print("diffusion_qsm.py: QSMDiffusion.__init__()")
 
         super().__init__(network=actor, **kwargs)
-        self.critic_q = critic.to(self.device)
+        self.critic_q = critic
+
 
         # target critic
         self.target_q = copy.deepcopy(critic)
@@ -41,31 +44,39 @@ class QSMDiffusion(RWRDiffusion):
         print("diffusion_qsm.py: QSMDiffusion.loss_actor()")
 
         x_start = actions
-        device = x_start.device
-        B = len(x_start)
+
+        batch_size = tf.shape(x_start)[0]
 
         # Forward process
-        noise = torch.randn_like(x_start, device=device)
-        t = torch.randint(
-            0, self.denoising_steps, (B,), device=device
-        ).long()  # sample random denoising time index
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        noise = tf.random.normal(tf.shape(x_start))
+        t = tf.random.uniform(
+            [batch_size], minval=0, maxval=self.denoising_steps, dtype=tf.int32
+        )  # Random time step
 
         # get current value for noisy actions as the code does --- the algorthm block in the paper is wrong, it says using a_t, the final denoised action
-        x_noisy.requires_grad_(True)
-        current_q1, current_q2 = self.critic_q(obs, x_noisy)
+        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
-        # Compute dQ/da|a=noise_actions
-        gradient_q1 = torch.autograd.grad(current_q1.sum(), x_noisy)[0]
-        gradient_q2 = torch.autograd.grad(current_q2.sum(), x_noisy)[0]
-        gradient_q = torch.stack((gradient_q1, gradient_q2), 0).mean(0).detach()
+        # Compute Q values for noisy actions
+        with tf.GradientTape() as tape1, tf.GradientTape() as tape2:
+            tape1.watch(x_noisy)
+            tape2.watch(x_noisy)
+            current_q1, current_q2 = self.critic_q([obs, x_noisy], training=True)
+
+        # Compute gradients dQ/da
+        gradient_q1 = tape1.gradient(current_q1, x_noisy)
+        gradient_q2 = tape2.gradient(current_q2, x_noisy)
+        gradient_q = tf.reduce_mean(tf.stack([gradient_q1, gradient_q2]), axis=0)
+        # # Compute dQ/da|a=noise_actions
+        # gradient_q1 = torch.autograd.grad(current_q1.sum(), x_noisy)[0]
+        # gradient_q2 = torch.autograd.grad(current_q2.sum(), x_noisy)[0]
+        # gradient_q = torch.stack((gradient_q1, gradient_q2), 0).mean(0).detach()
 
         # Predict noise from noisy actions
-        x_recon = self.network(x_noisy, t, cond=obs)
+        x_recon = self.actor([x_noisy, t, obs], training=True)
 
         # Loss with mask - align predicted noise with critic gradient of noisy actions
         # Note: the gradient of mu wrt. epsilon has a negative sign
-        loss = F.mse_loss(-x_recon, q_grad_coeff * gradient_q)
+        loss = tf.reduce_mean(tf.square(-x_recon - q_grad_coeff * gradient_q))
         return loss
 
     def loss_critic(self, obs, next_obs, actions, rewards, terminated, gamma):
@@ -73,31 +84,27 @@ class QSMDiffusion(RWRDiffusion):
         print("diffusion_qsm.py: QSMDiffusion.loss_critic()")
 
         # get current Q-function
-        current_q1, current_q2 = self.critic_q(obs, actions)
+        current_q1, current_q2 = self.critic_q([obs, actions], training=True)
 
         # get next Q-function - with noise, same as QSM https://github.com/Alescontrela/score_matching_rl/blob/f02a21969b17e322eb229ceb2b0f5a9111b1b968/jaxrl5/agents/score_matching/score_matching_learner.py#L193
-        next_actions = self.forward(
-            cond=next_obs,
-            deterministic=False,
-        )  # forward() has no gradient, which is desired here.
-        with torch.no_grad():
-            next_q1, next_q2 = self.target_q(next_obs, next_actions)
-        next_q = torch.min(next_q1, next_q2)
+        next_actions = self.call(cond=next_obs, deterministic=False)
+        next_q1, next_q2 = self.target_q([next_obs, next_actions], training=False)
+        next_q = tf.minimum(next_q1, next_q2)
 
         # terminal state mask
         mask = 1 - terminated
 
         # flatten
-        rewards = rewards.view(-1)
-        next_q = next_q.view(-1)
-        mask = mask.view(-1)
+        rewards = tf.reshape(rewards, [-1] )
+        next_q = tf.reshape(next_q, [-1])
+        mask = tf.reshape(mask, [-1])
 
         # target value
         discounted_q = rewards + gamma * next_q * mask
 
         # Update critic
-        loss_critic = torch.mean((current_q1 - discounted_q) ** 2) + torch.mean(
-            (current_q2 - discounted_q) ** 2
+        loss_critic = tf.reduce_mean(tf.square(current_q1 - discounted_q)) + tf.reduce_mean(
+            tf.square(current_q2 - discounted_q)
         )
 
         return loss_critic
@@ -106,9 +113,5 @@ class QSMDiffusion(RWRDiffusion):
 
         print("diffusion_qsm.py: QSMDiffusion.update_target_critic()")
 
-        for target_param, source_param in zip(
-            self.target_q.parameters(), self.critic_q.parameters()
-        ):
-            target_param.data.copy_(
-                target_param.data * (1.0 - tau) + source_param.data * tau
-            )
+        for target_var, source_var in zip(self.target_q.trainable_variables, self.critic_q.trainable_variables):
+            target_var.assign(tau * source_var + (1.0 - tau) * target_var)
