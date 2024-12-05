@@ -171,3 +171,9 @@ class Conv1dBlock(tf.keras.layers.Layer):
             "eps": self.eps,
         })
         return config
+    
+
+
+
+
+

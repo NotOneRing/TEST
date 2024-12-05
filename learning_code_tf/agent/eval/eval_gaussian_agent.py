@@ -5,7 +5,10 @@ Evaluate pre-trained/fine-tuned Gaussian/GMM policy.
 
 import os
 import numpy as np
-import torch
+
+import tensorflow as tf
+
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -49,14 +52,18 @@ class EvalGaussianAgent(EvalAgent):
                 print(f"Processed step {step} of {self.n_steps}")
 
             # Select action
-            with torch.no_grad():
-                cond = {
-                    "state": torch.from_numpy(prev_obs_venv["state"])
-                    .float()
-                    .to(self.device)
-                }
-                samples = self.model(cond=cond, deterministic=True)
-                output_venv = samples.cpu().numpy()
+            # with torch.no_grad():
+            cond = {
+                "state": 
+                # torch.from_numpy(prev_obs_venv["state"])
+                # .float()
+                tf.convert_to_tensor(prev_obs_venv["state"], dtype=tf.float32)
+                # .to(self.device)
+            }
+            samples = self.model(cond=cond, deterministic=True)
+            # output_venv = samples.cpu().numpy()
+            output_venv = samples.numpy()
+
             action_venv = output_venv[:, : self.act_steps]
 
             # Apply multi-step action
@@ -124,3 +131,19 @@ class EvalGaussianAgent(EvalAgent):
             eval_best_reward=avg_best_reward,
             time=time,
         )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

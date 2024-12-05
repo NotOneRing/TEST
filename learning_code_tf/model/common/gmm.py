@@ -10,7 +10,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from util.torch_to_tf import Normal, Categorical
+from util.torch_to_tf import Normal, Categorical, Independent, MixtureSameFamily
 
 
 
@@ -90,6 +90,7 @@ class GMMModel(tf.keras.Model):
         component_entropy = component_distribution.entropy()
 
 
+
         approx_entropy = tf.reduce_mean(
             tf.reduce_sum(tf.nn.softmax(logits, axis=-1) * component_entropy, axis=-1)
         )
@@ -98,6 +99,7 @@ class GMMModel(tf.keras.Model):
 
         # Unnormalized logits to categorical distribution for mixing the modes
         mixture_distribution = Categorical(logits=logits)
+        
         dist = MixtureSameFamily(
             mixture_distribution=mixture_distribution,
             component_distribution=component_distribution,

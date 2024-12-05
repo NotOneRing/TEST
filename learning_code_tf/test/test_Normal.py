@@ -50,6 +50,12 @@ sigma = tf.convert_to_tensor(std.numpy(), dtype=np.float32)  # 标准差
 x = tf.convert_to_tensor( np.array([1.0, 1.0]), dtype=np.float32 )
 
 dist = Normal(mu, sigma)
+
+# 采样
+sample = dist.sample()  # 生成一个样本
+print(f"Sample: {sample}")
+
+
 log_prob = dist.log_prob(x)  # 对应均值的概率密度
 
 # 计算

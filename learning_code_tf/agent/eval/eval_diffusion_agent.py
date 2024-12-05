@@ -5,7 +5,7 @@ Evaluate pre-trained/DPPO-fine-tuned diffusion policy.
 
 import os
 import numpy as np
-# import torch
+
 import tensorflow as tf
 import logging
 

@@ -5,8 +5,11 @@ Evaluate pre-trained/fine-tuned Gaussian/GMM pixel-based policy.
 
 import os
 import numpy as np
-import torch
+
+import tensorflow as tf
+
 import logging
+
 
 log = logging.getLogger(__name__)
 from util.timer import Timer
@@ -53,13 +56,15 @@ class EvalImgGaussianAgent(EvalAgent):
                 print(f"Processed step {step} of {self.n_steps}")
 
             # Select action
-            with torch.no_grad():
-                cond = {
-                    key: torch.from_numpy(prev_obs_venv[key]).float().to(self.device)
-                    for key in self.obs_dims
-                }
-                samples = self.model(cond=cond, deterministic=True)
-                output_venv = samples.cpu().numpy()
+            # with torch.no_grad():
+            cond = {
+                # key: torch.from_numpy(prev_obs_venv[key]).float().to(self.device)
+                key: tf.convert_to_tensor(prev_obs_venv[key], dtype=tf.float32)
+                for key in self.obs_dims
+            }
+            samples = self.model(cond=cond, deterministic=True)
+            output_venv = samples.cpu().numpy()
+
             action_venv = output_venv[:, : self.act_steps]
 
             # Apply multi-step action
