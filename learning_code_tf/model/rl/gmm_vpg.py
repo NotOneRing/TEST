@@ -59,3 +59,11 @@ class VPG_GMM(GMMModel):
         print("gmm_vpg.py: VPG_GMM.loss()")
 
         raise NotImplementedError
+
+
+
+
+
+
+
+

@@ -60,12 +60,14 @@ feats_torch_flatten = feats_torch.flatten(start_dim=1, end_dim=2)
 feats_tf_flatten_np = feats_tf_flatten.numpy()
 feats_torch_flatten_np = feats_torch_flatten.numpy()
 
+
 # Check if they are equal
 print("NumPy vs TensorFlow:", np.allclose(feats_np_flatten, feats_tf_flatten_np))
 print("NumPy vs PyTorch:", np.allclose(feats_np_flatten, feats_torch_flatten_np))
 print("TensorFlow vs PyTorch:", np.allclose(feats_tf_flatten_np, feats_torch_flatten_np))
 
 print("numpy vs Mine:", np.allclose(feats_np_flatten, output.numpy()))
+
 
 
 # Print the shape for verification

@@ -358,6 +358,9 @@ def test_transformer_layer():
     print("Transformer output shape:", z.shape)
 
 
+
+
+
 if __name__ == "__main__":
 
     print("vit.py: main()")

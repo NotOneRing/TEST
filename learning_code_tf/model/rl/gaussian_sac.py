@@ -11,7 +11,7 @@ from model.common.gaussian import GaussianModel
 
 log = logging.getLogger(__name__)
 
-from util.torch_to_tf import F_mse_loss, torch_min, torch_mean
+from util.torch_to_tf import torch_mse_loss, torch_min, torch_mean
 
 import tensorflow as tf
 
@@ -64,7 +64,7 @@ class SAC_Gaussian(GaussianModel):
         target_q = rewards + gamma * next_q * (1 - terminated)
 
         current_q1, current_q2 = self.critic(obs, actions)
-        loss_critic = F_mse_loss(current_q1, target_q) + F_mse_loss(
+        loss_critic = torch_mse_loss(current_q1, target_q) + torch_mse_loss(
             current_q2, target_q
         )
         return loss_critic

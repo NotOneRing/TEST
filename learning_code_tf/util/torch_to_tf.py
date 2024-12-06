@@ -1,7 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
-def tf_index_gather(input_tensor, dim, index_tensor):
+
+def torch_gather(input_tensor, dim, index_tensor):
     """
     Mimics the behavior of indexing in PyTorch. 
     Specifically:
@@ -471,9 +472,6 @@ def torch_logsumexp(input, dim):
 
 
 
-def F_mse_loss(input_tensor1, input_tensor2):
-    return tf.keras.losses.MeanSquaredError(input_tensor1, input_tensor2)
-
 
 
 def torch_min(input, dim = None, other = None):
@@ -484,7 +482,7 @@ def torch_min(input, dim = None, other = None):
 
 def torch_max(input, dim = None, other = None):
     if other == None:
-        return tf.reduce_min(input, axis=dim)
+        return tf.reduce_max(input, axis=dim)
     else:
         return tf.maximum(input, other)
 
@@ -511,17 +509,6 @@ def torch_multinomial(input, num_samples, replacement = True):
 
 def torch_where(index_tensor, input_tensor, replace_value):
     return tf.where(index_tensor, input_tensor, replace_value)
-
-
-
-
-def torch_vmap():
-    pass
-
-
-
-def torch_func_stack_module_state():
-    pass
 
 
 
@@ -563,10 +550,215 @@ def torch_ones(*size, dtype=tf.float32):
 
 
 
+def torch_nanmean(input):
+
+    input_no_nan = tf.boolean_mask(input, ~tf.math.is_nan(input))
+    result = tf.reduce_mean(input_no_nan)
+
+    return result
 
 
 
-def torch_prod():
+
+
+def torch_prod(input, dim = None, keepdim=False):
+    return tf.reduce_prod(input, axis=dim, keepdims = keepdim)
+        
+
+
+
+
+
+def torch_cat(tensors, dim=0, out=None):
+    out =  tf.concat(tensors, axis = dim, name='concat')
+    return out
+
+
+
+
+
+
+def torch_hstack(input):
+    return tf.concat(input, axis=1)
+
+
+
+
+
+def torch_linspace(start, end, steps):
+    return tf.linspace(start, end, num=steps)
+
+
+
+
+
+
+def torch_argmax(input, dim=None):
+    return tf.argmax(input, axis=dim, output_type=tf.dtypes.int64, name='ArgMax')
+    
+
+
+
+
+
+
+
+def torch_tensor_view(input, *args):
+    return tf.reshape(input, [*args])
+
+
+
+
+
+
+def torch_arange(start, end, step=1, dtype=None, device=None, requires_grad=False):
+    return tf.range(start=start, limit=end, delta=step, dtype=dtype, name='range')
+
+
+
+
+
+
+
+def torch_logsumexp(input, dim, keepdim=False, dtype=None):
+    return tf.reduce_logsumexp(input, axis=dim, keepdims=keepdim)
+
+
+
+def torch_mse_loss(input, target, reduction='mean'):
+    mse = tf.reduce_mean(tf.square(input - target))
+    return mse
+
+
+
+
+def torch_unsqueeze(input, dim):
+    return tf.expand_dims(input, axis=dim)
+
+
+
+
+
+
+# torch.full(size, fill_value, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False) → Tensor
+def torch_full(size, fill_value):
+    return tf.fill(size, fill_value)
+
+
+
+
+
+
+
+def torch_sqrt(input):
+    return tf.sqrt(input)
+
+
+
+
+
+def torch_tensor_float(input):
+    return tf.cast(input, tf.float32)
+
+
+
+
+
+def torch_tensor_expand(input, *args):
+    return tf.broadcast_to(input, [*args])
+
+
+
+
+
+def torch_triu(input, diagonal=0, *, out=None):
+    dim = len(input.shape)
+    assert dim == 2, "shape must be 2-D for torch.triu"
+    rows, cols = input.shape.as_list()
+
+    row_indices = torch_tensor_expand( torch_tensor_view( torch_arange(0, rows), -1, 1 ), rows, cols)
+    col_indices = torch_tensor_expand( torch_tensor_view( torch_arange(0, cols), 1, -1 ), rows, cols)
+
+    mask = col_indices - row_indices >= diagonal
+
+    return tf.where(mask, input, 0)
+
+
+
+
+
+
+
+
+def torch_round(input):
+    return tf.round(input)
+
+
+
+
+
+
+
+def torch_meshgrid(*tensors, indexing=None):
+    if indexing == "xy":
+        return tf.meshgrid(*tensors, indexing=indexing)
+
+    return tf.meshgrid(*tensors, indexing="ij")
+
+
+
+
+
+
+def torch_sum(input, dim, keepdim = False):
+    return tf.reduce_sum(input, axis=dim, keepdims = keepdim)
+
+
+
+
+
+
+
+
+
+def torch_cumprod(input, dim):
+    return tf.math.cumprod(input, axis=dim)
+
+
+
+
+
+
+
+
+def torch_randn(*size):
+    return tf.random.normal([*size])
+
+
+
+
+
+
+
+def torch_randperm(n):
+    return tf.random.shuffle(tf.range(n))
+
+
+
+
+
+
+
+def torch_zeros_like(input, dtype=None):
+    return tf.zeros_like(input, dtype=dtype)
+
+
+
+
+
+
+
+def torch_vmap():
     pass
 
 
@@ -574,7 +766,7 @@ def torch_prod():
 
 
 
-def torch_cat():
+def torch_func_stack_module_state():
     pass
 
 
@@ -582,15 +774,31 @@ def torch_cat():
 
 
 
-def torch_hstack():
+
+
+
+def torch_func_functional_call():
     pass
 
 
 
 
 
-def torch_linspace():
+
+
+
+def torch_repeat_interleave():
     pass
+
+
+
+
+
+
+
+
+
+
 
 
 

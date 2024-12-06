@@ -17,6 +17,8 @@ from model.diffusion.modules import SinusoidalPosEmb
 logger = logging.getLogger(__name__)
 
 
+from util.torch_to_tf import torch_zeros, torch_unsqueeze, torch_ones
+
 # class Gaussian_Transformer(nn.Module):
 class Gaussian_Transformer(tf.keras.Model):
     def __init__(
@@ -186,7 +188,9 @@ class GMM_Transformer(tf.keras.Model):
         state = cond["state"].view(B, -1)
 
         # input to transformer
-        state = state.unsqueeze(1)  # (B,1,cond_dim)
+        # state = state.unsqueeze(1)  # (B,1,cond_dim)
+        state = torch_unsqueeze(state, 1)  # (B,1,cond_dim)
+
         out, out_prehead = self.transformer(
             state
         )  # (B,horizon,output_dim), (B,horizon,emb_dim)
@@ -388,7 +392,7 @@ class Transformer(tf.keras.Model):
             ])
 
         # decoder
-        self.pos_emb = nn.Parameter(torch.zeros(1, horizon, n_emb))
+        self.pos_emb = nn.Parameter(torch_zeros(1, horizon, n_emb))
         self.drop = nn.Dropout(p_drop_emb)
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=n_emb,
@@ -409,7 +413,7 @@ class Transformer(tf.keras.Model):
             # torch.nn.Transformer uses additive mask as opposed to multiplicative mask in minGPT
             # therefore, the upper triangle should be -inf and others (including diag) should be 0.
             sz = horizon
-            mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+            mask = (torch.triu(torch_ones(sz, sz)) == 1).transpose(0, 1)
             mask = (
                 mask.float()
                 .masked_fill(mask == 0, float("-inf"))
@@ -554,5 +558,5 @@ if __name__ == "__main__":
     )
     # opt = transformer.configure_optimizers()
 
-    cond = torch.zeros((4, 1, 16))  # B x 1 x cond_dim
+    cond = torch_zeros((4, 1, 16))  # B x 1 x cond_dim
     out, _ = transformer(cond)

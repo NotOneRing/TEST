@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 from model.diffusion.diffusion_rwr import RWRDiffusion
 
-from util.torch_to_tf import tf_index_gather
+from util.torch_to_tf import torch_gather
 
 def expectile_loss(diff, expectile=0.8):
 
@@ -190,7 +190,7 @@ class IDQLDiffusion(RWRDiffusion):
             sample_indices = best_indices[None, :, None, None]  # [1, B, 1, 1]
             sample_indices = tf.tile(sample_indices, [S, 1, H, A])
 
-            samples_best = tf_index_gather(samples_expanded, 0, sample_indices)
+            samples_best = torch_gather(samples_expanded, 0, sample_indices)
 
         # Sample as an implicit policy for exploration
         else:
@@ -219,7 +219,7 @@ class IDQLDiffusion(RWRDiffusion):
 
             sample_indices = tf.tile(sample_indices, [S, 1, H, A])
 
-            samples_best = tf_index_gather(samples_expanded, 0, sample_indices)
+            samples_best = torch_gather(samples_expanded, 0, sample_indices)
 
 
         # squeeze dummy dimension

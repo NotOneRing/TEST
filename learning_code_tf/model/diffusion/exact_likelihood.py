@@ -47,6 +47,7 @@ def get_likelihood_fn(
     print("exact_likelihood.py: get_likelihood_fn()")
 
 
+
     def drift_fn(
         model,
         x,
@@ -67,6 +68,8 @@ def get_likelihood_fn(
         rsde = sde.reverse(score_fn, probability_flow=probability_flow)
         sde_out = rsde.sde(x, t, **kwargs)[0]
         return sde_out
+
+
 
     def div_fn(
         model,
@@ -90,6 +93,8 @@ def get_likelihood_fn(
         if not create_graph:
             x.requires_grad_(False)
         return torch.sum(grad_fn_eps * noise, dim=(1, 2))
+
+
 
     def likelihood_fn(
         model,
@@ -135,6 +140,8 @@ def get_likelihood_fn(
         cond_eps = {
             key: cond[key].repeat_interleave(num_epsilon, dim=0) for key in cond
         }
+
+
 
         def ode_func(t, x):
 

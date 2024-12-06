@@ -12,8 +12,12 @@ H, W: image height and width
 """
 
 from typing import Optional
-import torch
+
+import tensorflow as tf
+
 from model.rl.gmm_vpg import VPG_GMM
+
+from util.torch_to_tf import torch_clamp, torch_max, torch_nanmean
 
 
 class PPO_GMM(VPG_GMM):
@@ -65,54 +69,63 @@ class PPO_GMM(VPG_GMM):
         print("gmm_ppo.py: PPO_GMM.loss()")
 
         newlogprobs, entropy, std = self.get_logprobs(obs, actions)
-        newlogprobs = newlogprobs.clamp(min=-5, max=2)
-        oldlogprobs = oldlogprobs.clamp(min=-5, max=2)
-        entropy_loss = -entropy.mean()
+
+
+        newlogprobs = tf.clip_by_value(newlogprobs, min=-5, max=2)
+        oldlogprobs = tf.clip_by_value(oldlogprobs, min=-5, max=2)
+
+        entropy_loss = -tf.reduce_mean( entropy )
 
         # get ratio
         logratio = newlogprobs - oldlogprobs
-        ratio = logratio.exp()
+        ratio = tf.exp( logratio )
 
         # get kl difference and whether value clipped
-        with torch.no_grad():
-            approx_kl = ((ratio - 1) - logratio).nanmean()
-            clipfrac = (
-                ((ratio - 1.0).abs() > self.clip_ploss_coef).float().mean().item()
-            )
+        # with torch.no_grad():
+        # approx_kl = ((ratio - 1) - logratio).nanmean()
+
+        approx_kl = torch_nanmean((ratio - 1) - logratio)
+
+
+        clipfrac = tf.reduce_mean( tf.cast( tf.greater( tf.abs(ratio - 1.0), self.clip_ploss_coef ), tf.float32) )
+
+
+        advantages_std = tf.reduce_std(advantages)
 
         # normalize advantages
         if self.norm_adv:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+            advantages = (advantages - tf.reduce_mean( advantages ) ) / ( advantages_std + 1e-8)
 
         # Policy loss with clipping
         pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * torch.clamp(
+        pg_loss2 = -advantages * torch_clamp(
             ratio, 1 - self.clip_ploss_coef, 1 + self.clip_ploss_coef
         )
-        pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+
+        pg_loss = tf.reduce_mean( torch_max(pg_loss1, pg_loss2) )
 
         # Value loss optionally with clipping
-        newvalues = self.critic(obs).view(-1)
+        newvalues = tf.reshape( self.critic(obs), [-1] )
         if self.clip_vloss_coef is not None:
             v_loss_unclipped = (newvalues - returns) ** 2
-            v_clipped = oldvalues + torch.clamp(
+            v_clipped = oldvalues + torch_clamp(
                 newvalues - oldvalues,
                 -self.clip_vloss_coef,
                 self.clip_vloss_coef,
             )
             v_loss_clipped = (v_clipped - returns) ** 2
-            v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-            v_loss = 0.5 * v_loss_max.mean()
+            v_loss_max = torch_max(v_loss_unclipped, v_loss_clipped)
+            v_loss = 0.5 * tf.reduce_mean( v_loss_max )
         else:
-            v_loss = 0.5 * ((newvalues - returns) ** 2).mean()
+            v_loss = 0.5 * tf.reduce_mean((newvalues - returns) ** 2)
         bc_loss = 0
         return (
             pg_loss,
             entropy_loss,
             v_loss,
             clipfrac,
-            approx_kl.item(),
-            ratio.mean().item(),
+            int( approx_kl ),
+            tf.reduce_mean( ratio ),
             bc_loss,
-            std.item(),
+            int( std ),
         )

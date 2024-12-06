@@ -7,9 +7,12 @@ From https://github.com/yang-song/score_sde_pytorch
 
 import abc
 
-import torch
+# import torch
 
 import numpy as np
+
+
+from util.torch_to_tf import torch_sum, torch_sqrt, torch_tensor, torch_randn, torch_cumprod, torch_zeros_like
 
 
 def get_score_fn(
@@ -134,7 +137,7 @@ class SDE(abc.ABC):
         dt = 1 / self.N
         drift, diffusion = self.sde(x, t)
         f = drift * dt
-        G = diffusion * torch.sqrt(torch.tensor(dt, device=t.device))
+        G = diffusion * torch_sqrt(torch_tensor(dt, device=t.device))
         return f, G
 
     def reverse(self, score_fn, probability_flow=False):
@@ -191,7 +194,7 @@ class SDE(abc.ABC):
                 rev_f = f - G[:, None] ** 2 * score_fn(x, t) * (
                     0.5 if self.probability_flow else 1.0
                 )
-                rev_G = torch.zeros_like(G) if self.probability_flow else G
+                rev_G = torch_zeros_like(G) if self.probability_flow else G
                 return rev_f, rev_G
 
         return RSDE()
@@ -217,9 +220,9 @@ class VPSDE(SDE):
 
         self.discrete_betas = betas.clamp(min=min_beta)  # cosine schedule from our DDPM
         self.alphas = 1.0 - self.discrete_betas
-        self.sqrt_alphas = torch.sqrt(self.alphas)
-        self.alphas_bar = torch.cumprod(self.alphas, axis=0)
-        self.sqrt_1m_alpha_bar = torch.sqrt(1 - self.alphas_bar)
+        self.sqrt_alphas = torch_sqrt(self.alphas)
+        self.alphas_bar = torch_cumprod(self.alphas, axis=0)
+        self.sqrt_1m_alpha_bar = torch_sqrt(1 - self.alphas_bar)
 
     @property
     def T(self):
@@ -235,7 +238,7 @@ class VPSDE(SDE):
         # dx = - 1/2 beta(t) x dt + sqrt(beta(t)) dW
         beta_t = self.discrete_betas[t]
         drift = -0.5 * beta_t[:, None, None] * x
-        diffusion = torch.sqrt(beta_t)
+        diffusion = torch_sqrt(beta_t)
         return drift, diffusion
 
     def marginal_prob(self, x, t):
@@ -254,7 +257,7 @@ class VPSDE(SDE):
 
         print("sde_lib.py: VPSDE.prior_sampling()")
 
-        return torch.randn(*shape)
+        return torch_randn(*shape)
 
     def prior_logp(self, z):
 
@@ -262,7 +265,7 @@ class VPSDE(SDE):
 
         shape = z.shape
         N = np.prod(shape[1:])
-        logps = -N / 2.0 * np.log(2 * np.pi) - torch.sum(z**2, dim=(1, 2)) / 2.0
+        logps = -N / 2.0 * np.log(2 * np.pi) - torch_sum(z**2, dim=(1, 2)) / 2.0
         return logps
 
     def discretize(self, x, t):
@@ -273,8 +276,8 @@ class VPSDE(SDE):
         timestep = (t * (self.N - 1) / self.T).long()
         beta = self.discrete_betas.to(x.device)[timestep]
         alpha = self.alphas.to(x.device)[timestep]
-        sqrt_beta = torch.sqrt(beta)
-        f = torch.sqrt(alpha)[:, None, None] * x - x
+        sqrt_beta = torch_sqrt(beta)
+        f = torch_sqrt(alpha)[:, None, None] * x - x
         G = sqrt_beta
         return f, G
 

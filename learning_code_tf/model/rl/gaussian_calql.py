@@ -3,10 +3,13 @@ Calibrated Conservative Q-Learning (CalQL) for Gaussian policy.
 
 """
 
-# import torch
-# import torch.nn as nn
 
 import tensorflow as tf
+
+from util.torch_to_tf import torch_min, torch_argmax, torch_arange, torch_tensor, torch_cat, torch_logsumexp
+
+from util.torch_to_tf import torch_prod, torch_max, torch_clamp, torch_mean, torch_tensor_view, torch_mse_loss
+
 
 import logging
 from copy import deepcopy
@@ -88,46 +91,46 @@ class CalQL_Gaussian(GaussianModel):
 
         # Get initial TD loss
         q_data1, q_data2 = self.critic(obs, actions)
-        with torch.no_grad():
-            # repeat for action samples
-            next_obs_repeated = {"state": next_obs["state"].repeat_interleave(
-                self.cql_n_actions, dim=0
-            )}
+        # with torch.no_grad():
+        # repeat for action samples
+        next_obs_repeated = {"state": next_obs["state"].repeat_interleave(
+            self.cql_n_actions, dim=0
+        )}
 
-            # Get the next actions and logprobs
-            next_actions, next_logprobs = self.forward(
-                next_obs_repeated,
-                deterministic=False,
-                get_logprob=True,
-            )
-            next_q1, next_q2 = self.target_critic(next_obs_repeated, next_actions)
-            next_q = torch.min(next_q1, next_q2)
+        # Get the next actions and logprobs
+        next_actions, next_logprobs = self.call(
+            next_obs_repeated,
+            deterministic=False,
+            get_logprob=True,
+        )
+        next_q1, next_q2 = self.target_critic(next_obs_repeated, next_actions)
+        next_q = torch_min(next_q1, next_q2)
 
-            # Reshape the next_q to match the number of samples
-            next_q = next_q.view(B, self.cql_n_actions)  # (B, n_sample)
-            next_logprobs = next_logprobs.view(B, self.cql_n_actions)  # (B, n_sample)
+        # Reshape the next_q to match the number of samples
+        next_q = next_q.view(B, self.cql_n_actions)  # (B, n_sample)
+        next_logprobs = next_logprobs.view(B, self.cql_n_actions)  # (B, n_sample)
 
-            # Get the max indices over the samples, and index into the next_q and next_log_probs
-            max_idx = torch.argmax(next_q, dim=1)
-            next_q = next_q[torch.arange(B), max_idx]
-            next_logprobs = next_logprobs[torch.arange(B), max_idx]
+        # Get the max indices over the samples, and index into the next_q and next_log_probs
+        max_idx = torch_argmax(next_q, dim=1)
+        next_q = next_q[torch_arange(B), max_idx]
+        next_logprobs = next_logprobs[torch_arange(B), max_idx]
 
-            # Get the target Q values
-            target_q = rewards + gamma * (1 - terminated) * next_q
+        # Get the target Q values
+        target_q = rewards + gamma * (1 - terminated) * next_q
 
         # TD loss
-        td_loss_1 = nn.functional.mse_loss(q_data1, target_q)
-        td_loss_2 = nn.functional.mse_loss(q_data2, target_q)
+        td_loss_1 = torch_mse_loss(q_data1, target_q)
+        td_loss_2 = torch_mse_loss(q_data2, target_q)
 
         # Get actions and logprobs
-        log_rand_pi = 0.5 ** torch.prod(torch.tensor(random_actions.shape[-2:]))
-        pi_actions, log_pi = self.forward(
+        log_rand_pi = 0.5 ** torch_prod(torch_tensor(random_actions.shape[-2:]))
+        pi_actions, log_pi = self.call(
             obs,
             deterministic=False,
             reparameterize=False,
             get_logprob=True,
         )  # no gradient
-        pi_next_actions, log_pi_next = self.forward(
+        pi_next_actions, log_pi_next = self.call(
             next_obs,
             deterministic=False,
             reparameterize=False,
@@ -147,42 +150,47 @@ class CalQL_Gaussian(GaussianModel):
         q_rand_2 = q_rand_2 - log_rand_pi
 
         # Reshape the random action Q values to match the number of samples
-        q_rand_1 = q_rand_1.view(B, n_random_actions)  # (n_sample, B)
-        q_rand_2 = q_rand_2.view(B, n_random_actions)
+        q_rand_1 = torch_tensor_view(q_rand_1, B, n_random_actions)  # (n_sample, B)
+        q_rand_2 = torch_tensor_view(q_rand_2, B, n_random_actions)
 
         # Policy action Q values
         q_pi_1, q_pi_2 = self.critic(obs, pi_actions)
         q_pi_next_1, q_pi_next_2 = self.critic(next_obs, pi_next_actions)
 
         # Ensure calibration w.r.t. value function estimate
-        q_pi_1 = torch.max(q_pi_1, returns)[:, None]  # (B, 1)
-        q_pi_2 = torch.max(q_pi_2, returns)[:, None]  # (B, 1)
-        q_pi_next_1 = torch.max(q_pi_next_1, returns)[:, None]  # (B, 1)
-        q_pi_next_2 = torch.max(q_pi_next_2, returns)[:, None]  # (B, 1)
+        q_pi_1 = torch_max(q_pi_1, returns)[:, None]  # (B, 1)
+        q_pi_2 = torch_max(q_pi_2, returns)[:, None]  # (B, 1)
+        q_pi_next_1 = torch_max(q_pi_next_1, returns)[:, None]  # (B, 1)
+        q_pi_next_2 = torch_max(q_pi_next_2, returns)[:, None]  # (B, 1)
 
         # cql_importance_sample
         q_pi_1 = q_pi_1 - log_pi
         q_pi_2 = q_pi_2 - log_pi
         q_pi_next_1 = q_pi_next_1 - log_pi_next
         q_pi_next_2 = q_pi_next_2 - log_pi_next
-        cat_q_1 = torch.cat([q_rand_1, q_pi_1, q_pi_next_1], dim=-1)  # (B, num_samples+1)
-        cql_qf1_ood = torch.logsumexp(cat_q_1, dim=-1)  # max over num_samples
-        cat_q_2 = torch.cat([q_rand_2, q_pi_2, q_pi_next_2], dim=-1)  # (B, num_samples+1)
-        cql_qf2_ood = torch.logsumexp(cat_q_2, dim=-1)  # sum over num_samples
+        cat_q_1 = torch_cat([q_rand_1, q_pi_1, q_pi_next_1], dim=-1)  # (B, num_samples+1)
+        cql_qf1_ood = torch_logsumexp(cat_q_1, dim=-1)  # max over num_samples
+        cat_q_2 = torch_cat([q_rand_2, q_pi_2, q_pi_next_2], dim=-1)  # (B, num_samples+1)
+        cql_qf2_ood = torch_logsumexp(cat_q_2, dim=-1)  # sum over num_samples
 
         # skip cal_lagrange since the paper shows cql_target_action_gap not used in kitchen
 
         # Subtract the log likelihood of the data
-        cql_qf1_diff = torch.clamp(
+        cql_qf1_diff = tf.reduce_mean( torch_clamp(
             cql_qf1_ood - q_data1,
             min=self.cql_clip_diff_min,
             max=self.cql_clip_diff_max,
-        ).mean()
-        cql_qf2_diff = torch.clamp(
+        )
+        )
+        # .mean()
+        cql_qf2_diff = tf.reduce_mean(
+        torch_clamp(
             cql_qf2_ood - q_data2,
             min=self.cql_clip_diff_min,
             max=self.cql_clip_diff_max,
-        ).mean()
+        )
+        )
+        # .mean()
         cql_min_qf1_loss = cql_qf1_diff * self.cql_min_q_weight
         cql_min_qf2_loss = cql_qf2_diff * self.cql_min_q_weight
 
@@ -194,27 +202,28 @@ class CalQL_Gaussian(GaussianModel):
 
         print("gaussian_calql.py: CalQL_Gaussian.loss_actor()")
 
-        action, logprob = self.forward(
+        action, logprob = self.call(
             obs,
             deterministic=False,
             reparameterize=True,
             get_logprob=True,
         )
         q1, q2 = self.critic(obs, action)
-        actor_loss = -torch.min(q1, q2) + alpha * logprob
-        return actor_loss.mean()
-
+        actor_loss = -torch_min(q1, q2) + alpha * logprob
+        return torch_mean(actor_loss)
+    
+    
     def loss_temperature(self, obs, alpha, target_entropy):
 
         print("gaussian_calql.py: CalQL_Gaussian.loss_temperature()")
 
-        with torch.no_grad():
-            _, logprob = self.forward(
-                obs,
-                deterministic=False,
-                get_logprob=True,
-            )
-        loss_alpha = -torch.mean(alpha * (logprob + target_entropy))
+        # with torch.no_grad():
+        _, logprob = self.call(
+            obs,
+            deterministic=False,
+            get_logprob=True,
+        )
+        loss_alpha = -torch_mean(alpha * (logprob + target_entropy))
         return loss_alpha
 
     def update_target_critic(self, tau):

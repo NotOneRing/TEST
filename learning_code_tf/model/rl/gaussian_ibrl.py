@@ -14,6 +14,8 @@ from model.common.gaussian import GaussianModel
 log = logging.getLogger(__name__)
 
 
+from util.torch_to_tf import torch_mean, torch_where, torch_softmax, torch_stack, torch_multinomial
+
 
 
 class IBRL_Gaussian(GaussianModel):
