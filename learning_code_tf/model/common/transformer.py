@@ -413,7 +413,7 @@ class Transformer(tf.keras.Model):
             # torch.nn.Transformer uses additive mask as opposed to multiplicative mask in minGPT
             # therefore, the upper triangle should be -inf and others (including diag) should be 0.
             sz = horizon
-            mask = (torch.triu(torch_ones(sz, sz)) == 1).transpose(0, 1)
+            mask = (torch_triu(torch_ones(sz, sz)) == 1).transpose(0, 1)
             mask = (
                 mask.float()
                 .masked_fill(mask == 0, float("-inf"))
@@ -421,8 +421,8 @@ class Transformer(tf.keras.Model):
             )
             self.register_buffer("mask", mask)
 
-            t, s = torch.meshgrid(
-                torch.arange(horizon), torch.arange(T_cond), indexing="ij"
+            t, s = torch_meshgrid(
+                torch_arange(horizon), torch_arange(T_cond), indexing="ij"
             )
             mask = t >= (
                 s - 1

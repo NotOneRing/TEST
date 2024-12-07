@@ -85,7 +85,8 @@ class IBRL_Gaussian(GaussianModel):
 
         perm = tf.random.shuffle(tf.range(sz))
 
-        ind = perm[:num_ind].to(self.device)
+        ind = perm[:num_ind]
+        # .to(self.device)
         return ind
 
     def loss_critic(
@@ -161,31 +162,75 @@ class IBRL_Gaussian(GaussianModel):
         current_q = current_q.min(
             dim=0
         ).values  # unlike RLPD, IBRL uses the min Q value for actor update
+        
         loss_actor = -torch_mean(current_q)
         return loss_actor
 
-    def update_target_critic(self, tau):
-        """need to use ensemble_params instead of critic_networks"""
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def update_target_critic(self, tau):
+        """Update the target critic using soft updates"""
         print("gaussian_ibrl.py: IBRL_Gaussian.update_target_critic()")
 
         for target_ind, target_critic in enumerate(self.target_networks):
-            for target_param_name, target_param in target_critic.named_parameters():
+            for target_param_name, target_param in target_critic.trainable_variables:
                 source_param = self.ensemble_params[target_param_name][target_ind]
-                target_param.data.copy_(
-                    target_param.data * (1.0 - tau) + source_param.data * tau
-                )
+                updated_value = target_param * (1.0 - tau) + source_param * tau
+                target_param.assign(updated_value)
+
+
+
+
+
 
     def update_target_actor(self, tau):
-
+        """Update the target actor using soft updates"""
         print("gaussian_ibrl.py: IBRL_Gaussian.update_target_actor()")
 
         for target_param, source_param in zip(
-            self.target_actor.parameters(), self.network.parameters()
+            self.target_actor.trainable_variables, self.network.trainable_variables
         ):
-            target_param.data.copy_(
-                target_param.data * (1.0 - tau) + source_param.data * tau
-            )
+            updated_value = target_param * (1.0 - tau) + source_param * tau
+            target_param.assign(updated_value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # ---------- Sampling ----------#
 

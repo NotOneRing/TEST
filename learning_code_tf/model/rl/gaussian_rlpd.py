@@ -8,7 +8,7 @@ Use ensemble of critics.
 # import torch
 # import torch.nn as nn
 
-from util.torch_to_tf import torch_mean, torch_min
+from util.torch_to_tf import torch_mean, torch_min, torch_randperm
 
 import logging
 from copy import deepcopy
@@ -67,8 +67,9 @@ class RLPD_Gaussian(GaussianModel):
 
         if sz is None:
             sz = len(self.critic_networks)
-        perm = torch.randperm(sz)
-        ind = perm[:num_ind].to(self.device)
+        perm = torch_randperm(sz)
+        ind = perm[:num_ind]
+        # .to(self.device)
         return ind
 
     def loss_critic(
@@ -88,7 +89,7 @@ class RLPD_Gaussian(GaussianModel):
         q1_ind, q2_ind = self.get_random_indices()
         # with torch.no_grad():
 
-        next_actions, next_logprobs = self.forward(
+        next_actions, next_logprobs = self.call(
             cond=next_obs,
             deterministic=False,
             get_logprob=True,
@@ -107,7 +108,7 @@ class RLPD_Gaussian(GaussianModel):
             )
 
         # run all critics in batch
-        current_q = torch.vmap(self.critic_wrapper, in_dims=(0, 0, None))(
+        current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
             self.ensemble_params, self.ensemble_buffers, (obs, actions)
         )  # (n_critics, B)
         loss_critic = torch_mean((current_q - target_q[None]) ** 2)
@@ -117,16 +118,16 @@ class RLPD_Gaussian(GaussianModel):
 
         print("gaussian_rlpd.py: RLPD_Gaussian.loss_actor()")
 
-        action, logprob = self.forward(
+        action, logprob = self.call(
             obs,
             deterministic=False,
             reparameterize=True,
             get_logprob=True,
         )
-        current_q = torch.vmap(self.critic_wrapper, in_dims=(0, 0, None))(
+        current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
             self.ensemble_params, self.ensemble_buffers, (obs, action)
         )  # (n_critics, B)
-        current_q = current_q.mean(dim=0) + alpha * (-logprob)
+        current_q = torch_mean(current_q, dim=0) + alpha * (-logprob)
         loss_actor = -torch_mean(current_q)
         return loss_actor
 
@@ -135,7 +136,7 @@ class RLPD_Gaussian(GaussianModel):
         print("gaussian_rlpd.py: RLPD_Gaussian.loss_temperature()")
 
         # with torch.no_grad():
-        _, logprob = self.forward(
+        _, logprob = self.call(
             obs,
             deterministic=False,
             get_logprob=True,
@@ -144,17 +145,44 @@ class RLPD_Gaussian(GaussianModel):
         loss_alpha = -torch_mean(alpha * (logprob + target_entropy))
         return loss_alpha
 
+
+
+
+
+
+
+
+
+
+
     def update_target_critic(self, tau):
         """need to use ensemble_params instead of critic_networks"""
-
         print("gaussian_rlpd.py: RLPD_Gaussian.update_target_critic()")
 
         for target_ind, target_critic in enumerate(self.target_networks):
-            for target_param_name, target_param in target_critic.named_parameters():
+            for target_param_name, target_param in target_critic.trainable_variables:
                 source_param = self.ensemble_params[target_param_name][target_ind]
-                target_param.data.copy_(
-                    target_param.data * (1.0 - tau) + source_param.data * tau
-                )
+                updated_value = target_param * (1.0 - tau) + source_param * tau
+                target_param.assign(updated_value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

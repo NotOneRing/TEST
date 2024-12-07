@@ -6,9 +6,9 @@ Calibrated Conservative Q-Learning (CalQL) for Gaussian policy.
 
 import tensorflow as tf
 
-from util.torch_to_tf import torch_min, torch_argmax, torch_arange, torch_tensor, torch_cat, torch_logsumexp
+from util.torch_to_tf import torch_min, torch_argmax, torch_arange, torch_tensor, torch_cat, torch_logsumexp, torch_tensor_view
 
-from util.torch_to_tf import torch_prod, torch_max, torch_clamp, torch_mean, torch_tensor_view, torch_mse_loss
+from util.torch_to_tf import torch_prod, torch_max, torch_clamp, torch_mean, torch_tensor_view, torch_mse_loss, torch_repeat_interleave
 
 
 import logging
@@ -73,6 +73,11 @@ class CalQL_Gaussian(GaussianModel):
         )
 
 
+
+
+
+
+
     def loss_critic(
         self,
         obs,
@@ -87,15 +92,16 @@ class CalQL_Gaussian(GaussianModel):
 
         print("gaussian_calql.py: CalQL_Gaussian.loss_critic()")
 
-        B = len(actions)
+        # B = len(actions)
+        B = actions.shape[0]
 
         # Get initial TD loss
         q_data1, q_data2 = self.critic(obs, actions)
         # with torch.no_grad():
         # repeat for action samples
-        next_obs_repeated = {"state": next_obs["state"].repeat_interleave(
-            self.cql_n_actions, dim=0
-        )}
+        next_obs_repeated = {"state": torch_repeat_interleave( next_obs["state"],
+            self.cql_n_actions, dim=0 )
+        }
 
         # Get the next actions and logprobs
         next_actions, next_logprobs = self.call(
@@ -107,8 +113,10 @@ class CalQL_Gaussian(GaussianModel):
         next_q = torch_min(next_q1, next_q2)
 
         # Reshape the next_q to match the number of samples
-        next_q = next_q.view(B, self.cql_n_actions)  # (B, n_sample)
-        next_logprobs = next_logprobs.view(B, self.cql_n_actions)  # (B, n_sample)
+        # next_q = next_q.view(B, self.cql_n_actions)  # (B, n_sample)
+        # next_logprobs = next_logprobs.view(B, self.cql_n_actions)  # (B, n_sample)
+        next_q = torch_tensor_view(next_q, B, self.cql_n_actions)  # (B, n_sample)
+        next_logprobs = torch_tensor_view( next_logprobs, B, self.cql_n_actions)  # (B, n_sample)
 
         # Get the max indices over the samples, and index into the next_q and next_log_probs
         max_idx = torch_argmax(next_q, dim=1)
@@ -140,7 +148,7 @@ class CalQL_Gaussian(GaussianModel):
         # Random action Q values
         n_random_actions = random_actions.shape[1]
         obs_sample_state = {
-            "state": obs["state"].repeat_interleave(n_random_actions, dim=0)
+            "state": torch_repeat_interleave( obs["state"], n_random_actions, dim=0)
         }
         random_actions = einops.rearrange(random_actions, "B N H A -> (B N) H A")
 
@@ -198,6 +206,11 @@ class CalQL_Gaussian(GaussianModel):
         critic_loss = td_loss_1 + td_loss_2 + cql_min_qf1_loss + cql_min_qf2_loss
         return critic_loss
 
+
+
+
+
+
     def loss_actor(self, obs, alpha):
 
         print("gaussian_calql.py: CalQL_Gaussian.loss_actor()")
@@ -212,6 +225,11 @@ class CalQL_Gaussian(GaussianModel):
         actor_loss = -torch_min(q1, q2) + alpha * logprob
         return torch_mean(actor_loss)
     
+
+
+
+
+
     
     def loss_temperature(self, obs, alpha, target_entropy):
 
@@ -226,11 +244,40 @@ class CalQL_Gaussian(GaussianModel):
         loss_alpha = -torch_mean(alpha * (logprob + target_entropy))
         return loss_alpha
 
-    def update_target_critic(self, tau):
 
+
+
+
+
+
+
+
+
+
+
+    def update_target_critic(self, tau):
         print("gaussian_calql.py: CalQL_Gaussian.update_target_critic()")
 
         for target_param, param in zip(
-            self.target_critic.parameters(), self.critic.parameters()
+            self.target_critic.trainable_variables, self.critic.trainable_variables
         ):
-            target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
+            updated_value = tau * param + (1 - tau) * target_param
+            target_param.assign(updated_value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

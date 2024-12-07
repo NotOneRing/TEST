@@ -3,7 +3,7 @@ import tensorflow as tf
 import torch
 
 
-def tf_flatten(input_tensor, start_dim = 0, end_dim = -1):
+def torch_flatten(input_tensor, start_dim = 0, end_dim = -1):
     tensor_shape_list = input_tensor.shape.as_list()
 
     if end_dim == -1:
@@ -48,7 +48,7 @@ feats_np_flatten = feats.reshape(feats.shape[0], -1, feats.shape[-1])
 # TensorFlow
 feats_tf_flatten = tf.reshape(feats_tf, [feats_tf.shape[0], -1, feats_tf.shape[-1]])
 
-output = tf_flatten(feats_tf, 1, 2)
+output = torch_flatten(feats_tf, 1, 2)
 
 print("output = ", output)
 

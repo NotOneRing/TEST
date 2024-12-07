@@ -3,14 +3,18 @@ Solving probabilistic ODE for exact likelihood, from https://github.com/yang-son
 
 """
 
-import torch
+# import torch
 import numpy as np
 
-from torchdiffeq import odeint
+# from torchdiffeq import odeint
 
 # adjoint can reduce memory, but not faster
 # from torchdiffeq import odeint_adjoint as odeint
 from model.diffusion.sde_lib import get_score_fn
+
+from util.torch_to_tf import torch_repeat_interleave, torch_round, torch_sum, torch_prod, torch_tensor, \
+torch_linspace, torch_zeros, torch_cat, torch_hstack, torch_reshape, torch_mean, torch_full, torch_randn, torch_randint, torch_view
+
 
 
 def get_likelihood_fn(
@@ -84,7 +88,7 @@ def get_likelihood_fn(
 
         with torch.enable_grad():
             x.requires_grad_(True)
-            fn_eps = torch.sum(drift_fn(model, x, t, **kwargs) * noise)
+            fn_eps = torch_sum(drift_fn(model, x, t, **kwargs) * noise)
             grad_fn_eps = torch.autograd.grad(
                 fn_eps,
                 x,
@@ -92,7 +96,7 @@ def get_likelihood_fn(
             )[0]
         if not create_graph:
             x.requires_grad_(False)
-        return torch.sum(grad_fn_eps * noise, dim=(1, 2))
+        return torch_sum(grad_fn_eps * noise, dim=(1, 2))
 
 
 
@@ -120,15 +124,18 @@ def get_likelihood_fn(
 
         shape = data.shape
         B, H, A = shape
-        device = data.device
+        # device = data.device
 
         # sample epsilon
         if hutchinson_type == "Gaussian":
-            epsilon = torch.randn(size=(B * num_epsilon, H, A), device=device)
+            epsilon = torch_randn(size=(B * num_epsilon, H, A)
+                                #   , device=device
+                                  )
         elif hutchinson_type == "Rademacher":
             epsilon = (
-                torch.randint(
-                    low=0, high=2, size=(B * num_epsilon, H, A), device=device
+                torch_randint(
+                    low=0, high=2, size=(B * num_epsilon, H, A)
+                    # , device=device
                 ).float()
                 * 2
                 - 1.0
@@ -138,7 +145,7 @@ def get_likelihood_fn(
 
         # repeat for expectation
         cond_eps = {
-            key: cond[key].repeat_interleave(num_epsilon, dim=0) for key in cond
+            key: torch_repeat_interleave(cond[key], num_epsilon, dim=0) for key in cond
         }
 
 
@@ -148,13 +155,13 @@ def get_likelihood_fn(
             print("exact_likelihood.py: ode_func()")
 
             x = x[:, :-1]
-            vec_t = torch.full(
+            vec_t = torch_full(
                 (x.shape[0],),
-                torch.round(t * denoising_steps),
-                device=x.device,
+                torch_round(t * denoising_steps),
+                # device=x.device,
                 dtype=int,
             )
-            if torch.round(t * denoising_steps) <= ft_denoising_steps:
+            if torch_round(t * denoising_steps) <= ft_denoising_steps:
                 model_fn = model_ft
             else:
                 model_fn = model
@@ -165,11 +172,12 @@ def get_likelihood_fn(
                 vec_t,
                 cond=cond,
                 **kwargs,
-            ).reshape(B, -1)
+            )
+            drift = torch_reshape(drift, B, -1)
 
             # repeat for expectation
-            x = x.repeat_interleave(num_epsilon, dim=0)
-            vec_t = vec_t.repeat_interleave(num_epsilon)
+            x = torch_repeat_interleave(x, num_epsilon, dim=0)
+            vec_t = torch_repeat_interleave(vec_t, num_epsilon)
 
             logp_grad = div_fn(
                 model,
@@ -179,18 +187,24 @@ def get_likelihood_fn(
                 create_graph=True,
                 cond=cond_eps,
                 **kwargs,
-            )[:, None].reshape(B, num_epsilon, -1)
-            logp_grad = logp_grad.mean(dim=1)  # expectation over epsilon
-            return torch.cat(
+            )[:, None]
+
+            logp_grad = torch_reshape(logp_grad, B, num_epsilon, -1)
+
+            logp_grad = torch_mean(logp_grad, dim=1)  # expectation over epsilon
+            return torch_cat(
                 [drift, logp_grad], dim=-1
             )  # Concatenate along the feature dimension
 
         # flatten data
         data = data.view(shape[0], -1)
-        init = torch.hstack(
-            (data, torch.zeros((shape[0], 1)).to(data.dtype).to(device))
+        init = torch_hstack(
+            (data, torch_zeros((shape[0], 1)).to(data.dtype)
+            #  .to(device)
+            )
         )
-        t_eval = torch.linspace(eps, sde.T, steps=steps).to(device)  # eval points
+        t_eval = torch_linspace(eps, sde.T, steps=steps)
+        # .to(device)  # eval points
         solution = odeint(
             ode_func,
             init,
@@ -202,10 +216,11 @@ def get_likelihood_fn(
             # args=(model, epsilon),
         )  # steps x batch x 3
         zp = solution[-1]  # batch x 3
-        z = zp[:, :-1].view(shape)
+        z = torch_view( zp[:, :-1], shape )
+
         delta_logp = zp[:, -1]
         prior_logp = sde.prior_logp(z)
-        N = torch.prod(torch.tensor(shape[1:]))
+        N = torch_prod(torch_tensor(shape[1:]))
         # print("prior:", prior_logp / (np.log(2) * N))
         # print("delta:", delta_logp / (np.log(2) * N))
         logprob = (prior_logp + delta_logp) / (np.log(2) * N)

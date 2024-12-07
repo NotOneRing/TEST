@@ -119,7 +119,7 @@ def tf_quantile(input_tensor, q, dim=None, interpolation='linear'):
 
 
 
-def tf_flatten(input_tensor, start_dim = 0, end_dim = -1):
+def torch_flatten(input_tensor, start_dim = 0, end_dim = -1):
     tensor_shape_list = input_tensor.shape.as_list()
 
     if end_dim == -1:
@@ -637,13 +637,18 @@ def torch_unsqueeze(input, dim):
 
 
 
+def torch_squeeze(input, dim=None):
+    return tf.squeeze(input, axis=dim)
+
 
 
 
 # torch.full(size, fill_value, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False) → Tensor
-def torch_full(size, fill_value):
-    return tf.fill(size, fill_value)
-
+def torch_full(size, fill_value, dtype=None):
+    result = tf.fill(size, fill_value)
+    if dtype != None:
+        result = tf.cast(result, dtype=dtype)
+    return result
 
 
 
@@ -755,6 +760,95 @@ def torch_zeros_like(input, dtype=None):
 
 
 
+def torch_full_like(input, fill_value, dtype=None):
+    return tf.fill(tf.shape(input), fill_value)
+
+
+
+
+def torch_from_numpy(ndarray):
+    return tf.convert_to_tensor(value=ndarray)
+
+
+
+
+def torch_exp(input):
+    return tf.math.exp(input)
+
+
+
+
+def torch_item(x):
+    out = torch_squeeze(x)
+    out = out.numpy().item()
+    return out
+
+
+
+
+
+
+
+def torch_repeat_interleave(tensor, repeats, dim=None):
+
+    
+    if isinstance(repeats, int):
+        # repeats = torch_full_like(torch_tensor(tensor.shape), repeats)  # 扩展为与 tensor 大小一致
+        pass
+    else:
+        raise ValueError("non scalar repeats is not implemented for this function")
+
+    print("repeats = ", repeats)
+
+    cur_tensor = tensor
+
+
+    if dim == None:
+        cur_tensor = torch_flatten(tensor)
+        
+    result = []
+
+    if len(cur_tensor.shape) == 1:
+        for i in range(cur_tensor.shape[0]):
+            result.extend( [cur_tensor[i], ] * repeats )
+        return tf.convert_to_tensor( np.array(result) )
+        
+    elif len(tensor.shape) >= 2:
+
+        for i in range(tensor.shape[dim]):
+            new_shape = tensor.shape.as_list()
+            new_shape[dim] = 1
+            row = tf.gather( tensor, i, axis=dim)
+            row = tf.reshape(row, new_shape)
+            result.extend( [row ] * repeats )        
+        return tf.concat( result, axis=dim )
+    
+    else:
+        raise ValueError("tensor.shape > 2 is not implemented for hte repeat_interleave()")
+
+
+
+
+
+
+
+
+
+
+
+def torch_reshape():
+    pass
+
+
+
+
+
+def torch_randint():
+    pass
+
+
+
+
 
 
 
@@ -779,26 +873,6 @@ def torch_func_stack_module_state():
 
 def torch_func_functional_call():
     pass
-
-
-
-
-
-
-
-
-def torch_repeat_interleave():
-    pass
-
-
-
-
-
-
-
-
-
-
 
 
 

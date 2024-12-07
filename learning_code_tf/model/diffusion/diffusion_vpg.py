@@ -24,7 +24,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer
 import numpy as np
 
-from util.torch_to_tf import tf_flatten, tf_arange, Normal
+from util.torch_to_tf import torch_flatten, tf_arange, Normal
 
 
 class VPGDiffusion(DiffusionModel):
@@ -396,7 +396,7 @@ class VPGDiffusion(DiffusionModel):
             # .unsqueeze(1)
             # .repeat(1, self.ft_denoising_steps, *(1,) * (cond[key].ndim - 1))
             # .flatten(start_dim=0, end_dim=1)
-            key: tf_flatten( tf.tile(
+            key: torch_flatten( tf.tile(
                 tf.expand_dims(cond[key], axis=1),
                 [1, self.ft_denoising_steps, *(1,) * (cond[key].ndim - 1)]
             ), 0, 1)
@@ -416,7 +416,7 @@ class VPGDiffusion(DiffusionModel):
             )
             # 4,3,2,1,0,4,3,2,1,0,...,4,3,2,1,0
         t_all = tf.tile(t_single, [chains.shape[0], 1])
-        t_all = tf_flatten(t_all)
+        t_all = torch_flatten(t_all)
 
         if self.use_ddim:
             indices_single = tf_arange(
