@@ -8,7 +8,7 @@ Use ensemble of critics.
 # import torch
 # import torch.nn as nn
 
-from util.torch_to_tf import torch_mean, torch_min, torch_randperm
+from util.torch_to_tf import torch_mean, torch_min, torch_randperm, torch_func_functional_call
 
 import logging
 from copy import deepcopy
@@ -36,20 +36,26 @@ class RLPD_Gaussian(GaussianModel):
 
         # initialize critic networks
         self.critic_networks = [
-            deepcopy(critic).to(self.device) for _ in range(n_critics)
+            deepcopy(critic)
+            # .to(self.device) 
+            for _ in range(n_critics)
         ]
         self.critic_networks = nn.ModuleList(self.critic_networks)
 
         # initialize target networks
         self.target_networks = [
-            deepcopy(critic).to(self.device) for _ in range(n_critics)
+            deepcopy(critic)
+            # .to(self.device) 
+            for _ in range(n_critics)
         ]
+
         self.target_networks = nn.ModuleList(self.target_networks)
 
         # Construct a "stateless" version of one of the models. It is "stateless" in the sense that the parameters are meta Tensors and do not have storage.
         base_model = deepcopy(self.critic_networks[0])
         self.base_model = base_model.to("meta")
-        self.ensemble_params, self.ensemble_buffers = torch.func.stack_module_state(
+
+        self.ensemble_params, self.ensemble_buffers = torch_func_stack_module_state(
             self.critic_networks
         )
 
@@ -58,7 +64,7 @@ class RLPD_Gaussian(GaussianModel):
 
         print("gaussian_rlpd.py: RLPD_Gaussian.critic_wrapper()")
 
-        return torch.func.functional_call(self.base_model, (params, buffers), data)
+        return torch_func_functional_call(self.base_model, (params, buffers), data)
 
     def get_random_indices(self, sz=None, num_ind=2):
         """get num_ind random indices from a set of size sz (used for getting critic targets)"""
@@ -164,6 +170,59 @@ class RLPD_Gaussian(GaussianModel):
                 source_param = self.ensemble_params[target_param_name][target_ind]
                 updated_value = target_param * (1.0 - tau) + source_param * tau
                 target_param.assign(updated_value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

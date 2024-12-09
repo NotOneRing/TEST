@@ -14,6 +14,8 @@ import numpy as np
 
 from util.torch_to_tf import torch_sum, torch_sqrt, torch_tensor, torch_randn, torch_cumprod, torch_zeros_like
 
+from util.torch_to_tf import torch_tensor_long, torch_clamp
+
 
 def get_score_fn(
     sde,
@@ -45,11 +47,11 @@ def get_score_fn(
 
         if not predict_epsilon:  # get epsilon first from predicted mu
             score = (
-                -(x - score * sde.sqrt_alphas[t.long()][:, None, None])
-                / sde.discrete_betas[t.long()][:, None, None]
+                -(x - score * sde.sqrt_alphas[ torch_tensor_long(t) ][:, None, None])
+                / sde.discrete_betas[ torch_tensor_long(t) ][:, None, None]
             )
         else:
-            std = sde.sqrt_1m_alpha_bar[t.long()]
+            std = sde.sqrt_1m_alpha_bar[ torch_tensor_long(t) ]
             score = -score / std[:, None, None]
         return score
 
@@ -137,7 +139,7 @@ class SDE(abc.ABC):
         dt = 1 / self.N
         drift, diffusion = self.sde(x, t)
         f = drift * dt
-        G = diffusion * torch_sqrt(torch_tensor(dt, device=t.device))
+        G = diffusion * torch_sqrt( torch_tensor(dt) )
         return f, G
 
     def reverse(self, score_fn, probability_flow=False):
@@ -218,7 +220,7 @@ class VPSDE(SDE):
 
         print("sde_lib.py: VPSDE.set_betas()")
 
-        self.discrete_betas = betas.clamp(min=min_beta)  # cosine schedule from our DDPM
+        self.discrete_betas = torch_clamp(betas, min=min_beta)  # cosine schedule from our DDPM
         self.alphas = 1.0 - self.discrete_betas
         self.sqrt_alphas = torch_sqrt(self.alphas)
         self.alphas_bar = torch_cumprod(self.alphas, axis=0)
@@ -273,9 +275,12 @@ class VPSDE(SDE):
 
         print("sde_lib.py: VPSDE.discretize()")
 
-        timestep = (t * (self.N - 1) / self.T).long()
-        beta = self.discrete_betas.to(x.device)[timestep]
-        alpha = self.alphas.to(x.device)[timestep]
+        timestep = torch_tensor_long(t * (self.N - 1) / self.T)
+        # beta = self.discrete_betas.to(x.device)[timestep]
+        # alpha = self.alphas.to(x.device)[timestep]
+        beta = self.discrete_betas[timestep]
+        alpha = self.alphas[timestep]
+
         sqrt_beta = torch_sqrt(beta)
         f = torch_sqrt(alpha)[:, None, None] * x - x
         G = sqrt_beta

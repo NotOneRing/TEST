@@ -17,22 +17,13 @@ def cosine_beta_schedule(timesteps, s=0.008, dtype=tf.float32):
     print("cosine_beta_schedule() called")
 
     steps = timesteps + 1
-    x = tf.linspace(0.0, float(steps), steps)  # 生成均匀分布的点
-    alphas_cumprod = tf.cos(((x / steps) + s) / (1 + s) * np.pi * 0.5) ** 2  # 计算累积alpha
-    alphas_cumprod = alphas_cumprod / alphas_cumprod[0]  # 归一化
-    betas = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])  # 计算beta值
-    betas_clipped = tf.clip_by_value(betas, clip_value_min=0.0, clip_value_max=0.999)  # 截断
-
+    x = np.linspace(0.0, steps, steps)
+    alphas_cumprod = np.cos(((x / steps) + s) / (1 + s) * np.pi * 0.5) ** 2
+    alphas_cumprod = alphas_cumprod / alphas_cumprod[0]
+    betas = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])
+    betas_clipped = np.clip(betas, a_min=0.0, a_max=0.999)
     return tf.convert_to_tensor(betas_clipped, dtype=dtype)
 
-
-# def extract(a, t, x_shape):
-#     print("sampling.py: extract()")
-#     print("22222")
-
-#     b = tf.shape(t)[0]
-#     out = tf.gather(a, t, axis=-1)
-#     return tf.reshape(out, [b] + [1] * (len(x_shape) - 1))
 
 
 def extract(a, t, x_shape):
@@ -70,6 +61,10 @@ def extract(a, t, x_shape):
 
     out = tf.gather(a, t, axis=-1)
 
+    from util.torch_to_tf import torch_gather
+    out2 = torch_gather(a, t, axis=-1)
+    assert out == out2, "torch_gather have different result from tf.gather"
+
     # print("out = ", out)
     # print("out.shape = ", out.shape)
     
@@ -85,6 +80,11 @@ def extract(a, t, x_shape):
 def make_timesteps(batch_size, i):
     print("sampling.py: make_timesteps()")
     t = tf.constant([i] * batch_size, dtype=tf.int64)
+
+    from util.torch_to_tf import torch_full
+    t2 = torch_full((batch_size,), i, dtype=tf.int64)
+    assert t == t2, "torch_full have different result from tf_make_timesteps"
+
     return t
 
 

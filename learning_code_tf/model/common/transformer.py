@@ -17,7 +17,7 @@ from model.diffusion.modules import SinusoidalPosEmb
 logger = logging.getLogger(__name__)
 
 
-from util.torch_to_tf import torch_zeros, torch_unsqueeze, torch_ones
+from util.torch_to_tf import torch_zeros, torch_unsqueeze, torch_ones, torch_triu, torch_arange, torch_tensor_expand
 
 # class Gaussian_Transformer(nn.Module):
 class Gaussian_Transformer(tf.keras.Model):
@@ -498,7 +498,9 @@ class Transformer(tf.keras.Model):
 
     def forward(
         self,
-        cond: torch.Tensor,
+        cond
+        # : torch.Tensor
+        ,
         **kwargs,
     ):
         """
@@ -523,9 +525,14 @@ class Transformer(tf.keras.Model):
         position_embeddings = self.pos_emb[
             :, : self.horizon, :
         ]  # each position maps to a (learnable) vector
-        position_embeddings = position_embeddings.expand(
+
+        # position_embeddings = position_embeddings.expand(
+        #     cond.shape[0], self.horizon, -1
+        # )  # repeat for batch dimension
+        position_embeddings = torch_tensor_expand( position_embeddings,
             cond.shape[0], self.horizon, -1
         )  # repeat for batch dimension
+
         x = self.drop(position_embeddings)
         # (B,T,n_emb)
         x = self.decoder(
@@ -560,3 +567,20 @@ if __name__ == "__main__":
 
     cond = torch_zeros((4, 1, 16))  # B x 1 x cond_dim
     out, _ = transformer(cond)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -476,7 +476,15 @@ def torch_logsumexp(input, dim):
 
 def torch_min(input, dim = None, other = None):
     if other == None:
-        return tf.reduce_min(input, axis=dim)
+        if dim == None:
+            return tf.reduce_min(input)
+        else:
+            min_values = tf.reduce_min(input, axis=dim)
+            min_indices = tf.math.argmin(input, axis=dim)
+            from collections import namedtuple
+            MinResult = namedtuple('MinResult', ['values', 'indices'])
+            result = MinResult(values=min_values, indices=min_indices)
+            return result
     else:
         return tf.minimum(input, other)
 
@@ -666,6 +674,9 @@ def torch_tensor_float(input):
     return tf.cast(input, tf.float32)
 
 
+def torch_tensor_long(input):
+    return tf.cast(input, tf.int64)
+
 
 
 
@@ -834,10 +845,11 @@ def torch_repeat_interleave(tensor, repeats, dim=None):
 
 
 
-
-
 def torch_reshape():
     pass
+
+
+
 
 
 
@@ -860,8 +872,14 @@ def torch_vmap():
 
 
 
-def torch_func_stack_module_state():
-    pass
+
+def torch_func_stack_module_state(models):
+    # 堆叠所有模型的参数和缓冲区
+    trainable = [tf.stack([var for var in model.trainable_variables])
+                 for model in models]
+    non_trainable = [tf.stack([var for var in model.non_trainable_variables])
+                     for model in models]
+    return trainable, non_trainable
 
 
 
@@ -871,8 +889,61 @@ def torch_func_stack_module_state():
 
 
 
-def torch_func_functional_call():
-    pass
+def torch_func_functional_call(model, params, x):
+    # Performs a functional call on the module by replacing the module parameters and buffers with the provided ones.
+    former_params = model.trainable_variables
+
+    for var, param in zip(model.trainable_variables, params):
+        var.assign(param)
+    result = model(x)
+
+    for var, param in zip(model.trainable_variables, former_params):
+        var.assign(param)
+
+    return result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

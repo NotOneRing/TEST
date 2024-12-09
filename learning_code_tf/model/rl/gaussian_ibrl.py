@@ -14,7 +14,8 @@ from model.common.gaussian import GaussianModel
 log = logging.getLogger(__name__)
 
 
-from util.torch_to_tf import torch_mean, torch_where, torch_softmax, torch_stack, torch_multinomial
+from util.torch_to_tf import torch_mean, torch_where, torch_softmax, torch_stack, torch_multinomial, torch_func_functional_call, \
+    torch_min
 
 
 
@@ -61,11 +62,17 @@ class IBRL_Gaussian(GaussianModel):
         base_model = deepcopy(self.critic_networks[0])
         self.base_model = base_model.to("meta")
 
+
+
         self.ensemble_params, self.ensemble_buffers = torch.func.stack_module_state(
             self.critic_networks
         )
 
+
+
         self.ensemble_params = [critic.trainable_weights for critic in self.critic_networks]
+
+
 
 
     def critic_wrapper(self, params, buffers, data):
@@ -73,7 +80,13 @@ class IBRL_Gaussian(GaussianModel):
 
         print("gaussian_ibrl.py: IBRL_Gaussian.critic_wrapper()")
 
-        return torch.func.functional_call(self.base_model, (params, buffers), data)
+        # return torch.func.functional_call(self.base_model, (params, buffers), data)
+        print("params = ", params)
+        print("buffers = ", buffers)
+
+        return torch_func_functional_call(self.base_model, (params, buffers), data)
+
+
 
     def get_random_indices(self, sz=None, num_ind=2):
         """get num_ind random indices from a set of size sz (used for getting critic targets)"""
@@ -142,6 +155,7 @@ class IBRL_Gaussian(GaussianModel):
         current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
             self.ensemble_params, self.ensemble_buffers, (obs, actions)
         )  # (n_critics, B)
+        
         loss_critic = torch_mean((current_q - target_q[None]) ** 2)
         return loss_critic
 
@@ -159,8 +173,11 @@ class IBRL_Gaussian(GaussianModel):
             self.ensemble_params, self.ensemble_buffers, (obs, action)
         )  # (n_critics, B)
 
-        current_q = current_q.min(
-            dim=0
+        # current_q = current_q.min(
+        #     dim=0
+        # ).values  # unlike RLPD, IBRL uses the min Q value for actor update
+
+        current_q = torch_min( current_q, dim=0
         ).values  # unlike RLPD, IBRL uses the min Q value for actor update
         
         loss_actor = -torch_mean(current_q)
