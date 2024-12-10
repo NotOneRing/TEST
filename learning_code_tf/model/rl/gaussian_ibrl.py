@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 from util.torch_to_tf import torch_mean, torch_where, torch_softmax, torch_stack, torch_multinomial, torch_func_functional_call, \
-    torch_min
+    torch_min, torch_func_stack_module_state, torch_vmap
 
 
 
@@ -64,7 +64,7 @@ class IBRL_Gaussian(GaussianModel):
 
 
 
-        self.ensemble_params, self.ensemble_buffers = torch.func.stack_module_state(
+        self.ensemble_params, self.ensemble_buffers = torch_func_stack_module_state(
             self.critic_networks
         )
 
@@ -151,11 +151,15 @@ class IBRL_Gaussian(GaussianModel):
         current_q = tf.stack(current_q_list, axis=0)  # Shape: (n_critics, batch_size)
         loss_critic = tf.reduce_mean((current_q - target_q[None, :]) ** 2)
 
+        # # run all critics in batch
+        # current_q = torch_vmap( self.critic_wrapper, in_dims=(0, 0, None) )(
+        #     self.ensemble_params, self.ensemble_buffers, (obs, actions)
+        # )  # (n_critics, B)
+
         # run all critics in batch
-        current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
-            self.ensemble_params, self.ensemble_buffers, (obs, actions)
-        )  # (n_critics, B)
-        
+        current_q = torch_vmap( self.critic_wrapper, self.ensemble_params, self.ensemble_buffers, (obs, actions), in_dims=(0, 0, None) )  # (n_critics, B)
+
+
         loss_critic = torch_mean((current_q - target_q[None]) ** 2)
         return loss_critic
 
@@ -169,9 +173,11 @@ class IBRL_Gaussian(GaussianModel):
             reparameterize=True,
         )  # use online policy only, also IBRL does not use tanh squashing
         
-        current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
-            self.ensemble_params, self.ensemble_buffers, (obs, action)
-        )  # (n_critics, B)
+        # current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
+        #     self.ensemble_params, self.ensemble_buffers, (obs, action)
+        # )  # (n_critics, B)
+
+        current_q = torch_vmap(self.critic_wrapper, self.ensemble_params, self.ensemble_buffers, (obs, action), in_dims=(0, 0, None) )  # (n_critics, B)
 
         # current_q = current_q.min(
         #     dim=0

@@ -17,7 +17,14 @@ from model.diffusion.modules import SinusoidalPosEmb
 logger = logging.getLogger(__name__)
 
 
-from util.torch_to_tf import torch_zeros, torch_unsqueeze, torch_ones, torch_triu, torch_arange, torch_tensor_expand
+from util.torch_to_tf import torch_zeros, torch_unsqueeze, torch_ones, torch_triu, torch_arange, torch_tensor_expand,\
+torch_meshgrid, torch_view
+
+
+
+
+
+
 
 # class Gaussian_Transformer(nn.Module):
 class Gaussian_Transformer(tf.keras.Model):
@@ -82,7 +89,8 @@ class Gaussian_Transformer(tf.keras.Model):
 
         print("transformer.py: Gaussian_Transformer.forward()")
 
-        B = len(cond["state"])
+        # B = len(cond["state"])
+        B = cond["state"].shape[0]
 
         # flatten history
         state = tf.reshape(cond["state"], (B, -1))
@@ -185,7 +193,8 @@ class GMM_Transformer(tf.keras.Model):
         B = len(cond["state"])
 
         # flatten history
-        state = cond["state"].view(B, -1)
+        # state = cond["state"].view(B, -1)
+        state = torch_view( cond["state"], B, -1)
 
         # input to transformer
         # state = state.unsqueeze(1)  # (B,1,cond_dim)
@@ -496,7 +505,7 @@ class Transformer(tf.keras.Model):
         else:
             raise RuntimeError("Unaccounted module {}".format(module))
 
-    def forward(
+    def call(
         self,
         cond
         # : torch.Tensor

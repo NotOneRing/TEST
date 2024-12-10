@@ -864,8 +864,71 @@ def torch_randint():
 
 
 
-def torch_vmap():
+
+
+
+
+
+
+
+
+def torch_nn_init_normal_():
     pass
+
+
+
+
+
+def torch_nn_init_zeros_():
+    pass
+
+
+
+
+
+def torch_nn_init_ones_():
+    pass
+
+
+
+def torch_tensor_transpose():
+    pass
+
+
+
+def torch_masked_fill():
+    pass
+
+
+
+
+
+# class nn_Dropout:
+#     pass
+
+# class nn.TransformerEncoderLayer,
+# class nn.TransformerDecoderLayer,
+# class nn.TransformerEncoder,
+# class nn.TransformerDecoder,
+# class nn.ModuleList,
+# class nn.Mish,
+# class nn.Sequential,
+
+# nn.LayerNorm(n_emb)
+
+# nn.Linear(n_emb, output_dim)
+
+
+
+
+
+
+
+
+
+def torch_vmap(func, *parameters, in_dims=0):
+    outputs = tf.vectorized_map(func, parameters)
+    return outputs
 
 
 

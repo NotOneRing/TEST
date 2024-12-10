@@ -25,3 +25,37 @@ print("result2 = ", result2)
 
 
 
+import tensorflow as tf
+
+# 定义一个简单的标量函数
+def scalar_function(x):
+    return tf.reduce_sum(x ** 2)
+
+# 输入数据：batch_size=5，每个样本有3个特征
+inputs = tf.random.normal([5, 3])
+
+
+print("inputs = ", inputs)
+
+print("inputs**2 = ", inputs**2)
+
+# 使用 tf.vectorized_map 对每个样本应用函数
+outputs = tf.vectorized_map(scalar_function, inputs)
+
+print("Outputs:", outputs)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

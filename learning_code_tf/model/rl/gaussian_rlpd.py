@@ -8,7 +8,7 @@ Use ensemble of critics.
 # import torch
 # import torch.nn as nn
 
-from util.torch_to_tf import torch_mean, torch_min, torch_randperm, torch_func_functional_call
+from util.torch_to_tf import torch_mean, torch_min, torch_randperm, torch_func_functional_call, torch_func_stack_module_state, torch_vmap
 
 import logging
 from copy import deepcopy
@@ -40,7 +40,8 @@ class RLPD_Gaussian(GaussianModel):
             # .to(self.device) 
             for _ in range(n_critics)
         ]
-        self.critic_networks = nn.ModuleList(self.critic_networks)
+
+        # self.critic_networks = nn.ModuleList(self.critic_networks)
 
         # initialize target networks
         self.target_networks = [
@@ -49,11 +50,12 @@ class RLPD_Gaussian(GaussianModel):
             for _ in range(n_critics)
         ]
 
-        self.target_networks = nn.ModuleList(self.target_networks)
+        # self.target_networks = nn.ModuleList(self.target_networks)
 
         # Construct a "stateless" version of one of the models. It is "stateless" in the sense that the parameters are meta Tensors and do not have storage.
         base_model = deepcopy(self.critic_networks[0])
-        self.base_model = base_model.to("meta")
+        self.base_model = base_model
+        # .to("meta")
 
         self.ensemble_params, self.ensemble_buffers = torch_func_stack_module_state(
             self.critic_networks
@@ -113,10 +115,15 @@ class RLPD_Gaussian(GaussianModel):
                 -next_logprobs
             )
 
+        # # run all critics in batch
+        # current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
+        #     self.ensemble_params, self.ensemble_buffers, (obs, actions)
+        # )  # (n_critics, B)
         # run all critics in batch
-        current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
-            self.ensemble_params, self.ensemble_buffers, (obs, actions)
-        )  # (n_critics, B)
+        current_q = torch_vmap(self.critic_wrapper,  self.ensemble_params, self.ensemble_buffers, (obs, actions), in_dims=(0, 0, None) )  # (n_critics, B)
+
+
+
         loss_critic = torch_mean((current_q - target_q[None]) ** 2)
         return loss_critic
 
@@ -130,9 +137,13 @@ class RLPD_Gaussian(GaussianModel):
             reparameterize=True,
             get_logprob=True,
         )
-        current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
-            self.ensemble_params, self.ensemble_buffers, (obs, action)
-        )  # (n_critics, B)
+        
+        # current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
+        #     self.ensemble_params, self.ensemble_buffers, (obs, action)
+        # )  # (n_critics, B)
+
+        current_q = torch_vmap(self.critic_wrapper, self.ensemble_params, self.ensemble_buffers, (obs, action), in_dims=(0, 0, None) )  # (n_critics, B)
+
         current_q = torch_mean(current_q, dim=0) + alpha * (-logprob)
         loss_actor = -torch_mean(current_q)
         return loss_actor

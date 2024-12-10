@@ -1,7 +1,7 @@
 """
 Solving probabilistic ODE for exact likelihood, from https://github.com/yang-song/score_sde_pytorch
-
 """
+
 
 # import torch
 import numpy as np
@@ -13,7 +13,7 @@ import numpy as np
 from model.diffusion.sde_lib import get_score_fn
 
 from util.torch_to_tf import torch_repeat_interleave, torch_round, torch_sum, torch_prod, torch_tensor, \
-torch_linspace, torch_zeros, torch_cat, torch_hstack, torch_reshape, torch_mean, torch_full, torch_randn, torch_randint, torch_view
+torch_linspace, torch_zeros, torch_cat, torch_hstack, torch_reshape, torch_mean, torch_full, torch_randn, torch_randint, torch_tensor_view
 
 
 
@@ -165,7 +165,10 @@ def get_likelihood_fn(
                 model_fn = model_ft
             else:
                 model_fn = model
-            x = x.view(shape)  # B x horizon x action_dim
+
+            # x = x.view(shape)  # B x horizon x action_dim
+            x = torch_tensor_view(x, shape)
+
             drift = drift_fn(
                 model_fn,
                 x,
@@ -197,7 +200,10 @@ def get_likelihood_fn(
             )  # Concatenate along the feature dimension
 
         # flatten data
-        data = data.view(shape[0], -1)
+        # data = data.view(shape[0], -1)
+
+        data = torch_tensor_view(data, shape[0], -1)
+
         init = torch_hstack(
             (data, torch_zeros((shape[0], 1)).to(data.dtype)
             #  .to(device)
@@ -216,7 +222,7 @@ def get_likelihood_fn(
             # args=(model, epsilon),
         )  # steps x batch x 3
         zp = solution[-1]  # batch x 3
-        z = torch_view( zp[:, :-1], shape )
+        z = torch_tensor_view( zp[:, :-1], shape )
 
         delta_logp = zp[:, -1]
         prior_logp = sde.prior_logp(z)
