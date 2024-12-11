@@ -671,7 +671,9 @@ def torch_sqrt(input):
 
 
 def torch_tensor_float(input):
-    return tf.cast(input, tf.float32)
+    output = tf.cast(input, tf.float32)
+    return output
+
 
 
 def torch_tensor_long(input):
@@ -682,6 +684,10 @@ def torch_tensor_long(input):
 
 def torch_tensor_expand(input, *args):
     return tf.broadcast_to(input, [*args])
+
+
+def torch_tensor_expand_as(input, other):
+    return tf.broadcast_to(input, other.shape)
 
 
 
@@ -789,10 +795,70 @@ def torch_exp(input):
 
 
 
+
+
+def torch_reshape():
+    pass
+
+
+
+
+
+
+
+
+def torch_randint():
+    pass
+
+
+
+
+
+
+
+def torch_tensor_transpose(input, dim0, dim1):
+    dim_lens = len(input.shape)
+    perm = list(range(dim_lens))
+    temp = perm[dim0]
+    perm[dim0] = perm[dim1]
+    perm[dim1] = temp
+    return tf.transpose(input, perm=perm)
+
+
+
+
+def torch_tensor_clone(input):
+    return tf.identity(input)
+
+
+
+
+
+def torch_tensor_masked_fill(tensor, mask, value):
+    broadcasted_mask = mask if mask.shape == tensor.shape else torch_tensor_expand(mask, tensor)
+    output = torch_tensor_clone(tensor)
+    output[broadcasted_mask] = value
+    return output
+
+
+
+
+
+
+
+
+
+
 def torch_item(x):
     out = torch_squeeze(x)
     out = out.numpy().item()
     return out
+
+
+
+
+
+
 
 
 
@@ -845,85 +911,6 @@ def torch_repeat_interleave(tensor, repeats, dim=None):
 
 
 
-def torch_reshape():
-    pass
-
-
-
-
-
-
-
-
-def torch_randint():
-    pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def torch_nn_init_normal_():
-    pass
-
-
-
-
-
-def torch_nn_init_zeros_():
-    pass
-
-
-
-
-
-def torch_nn_init_ones_():
-    pass
-
-
-
-def torch_tensor_transpose():
-    pass
-
-
-
-def torch_masked_fill():
-    pass
-
-
-
-
-
-# class nn_Dropout:
-#     pass
-
-# class nn.TransformerEncoderLayer,
-# class nn.TransformerDecoderLayer,
-# class nn.TransformerEncoder,
-# class nn.TransformerDecoder,
-# class nn.ModuleList,
-# class nn.Mish,
-# class nn.Sequential,
-
-# nn.LayerNorm(n_emb)
-
-# nn.Linear(n_emb, output_dim)
-
-
-
-
-
-
-
 
 
 def torch_vmap(func, *parameters, in_dims=0):
@@ -964,6 +951,538 @@ def torch_func_functional_call(model, params, x):
         var.assign(param)
 
     return result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def torch_nn_init_normal_():
+    pass
+
+
+
+
+
+def torch_nn_init_zeros_():
+    pass
+
+
+
+
+
+def torch_nn_init_ones_():
+    pass
+
+
+
+
+
+class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
+        super(nn_TransformerDecoderLayer, self).__init__()
+        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.ffn = tf.keras.Sequential([
+            tf.keras.layers.Dense(dim_feedforward, activation=activation),
+            tf.keras.layers.Dropout(dropout),
+            tf.keras.layers.Dense(d_model),
+        ])
+        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+        self.dropout3 = tf.keras.layers.Dropout(dropout)
+
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+        # Self-attention on target
+        tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
+        tgt = tgt + self.dropout1(tgt2, training=training)
+        tgt = self.norm1(tgt)
+
+        # Cross-attention between target and memory
+        tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
+        tgt = tgt + self.dropout2(tgt2, training=training)
+        tgt = self.norm2(tgt)
+
+        # Feedforward network
+        tgt2 = self.ffn(tgt, training=training)
+        tgt = tgt + self.dropout3(tgt2, training=training)
+        tgt = self.norm3(tgt)
+
+        return tgt
+
+class nn_TransformerDecoder(tf.keras.layers.Layer):
+    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
+        super(nn_TransformerDecoder, self).__init__()
+        self.layers = [
+            nn_TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+            for _ in range(n_layers)
+        ]
+        self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+        for layer in self.layers:
+            tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
+        return self.norm(tgt)
+
+
+
+
+
+
+
+
+class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
+        super(nn_TransformerEncoderLayer, self).__init__()
+        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.ffn = tf.keras.Sequential([
+            tf.keras.layers.Dense(dim_feedforward, activation=activation),
+            tf.keras.layers.Dropout(dropout),
+            tf.keras.layers.Dense(d_model),
+        ])
+        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+
+    def call(self, x, training):
+        # Self-attention
+        attn_output = self.self_attn(x, x, training=training)
+        x = x + self.dropout1(attn_output, training=training)
+        x = self.norm1(x)
+
+        # Feedforward network
+        ffn_output = self.ffn(x, training=training)
+        x = x + self.dropout2(ffn_output, training=training)
+        x = self.norm2(x)
+        return x
+
+
+
+
+
+class nn_TransformerEncoder(tf.keras.layers.Layer):
+    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
+        super(nn_TransformerEncoder, self).__init__()
+        self.layers = [
+            nn_TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+            for _ in range(n_layers)
+        ]
+
+    def call(self, x, training):
+        for layer in self.layers:
+            x = layer(x, training=training)
+        return x
+
+
+
+
+
+
+class nn_Mish(tf.keras.layers.Layer):
+    def __init__(self):
+        super(nn_Mish, self).__init__()
+
+    def call(self, x):
+        return x * tf.math.tanh(tf.math.softplus(x))
+
+
+
+
+
+
+
+
+
+class nn_Dropout(tf.keras.layers.Layer):
+    def __init__(self, p=0.5):
+        super(nn_Dropout, self).__init__()
+        self.model = tf.keras.layers.Dropout(rate = p)
+
+    # torch.nn.Dropout(p=0.5, inplace=False)
+    # tf.keras.layers.Dropout(
+    #     rate, noise_shape=None, seed=None, **kwargs
+    # )
+
+    def call(self, net_params):
+        return self.model(net_params)
+
+
+
+
+class nn_Linear(tf.keras.layers.Layer):
+# torch.nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
+# tf.keras.layers.Dense(
+#     units,
+#     activation=None,
+#     use_bias=True,
+#     kernel_initializer='glorot_uniform',
+#     bias_initializer='zeros',
+#     kernel_regularizer=None,
+#     bias_regularizer=None,
+#     activity_regularizer=None,
+#     kernel_constraint=None,
+#     bias_constraint=None,
+#     lora_rank=None,
+#     **kwargs
+# )
+    def __init__(self, in_features, out_features, bias=True, device=None, dtype=None):
+        super(nn_Linear, self).__init__()
+        self.model = tf.keras.layers.Dense(
+            out_features,
+            activation=None,
+            use_bias=True,
+            kernel_initializer='glorot_uniform',
+            bias_initializer='zeros',
+            # kernel_regularizer=None,
+            # bias_regularizer=None,
+            # activity_regularizer=None,
+            # kernel_constraint=None,
+            # bias_constraint=None,
+            # ,**kwargs
+        )
+
+    def call(self, x):
+        return self.model(x)
+
+
+
+
+class nn_LayerNorm(tf.keras.layers.Layer):
+# torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
+# tf.keras.layers.LayerNormalization(
+#     axis=-1,
+#     epsilon=0.001,
+#     center=True,
+#     scale=True,
+#     rms_scaling=False,
+#     beta_initializer='zeros',
+#     gamma_initializer='ones',
+#     beta_regularizer=None,
+#     gamma_regularizer=None,
+#     beta_constraint=None,
+#     gamma_constraint=None,
+#     **kwargs
+# )
+    def __init__(self, normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None):
+        super(nn_LayerNorm, self).__init__()
+
+        self.model = tf.keras.layers.LayerNormalization(
+            axis=-1,
+            epsilon=0.001,
+            center=True,
+            scale=True,
+            rms_scaling=False,
+            beta_initializer='zeros',
+            gamma_initializer='ones',
+            beta_regularizer=None,
+            gamma_regularizer=None,
+            beta_constraint=None,
+            gamma_constraint=None
+            # ,**kwargs
+        )   
+
+    def call(self, x):
+        return self.model(x)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def nn_Parameter(data=None, requires_grad=True):
+    if data is None:
+        raise ValueError("data cannot be None. Please provide a tensor value.")
+    return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+
+
+
+
+
+
+class nn_ModuleList(tf.keras.layers.Layer):
+    def __init__(self, modules=None):
+        super(nn_ModuleList, self).__init__()
+        self.modules = []
+        if modules is not None:
+            for module in modules:
+                self.append(module)
+
+    def append(self, module):
+        if not isinstance(module, tf.keras.layers.Layer):
+            raise ValueError("All modules must be instances of tf.keras.layers.Layer")
+        self.modules.append(module)
+        self._track_layer(module)
+
+    def extend(self, modules):
+        for module in modules:
+            self.append(module)
+
+    def call(self, x):
+        outputs = []
+        for module in self.modules:
+            outputs.append(module(x))
+        return outputs
+    
+    def __getitem__(self, idx):
+        return self.modules[idx]
+
+    def __len__(self):
+        return len(self.modules)
+
+    def __repr__(self):
+        return f"nn_ModuleList({self.modules})"
+
+
+
+
+
+
+
+
+
+class nn_Embedding(tf.keras.layers.Layer):
+    # torch.nn.Embedding(num_embeddings, embedding_dim, padding_idx=None, max_norm=None, 
+    # norm_type=2.0, scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None)    
+    def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
+                 scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None):
+        super(nn_Embedding, self).__init__()
+        pass
+    
+    def call(self, x):
+        pass
+
+
+
+
+
+
+
+
+
+
+
+class nn_Sequential(tf.keras.layers.Layer):
+    def __init__(self, *args):
+        super(nn_Sequential, self).__init__()
+        self.model_list = []
+        for module in args:
+            self.model_list.append(module)
+        pass
+    
+    def call(self, x):
+        output = x
+        for module in self.model_list:
+            output = module(output)
+        return output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class nn_LayerNorm(tf.keras.layers.Layer):
+    # torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
+    def __init__(self, normalized_shape, epsilon=1e-5):
+        """
+        A wrapper for PyTorch's nn.LayerNorm in TensorFlow.
+        Args:
+            normalized_shape (int or tuple): Input shape for layer normalization.
+            epsilon (float): A small value to add to the denominator for numerical stability.
+        """
+        super(nn_LayerNorm, self).__init__()
+        self.normalized_shape = normalized_shape
+        self.epsilon = epsilon
+
+        # Define trainable parameters gamma (scale) and beta (offset)
+        self.gamma = self.add_weight(
+            name="gamma",
+            shape=self.normalized_shape,
+            initializer="ones",
+            trainable=True
+        )
+        self.beta = self.add_weight(
+            name="beta",
+            shape=self.normalized_shape,
+            initializer="zeros",
+            trainable=True
+        )
+
+    def call(self, x):
+        """
+        Forward pass for LayerNorm.
+
+        Args:
+            x (tf.Tensor): Input tensor to normalize.
+
+        Returns:
+            tf.Tensor: The normalized tensor.
+        """
+        print("type(normalized_shape) = ", type(self.normalized_shape))
+        if isinstance(self.normalized_shape, int):
+            dims = 1
+        else:
+            dims = len(self.normalized_shape)
+        dim_list = []
+        for i in range(-dims, 0, 1):
+            dim_list.append(i)
+        mean = tf.reduce_mean(x, axis=dim_list, keepdims=True)
+        variance = tf.reduce_mean(tf.square(x - mean), axis=dim_list, keepdims=True)
+        normalized_x = (x - mean) / tf.sqrt(variance + self.epsilon)
+
+        return self.gamma * normalized_x + self.beta
+
+
+
+
+
+
+
+class nn_MultiheadAttention(tf.keras.layers.Layer):
+    def __init__(self, num_heads, d_model):
+        super(nn_MultiheadAttention, self).__init__()
+        self.num_heads = num_heads
+        self.d_model = d_model
+
+        assert d_model % self.num_heads == 0
+
+        self.depth = d_model // self.num_heads
+
+        # 线性变换用于 Query, Key 和 Value
+        self.query_dense = tf.keras.layers.Dense(d_model)
+        self.key_dense = tf.keras.layers.Dense(d_model)
+        self.value_dense = tf.keras.layers.Dense(d_model)
+
+        # 输出变换
+        self.output_dense = tf.keras.layers.Dense(d_model)
+
+    def split_heads(self, x, batch_size):
+        """将最后一个维度切分为多个头"""
+        x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
+        return tf.transpose(x, perm=[0, 2, 1, 3])
+
+    def scaled_dot_product_attention(self, query, key, value, mask=None):
+        """计算缩放点积注意力"""
+        matmul_qk = tf.matmul(query, key, transpose_b=True)
+        dk = tf.cast(tf.shape(key)[-1], tf.float32)
+        scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
+
+        if mask is not None:
+            scaled_attention_logits += (mask * -1e9)
+
+        attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
+        output = tf.matmul(attention_weights, value)
+        return output, attention_weights
+
+    def call(self, query, key, value, mask=None):
+        batch_size = tf.shape(query)[0]
+
+        # 对 Q, K, V 进行线性变换并分割成多个头
+        query = self.query_dense(query)
+        key = self.key_dense(key)
+        value = self.value_dense(value)
+
+        query = self.split_heads(query, batch_size)
+        key = self.split_heads(key, batch_size)
+        value = self.split_heads(value, batch_size)
+
+        # 缩放点积注意力
+        output, attention_weights = self.scaled_dot_product_attention(query, key, value, mask)
+
+        # 拼接多个头
+        output = tf.transpose(output, perm=[0, 2, 1, 3])
+        output = tf.reshape(output, (batch_size, -1, self.d_model))
+
+        attention_weights = tf.reduce_mean(attention_weights, axis=1)  # 平均所有头
+
+        # 输出变换
+        output = self.output_dense(output)
+        return output, attention_weights
+
+
+
+
+
+
+
+
+
 
 
 

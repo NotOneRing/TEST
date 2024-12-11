@@ -8,7 +8,7 @@ Modified from https://github.com/real-stanford/diffusion_policy/blob/main/diffus
 import logging
 
 import tensorflow as tf
-from tensorflow.keras import layers, models
+from tensorflow.keras import layers
 
 import numpy as np
 
@@ -18,9 +18,12 @@ logger = logging.getLogger(__name__)
 
 
 from util.torch_to_tf import torch_zeros, torch_unsqueeze, torch_ones, torch_triu, torch_arange, torch_tensor_expand,\
-torch_meshgrid, torch_view
+torch_meshgrid, torch_view, torch_tensor_masked_fill
 
 
+
+from util.torch_to_tf import nn_TransformerDecoder, nn_TransformerDecoderLayer, nn_TransformerEncoder, nn_TransformerEncoderLayer, nn_Mish,\
+nn_MultiheadAttention, nn_LayerNorm, nn_Linear, nn_Dropout, torch_tensor_float, torch_tensor_transpose
 
 
 
@@ -256,102 +259,6 @@ class GMM_Transformer(tf.keras.Model):
 
 
 
-class TransformerEncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
-        super(TransformerEncoderLayer, self).__init__()
-        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.ffn = tf.keras.Sequential([
-            tf.keras.layers.Dense(dim_feedforward, activation=activation),
-            tf.keras.layers.Dropout(dropout),
-            tf.keras.layers.Dense(d_model),
-        ])
-        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = tf.keras.layers.Dropout(dropout)
-        self.dropout2 = tf.keras.layers.Dropout(dropout)
-
-    def call(self, x, training):
-        # Self-attention
-        attn_output = self.self_attn(x, x, training=training)
-        x = x + self.dropout1(attn_output, training=training)
-        x = self.norm1(x)
-
-        # Feedforward network
-        ffn_output = self.ffn(x, training=training)
-        x = x + self.dropout2(ffn_output, training=training)
-        x = self.norm2(x)
-        return x
-
-
-class TransformerEncoder(tf.keras.layers.Layer):
-    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
-        super(TransformerEncoder, self).__init__()
-        self.layers = [
-            TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
-            for _ in range(n_layers)
-        ]
-
-    def call(self, x, training):
-        for layer in self.layers:
-            x = layer(x, training=training)
-        return x
-
-
-
-class Mish(tf.keras.layers.Layer):
-    def call(self, x):
-        return x * tf.math.tanh(tf.math.softplus(x))
-
-
-class TransformerDecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
-        super(TransformerDecoderLayer, self).__init__()
-        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.ffn = tf.keras.Sequential([
-            tf.keras.layers.Dense(dim_feedforward, activation=activation),
-            tf.keras.layers.Dropout(dropout),
-            tf.keras.layers.Dense(d_model),
-        ])
-        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = tf.keras.layers.Dropout(dropout)
-        self.dropout2 = tf.keras.layers.Dropout(dropout)
-        self.dropout3 = tf.keras.layers.Dropout(dropout)
-
-    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-        # Self-attention on target
-        tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
-        tgt = tgt + self.dropout1(tgt2, training=training)
-        tgt = self.norm1(tgt)
-
-        # Cross-attention between target and memory
-        tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
-        tgt = tgt + self.dropout2(tgt2, training=training)
-        tgt = self.norm2(tgt)
-
-        # Feedforward network
-        tgt2 = self.ffn(tgt, training=training)
-        tgt = tgt + self.dropout3(tgt2, training=training)
-        tgt = self.norm3(tgt)
-
-        return tgt
-
-class TransformerDecoder(tf.keras.layers.Layer):
-    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
-        super(TransformerDecoder, self).__init__()
-        self.layers = [
-            TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
-            for _ in range(n_layers)
-        ]
-        self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-
-    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-        for layer in self.layers:
-            tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
-        return self.norm(tgt)
-
         
 
 class Transformer(tf.keras.Model):
@@ -375,14 +282,18 @@ class Transformer(tf.keras.Model):
 
         super().__init__()
 
+        self.model_layers = []
+
         # encoder for observations
         #输入维度cond_dim
         self.cond_obs_emb = layers.Dense(n_emb)
         self.cond_pos_emb = tf.Variable(tf.zeros([1, T_cond, n_emb]))
 
+        self.model_layers.append(self.cond_obs_emb)
+        self.model_layers.append(self.cond_pos_emb)
 
         if n_cond_layers > 0:
-            self.encoder = TransformerEncoder(
+            self.encoder = nn_TransformerEncoder(
                 n_layers=n_cond_layers,
                 d_model=n_emb,
                 nhead=n_head,
@@ -396,14 +307,22 @@ class Transformer(tf.keras.Model):
             # 输入n_emb
             self.encoder = tf.keras.Sequential([
                 tf.keras.layers.Dense(4 * n_emb),
-                Mish(),
+                nn_Mish(),
                 tf.keras.layers.Dense(n_emb),
             ])
 
+        self.model_layers.append(self.encoder)
+
         # decoder
         self.pos_emb = nn.Parameter(torch_zeros(1, horizon, n_emb))
-        self.drop = nn.Dropout(p_drop_emb)
-        decoder_layer = nn.TransformerDecoderLayer(
+
+        self.model_layers.append(self.pos_emb)
+
+        self.drop = nn_Dropout(p_drop_emb)
+
+        self.model_layers.append(self.drop)
+
+        decoder_layer = nn_TransformerDecoderLayer(
             d_model=n_emb,
             nhead=n_head,
             dim_feedforward=4 * n_emb,
@@ -412,9 +331,13 @@ class Transformer(tf.keras.Model):
             batch_first=True,
             norm_first=True,  # important for stability
         )
-        self.decoder = nn.TransformerDecoder(
+        self.decoder = nn_TransformerDecoder(
             decoder_layer=decoder_layer, num_layers=n_layer
         )
+
+        self.model_layers.append(self.decoder_layer)
+
+        self.model_layers.append(self.decoder)
 
         # attention mask
         if causal_attn:
@@ -422,13 +345,28 @@ class Transformer(tf.keras.Model):
             # torch.nn.Transformer uses additive mask as opposed to multiplicative mask in minGPT
             # therefore, the upper triangle should be -inf and others (including diag) should be 0.
             sz = horizon
-            mask = (torch_triu(torch_ones(sz, sz)) == 1).transpose(0, 1)
-            mask = (
-                mask.float()
-                .masked_fill(mask == 0, float("-inf"))
-                .masked_fill(mask == 1, float(0.0))
+            # mask = (torch_triu(torch_ones(sz, sz)) == 1).transpose(0, 1)
+            temp_tensor = (torch_triu(torch_ones(sz, sz)) == 1)
+            mask = torch_tensor_transpose(temp_tensor, 0, 1)
+
+            # mask = (
+            #     torch_tensor_float( mask
+            #                     #    .float() 
+            #                        )
+            #     .masked_fill(mask == 0, float("-inf"))
+            #     .masked_fill(mask == 1, float(0.0))
+            # )
+
+            temp = torch_tensor_float( mask )
+            temp = torch_tensor_masked_fill(temp, mask==0, float("-inf"))
+            temp = torch_tensor_masked_fill(temp, mask==1, float(0.0))
+            mask = ( temp                
+                # .masked_fill(mask == 0, float("-inf"))
+                # .masked_fill(mask == 1, float(0.0))
             )
+
             self.register_buffer("mask", mask)
+
 
             t, s = torch_meshgrid(
                 torch_arange(horizon), torch_arange(T_cond), indexing="ij"
@@ -436,47 +374,55 @@ class Transformer(tf.keras.Model):
             mask = t >= (
                 s - 1
             )  # add one dimension since time is the first token in cond
-            mask = (
-                mask.float()
-                .masked_fill(mask == 0, float("-inf"))
-                .masked_fill(mask == 1, float(0.0))
+
+            temp = torch_tensor_float( mask )
+            temp = torch_tensor_masked_fill(temp, mask==0, float("-inf"))
+            temp = torch_tensor_masked_fill(temp, mask==1, float(0.0))
+            mask = ( temp                
+                # .masked_fill(mask == 0, float("-inf"))
+                # .masked_fill(mask == 1, float(0.0))
             )
+
             self.register_buffer("memory_mask", mask)
         else:
             self.mask = None
             self.memory_mask = None
 
         # decoder head
-        self.ln_f = nn.LayerNorm(n_emb)
-        self.head = nn.Linear(n_emb, output_dim)
+        self.ln_f = nn_LayerNorm(n_emb)
+        self.head = nn_Linear(n_emb, output_dim)
 
         # constants
         self.T_cond = T_cond
         self.horizon = horizon
 
-        # init
-        self.apply(self._init_weights)
+        # # init
+        # self.apply(self._init_weights)
+
+        for layer in self.model_layers:
+            self._init_weights(layer)
 
     def _init_weights(self, module):
 
         print("transformer.py: Transformer._init_weights()")
 
         ignore_types = (
-            nn.Dropout,
+            nn_Dropout,
             SinusoidalPosEmb,
-            nn.TransformerEncoderLayer,
-            nn.TransformerDecoderLayer,
-            nn.TransformerEncoder,
-            nn.TransformerDecoder,
+            nn_TransformerEncoderLayer,
+            nn_TransformerDecoderLayer,
+            nn_TransformerEncoder,
+            nn_TransformerDecoder,
             nn.ModuleList,
-            nn.Mish,
+            nn_Mish,
             nn.Sequential,
         )
-        if isinstance(module, (nn.Linear, nn.Embedding)):
+
+        if isinstance(module, (nn_Linear, nn.Embedding)):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-            if isinstance(module, nn.Linear) and module.bias is not None:
+            if isinstance(module, nn_Linear) and module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
-        elif isinstance(module, nn.MultiheadAttention):
+        elif isinstance(module, nn_MultiheadAttention):
             weight_names = [
                 "in_proj_weight",
                 "q_proj_weight",
@@ -492,7 +438,7 @@ class Transformer(tf.keras.Model):
                 bias = getattr(module, name)
                 if bias is not None:
                     torch.nn.init.zeros_(bias)
-        elif isinstance(module, nn.LayerNorm):
+        elif isinstance(module, nn_LayerNorm):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
         elif isinstance(module, Transformer):
