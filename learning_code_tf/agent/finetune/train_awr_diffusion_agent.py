@@ -11,7 +11,9 @@ import os
 import pickle
 import einops
 import numpy as np
-import torch
+
+# import torch
+
 import logging
 import wandb
 from copy import deepcopy
@@ -21,6 +23,9 @@ from util.timer import Timer
 from collections import deque
 from agent.finetune.train_agent import TrainAgent
 from util.scheduler import CosineAnnealingWarmupRestarts
+
+
+from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_flatten, torch_tensor_float, torch_exp, torch_clamp, torch_mean
 
 
 def td_values(
@@ -176,9 +181,8 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 # Select action
                 with torch.no_grad():
                     cond = {
-                        "state": torch.from_numpy(prev_obs_venv["state"])
-                        .float()
-                        .to(self.device)
+                        "state": torch_tensor_float( torch_from_numpy( prev_obs_venv["state"] ) )
+                        # .to(self.device)
                     }
                     samples = (
                         self.model(
@@ -254,16 +258,25 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 reward_trajs = np.array(deepcopy(reward_buffer))
                 terminated_trajs = np.array(deepcopy(terminated_buffer))
                 obs_t = einops.rearrange(
-                    torch.from_numpy(obs_trajs).float().to(self.device),
+                    torch_tensor_float( torch_from_numpy(obs_trajs) ) 
+                    # .float().to(self.device)
+                    ,
                     "s e h d -> (s e) h d",
                 )
+
                 values_trajs = np.array(
-                    self.model.critic({"state": obs_t}).detach().cpu().numpy()
+                    # self.model.critic({"state": obs_t}).detach().cpu().numpy()
+                    self.model.critic({"state": obs_t}).cpu().numpy()
                 ).reshape(-1, self.n_envs)
+
                 td_trajs = td_values(
                     obs_trajs, reward_trajs, terminated_trajs, values_trajs
                 )
-                td_t = torch.from_numpy(td_trajs.flatten()).float().to(self.device)
+
+                # td_t = torch_from_numpy(td_trajs.flatten()).float().to(self.device)
+
+                td_t = torch_tensor_float( torch_flatten( torch_from_numpy(td_trajs) ) )
+                # .float().to(self.device)
 
                 # Update critic
                 num_batch = int(
@@ -271,9 +284,11 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 )
                 for _ in range(num_batch // self.critic_update_ratio):
                     inds = np.random.choice(len(obs_trajs), self.batch_size)
+
                     loss_critic = self.model.loss_critic(
                         {"state": obs_t[inds]}, td_t[inds]
                     )
+
                     self.critic_optimizer.zero_grad()
                     loss_critic.backward()
                     self.critic_optimizer.step()
@@ -284,12 +299,16 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 reward_trajs = np.array(deepcopy(reward_buffer))
                 terminated_trajs = np.array(deepcopy(terminated_buffer))
                 obs_t = einops.rearrange(
-                    torch.from_numpy(obs_trajs).float().to(self.device),
+                    # torch_from_numpy(obs_trajs).float().to(self.device),
+                    torch_tensor_float( torch_from_numpy(obs_trajs) ),
+                    # .to(self.device),
                     "s e h d -> (s e) h d",
                 )
                 values_trajs = np.array(
-                    self.model.critic({"state": obs_t}).detach().cpu().numpy()
+                    # self.model.critic({"state": obs_t}).detach().cpu().numpy()
+                    self.model.critic({"state": obs_t}).cpu().numpy()
                 ).reshape(-1, self.n_envs)
+
                 td_trajs = td_values(
                     obs_trajs, reward_trajs, terminated_trajs, values_trajs
                 )
@@ -314,21 +333,24 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     # Sample batch
                     inds = np.random.choice(len(obs_trajs), self.batch_size)
                     obs_b = {
-                        "state": torch.from_numpy(obs_trajs[inds])
-                        .float()
-                        .to(self.device)
+                        "state": torch_tensor_float( torch_from_numpy(obs_trajs[inds]) )
+                        # "state": torch_from_numpy(obs_trajs[inds])
+                        # .float()
+                        # .to(self.device)
                     }
                     actions_b = (
-                        torch.from_numpy(samples_trajs[inds]).float().to(self.device)
+                        torch_from_numpy(samples_trajs[inds]).float().to(self.device)
                     )
                     advantages_b = (
-                        torch.from_numpy(advantages_trajs[inds]).float().to(self.device)
+                        torch_from_numpy(advantages_trajs[inds]).float().to(self.device)
                     )
-                    advantages_b = (advantages_b - advantages_b.mean()) / (
+                    advantages_b = (advantages_b - torch_mean( advantages_b) ) / (
                         advantages_b.std() + 1e-6
                     )
-                    advantages_b_scaled = torch.exp(self.beta * advantages_b)
-                    advantages_b_scaled.clamp_(max=self.max_adv_weight)
+                    
+                    advantages_b_scaled = torch_exp(self.beta * advantages_b)
+                    
+                    advantages_b_scaled = torch_clamp( advantages_b_scaled, max=self.max_adv_weight)
 
                     # Update policy with collected trajectories
                     loss_actor = self.model.loss(
@@ -338,6 +360,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     )
                     self.actor_optimizer.zero_grad()
                     loss_actor.backward()
+
                     if self.itr >= self.n_critic_warmup_itr:
                         if self.max_grad_norm is not None:
                             torch.nn.utils.clip_grad_norm_(

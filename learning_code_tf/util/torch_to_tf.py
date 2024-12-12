@@ -797,8 +797,8 @@ def torch_exp(input):
 
 
 
-def torch_reshape():
-    pass
+def torch_reshape(input, *shape):
+    return tf.reshape(input, [*shape])
 
 
 
@@ -807,9 +807,15 @@ def torch_reshape():
 
 
 
-def torch_randint():
-    pass
-
+def torch_randint(low=0, *, high, size, dtype = None):
+    if high is None or size is None:
+        raise ValueError("Both 'high' and 'size' must be specified.")
+    
+    if dtype is None:
+        dtype = tf.int32  # Default dtype
+    
+    # Generate random integers
+    return tf.random.uniform(shape=size, minval=low, maxval=high, dtype=dtype)
 
 
 
@@ -961,42 +967,92 @@ def torch_func_functional_call(model, params, x):
 
 
 
+def torch_register_buffer(self, input, name):
+    result = tf.constant(input)
+    setattr(self, name, result)
 
 
 
+def torch_optim_Adam():
+    pass
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-def torch_nn_init_normal_():
+def torch_optim_AdamW():
     pass
 
 
 
 
-
-def torch_nn_init_zeros_():
+def torch_std():
     pass
 
 
 
 
-
-def torch_nn_init_ones_():
+def torch_nn_utils_clip_grad_norm_():
     pass
 
+
+
+
+def torch_nn_init_normal_(variable, mean=0.0, std=1.0):
+    """
+    Mimic torch.nn.init.normal_ to initialize TensorFlow variables with values drawn
+    from a normal distribution.
+    Args:
+        variable: A TensorFlow variable or tensor (tf.Variable or tf.Tensor) to initialize.
+        mean: Mean of the normal distribution.
+        std: Standard deviation of the normal distribution.
+    Returns:
+        None: The variable is updated in place.
+    """
+    if not isinstance(variable, tf.Variable):
+        raise ValueError("Input variable must be a tf.Variable.")
+
+    # Draw values from a normal distribution
+    normal_values = np.random.normal(loc=mean, scale=std, size=variable.shape)
+
+    # Assign the values to the TensorFlow variable
+    variable.assign(normal_values.astype(np.float32))
+
+
+
+
+def torch_nn_init_zeros_(tensor):
+    """
+    Mimic torch.nn.init.zeros_ to initialize TensorFlow variables with zeros.
+
+    Args:
+        variable: A TensorFlow variable or tensor (tf.Variable or tf.Tensor) to initialize.
+
+    Returns:
+        None: The variable is updated in place.
+    """
+    if not isinstance(tensor, tf.Variable):
+        raise ValueError("Input variable must be a tf.Variable.")
+    
+    # Assign zeros to the variable
+    tensor.assign(tf.zeros_like(tensor))
+
+
+
+
+def torch_nn_init_ones_(tensor):
+    """
+    Mimic torch.nn.init.ones_ to initialize TensorFlow variables with ones.
+
+    Args:
+        variable: A TensorFlow variable or tensor (tf.Variable or tf.Tensor) to initialize.
+
+    Returns:
+        None: The variable is updated in place.
+    """
+    if not isinstance(tensor, tf.Variable):
+        raise ValueError("Input variable must be a tf.Variable.")
+    
+    # Assign ones to the variable
+    tensor.assign(tf.ones_like(tensor))
 
 
 
@@ -1246,7 +1302,6 @@ def nn_Parameter(data=None, requires_grad=True):
 
 
 
-
 class nn_ModuleList(tf.keras.layers.Layer):
     def __init__(self, modules=None):
         super(nn_ModuleList, self).__init__()
@@ -1259,7 +1314,8 @@ class nn_ModuleList(tf.keras.layers.Layer):
         if not isinstance(module, tf.keras.layers.Layer):
             raise ValueError("All modules must be instances of tf.keras.layers.Layer")
         self.modules.append(module)
-        self._track_layer(module)
+        # Automatically track the layer by assigning it to an attribute
+        setattr(self, f"module_{len(self.modules) - 1}", module)
 
     def extend(self, modules):
         for module in modules:
@@ -1267,10 +1323,13 @@ class nn_ModuleList(tf.keras.layers.Layer):
 
     def call(self, x):
         outputs = []
+        output = x
         for module in self.modules:
-            outputs.append(module(x))
+            output = module(output)
+            outputs.append(output)
         return outputs
-    
+
+
     def __getitem__(self, idx):
         return self.modules[idx]
 
@@ -1288,17 +1347,81 @@ class nn_ModuleList(tf.keras.layers.Layer):
 
 
 
+# class nn_Embedding(tf.keras.layers.Layer):
+#     # torch.nn.Embedding(num_embeddings, embedding_dim, padding_idx=None, max_norm=None, 
+#     # norm_type=2.0, scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None)    
+#     def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
+#                  scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None):
+#         super(nn_Embedding, self).__init__()
+#         pass
+    
+#     def call(self, x):
+#         pass
+
+
+
 class nn_Embedding(tf.keras.layers.Layer):
-    # torch.nn.Embedding(num_embeddings, embedding_dim, padding_idx=None, max_norm=None, 
-    # norm_type=2.0, scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None)    
     def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
                  scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None):
-        super(nn_Embedding, self).__init__()
-        pass
-    
-    def call(self, x):
-        pass
+        """
+        A TensorFlow wrapper to replicate the functionality of torch.nn.Embedding.
+        
+        Args:
+            num_embeddings (int): Size of the embedding dictionary.
+            embedding_dim (int): Size of each embedding vector.
+            padding_idx (int, optional): Specifies padding index. Embeddings for this index are always zero.
+            max_norm (float, optional): If given, will renormalize embeddings to have a norm less than this value.
+            norm_type (float, optional): The p-norm to compute for the max_norm option. Default is 2.0.
+            scale_grad_by_freq (bool, optional): If True, scale gradients by inverse of word frequency.
+            sparse (bool, optional): Not used in TensorFlow, included for API compatibility.
+            _weight (np.ndarray, optional): Predefined weight matrix for embeddings.
+            _freeze (bool, optional): If True, the embedding weights are frozen and not updated during training.
+            device, dtype: Not used, included for API compatibility.
+        """
+        super(nn_Embedding, self).__init__(dtype=dtype)
+        
+        self.num_embeddings = num_embeddings
+        self.embedding_dim = embedding_dim
+        self.padding_idx = padding_idx
+        self.max_norm = max_norm
+        self.norm_type = norm_type
+        self.scale_grad_by_freq = scale_grad_by_freq
+        self._freeze = _freeze
 
+        # Initialize embedding weights
+        if _weight is not None:
+            self.embeddings = tf.Variable(_weight, trainable=not _freeze, dtype=self.dtype)
+        else:
+            initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1.0)
+            self.embeddings = tf.Variable(
+                initializer([num_embeddings, embedding_dim]), trainable=not _freeze, dtype=self.dtype
+            )
+
+        # Ensure padding_idx embeddings are always zero
+        if self.padding_idx is not None:
+            self.embeddings[self.padding_idx].assign(tf.zeros([embedding_dim], dtype=self.dtype))
+
+    def call(self, x):
+        """
+        Args:
+            x (Tensor): Indices of the embeddings to retrieve.
+        
+        Returns:
+            Tensor: The embedding vectors corresponding to input indices.
+        """
+        # Gather embeddings
+        embedded = tf.nn.embedding_lookup(self.embeddings, x)
+
+        # Apply max_norm constraint if specified
+        if self.max_norm is not None:
+            norms = tf.norm(embedded, ord=self.norm_type, axis=-1, keepdims=True)
+            embedded = tf.where(
+                norms > self.max_norm,
+                embedded * (self.max_norm / norms),
+                embedded
+            )
+
+        return embedded
 
 
 
@@ -1485,7 +1608,46 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
 
 
+def torch_tensor_cpu(tensor):
+    return 
 
+
+
+
+
+
+
+def torch_utils_data_DataLoader():
+    pass
+
+
+
+
+
+
+
+def torch_optim_AdamW():
+    return  tf.keras.optimizers.Adam(
+            learning_rate=tf.keras.optimizers.schedules.CosineDecayRestarts(
+                initial_learning_rate=cfg.train.learning_rate,
+                first_decay_steps=cfg.train.lr_scheduler.first_cycle_steps,
+                t_mul=1.0,
+                alpha=cfg.train.lr_scheduler.min_lr / cfg.train.learning_rate,
+            ),
+        )
+
+
+
+# self.critic_optimizer.zero_grad()
+# loss_critic.backward()
+# self.critic_optimizer.step()
+
+
+
+
+def torch_optimizer_step(optimizer, gradients, parameters):
+    # return optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+    return optimizer.apply_gradients(zip(gradients, parameters))
 
 
 

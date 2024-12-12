@@ -124,7 +124,7 @@ class PPODiffusion(VPGDiffusion):
             # Actions are chosen along trajectory induced by current policy.
 
             # Get counterfactual teacher actions
-            samples = self.forward(
+            samples = self.call(
                 cond=obs,
                 deterministic=False,
                 return_chain=True,
@@ -221,5 +221,29 @@ class PPODiffusion(VPGDiffusion):
             bc_loss,
             tf.reduce_mean(eta).numpy(),
         )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

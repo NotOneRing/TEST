@@ -18,6 +18,9 @@ from agent.finetune.train_agent import TrainAgent
 from util.scheduler import CosineAnnealingWarmupRestarts
 
 
+from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_tensor
+
+
 class TrainRWRDiffusionAgent(TrainAgent):
     def __init__(self, cfg):
         print("train_rwr_diffusion_agent.py: TrainRWRDiffusionAgent.__init__()")
@@ -108,8 +111,8 @@ class TrainRWRDiffusionAgent(TrainAgent):
                 # Select action
                 with torch.no_grad():
                     cond = {
-                        "state": torch.from_numpy(prev_obs_venv["state"])
-                        .float()
+                        "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
+                        # .float()
                         .to(self.device)
                     }
                     samples = (
@@ -210,17 +213,18 @@ class TrainRWRDiffusionAgent(TrainAgent):
                 # Tensorize data and put them to device
                 # k for environment step
                 obs_k = {
-                    "state": torch.tensor(
+                    "state": torch_tensor_float( torch_tensor(
                         np.concatenate(
                             [obs_traj["state"] for obs_traj in obs_trajs_split]
                         )
+                    ) 
                     )
-                    .float()
+                    # .float()
                     .to(self.device)
                 }
                 samples_k = (
-                    torch.tensor(np.concatenate(samples_trajs_split))
-                    .float()
+                    torch_tensor_float( torch_tensor(np.concatenate(samples_trajs_split)) )
+                    # .float()
                     .to(self.device)
                 )
 
@@ -229,13 +233,15 @@ class TrainRWRDiffusionAgent(TrainAgent):
                     returns_trajs_split - np.mean(returns_trajs_split)
                 ) / (returns_trajs_split.std() + 1e-3)
                 rewards_k = (
-                    torch.tensor(returns_trajs_split)
-                    .float()
+                    torch_tensor_float( torch_tensor(returns_trajs_split) )
+                    # .float()
                     .to(self.device)
                     .reshape(-1)
                 )
+
                 rewards_k_scaled = torch.exp(self.beta * rewards_k)
                 rewards_k_scaled.clamp_(max=self.max_reward_weight)
+
 
                 # Update policy and critic
                 total_steps = len(rewards_k_scaled)
@@ -258,6 +264,8 @@ class TrainRWRDiffusionAgent(TrainAgent):
                             obs_b,
                             rewards_b,
                         )
+
+
                         self.optimizer.zero_grad()
                         loss.backward()
                         if self.max_grad_norm is not None:
@@ -265,6 +273,7 @@ class TrainRWRDiffusionAgent(TrainAgent):
                                 self.model.parameters(), self.max_grad_norm
                             )
                         self.optimizer.step()
+
 
             # Update lr
             self.lr_scheduler.step()

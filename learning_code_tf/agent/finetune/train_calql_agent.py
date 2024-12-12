@@ -7,7 +7,9 @@ Does not support image observations right now.
 import os
 import pickle
 import numpy as np
-import torch
+
+# import torch
+
 import logging
 import wandb
 import hydra
@@ -17,6 +19,8 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 from util.scheduler import CosineAnnealingWarmupRestarts
+
+from util.torch_to_tf import torch_from_numpy, torch_tensor, torch_cat, torch_tensor_exp
 
 
 class TrainCalQLAgent(TrainAgent):
@@ -42,6 +46,7 @@ class TrainCalQLAgent(TrainAgent):
             lr=cfg.train.actor_lr,
             weight_decay=cfg.train.actor_weight_decay,
         )
+
         self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
             self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
@@ -51,11 +56,13 @@ class TrainCalQLAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
+
         self.critic_optimizer = torch.optim.AdamW(
             self.model.critic.parameters(),
             lr=cfg.train.critic_lr,
             weight_decay=cfg.train.critic_weight_decay,
         )
+
         self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
             self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
@@ -94,7 +101,7 @@ class TrainCalQLAgent(TrainAgent):
 
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
-        self.log_alpha = torch.tensor(np.log(init_temperature)).to(self.device)
+        self.log_alpha = torch_tensor(np.log(init_temperature)).to(self.device)
         self.log_alpha.requires_grad = True
         self.automatic_entropy_tuning = cfg.train.automatic_entropy_tuning
         self.target_entropy = cfg.train.target_entropy
@@ -193,7 +200,7 @@ class TrainCalQLAgent(TrainAgent):
                 else:
                     with torch.no_grad():
                         cond = {
-                            "state": torch.from_numpy(prev_obs_venv["state"])
+                            "state": torch_from_numpy(prev_obs_venv["state"])
                             .float()
                             .to(self.device)
                         }
@@ -327,30 +334,30 @@ class TrainCalQLAgent(TrainAgent):
                         self.batch_size // 2 if self.train_online else self.batch_size,
                     )
                     obs_b = (
-                        torch.from_numpy(obs_buffer_off[inds]).float().to(self.device)
+                        torch_from_numpy(obs_buffer_off[inds]).float().to(self.device)
                     )
                     next_obs_b = (
-                        torch.from_numpy(next_obs_buffer_off[inds])
+                        torch_from_numpy(next_obs_buffer_off[inds])
                         .float()
                         .to(self.device)
                     )
                     actions_b = (
-                        torch.from_numpy(action_buffer_off[inds])
+                        torch_from_numpy(action_buffer_off[inds])
                         .float()
                         .to(self.device)
                     )
                     rewards_b = (
-                        torch.from_numpy(reward_buffer_off[inds])
+                        torch_from_numpy(reward_buffer_off[inds])
                         .float()
                         .to(self.device)
                     )
                     terminated_b = (
-                        torch.from_numpy(terminated_buffer_off[inds])
+                        torch_from_numpy(terminated_buffer_off[inds])
                         .float()
                         .to(self.device)
                     )
                     reward_to_go_b = (
-                        torch.from_numpy(reward_to_go_buffer_off[inds])
+                        torch_from_numpy(reward_to_go_buffer_off[inds])
                         .float()
                         .to(self.device)
                     )
@@ -359,41 +366,41 @@ class TrainCalQLAgent(TrainAgent):
                     if self.train_online:
                         inds = np.random.choice(len(obs_buffer), self.batch_size // 2)
                         obs_b_on = (
-                            torch.from_numpy(obs_array[inds]).float().to(self.device)
+                            torch_from_numpy(obs_array[inds]).float().to(self.device)
                         )
                         next_obs_b_on = (
-                            torch.from_numpy(next_obs_array[inds])
+                            torch_from_numpy(next_obs_array[inds])
                             .float()
                             .to(self.device)
                         )
                         actions_b_on = (
-                            torch.from_numpy(actions_array[inds])
+                            torch_from_numpy(actions_array[inds])
                             .float()
                             .to(self.device)
                         )
                         rewards_b_on = (
-                            torch.from_numpy(rewards_array[inds])
+                            torch_from_numpy(rewards_array[inds])
                             .float()
                             .to(self.device)
                         )
                         terminated_b_on = (
-                            torch.from_numpy(terminated_array[inds])
+                            torch_from_numpy(terminated_array[inds])
                             .float()
                             .to(self.device)
                         )
                         reward_to_go_b_on = (
-                            torch.from_numpy(reward_to_go_array[inds])
+                            torch_from_numpy(reward_to_go_array[inds])
                             .float()
                             .to(self.device)
                         )
 
                         # merge offline and online data
-                        obs_b = torch.cat([obs_b, obs_b_on], dim=0)
-                        next_obs_b = torch.cat([next_obs_b, next_obs_b_on], dim=0)
-                        actions_b = torch.cat([actions_b, actions_b_on], dim=0)
-                        rewards_b = torch.cat([rewards_b, rewards_b_on], dim=0)
-                        terminated_b = torch.cat([terminated_b, terminated_b_on], dim=0)
-                        reward_to_go_b = torch.cat(
+                        obs_b = torch_cat([obs_b, obs_b_on], dim=0)
+                        next_obs_b = torch_cat([next_obs_b, next_obs_b_on], dim=0)
+                        actions_b = torch_cat([actions_b, actions_b_on], dim=0)
+                        rewards_b = torch_cat([rewards_b, rewards_b_on], dim=0)
+                        terminated_b = torch_cat([terminated_b, terminated_b_on], dim=0)
+                        reward_to_go_b = torch_cat(
                             [reward_to_go_b, reward_to_go_b_on], dim=0
                         )
 
@@ -412,7 +419,9 @@ class TrainCalQLAgent(TrainAgent):
                     )  # scale to [-1, 1]
 
                     # Update critic
-                    alpha = self.log_alpha.exp().item()
+                    # alpha = self.log_alpha.exp().item()
+                    alpha = torch_tensor_exp( self.log_alpha ).item()
+
                     loss_critic = self.model.loss_critic(
                         {"state": obs_b},
                         {"state": next_obs_b},
@@ -423,6 +432,7 @@ class TrainCalQLAgent(TrainAgent):
                         terminated_b,
                         self.gamma,
                     )
+
                     self.critic_optimizer.zero_grad()
                     loss_critic.backward()
                     self.critic_optimizer.step()
@@ -435,18 +445,24 @@ class TrainCalQLAgent(TrainAgent):
                         {"state": obs_b},
                         alpha,
                     )
+
+
                     self.actor_optimizer.zero_grad()
                     loss_actor.backward()
                     self.actor_optimizer.step()
 
+
+
                     # Update temperature parameter
                     if self.automatic_entropy_tuning:
-                        self.log_alpha_optimizer.zero_grad()
+                        
                         loss_alpha = self.model.loss_temperature(
                             {"state": obs_b},
                             self.log_alpha.exp(),  # with grad
                             self.target_entropy,
                         )
+
+                        self.log_alpha_optimizer.zero_grad()
                         loss_alpha.backward()
                         self.log_alpha_optimizer.step()
 

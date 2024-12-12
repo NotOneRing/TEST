@@ -23,6 +23,9 @@ from agent.finetune.train_agent import TrainAgent
 from util.scheduler import CosineAnnealingWarmupRestarts
 
 
+from util.torch_to_tf import torch_from_numpy, torch_ones_like, torch_zeros_like, torch_min, torch_tensor_float, torch_tensor_reshape, torch_reshape
+
+
 class TrainDIPODiffusionAgent(TrainAgent):
 
     def __init__(self, cfg):
@@ -137,8 +140,8 @@ class TrainDIPODiffusionAgent(TrainAgent):
                 # Select action
                 with torch.no_grad():
                     cond = {
-                        "state": torch.from_numpy(prev_obs_venv["state"])
-                        .float()
+                        "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
+                        # .float()
                         .to(self.device)
                     }
                     samples = (
@@ -231,18 +234,23 @@ class TrainDIPODiffusionAgent(TrainAgent):
                 # Critic learning
                 for _ in range(num_batch):
                     inds = np.random.choice(len(obs_buffer), self.batch_size)
-                    obs_b = torch.from_numpy(obs_array[inds]).float().to(self.device)
+                    obs_b = torch_tensor_float( torch_from_numpy(obs_array[inds]) )
+                                            #    .float().to(self.device)
                     next_obs_b = (
-                        torch.from_numpy(next_obs_array[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(next_obs_array[inds]) )
+                        # .float().to(self.device)
                     )
                     actions_b = (
-                        torch.from_numpy(action_array[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(action_array[inds]) )
+                        # .float().to(self.device)
                     )
                     rewards_b = (
-                        torch.from_numpy(reward_array[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(reward_array[inds]) )
+                        # .float().to(self.device)
                     )
                     terminated_b = (
-                        torch.from_numpy(terminated_array[inds]).float().to(self.device)
+                        torch_tensor_float(  torch_from_numpy(terminated_array[inds]) )
+                        # .float().to(self.device)
                     )
 
                     # Update critic
@@ -263,27 +271,34 @@ class TrainDIPODiffusionAgent(TrainAgent):
                     if self.itr >= self.n_critic_warmup_itr:
                         inds = np.random.choice(len(obs_buffer), self.batch_size)
                         obs_b = (
-                            torch.from_numpy(obs_array[inds]).float().to(self.device)
+                            torch_tensor_float( torch_from_numpy(obs_array[inds]) )
+                            # .to(self.device)
                         )
                         actions_b = (
-                            torch.from_numpy(action_array[inds]).float().to(self.device)
+                            torch_tensor_float( torch_from_numpy(action_array[inds]) )
+                            # .to(self.device)
                         )
 
                         # get Q-perturbed actions by optimizing
-                        actions_flat = actions_b.reshape(len(actions_b), -1)
+                        actions_flat = torch_reshape( actions_b, len(actions_b), -1)
+                        
                         actions_optim = torch.optim.Adam(
                             [actions_flat], lr=self.action_lr, eps=1e-5
                         )
+
                         for _ in range(self.action_gradient_steps):
+                            
                             actions_flat.requires_grad_(True)
+
                             q_values_1, q_values_2 = self.model.critic(
                                 {"state": obs_b}, actions_flat
                             )
-                            q_values = torch.min(q_values_1, q_values_2)
+                            q_values = torch_min(q_values_1, q_values_2)
                             action_opt_loss = -q_values.sum()
 
                             actions_optim.zero_grad()
-                            action_opt_loss.backward(torch.ones_like(action_opt_loss))
+
+                            action_opt_loss.backward(torch_ones_like(action_opt_loss))
                             torch.nn.utils.clip_grad_norm_(
                                 [actions_flat],
                                 max_norm=self.action_grad_norm,
@@ -305,6 +320,7 @@ class TrainDIPODiffusionAgent(TrainAgent):
                         loss_actor = self.model.loss(
                             guided_action.detach(), {"state": obs_b}
                         )
+
                         self.actor_optimizer.zero_grad()
                         loss_actor.backward()
                         if self.max_grad_norm is not None:

@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
+from util.torch_to_tf import torch_tensor, torch_from_numpy, torch_tensor_float
+
 
 class TrainSACAgent(TrainAgent):
     def __init__(self, cfg):
@@ -81,9 +83,14 @@ class TrainSACAgent(TrainAgent):
 
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
-        self.log_alpha = torch.tensor(np.log(init_temperature)).to(self.device)
+
+        # self.log_alpha = torch.tensor(np.log(init_temperature)).to(self.device)
+        self.log_alpha = torch_tensor(np.log(init_temperature))
+        # .to(self.device)
+
         self.log_alpha.requires_grad = True
         self.target_entropy = cfg.train.target_entropy
+        
         self.log_alpha_optimizer = torch.optim.Adam(
             [self.log_alpha],
             lr=cfg.train.critic_lr,
@@ -148,8 +155,8 @@ class TrainSACAgent(TrainAgent):
                 else:
                     with torch.no_grad():
                         cond = {
-                            "state": torch.from_numpy(prev_obs_venv["state"])
-                            .float()
+                            "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
+                            # .float()
                             .to(self.device)
                         }
                         samples = (
@@ -239,28 +246,28 @@ class TrainSACAgent(TrainAgent):
             ):
                 inds = np.random.choice(len(obs_buffer), self.batch_size, replace=False)
                 obs_b = (
-                    torch.from_numpy(np.array([obs_buffer[i] for i in inds]))
-                    .float()
+                    torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
+                    # .float()
                     .to(self.device)
                 )
                 next_obs_b = (
-                    torch.from_numpy(np.array([next_obs_buffer[i] for i in inds]))
-                    .float()
+                    torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
+                    # .float()
                     .to(self.device)
                 )
                 actions_b = (
-                    torch.from_numpy(np.array([action_buffer[i] for i in inds]))
-                    .float()
+                    torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
+                    # .float()
                     .to(self.device)
                 )
                 rewards_b = (
-                    torch.from_numpy(np.array([reward_buffer[i] for i in inds]))
-                    .float()
+                    torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
+                    # .float()
                     .to(self.device)
                 )
                 terminated_b = (
-                    torch.from_numpy(np.array([terminated_buffer[i] for i in inds]))
-                    .float()
+                    torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
+                    # .float()
                     .to(self.device)
                 )
 
@@ -275,6 +282,7 @@ class TrainSACAgent(TrainAgent):
                     self.gamma,
                     alpha,
                 )
+
                 self.critic_optimizer.zero_grad()
                 loss_critic.backward()
                 self.critic_optimizer.step()
@@ -290,17 +298,19 @@ class TrainSACAgent(TrainAgent):
                             {"state": obs_b},
                             alpha,
                         )
+
                         self.actor_optimizer.zero_grad()
                         loss_actor.backward()
                         self.actor_optimizer.step()
 
                         # Update temperature parameter
-                        self.log_alpha_optimizer.zero_grad()
                         loss_alpha = self.model.loss_temperature(
                             {"state": obs_b},
                             self.log_alpha.exp(),  # with grad
                             self.target_entropy,
                         )
+
+                        self.log_alpha_optimizer.zero_grad()
                         loss_alpha.backward()
                         self.log_alpha_optimizer.step()
 

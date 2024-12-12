@@ -18,14 +18,15 @@ logger = logging.getLogger(__name__)
 
 
 from util.torch_to_tf import torch_zeros, torch_unsqueeze, torch_ones, torch_triu, torch_arange, torch_tensor_expand,\
-torch_meshgrid, torch_view, torch_tensor_masked_fill
+torch_meshgrid, torch_view, torch_tensor_masked_fill, torch_tensor_float, torch_tensor_transpose, torch_register_buffer
 
 
 
 from util.torch_to_tf import nn_TransformerDecoder, nn_TransformerDecoderLayer, nn_TransformerEncoder, nn_TransformerEncoderLayer, nn_Mish,\
-nn_MultiheadAttention, nn_LayerNorm, nn_Linear, nn_Dropout, torch_tensor_float, torch_tensor_transpose
+nn_MultiheadAttention, nn_LayerNorm, nn_Linear, nn_Dropout, nn_Parameter, nn_ModuleList, nn_Sequential, nn_Embedding
 
 
+from util.torch_to_tf import torch_nn_init_normal_, torch_nn_init_ones_, torch_nn_init_zeros_
 
 
 
@@ -314,7 +315,7 @@ class Transformer(tf.keras.Model):
         self.model_layers.append(self.encoder)
 
         # decoder
-        self.pos_emb = nn.Parameter(torch_zeros(1, horizon, n_emb))
+        self.pos_emb = nn_Parameter(torch_zeros(1, horizon, n_emb))
 
         self.model_layers.append(self.pos_emb)
 
@@ -365,7 +366,8 @@ class Transformer(tf.keras.Model):
                 # .masked_fill(mask == 1, float(0.0))
             )
 
-            self.register_buffer("mask", mask)
+            # self.register_buffer("mask", mask)
+            torch_register_buffer(self, "mask", mask)
 
 
             t, s = torch_meshgrid(
@@ -383,7 +385,9 @@ class Transformer(tf.keras.Model):
                 # .masked_fill(mask == 1, float(0.0))
             )
 
-            self.register_buffer("memory_mask", mask)
+            # self.register_buffer("memory_mask", mask)
+            torch_register_buffer(self, "memory_mask", mask)
+
         else:
             self.mask = None
             self.memory_mask = None
@@ -413,15 +417,16 @@ class Transformer(tf.keras.Model):
             nn_TransformerDecoderLayer,
             nn_TransformerEncoder,
             nn_TransformerDecoder,
-            nn.ModuleList,
+            nn_ModuleList,
             nn_Mish,
-            nn.Sequential,
+            nn_Sequential,
         )
 
-        if isinstance(module, (nn_Linear, nn.Embedding)):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+        if isinstance(module, (nn_Linear, nn_Embedding)):
+            # torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            torch_nn_init_normal_(module.kernel, mean=0.0, std=0.02)
             if isinstance(module, nn_Linear) and module.bias is not None:
-                torch.nn.init.zeros_(module.bias)
+                torch_nn_init_zeros_(module.bias)
         elif isinstance(module, nn_MultiheadAttention):
             weight_names = [
                 "in_proj_weight",
@@ -432,19 +437,20 @@ class Transformer(tf.keras.Model):
             for name in weight_names:
                 weight = getattr(module, name)
                 if weight is not None:
-                    torch.nn.init.normal_(weight, mean=0.0, std=0.02)
+                    torch_nn_init_normal_(weight, mean=0.0, std=0.02)
             bias_names = ["in_proj_bias", "bias_k", "bias_v"]
             for name in bias_names:
                 bias = getattr(module, name)
                 if bias is not None:
-                    torch.nn.init.zeros_(bias)
+                    torch_nn_init_zeros_(bias)
         elif isinstance(module, nn_LayerNorm):
-            torch.nn.init.zeros_(module.bias)
-            torch.nn.init.ones_(module.weight)
+            torch_nn_init_zeros_(module.bias)
+            # torch.nn.init.ones_(module.weight)
+            torch_nn_init_ones_(module.kernel)
         elif isinstance(module, Transformer):
-            torch.nn.init.normal_(module.pos_emb, mean=0.0, std=0.02)
+            torch_nn_init_normal_(module.pos_emb, mean=0.0, std=0.02)
             if module.cond_obs_emb is not None:
-                torch.nn.init.normal_(module.cond_pos_emb, mean=0.0, std=0.02)
+                torch_nn_init_normal_(module.cond_pos_emb, mean=0.0, std=0.02)
         elif isinstance(module, ignore_types):
             # no param
             pass
@@ -463,7 +469,7 @@ class Transformer(tf.keras.Model):
         output: (B, T, output_dim)
         """
 
-        print("transformer.py: Transformer.forward()")
+        print("transformer.py: Transformer.call()")
 
         # encoder
         cond_embeddings = self.cond_obs_emb(cond)  # (B,To,n_emb)

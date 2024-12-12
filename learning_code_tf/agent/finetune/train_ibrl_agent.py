@@ -7,7 +7,9 @@ Does not support image observations right now.
 import os
 import pickle
 import numpy as np
-import torch
+
+# import torch
+
 import logging
 import wandb
 import hydra
@@ -38,6 +40,7 @@ class TrainIBRLAgent(TrainAgent):
             lr=cfg.train.actor_lr,
             weight_decay=cfg.train.actor_weight_decay,
         )
+        
         self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
             self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
@@ -103,6 +106,7 @@ class TrainIBRLAgent(TrainAgent):
             actions, states_and_next, rewards, terminated = batch
             states = states_and_next["state"]
             next_states = states_and_next["next_state"]
+            
             obs_buffer.extend(states.cpu().numpy())
             next_obs_buffer.extend(next_states.cpu().numpy())
             action_buffer.extend(actions.cpu().numpy())
