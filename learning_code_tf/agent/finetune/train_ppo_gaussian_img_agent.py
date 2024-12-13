@@ -348,6 +348,8 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                             self.critic_optimizer.step()
                             self.actor_optimizer.zero_grad()
                             self.critic_optimizer.zero_grad()
+
+
                             log.info(f"run grad update at batch {batch}")
                             log.info(
                                 f"approx_kl: {approx_kl}, update_epoch: {update_epoch}, num_batch: {num_batch}"
@@ -439,6 +441,30 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -142,14 +142,26 @@ def torch_flatten(input_tensor, start_dim = 0, end_dim = -1):
 
 
 
-
-def tf_arange(start, end, step, dtype):
+def torch_arange(start, end, step, dtype):
+    # torch.arange(start=0, end, step=1, *, 
+    # out=None, dtype=None, layout=torch.strided, 
+    # device=None, requires_grad=False)
     return tf.range(start=start, limit=end, delta=step, dtype=dtype)
 
 
 
 
-# import torch
+
+def torch_abs(input, *, out=None):
+    out = tf.abs(input)
+    return out
+
+
+
+def torch_square(input, *, out=None):
+    out = tf.square(input)
+    return out
+
 
 
 class Normal:
@@ -522,8 +534,15 @@ def torch_where(index_tensor, input_tensor, replace_value):
 
 
 def torch_tensor(input_numpy_array):
+    assert isinstance(input_numpy_array, np.ndarray), "torch_tensor input type wrong"
     return tf.convert_to_tensor(input_numpy_array)
 
+
+
+def torch_clip(input, min = float('-inf'), max = float('inf'), out=None):
+    #alias for torch_clamp
+    out = tf.clip_by_value(input, min, max)
+    return out
 
 
 
@@ -531,6 +550,10 @@ def torch_clamp(input, min = float('-inf'), max = float('inf'), out=None):
     out = tf.clip_by_value(input, min, max)
     return out
 
+
+
+def torch_tensor_clamp_(input, min = float('-inf'), max = float('inf')):
+    input = tf.clip_by_value(input, min, max)
 
 
 # torch.zeros(size, dtype=torch.float32, device=None, requires_grad=False)
@@ -768,6 +791,28 @@ def torch_randperm(n):
 
 
 
+def torch_randn_like(input, *, dtype=None
+                     # , layout=None 
+                     # , device=None
+                     # , requires_grad=False
+                     # , memory_format=torch.preserve_format
+                     ):
+    # wrapper for torch.randn_like(x)
+    # Returns a tensor with the same size as input 
+    # that is filled with random numbers from a normal
+    # distribution with mean 0 and variance 1. 
+    # Please refer to torch.randn() for the 
+    # sampling process of complex dtypes. 
+    # torch.randn_like(input) is equivalent 
+    # to torch.randn(input.size(), dtype=input.dtype, 
+    # layout=input.layout, device=input.device).
+
+    shape = input.shape.as_list()
+
+    if input.dtype.is_floating:
+        return torch_randn(*shape)
+    else:
+        raise RuntimeError("'normal_kernel_cpu' not implemented for 'Long' type.")
 
 
 
@@ -967,31 +1012,17 @@ def torch_func_functional_call(model, params, x):
 
 
 
-def torch_register_buffer(self, input, name):
-    result = tf.constant(input)
-    setattr(self, name, result)
-
-
-
-def torch_optim_Adam():
-    pass
-
-
-
-def torch_optim_AdamW():
-    pass
 
 
 
 
-def torch_std():
-    pass
 
 
 
 
-def torch_nn_utils_clip_grad_norm_():
-    pass
+
+
+
 
 
 
@@ -1608,8 +1639,13 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
 
 
-def torch_tensor_cpu(tensor):
-    return 
+
+
+
+
+def torch_tensor_detach(tensor):
+    tensor = tf.stop_gradient(tensor)
+    return tensor
 
 
 
@@ -1617,7 +1653,34 @@ def torch_tensor_cpu(tensor):
 
 
 
-def torch_utils_data_DataLoader():
+def torch_repeat():
+    pass
+
+
+
+
+
+# tf.keras.optimizers.Adam(
+#     learning_rate=0.001,
+#     beta_1=0.9,
+#     beta_2=0.999,
+#     epsilon=1e-07,
+#     amsgrad=False,
+#     weight_decay=None,
+#     clipnorm=None,
+#     clipvalue=None,
+#     global_clipnorm=None,
+#     use_ema=False,
+#     ema_momentum=0.99,
+#     ema_overwrite_frequency=None,
+#     loss_scale_factor=None,
+#     gradient_accumulation_steps=None,
+#     name='adam',
+#     **kwargs
+# )
+def torch_optim_Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, 
+                     amsgrad=False, *, foreach=None, maximize=False, capturable=False, 
+                     differentiable=False, fused=None):
     pass
 
 
@@ -1626,10 +1689,15 @@ def torch_utils_data_DataLoader():
 
 
 
-def torch_optim_AdamW():
+
+
+def torch_optim_AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, 
+                      amsgrad=False, *, maximize=False, foreach=None, capturable=False, 
+                      differentiable=False, fused=None):
+    
     return  tf.keras.optimizers.Adam(
             learning_rate=tf.keras.optimizers.schedules.CosineDecayRestarts(
-                initial_learning_rate=cfg.train.learning_rate,
+                initial_learning_rate=lr,
                 first_decay_steps=cfg.train.lr_scheduler.first_cycle_steps,
                 t_mul=1.0,
                 alpha=cfg.train.lr_scheduler.min_lr / cfg.train.learning_rate,
@@ -1638,9 +1706,103 @@ def torch_optim_AdamW():
 
 
 
-# self.critic_optimizer.zero_grad()
-# loss_critic.backward()
-# self.critic_optimizer.step()
+
+
+
+
+
+def torch_repeat():
+    pass
+
+
+
+
+
+
+
+def torch_std(input, dim=None, *, correction=1, keepdim=False, out=None):
+    pass
+
+
+
+
+
+
+
+
+def torch_nn_utils_clip_grad_norm_():
+    # torch.nn.utils.clip_grad_norm_
+    pass
+
+
+
+
+
+
+
+
+def torch_utils_data_DataLoader():
+    # torch.utils.data.DataLoader
+    pass
+
+
+
+
+
+
+
+def torch_rand():
+    # torch.rand
+    pass
+
+
+
+
+
+
+def torch_tensor_to():
+    pass
+
+
+
+
+
+
+
+
+
+def torch_tensor_requires_grad_():
+    # torch.tensor.requires_grad_
+    pass
+
+
+
+
+
+def torch_unravel_index():
+    pass
+
+
+
+
+
+def torch_split():
+    pass
+
+
+
+
+
+
+def with_torch_no_grad():
+    # with torch.no_grad():
+    pass
+
+
+
+
+
+
 
 
 
@@ -1648,6 +1810,20 @@ def torch_optim_AdamW():
 def torch_optimizer_step(optimizer, gradients, parameters):
     # return optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
     return optimizer.apply_gradients(zip(gradients, parameters))
+# self.critic_optimizer.zero_grad()
+# loss_critic.backward()
+# self.critic_optimizer.step()
+
+
+
+
+
+
+
+
+def torch_register_buffer(self, input, name):
+    result = tf.constant(input)
+    setattr(self, name, result)
 
 
 
@@ -1658,36 +1834,21 @@ def torch_optimizer_step(optimizer, gradients, parameters):
 
 
 
+def torch_tensor_cpu(tensor):
+    return 
 
 
 
 
 
+def torch_save():
+    # torch.save
+    pass
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def torch_load():
+    # torch.load()
+    pass

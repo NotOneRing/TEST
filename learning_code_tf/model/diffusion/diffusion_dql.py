@@ -15,6 +15,13 @@ from model.diffusion.diffusion import DiffusionModel
 from model.diffusion.sampling import make_timesteps
 
 
+from util.torch_to_tf import torch_tensor_detach, \
+    torch_mean, torch_tensor_view, torch_min, torch_abs, \
+        torch_square, torch_randn, torch_exp, torch_clip,\
+        torch_zeros_like, 
+
+
+
 class DQLDiffusion(DiffusionModel):
 
     def __init__(
@@ -57,22 +64,22 @@ class DQLDiffusion(DiffusionModel):
             deterministic=False,
         )  # forward() has no gradient, which is desired here.
         next_q1, next_q2 = self.critic_target(next_obs, next_actions)
-        next_q = tf.minimum(next_q1, next_q2)
+        next_q = torch_min(next_q1, next_q2)
 
         # terminal state mask
         mask = 1 - terminated
 
         # flatten
-        rewards = tf.reshape(rewards, [-1])
-        next_q = tf.reshape(next_q, [-1])
-        mask = tf.reshape(mask, [-1])
+        rewards = torch_tensor_view(rewards, -1)
+        next_q = torch_tensor_view(next_q, -1)
+        mask = torch_tensor_view(mask, -1)
 
         # target value
         target_q = rewards + gamma * next_q * mask
 
         # Update critic
-        loss_critic = tf.reduce_mean(tf.square(current_q1 - target_q)) + tf.reduce_mean(
-            tf.square(current_q2 - target_q)
+        loss_critic = torch_mean(torch_square(current_q1 - target_q)) + torch_mean(
+            (current_q2 - target_q)**2
         )
         return loss_critic
 
@@ -89,10 +96,10 @@ class DQLDiffusion(DiffusionModel):
         q1, q2 = self.critic(obs, action_new)
         bc_loss = self.loss(action_new, obs)
         if np.random.uniform() > 0.5:
-            q_loss = -tf.reduce_mean(q1) / tf.reduce_mean(tf.abs(q2))
+            q_loss = -torch_mean(q1) / torch_tensor_detach( torch_mean(torch_abs(q2)) )
 
         else:
-            q_loss = -tf.reduce_mean(q2) / tf.reduce_mean(tf.abs(q1))
+            q_loss = -torch_mean(q2) / torch_tensor_detach( torch_mean(torch_abs(q1)) )
         actor_loss = bc_loss + eta * q_loss
         return actor_loss
 
@@ -123,7 +130,12 @@ class DQLDiffusion(DiffusionModel):
         B = tf.shape(cond["state"])[0]
 
         # Loop
-        x = tf.random.normal([B, self.horizon_steps, self.action_dim], dtype=tf.float32)
+        # x = tf.random.normal([B, self.horizon_steps, self.action_dim], dtype=tf.float32)
+
+        x = torch_randn((B, self.horizon_steps, self.action_dim)
+                        # , device=device
+                        )
+
         t_all = list(reversed(range(self.denoising_steps)))
         for i, t in enumerate(t_all):
             t_b = make_timesteps(B, t)
@@ -132,15 +144,15 @@ class DQLDiffusion(DiffusionModel):
                 t=t_b,
                 cond=cond,
             )
-            std = tf.exp(0.5 * logvar)
+            std = torch_exp(0.5 * logvar)
 
             # Determine the noise level
             if deterministic and t == 0:
-                std = tf.zeros_like(std)
+                std = torch_zeros_like(std)
             elif deterministic:
-                std = tf.clip_by_value(std, 1e-3, float('inf'))
+                std = torch_clip(std, min = 1e-3)
             else:
-                std = tf.clip_by_value(std, self.min_sampling_denoising_std, float('inf'))
+                std = torch_clip(std, self.min_sampling_denoising_std)
             
             noise = tf.random.normal(tf.shape(x), dtype=tf.float32)
             noise = tf.clip_by_value(noise, -self.randn_clip_value, self.randn_clip_value)

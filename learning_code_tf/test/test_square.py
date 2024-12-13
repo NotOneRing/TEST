@@ -7,8 +7,43 @@ print(var)  # 输出: tensor([1., 4., 9.])
 
 import tensorflow as tf
 
+from util.torch_to_tf import torch_square
+
 sigma = tf.constant([1.0, 2.0, 3.0])
-var = tf.square(sigma)  # 逐元素平方
+var = torch_square(sigma)  # 逐元素平方
 print(var)  # 输出: [1. 4. 9.]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

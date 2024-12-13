@@ -12,7 +12,6 @@ import pickle
 import einops
 import numpy as np
 
-# import torch
 
 import logging
 import wandb
@@ -356,7 +355,8 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     loss_actor = self.model.loss(
                         actions_b,
                         obs_b,
-                        advantages_b_scaled.detach(),
+                        advantages_b_scaled.detach()
+                        ,
                     )
                     self.actor_optimizer.zero_grad()
                     loss_actor.backward()

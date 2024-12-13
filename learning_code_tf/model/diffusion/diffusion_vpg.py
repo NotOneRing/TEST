@@ -24,7 +24,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer
 import numpy as np
 
-from util.torch_to_tf import torch_flatten, tf_arange, Normal
+from util.torch_to_tf import torch_flatten, torch_arange, Normal
 
 
 class VPGDiffusion(DiffusionModel):
@@ -408,7 +408,7 @@ class VPGDiffusion(DiffusionModel):
         if self.use_ddim:
             t_single = self.ddim_t[-self.ft_denoising_steps :]
         else:
-            t_single = tf_arange(
+            t_single = torch_arange(
                 start=self.ft_denoising_steps - 1,
                 end=-1,
                 step=-1,
@@ -419,7 +419,7 @@ class VPGDiffusion(DiffusionModel):
         t_all = torch_flatten(t_all)
 
         if self.use_ddim:
-            indices_single = tf_arange(
+            indices_single = torch_arange(
                 start=self.ddim_steps - self.ft_denoising_steps,
                 end=self.ddim_steps,
                 device=self.device,
@@ -491,7 +491,7 @@ class VPGDiffusion(DiffusionModel):
         if self.use_ddim:
             t_single = self.ddim_t[-self.ft_denoising_steps :]
         else:
-            t_single = tf_arange(
+            t_single = torch_arange(
                 start=self.ft_denoising_steps - 1,
                 end=-1,
                 step=-1,
@@ -500,7 +500,7 @@ class VPGDiffusion(DiffusionModel):
             # 4,3,2,1,0,4,3,2,1,0,...,4,3,2,1,0
         t_all = t_single[denoising_inds]
         if self.use_ddim:
-            ddim_indices_single = tf_arange(
+            ddim_indices_single = torch_arange(
                 start=self.ddim_steps - self.ft_denoising_steps,
                 end=self.ddim_steps,
                 device=self.device,
