@@ -635,7 +635,25 @@ def torch_argmax(input, dim=None):
 
 
 def torch_tensor_view(input, *args):
-    return tf.reshape(input, [*args])
+    if isinstance(args[0], (tuple, list)):
+        result = tf.reshape(input, args[0] )
+    else:
+        result = tf.reshape(input, [*args] )
+
+    return result
+
+
+
+
+
+
+def torch_reshape(input, *shape):
+    if isinstance(shape[0], (tuple, list)):
+        result = tf.reshape(input, shape[0] )
+    else:
+        result = tf.reshape(input, [*shape] )
+
+    return result
 
 
 
@@ -839,11 +857,6 @@ def torch_exp(input):
 
 
 
-
-
-
-def torch_reshape(input, *shape):
-    return tf.reshape(input, [*shape])
 
 
 
@@ -1205,6 +1218,22 @@ class nn_Mish(tf.keras.layers.Layer):
 
 
 
+# Define TensorFlow nn.ReLU wrapper
+class nn_ReLU(tf.keras.layers.Layer):
+    def __init__(self):
+        super(nn_ReLU, self).__init__()
+        self.relu = tf.keras.layers.ReLU()
+
+    def call(self, x):
+        return self.relu(x)
+
+
+
+
+
+
+
+
 
 
 class nn_Dropout(tf.keras.layers.Layer):
@@ -1219,6 +1248,16 @@ class nn_Dropout(tf.keras.layers.Layer):
 
     def call(self, net_params):
         return self.model(net_params)
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1257,6 +1296,43 @@ class nn_Linear(tf.keras.layers.Layer):
 
     def call(self, x):
         return self.model(x)
+
+
+    # def __getattr__(self, name):
+    #     if hasattr(self.model, name):
+    #         return getattr(self.model, name)
+    #     else:
+    #         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    # def __getattr__(self, name):
+    #     # 先检查当前对象的属性，避免无限递归
+    #     if name in self.__dict__:
+    #         return self.__dict__[name]
+    #     # 再检查 model 的属性
+    #     if hasattr(self.model, name):
+    #         return getattr(self.model, name)
+    #     # 如果都没有，抛出 AttributeError
+    #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+
+    # def __getattr__(self, name):
+    #     # 避免递归调用：直接访问 __dict__ 或 object.__getattribute__
+    #     try:
+    #         return object.__getattribute__(self, name)
+    #     except AttributeError:
+    #         pass
+
+    #     # 检查是否为 model 的属性
+    #     model = object.__getattribute__(self, "model")
+
+    #     if hasattr(model, name):
+    #         return getattr(model, name)
+
+    #     # 如果仍然找不到，抛出异常
+    #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+
+
 
 
 
@@ -1312,22 +1388,39 @@ class nn_LayerNorm(tf.keras.layers.Layer):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def nn_Parameter(data=None, requires_grad=True):
     if data is None:
         raise ValueError("data cannot be None. Please provide a tensor value.")
     return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+
+
+
+
+
+
+
+
+
+
+# Define TensorFlow nn.Sequential wrapper
+class nn_Sequential(tf.keras.layers.Layer):
+    def __init__(self, *args):
+        super(nn_Sequential, self).__init__()
+        self.model_list = []
+        for module in args:
+            self.model_list.append(module)
+
+    def call(self, x):
+        output = x
+        for module in self.model_list:
+            output = module(output)
+        return output
+    
+    def __getitem__(self, id):
+        print("getitem: len(self.model_list) = ", len(self.model_list))
+        return self.model_list[id]
+
+
 
 
 
@@ -1454,28 +1547,6 @@ class nn_Embedding(tf.keras.layers.Layer):
 
         return embedded
 
-
-
-
-
-
-
-
-
-
-class nn_Sequential(tf.keras.layers.Layer):
-    def __init__(self, *args):
-        super(nn_Sequential, self).__init__()
-        self.model_list = []
-        for module in args:
-            self.model_list.append(module)
-        pass
-    
-    def call(self, x):
-        output = x
-        for module in self.model_list:
-            output = module(output)
-        return output
 
 
 
@@ -1637,12 +1708,6 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
 
 
-
-
-
-
-
-
 def torch_tensor_detach(tensor):
     tensor = tf.stop_gradient(tensor)
     return tensor
@@ -1653,8 +1718,174 @@ def torch_tensor_detach(tensor):
 
 
 
-def torch_repeat():
-    pass
+
+
+# 定义自定义 torch_std 函数
+def torch_std(input, dim=None, *, correction=1, keepdim=False, out=None):
+    assert out == None, "Tensor is immutable in TensorFlow, but mutable in PyTorch"
+
+    # 计算均值
+    mean = tf.reduce_mean(input, axis=dim, keepdims=True)
+
+    # 计算方差
+    variance = tf.reduce_mean(tf.square(input - mean), axis=dim, keepdims=keepdim)
+
+    # 应用 Bessel's 修正
+    if correction != 0:
+        count = tf.shape(input)[dim] if dim is not None else tf.size(input)
+        count = tf.cast(count, tf.float32)
+        variance *= count / (count - correction)
+
+    return tf.sqrt(variance)
+
+
+
+
+
+
+
+
+
+
+def torch_tensor_repeat(tensor, *repeats):
+    """
+    Mimics the behavior of PyTorch's torch.Tensor.repeat in TensorFlow.
+
+    Args:
+        tensor (tf.Tensor): The input tensor.
+        *repeats: The number of times to repeat along each dimension.
+
+    Returns:
+        tf.Tensor: The repeated tensor.
+    """
+    if not isinstance(tensor, tf.Tensor):
+        raise TypeError("Input must be a TensorFlow tensor.")
+    if not repeats:
+        raise ValueError("At least one repeat value must be provided.")
+
+    # Compute the target shape for tiling
+    tensor_shape = tf.shape(tensor)
+    repeats = tf.constant(repeats, dtype=tf.int32)
+
+    # repeats_dim = len(repeats)
+
+    if isinstance(repeats[0], (tuple, list)):
+        repeat_shape = repeats[0]
+    else:
+        repeat_shape = [*repeats]
+
+    tensor_dim = len(tensor_shape)
+    repeat_dim = len(repeat_shape)
+
+    temp_tensor = tensor
+
+    if repeat_dim > tensor_dim:
+        tensor_shape = [1] * (repeat_dim - tensor_dim) + tensor_shape.numpy().tolist()
+        temp_tensor = tf.reshape(tensor, tensor_shape)
+
+    # Perform tiling
+    repeated_tensor = tf.tile(temp_tensor, repeats)
+    return repeated_tensor
+
+
+
+
+
+
+
+
+
+
+
+
+
+def torch_unravel_index(indices, shape):
+    """
+    TensorFlow equivalent of torch.unravel_index.
+
+    Args:
+        indices (Tensor): 1D tensor of linear indices.
+        shape (tuple or list): Shape of the target tensor.
+
+    Returns:
+        tuple: A tuple of Tensors representing the unraveled indices for each dimension.
+    """
+    # indices = tf.convert_to_tensor(indices, dtype=tf.int32)
+    # shape = tf.convert_to_tensor(shape, dtype=tf.int32)
+
+    unravel_indices = []
+    for dim in reversed(shape):
+        unravel_indices.append(indices % dim)
+        indices = indices // dim
+
+    return tuple(reversed(unravel_indices))
+
+
+
+
+
+
+
+
+
+def torch_register_buffer(self, input, name):
+    result = tf.constant(input)
+    setattr(self, name, result)
+
+
+
+
+
+
+
+
+# TensorFlow wrap of torch.split
+def torch_split(tensor, split_size_or_sections, dim=0):
+    # torch.split(tensor, split_size_or_sections, dim=0)
+    # tf.split(value, num_or_size_splits, axis=0, num=None, name='split')
+    final_num_or_size_splits_list = []
+
+    if not isinstance(split_size_or_sections, (tuple, list)):
+        tensor_dim = tensor.shape[dim]
+        import math
+        total_splits_number = math.ceil(tensor_dim / split_size_or_sections)
+        residual = tensor_dim % split_size_or_sections
+        
+        if residual > 0:
+            for i in range(total_splits_number - 1):
+                final_num_or_size_splits_list.append(split_size_or_sections)
+
+            final_num_or_size_splits_list.append(residual)
+        else:
+            for i in range(total_splits_number):
+                final_num_or_size_splits_list.append(split_size_or_sections)
+    else:
+        final_num_or_size_splits_list = split_size_or_sections
+
+    return tf.split(value=tensor, num_or_size_splits=final_num_or_size_splits_list, axis=dim)
+
+
+
+
+
+
+
+
+def torch_rand(*size, dtype=tf.dtypes.float32):
+    # torch.rand(*size, *, generator=None, out=None, dtype=None, 
+    # layout=torch.strided, device=None, requires_grad=False, pin_memory=False)
+    # tf.random.uniform(
+    #     shape,
+    #     minval=0,
+    #     maxval=None,
+    #     dtype=tf.dtypes.float32,
+    #     seed=None,
+    #     name=None
+    # )
+    return tf.random.uniform(shape=size, dtype=dtype)
+
+
+
 
 
 
@@ -1678,32 +1909,39 @@ def torch_repeat():
 #     name='adam',
 #     **kwargs
 # )
-def torch_optim_Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, 
-                     amsgrad=False, *, foreach=None, maximize=False, capturable=False, 
-                     differentiable=False, fused=None):
-    pass
+# torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False, 
+# *, foreach=None, maximize=False, capturable=False, differentiable=False, fused=None)
+class torch_optim_Adam:
+    def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
+        """
+        A TensorFlow implementation of torch.optim.Adam.
 
-
-
-
-
-
-
-
-
-def torch_optim_AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, 
-                      amsgrad=False, *, maximize=False, foreach=None, capturable=False, 
-                      differentiable=False, fused=None):
-    
-    return  tf.keras.optimizers.Adam(
-            learning_rate=tf.keras.optimizers.schedules.CosineDecayRestarts(
-                initial_learning_rate=lr,
-                first_decay_steps=cfg.train.lr_scheduler.first_cycle_steps,
-                t_mul=1.0,
-                alpha=cfg.train.lr_scheduler.min_lr / cfg.train.learning_rate,
-            ),
+        Args:
+            params (list): List of TensorFlow variables to optimize.
+            lr (float): Learning rate.
+            betas (tuple): Coefficients used for computing running averages of gradient and its square.
+            eps (float): Term added to the denominator to improve numerical stability.
+            weight_decay (float): Weight decay (L2 penalty).
+        """
+        self.params = params
+        self.lr = lr
+        self.betas = betas
+        self.eps = eps
+        self.weight_decay = weight_decay
+        
+        # TensorFlow Adam optimizer
+        self.optimizer = tf.keras.optimizers.Adam(
+            learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps
         )
 
+    def zero_grad(self):
+        """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
+        pass
+
+
+    def step(self, gradients):
+        """Apply gradients to parameters."""
+        self.optimizer.apply_gradients(zip(gradients, self.params))
 
 
 
@@ -1711,17 +1949,39 @@ def torch_optim_AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_de
 
 
 
-def torch_repeat():
-    pass
 
+# torch.optim.AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False, 
+# *, maximize=False, foreach=None, capturable=False, differentiable=False, fused=None)
+class torch_optim_AdamW:
+    def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
+        """
+        A TensorFlow implementation of torch.optim.AdamW.
 
+        Args:
+            params (list): List of TensorFlow variables to optimize.
+            lr (float): Learning rate.
+            betas (tuple): Coefficients used for computing running averages of gradient and its square.
+            eps (float): Term added to the denominator to improve numerical stability.
+            weight_decay (float): Weight decay (L2 penalty).
+        """
+        self.params = params
+        self.lr = lr
+        self.betas = betas
+        self.eps = eps
+        self.weight_decay = weight_decay
 
+        # TensorFlow AdamW optimizer
+        self.optimizer = tf.keras.optimizers.experimental.AdamW(
+            learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
+        )
 
+    def zero_grad(self):
+        """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
+        pass
 
-
-
-def torch_std(input, dim=None, *, correction=1, keepdim=False, out=None):
-    pass
+    def step(self, gradients):
+        """Apply gradients to parameters."""
+        self.optimizer.apply_gradients(zip(gradients, self.params))
 
 
 
@@ -1741,27 +2001,18 @@ def torch_nn_utils_clip_grad_norm_():
 
 
 
+
+
+
+
+
+
 def torch_utils_data_DataLoader():
     # torch.utils.data.DataLoader
     pass
 
 
 
-
-
-
-
-def torch_rand():
-    # torch.rand
-    pass
-
-
-
-
-
-
-def torch_tensor_to():
-    pass
 
 
 
@@ -1779,15 +2030,6 @@ def torch_tensor_requires_grad_():
 
 
 
-def torch_unravel_index():
-    pass
-
-
-
-
-
-def torch_split():
-    pass
 
 
 
@@ -1807,24 +2049,9 @@ def with_torch_no_grad():
 
 
 
-def torch_optimizer_step(optimizer, gradients, parameters):
-    # return optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
-    return optimizer.apply_gradients(zip(gradients, parameters))
-# self.critic_optimizer.zero_grad()
-# loss_critic.backward()
-# self.critic_optimizer.step()
 
-
-
-
-
-
-
-
-def torch_register_buffer(self, input, name):
-    result = tf.constant(input)
-    setattr(self, name, result)
-
+def torch_tensor_to():
+    pass
 
 
 
@@ -1841,14 +2068,46 @@ def torch_tensor_cpu(tensor):
 
 
 
-def torch_save():
-    # torch.save
+
+
+
+
+
+def torch_save(obj, f):
+    # torch.save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL, _use_new_zipfile_serialization=True)
+
     pass
 
 
 
 
 
-def torch_load():
-    # torch.load()
+
+
+
+
+
+
+
+def torch_load(network_path, map_location=None, weights_only=False):
+    # torch.load(f, map_location=None, pickle_module=pickle, *, weights_only=False, mmap=None, **pickle_load_args)
+    
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

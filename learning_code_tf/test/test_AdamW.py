@@ -1,116 +1,137 @@
+import tensorflow as tf
 import torch
 import torch.nn as nn
-import torch.optim.lr_scheduler
-from torch.optim import AdamW, Adam
+import numpy as np
 
-
-class M(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc = nn.Linear(3, 1, bias=False)
-
-    def forward(self, x):
-        return self.fc(x)
-
-
-class my_opt():
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
-                 weight_decay=1e-2):
-        self.params = params
-        self.lr = lr
-        self.b1 = betas[0]
-        self.b2 = betas[1]
-        self.eps = eps
-        self.wd = weight_decay
-        self.m = 0
-        self.v = 0
-        self.b1t = 1.0
-        self.b2t = 1.0
-
-    # 模拟AdamW的step
-    def stepW(self):
-        for name, param in self.params.named_parameters():
-            if param.grad is None:
-                continue
-            g = param.grad
-            self.m = self.b1 * self.m + (1 - self.b1) * g
-            self.v = self.b2 * self.v + (1 - self.b2) * g * g
-            self.b1t *= self.b1
-            self.b2t *= self.b2
-            m = self.m / (1 - self.b1t)
-            v = self.v / (1 - self.b2t)
-            n = 1.0
-            param.data -= n * (self.lr * (m / (v.sqrt() + self.eps) + self.wd * param.data))
-
-    # 模拟Adam的step
-    def step(self):
-        for name, param in self.params.named_parameters():
-            if param.grad is None:
-                continue
-            g = param.grad
-            self.m = self.b1 * self.m + (1 - self.b1) * g
-            self.v = self.b2 * self.v + (1 - self.b2) * g * g
-            self.b1t *= self.b1
-            self.b2t *= self.b2
-            m = self.m / (1 - self.b1t)
-            v = self.v / (1 - self.b2t)
-            n = 1.0
-            param.data -= n * (self.lr * m / (v.sqrt() + self.eps))
-
-
-adam_model = M()
-adamw_model = M()
-my_adam_model = M()
-my_adamw_model = M()
-# 使4个模型参数相同
-adamw_model.load_state_dict(adam_model.state_dict())
-my_adam_model.load_state_dict(adam_model.state_dict())
-my_adamw_model.load_state_dict(adam_model.state_dict())
-
-model_ls = {'adam_model': adam_model,
-            'adamw_model': adamw_model,
-            'my_adam_model': my_adam_model,
-            'my_adamw_model': my_adamw_model}
-
-# 检查4个模型初始参数
-for m in model_ls:
-    print(f"Model : {m}")
-    model = model_ls[m]
-    for name, parma in model.named_parameters():
-        print(name)
-        print(parma)
+from util.torch_to_tf import nn_Linear, nn_ReLU, torch_optim_AdamW
 
 
 
-adam_opt = Adam(adam_model.parameters(), lr=0.1)
-adamw_opt = AdamW(adamw_model.parameters(), lr=0.1)
-my_adam_opt = my_opt(my_adam_model, lr=0.1)
-my_adamw_opt = my_opt(my_adamw_model, lr=0.1)
+# class torch_optim_AdamW:
+#     def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
+#         """
+#         A TensorFlow implementation of torch.optim.AdamW.
 
-opt_ls = {'adam_model': adam_opt,
-          'adamw_model': adamw_opt,
-          'my_adam_model': my_adam_opt,
-          'my_adamw_model': my_adamw_opt}
+#         Args:
+#             params (list): List of TensorFlow variables to optimize.
+#             lr (float): Learning rate.
+#             betas (tuple): Coefficients used for computing running averages of gradient and its square.
+#             eps (float): Term added to the denominator to improve numerical stability.
+#             weight_decay (float): Weight decay (L2 penalty).
+#         """
+#         self.params = params
+#         self.lr = lr
+#         self.betas = betas
+#         self.eps = eps
+#         self.weight_decay = weight_decay
+
+#         # TensorFlow AdamW optimizer
+#         self.optimizer = tf.keras.optimizers.experimental.AdamW(
+#             learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
+#         )
+
+#     def zero_grad(self):
+#         """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
+#         pass
+
+#     def step(self, gradients):
+#         """Apply gradients to parameters."""
+#         self.optimizer.apply_gradients(zip(gradients, self.params))
 
 
 
-for i in range(5):
-    print(">>>>>>>>>>>>>>>>>>>>>>> epoch", i)
-    ip = torch.rand(2, 3)
-    for m in model_ls:
-        print(f">>> Model : {m}")
-        model = model_ls[m]
-        opt = opt_ls[m]
-        loss = (model(ip).sum()) ** 2
-        loss.backward()
 
-        if m != 'my_adamw_model':
-            opt.step()
-        else:
-            opt.stepW()
+# Testing torch_optim_AdamW vs torch.optim.AdamW
+def test_torch_and_tf_adamw():
+    # Set seeds for reproducibility
+    torch.manual_seed(42)
+    tf.random.set_seed(42)
 
-        for name, parma in model.named_parameters():
-            print(name)
-            print(parma)
+    # Define a simple model in PyTorch
+    torch_model = nn.Sequential(
+        nn.Linear(10, 5),
+        nn.ReLU(),
+        nn.Linear(5, 1)
+    )
 
-        model.zero_grad()
+    # Define the same model in TensorFlow
+    tf_model = tf.keras.Sequential([
+        nn_Linear(10, 5),
+        nn_ReLU(),
+        nn_Linear(5, 1)
+    ])
+
+    tf_model.build(input_shape=(None, 10))
+
+    # Initialize weights in TensorFlow model to match PyTorch
+    for torch_layer, tf_layer in zip(torch_model, tf_model.layers):
+        if isinstance(torch_layer, nn.Linear):
+            tf_layer.model.trainable_weights[0].assign(torch_layer.weight.detach().numpy().T)  # kernel
+            tf_layer.model.trainable_weights[1].assign(torch_layer.bias.detach().numpy())     # bias
+
+    # Define inputs and targets
+    inputs = np.random.rand(4, 10).astype(np.float32)
+    targets = np.random.rand(4, 1).astype(np.float32)
+
+    # Define optimizers
+    torch_optimizer = torch.optim.AdamW(torch_model.parameters(), lr=0.01, weight_decay=0.01)
+    tf_optimizer = torch_optim_AdamW(tf_model.trainable_variables, lr=0.01, weight_decay=0.01)
+
+    # Define loss functions
+    torch_loss_fn = nn.MSELoss()
+    tf_loss_fn = tf.keras.losses.MeanSquaredError()
+
+    # Training loop
+    for step in range(5):
+        # PyTorch
+        torch_inputs = torch.tensor(inputs)
+        torch_targets = torch.tensor(targets)
+
+        torch_optimizer.zero_grad()
+        torch_outputs = torch_model(torch_inputs)
+        torch_loss = torch_loss_fn(torch_outputs, torch_targets)
+        torch_loss.backward()
+        torch_optimizer.step()
+
+        # TensorFlow
+        with tf.GradientTape() as tape:
+            tf_outputs = tf_model(inputs)
+            tf_loss = tf_loss_fn(targets, tf_outputs)
+        tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
+
+        tf_optimizer.step(tf_gradients)
+
+        # Print losses
+        print(f"Step {step + 1}:")
+        print(f"  PyTorch Loss: {torch_loss.item():.6f}")
+        print(f"  TensorFlow Loss: {tf_loss.numpy():.6f}")
+
+    # Compare final outputs
+    torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
+    tf_final_output = tf_model(inputs).numpy()
+
+    print("\nFinal Output Comparison:")
+    print(f"  PyTorch: {torch_final_output}")
+    print(f"  TensorFlow: {tf_final_output}")
+
+# Run the test
+test_torch_and_tf_adamw()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

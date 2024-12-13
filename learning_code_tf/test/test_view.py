@@ -45,6 +45,9 @@ result = torch_tensor_view(tensor, 3, 3)
 print(result)
 
 
+result = torch_tensor_view(tensor, [3, 3])
+print(result)
+
 
 result = torch_tensor_view(tensor, 1, 3, 3)
 print(result)

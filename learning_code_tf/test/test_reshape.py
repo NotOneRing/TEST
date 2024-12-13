@@ -21,7 +21,9 @@ def test_reshape():
     torch_result = torch.reshape(input_tensor_torch, target_shape)
 
     # Perform reshape in TensorFlow
-    tf_result = torch_reshape(input_tensor_tf, target_shape)
+    tf_result = torch_reshape(input_tensor_tf, *target_shape)
+
+    # tf_result = torch_reshape(input_tensor_tf, target_shape)
 
     # Convert TensorFlow result to numpy for comparison
     tf_result_np = tf_result.numpy()
