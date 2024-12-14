@@ -7,7 +7,7 @@ from util.torch_to_tf import torch_nn_init_normal_
 
 
 # Testing PyTorch and TensorFlow outputs
-def compare_tf_torch():
+def test_compare_tf_torch():
     input_data = np.random.rand(1, 5).astype(np.float32)  # Input tensor for both frameworks
 
     # PyTorch
@@ -19,6 +19,7 @@ def compare_tf_torch():
 
     # TensorFlow
     tf_layer = tf.keras.layers.Dense(10, use_bias=True)
+
     tf_layer.build(input_shape=(None, 5))
 
     # Copy PyTorch weights and bias to TensorFlow
@@ -37,5 +38,7 @@ def compare_tf_torch():
     print("TensorFlow output:\n", tf_output)
     print("Outputs match:", np.allclose(torch_output, tf_output, atol=1e-5))
 
-if __name__ == "__main__":
-    compare_tf_torch()
+# if __name__ == "__main__":
+
+test_compare_tf_torch()
+

@@ -39,8 +39,12 @@ print("inputs = ", inputs)
 
 print("inputs**2 = ", inputs**2)
 
-# 使用 tf.vectorized_map 对每个样本应用函数
-outputs = tf.vectorized_map(scalar_function, inputs)
+# # 使用 tf.vectorized_map 对每个样本应用函数
+# outputs = tf.vectorized_map(scalar_function, inputs)
+
+from util.torch_to_tf import torch_vmap
+
+outputs = torch_vmap(scalar_function, inputs)
 
 print("Outputs:", outputs)
 

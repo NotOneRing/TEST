@@ -46,7 +46,12 @@ class TrainDiffusionAgent(PreTrainAgent):
         print("train_diffusion_agent.py: TrainDiffusionAgent.build_model()")
 
         model = hydra.utils.instantiate(cfg.model)
+
         model.build(input_shape=(None, *cfg.model.input_shape))  # Ensure the model is built
+
+        #后加的，为了初始化模型
+        _ = model(tf.constant(np.random.randn(1, *cfg.model.input_shape).astype(np.float32)))
+
         return model
     
 

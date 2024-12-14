@@ -552,31 +552,51 @@ def torch_clamp(input, min = float('-inf'), max = float('inf'), out=None):
 
 
 
+
+
+
+
+
 def torch_tensor_clamp_(input, min = float('-inf'), max = float('inf')):
     input = tf.clip_by_value(input, min, max)
 
 
+
+
+
+
+
+
 # torch.zeros(size, dtype=torch.float32, device=None, requires_grad=False)
 def torch_zeros(*size, dtype=tf.float32):
-    size_list = []
-    for cur_size in size:
-        if not isinstance(cur_size, int):
-            break
-        else:
-            size_list.append(cur_size)
-            
+
+    if isinstance(size[0], (list, tuple)):
+        size_list = size[0]
+    else:
+        size_list = list(size)
+    
     return tf.zeros(size_list, dtype=tf.float32, name=None)
 
 
+
+
+
+
 def torch_ones(*size, dtype=tf.float32):
-    size_list = []
-    for cur_size in size:
-        if not isinstance(cur_size, int):
-            break
-        else:
-            size_list.append(cur_size)
-            
+    
+    if isinstance(size[0], (list, tuple)):
+        size_list = size[0]
+    else:
+        size_list = list(size)
+    
     return tf.ones(size_list, dtype=tf.float32, name=None)
+
+
+
+
+
+
+
 
 
 
@@ -635,6 +655,7 @@ def torch_argmax(input, dim=None):
 
 
 def torch_tensor_view(input, *args):
+    # print("args = ", args)
     if isinstance(args[0], (tuple, list)):
         result = tf.reshape(input, args[0] )
     else:
@@ -724,7 +745,12 @@ def torch_tensor_long(input):
 
 
 def torch_tensor_expand(input, *args):
-    return tf.broadcast_to(input, [*args])
+    if isinstance(args[0], (tuple, list)):
+        result = tf.broadcast_to(input, args[0] )
+    else:
+        result = tf.broadcast_to(input, [*args] )
+
+    return result
 
 
 def torch_tensor_expand_as(input, other):
@@ -762,11 +788,16 @@ def torch_round(input):
 
 
 
-def torch_meshgrid(*tensors, indexing=None):
-    if indexing == "xy":
+def torch_meshgrid(*tensors, indexing="ij"):
+
+    if isinstance(tensors[0], (tuple, list)):
+        # print("branch1")
+        return tf.meshgrid(*tensors[0], indexing=indexing)
+
+    else:
+        # print("branch2")
         return tf.meshgrid(*tensors, indexing=indexing)
 
-    return tf.meshgrid(*tensors, indexing="ij")
 
 
 
@@ -795,8 +826,11 @@ def torch_cumprod(input, dim):
 
 
 def torch_randn(*size):
-    return tf.random.normal([*size])
+    if isinstance(size[0], (tuple, list)):
+        return tf.random.normal(size[0])
 
+    else:
+        return tf.random.normal(size)
 
 
 
@@ -1406,9 +1440,18 @@ def nn_Parameter(data=None, requires_grad=True):
 class nn_Sequential(tf.keras.layers.Layer):
     def __init__(self, *args):
         super(nn_Sequential, self).__init__()
+        # print("len(args) = ", len(args))
+        # print("args = ", args)
+
         self.model_list = []
-        for module in args:
-            self.model_list.append(module)
+
+        if isinstance(args[0], (tuple, list)):
+            for module in args[0]:
+               self.model_list.append(module)
+
+        else:
+            for module in args:
+                self.model_list.append(module)
 
     def call(self, x):
         output = x
@@ -1417,10 +1460,11 @@ class nn_Sequential(tf.keras.layers.Layer):
         return output
     
     def __getitem__(self, id):
-        print("getitem: len(self.model_list) = ", len(self.model_list))
+        # print("getitem: len(self.model_list) = ", len(self.model_list))
         return self.model_list[id]
 
-
+    def __iter__(self):
+        return iter(self.model_list)
 
 
 
@@ -1758,21 +1802,25 @@ def torch_tensor_repeat(tensor, *repeats):
     Returns:
         tf.Tensor: The repeated tensor.
     """
+
+    # print("repeats = ", repeats)
+
     if not isinstance(tensor, tf.Tensor):
         raise TypeError("Input must be a TensorFlow tensor.")
     if not repeats:
         raise ValueError("At least one repeat value must be provided.")
 
-    # Compute the target shape for tiling
-    tensor_shape = tf.shape(tensor)
-    repeats = tf.constant(repeats, dtype=tf.int32)
-
-    # repeats_dim = len(repeats)
-
+    # processed_repeats = []
     if isinstance(repeats[0], (tuple, list)):
-        repeat_shape = repeats[0]
+        repeat_shape = [ *repeats[0] ]
+        repeats_tensor = tf.constant(repeats[0], dtype=tf.int32)
     else:
         repeat_shape = [*repeats]
+        repeats_tensor = tf.constant(repeats, dtype=tf.int32)
+
+    # Compute the target shape for tiling
+    tensor_shape = tf.shape(tensor)
+
 
     tensor_dim = len(tensor_shape)
     repeat_dim = len(repeat_shape)
@@ -1784,7 +1832,7 @@ def torch_tensor_repeat(tensor, *repeats):
         temp_tensor = tf.reshape(tensor, tensor_shape)
 
     # Perform tiling
-    repeated_tensor = tf.tile(temp_tensor, repeats)
+    repeated_tensor = tf.tile(temp_tensor, repeats_tensor)
     return repeated_tensor
 
 
@@ -1882,7 +1930,15 @@ def torch_rand(*size, dtype=tf.dtypes.float32):
     #     seed=None,
     #     name=None
     # )
-    return tf.random.uniform(shape=size, dtype=dtype)
+
+    print("size = ", size)
+
+    if isinstance(size[0], (tuple, list)):
+        final_size = [ *size[0] ]
+    else:
+        final_size = [*size]
+
+    return tf.random.uniform(shape=final_size, dtype=dtype)
 
 
 
@@ -1944,6 +2000,8 @@ class torch_optim_Adam:
         self.optimizer.apply_gradients(zip(gradients, self.params))
 
 
+    def apply_gradients(self, gradients):
+        self.optimizer.apply_gradients(zip(gradients, self.params))
 
 
 
@@ -1990,9 +2048,54 @@ class torch_optim_AdamW:
 
 
 
-def torch_nn_utils_clip_grad_norm_():
+
+
+
+
+
+
+# def torch_nn_utils_clip_grad_norm_(parameters, max_norm, norm_type=2.0, error_if_nonfinite=False, foreach=None):
+#     pass
+
+
+def torch_nn_utils_clip_grad_norm_(parameters, max_norm, grads, norm_type=2.0, error_if_nonfinite=False):
     # torch.nn.utils.clip_grad_norm_
-    pass
+    """
+    这里多了一个grads参数，因为tensorflow的grads要紧跟着tf.GradientTape
+    模仿 PyTorch 中的 clip_grad_norm_ 函数，裁剪 TensorFlow 模型参数的梯度
+    :param grads: 梯度列表
+    :param max_norm: 梯度的最大范数
+    :param norm_type: 范数类型，默认为 2 范数
+    :param error_if_nonfinite: 如果梯度包含非有限值（如 NaN 或 Inf），是否抛出错误
+    :return: 裁剪后的梯度
+    """
+    if norm_type != 2.0:
+        raise NotImplementedError("Only L2 norm is currently supported")
+
+    # 计算所有梯度的范数
+    grads_finite = [tf.clip_by_value(g, -1e7, 1e7) if g is not None else tf.zeros_like(parameters[i]) for i, g in enumerate(grads)]
+    # print("grads_finite = ", grads_finite)
+
+    global_norm = tf.norm(tf.stack([tf.norm(grad) for grad in grads_finite if grad is not None]))
+
+    # print("global_norm = ", global_norm)
+
+    # 如果范数超过最大值，进行裁剪
+    clip_coef = max_norm / (global_norm + 1e-6)
+    # print("clip_coef = ", clip_coef)
+    clip_coef_bf = tf.where(global_norm < max_norm, tf.ones_like(clip_coef), clip_coef)
+    # print("clip_coef_bf = ", clip_coef_bf)
+    clipped_grads = [grad * clip_coef_bf if grad is not None else None for grad in grads]
+
+    print("clipped_grads = ", clipped_grads)
+
+    # 如果 error_if_nonfinite 为 True，检查非有限值
+    if error_if_nonfinite:
+        for g in grads:
+            if g is not None and (tf.reduce_any(tf.is_nan(g)) or tf.reduce_any(tf.is_inf(g))):
+                raise ValueError("Gradients contain non-finite values.")
+    
+    return clipped_grads
 
 
 
@@ -2022,9 +2125,10 @@ def torch_utils_data_DataLoader():
 
 
 
-def torch_tensor_requires_grad_():
+def torch_tensor_requires_grad_(tensor, requires_grad=True):
     # torch.tensor.requires_grad_
-    pass
+    tensor.trainable = requires_grad
+    return tensor
 
 
 
@@ -2072,7 +2176,6 @@ def torch_tensor_cpu(tensor):
 
 
 
-
 def torch_save(obj, f):
     # torch.save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL, _use_new_zipfile_serialization=True)
 
@@ -2100,6 +2203,38 @@ def torch_load(network_path, map_location=None, weights_only=False):
 
 
 
+
+
+
+
+
+
+
+
+
+def model_forward_backward_gradients(input_features, target_label, loss_func, model):
+    # torch_inputs = torch.tensor(inputs)
+    # torch_targets = torch.tensor(targets)
+
+    # torch_optimizer.zero_grad()
+    # torch_outputs = torch_model(torch_inputs)
+    # torch_loss = torch_loss_fn(torch_outputs, torch_targets)
+    # torch_loss.backward()
+
+    # torch_optimizer.step()
+
+    inputs = input_features
+    targets = target_label
+    tf_loss_fn = loss_func
+    tf_model = model
+
+    # TensorFlow
+    with tf.GradientTape() as tape:
+        tf_outputs = tf_model(inputs)
+        tf_loss = tf_loss_fn(targets, tf_outputs)
+    tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
+
+    return tf_loss, tf_gradients
 
 
 

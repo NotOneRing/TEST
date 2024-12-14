@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from util.torch_to_tf import nn_Linear, nn_ReLU, torch_optim_AdamW
+from util.torch_to_tf import nn_Linear, nn_ReLU, torch_optim_AdamW, nn_Sequential
 
 
 
@@ -55,7 +55,7 @@ def test_torch_and_tf_adamw():
     )
 
     # Define the same model in TensorFlow
-    tf_model = tf.keras.Sequential([
+    tf_model = nn_Sequential([
         nn_Linear(10, 5),
         nn_ReLU(),
         nn_Linear(5, 1)
@@ -63,11 +63,14 @@ def test_torch_and_tf_adamw():
 
     tf_model.build(input_shape=(None, 10))
 
+    #后加的，为了初始化模型
+    _ = tf_model(tf.constant(np.random.randn(1, 10).astype(np.float32)))
+
     # Initialize weights in TensorFlow model to match PyTorch
-    for torch_layer, tf_layer in zip(torch_model, tf_model.layers):
+    for torch_layer, tf_layer in zip(torch_model, tf_model):
         if isinstance(torch_layer, nn.Linear):
-            tf_layer.model.trainable_weights[0].assign(torch_layer.weight.detach().numpy().T)  # kernel
-            tf_layer.model.trainable_weights[1].assign(torch_layer.bias.detach().numpy())     # bias
+            tf_layer.trainable_weights[0].assign(torch_layer.weight.detach().numpy().T)  # kernel
+            tf_layer.trainable_weights[1].assign(torch_layer.bias.detach().numpy())     # bias
 
     # Define inputs and targets
     inputs = np.random.rand(4, 10).astype(np.float32)
@@ -106,6 +109,8 @@ def test_torch_and_tf_adamw():
         print(f"  PyTorch Loss: {torch_loss.item():.6f}")
         print(f"  TensorFlow Loss: {tf_loss.numpy():.6f}")
 
+        assert np.allclose(torch_loss.item(), tf_loss.numpy(), atol = 1e-6)
+
     # Compare final outputs
     torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
     tf_final_output = tf_model(inputs).numpy()
@@ -113,6 +118,8 @@ def test_torch_and_tf_adamw():
     print("\nFinal Output Comparison:")
     print(f"  PyTorch: {torch_final_output}")
     print(f"  TensorFlow: {tf_final_output}")
+    assert np.allclose(torch_final_output, tf_final_output, atol = 1e-6)
+
 
 # Run the test
 test_torch_and_tf_adamw()

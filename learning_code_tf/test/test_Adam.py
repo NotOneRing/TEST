@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from util.torch_to_tf import nn_Linear, nn_ReLU, torch_optim_Adam
+from util.torch_to_tf import nn_Sequential, nn_Linear, nn_ReLU, torch_optim_Adam, model_forward_backward_gradients
 
 
 # class torch_optim_Adam:
@@ -58,7 +58,7 @@ def test_torch_and_tf_adam():
     )
 
     # Define the same model in TensorFlow
-    tf_model = tf.keras.Sequential([
+    tf_model = nn_Sequential([
         # tf.keras.layers.Dense(5, activation='relu', input_shape=(10,)),
         # tf.keras.layers.Dense(1)
         nn_Linear(10, 5),
@@ -66,16 +66,18 @@ def test_torch_and_tf_adam():
         nn_Linear(5, 1)
     ])
 
-    tf_model.build( input_shape = (None, 10) )
+    # tf_model.build( input_shape = (None, 10) )
+    _ = tf_model(tf.constant(np.random.randn(1, 10).astype(np.float32)))
 
     # Initialize weights in TensorFlow model to match PyTorch
-    for torch_layer, tf_layer in zip(torch_model, tf_model.layers):
+    for torch_layer, tf_layer in zip(torch_model, tf_model):
         if isinstance(torch_layer, nn.Linear):
             # tf_layer.model.kernel.assign(tf.convert_to_tensor(torch_layer.weight.data.numpy().T, dtype=tf.float32))
             # tf_layer.model.bias.assign(tf.convert_to_tensor(torch_layer.bias.data.numpy(), dtype=tf.float32))
+            print("tf_layer = ", tf_layer)
 
-            tf_layer.model.trainable_weights[0].assign(torch_layer.weight.detach().numpy().T)  # kernel
-            tf_layer.model.trainable_weights[1].assign(torch_layer.bias.detach().numpy())     # bias
+            tf_layer.trainable_weights[0].assign(torch_layer.weight.detach().numpy().T)  # kernel
+            tf_layer.trainable_weights[1].assign(torch_layer.bias.detach().numpy())     # bias
 
 
 
@@ -104,11 +106,12 @@ def test_torch_and_tf_adam():
 
         torch_optimizer.step()
 
-        # TensorFlow
-        with tf.GradientTape() as tape:
-            tf_outputs = tf_model(inputs)
-            tf_loss = tf_loss_fn(targets, tf_outputs)
-        tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
+        tf_loss, tf_gradients = model_forward_backward_gradients(inputs, targets, tf_loss_fn, tf_model)
+        # # TensorFlow
+        # with tf.GradientTape() as tape:
+        #     tf_outputs = tf_model(inputs)
+        #     tf_loss = tf_loss_fn(targets, tf_outputs)
+        # tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
 
         tf_optimizer.step(tf_gradients)
 
@@ -117,6 +120,9 @@ def test_torch_and_tf_adam():
         print(f"  PyTorch Loss: {torch_loss.item():.6f}")
         print(f"  TensorFlow Loss: {tf_loss.numpy():.6f}")
 
+        # print("np.allclose(torch_loss.item(), tf_loss.numpy()) = ", np.allclose(torch_loss.item(), tf_loss.numpy()) )
+        assert np.allclose(torch_loss.item(), tf_loss.numpy(), atol = 1e-6)
+
     # Compare final outputs
     torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
     tf_final_output = tf_model(inputs).numpy()
@@ -124,7 +130,8 @@ def test_torch_and_tf_adam():
     print("\nFinal Output Comparison:")
     print(f"  PyTorch: {torch_final_output}")
     print(f"  TensorFlow: {tf_final_output}")
-
+    # print("np.allclose(torch_final_output, tf_final_output) = ", np.allclose(torch_final_output, tf_final_output) )
+    assert np.allclose(torch_final_output, tf_final_output)
 
 
 

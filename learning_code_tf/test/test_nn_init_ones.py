@@ -35,5 +35,5 @@ def test_ones_initialization():
     print("Outputs match:", np.allclose(torch_output, tf_output, atol=1e-5))
 
 # Run the test
-if __name__ == "__main__":
-    test_ones_initialization()
+# if __name__ == "__main__":
+test_ones_initialization()

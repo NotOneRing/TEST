@@ -29,6 +29,9 @@ tensorflow_net = TensorFlowNet()
 tensorflow_net.build((None, 4))  # input shape (batch_size, 4)
 # print("tensorflow_net.trainable_variables = ", tensorflow_net.trainable_variables)
 
+#后加的，为了初始化模型
+_ = tensorflow_net(tf.constant(np.random.randn(1, 4).astype(np.float32)))
+
 print("tensorflow_net.trainable_variables = ", tensorflow_net.trainable_variables)
 
 

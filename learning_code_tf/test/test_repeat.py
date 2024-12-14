@@ -17,17 +17,35 @@ def test_tensor_repeat():
     # Repeat the tensor in PyTorch
     pytorch_result = torch_tensor.repeat(*repeats).numpy()
 
-    print("pytorch_result.shape = ", pytorch_result.shape)
+    print("PyTorch result:\n", pytorch_result)
 
     # Convert PyTorch tensor to TensorFlow tensor
     tf_tensor = tf.convert_to_tensor(torch_tensor.numpy())
 
     # Repeat the tensor in TensorFlow
     tensorflow_result = torch_tensor_repeat(tf_tensor, *repeats).numpy()
-
-    # Compare the results
-    print("PyTorch result:\n", pytorch_result)
+    
     print("TensorFlow result:\n", tensorflow_result)
+
+    # Check if the results match
+    if np.array_equal(pytorch_result, tensorflow_result):
+        print("The results match!")
+    else:
+        print("The results do not match!")
+
+
+    pytorch_result = torch_tensor.repeat(repeats).numpy()
+
+    print("PyTorch result:\n", pytorch_result)
+
+    print("pytorch_result.shape = ", pytorch_result.shape)
+
+
+    # Repeat the tensor in TensorFlow
+    tensorflow_result = torch_tensor_repeat(tf_tensor, repeats).numpy()
+
+    print("TensorFlow result:\n", tensorflow_result)
+
 
     # Check if the results match
     if np.array_equal(pytorch_result, tensorflow_result):
