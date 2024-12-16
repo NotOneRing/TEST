@@ -2011,7 +2011,7 @@ class torch_optim_Adam:
 # torch.optim.AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False, 
 # *, maximize=False, foreach=None, capturable=False, differentiable=False, fused=None)
 class torch_optim_AdamW:
-    def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
+    def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01):
         """
         A TensorFlow implementation of torch.optim.AdamW.
 
@@ -2042,11 +2042,40 @@ class torch_optim_AdamW:
         self.optimizer.apply_gradients(zip(gradients, self.params))
 
 
+    def apply_gradients(self, gradients):
+        self.optimizer.apply_gradients(zip(gradients, self.params))
 
 
 
 
 
+
+
+
+
+def model_forward_backward_gradients(input_features, target_label, loss_func, model):
+    # torch_inputs = torch.tensor(inputs)
+    # torch_targets = torch.tensor(targets)
+
+    # torch_optimizer.zero_grad()
+    # torch_outputs = torch_model(torch_inputs)
+    # torch_loss = torch_loss_fn(torch_outputs, torch_targets)
+    # torch_loss.backward()
+
+    # torch_optimizer.step()
+
+    inputs = input_features
+    targets = target_label
+    tf_loss_fn = loss_func
+    tf_model = model
+
+    # TensorFlow
+    with tf.GradientTape() as tape:
+        tf_outputs = tf_model(inputs)
+        tf_loss = tf_loss_fn(targets, tf_outputs)
+    tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
+
+    return tf_loss, tf_gradients
 
 
 
@@ -2058,7 +2087,7 @@ class torch_optim_AdamW:
 #     pass
 
 
-def torch_nn_utils_clip_grad_norm_(parameters, max_norm, grads, norm_type=2.0, error_if_nonfinite=False):
+def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grads, norm_type=2.0, error_if_nonfinite=False):
     # torch.nn.utils.clip_grad_norm_
     """
     这里多了一个grads参数，因为tensorflow的grads要紧跟着tf.GradientTape
@@ -2087,13 +2116,16 @@ def torch_nn_utils_clip_grad_norm_(parameters, max_norm, grads, norm_type=2.0, e
     # print("clip_coef_bf = ", clip_coef_bf)
     clipped_grads = [grad * clip_coef_bf if grad is not None else None for grad in grads]
 
-    print("clipped_grads = ", clipped_grads)
+    # print("clipped_grads = ", clipped_grads)
 
     # 如果 error_if_nonfinite 为 True，检查非有限值
     if error_if_nonfinite:
         for g in grads:
             if g is not None and (tf.reduce_any(tf.is_nan(g)) or tf.reduce_any(tf.is_inf(g))):
                 raise ValueError("Gradients contain non-finite values.")
+
+
+    optimizer.apply_gradients(clipped_grads)
     
     return clipped_grads
 
@@ -2110,25 +2142,37 @@ def torch_nn_utils_clip_grad_norm_(parameters, max_norm, grads, norm_type=2.0, e
 
 
 
-def torch_utils_data_DataLoader():
-    # torch.utils.data.DataLoader
-    pass
-
-
-
-
-
-
-
-
-
-
-
-
 def torch_tensor_requires_grad_(tensor, requires_grad=True):
     # torch.tensor.requires_grad_
     tensor.trainable = requires_grad
     return tensor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def torch_utils_data_DataLoader(dataset, batch_size=1, shuffle=False, sampler=None,
+           batch_sampler=None, num_workers=0, collate_fn=None,
+           pin_memory=False, drop_last=False, timeout=0,
+           worker_init_fn=None, *, prefetch_factor=2,
+           persistent_workers=False):
+    # torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, sampler=None,
+    #    batch_sampler=None, num_workers=0, collate_fn=None,
+    #    pin_memory=False, drop_last=False, timeout=0,
+    #    worker_init_fn=None, *, prefetch_factor=2,
+    #    persistent_workers=False)
+    pass
+
+
 
 
 
@@ -2176,12 +2220,21 @@ def torch_tensor_cpu(tensor):
 
 
 
-def torch_save(obj, f):
-    # torch.save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL, _use_new_zipfile_serialization=True)
-
-    pass
 
 
+# def torch_save(obj, f):
+#     # torch.save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL, _use_new_zipfile_serialization=True)
+#     assert isinstance(obj, dict), "input should be a dict"
+#     for key, value in obj.items():
+#         if isinstance(value, (tf.keras.layers.Layer, tf.keras.Model)):
+#             print("save model: key = ", key)
+#             value.save(f + "key" + ".h5")
+#         elif "optimizer" in key or "lr_scheduler" in key:
+#             print("do not save optimizer or others: key = ", key)
+#             pass
+#         else:
+#             pass
+#     pass
 
 
 
@@ -2192,10 +2245,29 @@ def torch_save(obj, f):
 
 
 
-def torch_load(network_path, map_location=None, weights_only=False):
-    # torch.load(f, map_location=None, pickle_module=pickle, *, weights_only=False, mmap=None, **pickle_load_args)
+
+
+# def torch_load(network_path, map_location=None, weights_only=False):
+#     # torch.load(f, map_location=None, pickle_module=pickle, *, weights_only=False, mmap=None, **pickle_load_args)
     
-    pass
+#     pass
+
+
+
+
+
+# def torch_load_state_dict():
+#     pass
+
+# # checkpoint = torch.load(
+# #     network_path,
+# #     map_location=self.device,
+# #     weights_only=True,
+# # )
+# # self.load_state_dict(
+# #     checkpoint["model"],
+# #     strict=True,
+# # )
 
 
 
@@ -2212,37 +2284,125 @@ def torch_load(network_path, map_location=None, weights_only=False):
 
 
 
-def model_forward_backward_gradients(input_features, target_label, loss_func, model):
-    # torch_inputs = torch.tensor(inputs)
-    # torch_targets = torch.tensor(targets)
-
-    # torch_optimizer.zero_grad()
-    # torch_outputs = torch_model(torch_inputs)
-    # torch_loss = torch_loss_fn(torch_outputs, torch_targets)
-    # torch_loss.backward()
-
-    # torch_optimizer.step()
-
-    inputs = input_features
-    targets = target_label
-    tf_loss_fn = loss_func
-    tf_model = model
-
-    # TensorFlow
-    with tf.GradientTape() as tape:
-        tf_outputs = tf_model(inputs)
-        tf_loss = tf_loss_fn(targets, tf_outputs)
-    tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
-
-    return tf_loss, tf_gradients
 
 
 
+class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRateSchedule):
+    def __init__(self, first_cycle_steps, cycle_mult=1.0, max_lr=0.1, min_lr=0.001, warmup_steps=0, gamma=1.0, last_epoch = -1):
+        assert warmup_steps < first_cycle_steps
+
+        super(tf_CosineAnnealingWarmupRestarts, self).__init__()
+        self.first_cycle_steps = first_cycle_steps
+        self.cycle_mult = cycle_mult
+        self.max_lr = max_lr
+
+        self.base_max_lr = max_lr
+
+        self.min_lr = min_lr
+        self.warmup_steps = warmup_steps
+        self.gamma = gamma
+        
+        self.cur_cycle_steps = first_cycle_steps
+        self.cycle = 0
+        self.step_in_cycle = last_epoch
+
+        self.base_lr = self.min_lr
+        
+    def __call__(self, epoch = None):
+        import math
+        # print("scheduler.py: tf_CosineAnnealingWarmupRestarts.__call__()")
+        # print("epoch = ", epoch)
+
+        # print("type(epoch) = ", type(epoch))
+        # print("epoch = ", epoch)
+        if epoch is not None:
+            epoch = int(epoch)  # 强制转换为整数
+
+        print("2epoch = ", epoch)
+
+        print("self.base_lr = ", self.base_lr)
+
+        if epoch is None:
+            print("step: branch1")
+            epoch = self.last_epoch + 1
+            self.step_in_cycle = self.step_in_cycle + 1
+            if self.step_in_cycle >= self.cur_cycle_steps:
+                print("step: branch1-1")
+                self.cycle += 1
+                self.step_in_cycle = self.step_in_cycle - self.cur_cycle_steps
+                self.cur_cycle_steps = (
+                    int((self.cur_cycle_steps - self.warmup_steps) * self.cycle_mult)
+                    + self.warmup_steps
+                )
+        else:
+            print("step: branch2")
+            if epoch >= self.first_cycle_steps:
+                print("step: branch2-1")
+                if self.cycle_mult == 1.0:
+                    print("step: branch2-1-1")
+                    self.step_in_cycle = epoch % self.first_cycle_steps
+                    self.cycle = epoch // self.first_cycle_steps
+                else:
+                    print("step: branch2-1-2")
+                    n = int(
+                        math.log(
+                            (
+                                epoch / self.first_cycle_steps * (self.cycle_mult - 1)
+                                + 1
+                            ),
+                            self.cycle_mult,
+                        )
+                    )
+                    self.cycle = n
+
+                    print("self.cycle = ", self.cycle)
+
+                    self.step_in_cycle = epoch - int(
+                        self.first_cycle_steps
+                        * (self.cycle_mult**n - 1)
+                        / (self.cycle_mult - 1)
+                    )
+
+                    print("self.step_in_cycle = ", self.step_in_cycle)
+
+                    self.cur_cycle_steps = self.first_cycle_steps * self.cycle_mult ** (
+                        n
+                    )
+
+                    print("self.cur_cycle_steps = ", self.cur_cycle_steps)
+
+            else:
+                print("step: branch2-2")
+                self.cur_cycle_steps = self.first_cycle_steps
+                self.step_in_cycle = epoch
+
+        self.max_lr = self.base_max_lr * (self.gamma**self.cycle)
+        self.last_epoch = math.floor(epoch)
 
 
+        if self.step_in_cycle == -1:
+            # return self.base_lrs
+            print("get_lr: branch1")
+            lr = self.base_lr
+        elif self.step_in_cycle < self.warmup_steps:
+            print("get_lr: branch2")
+            lr = (self.max_lr - self.base_lr) * self.step_in_cycle / self.warmup_steps + self.base_lr
+            # [
+                # for base_lr in self.base_lrs
+            # ]
+        else:
+            print("get_lr: branch3")
+            lr = self.base_lr + (self.max_lr - self.base_lr) * ( 1
+                    + math.cos(
+                        math.pi
+                        * (self.step_in_cycle - self.warmup_steps)
+                        / (self.cur_cycle_steps - self.warmup_steps)
+                    )
+                ) / 2
 
+        # 更新学习率
+        # tf.keras.backend.set_value(self.model.optimizer.lr, lr)
 
+        print("lr = ", lr)
 
-
-
-
+        return lr

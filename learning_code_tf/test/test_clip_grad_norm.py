@@ -1,44 +1,5 @@
 import tensorflow as tf
 
-from util.torch_to_tf import torch_nn_utils_clip_grad_norm_
-
-# def torch_nn_utils_clip_grad_norm_(parameters, max_norm, norm_type=2.0, error_if_nonfinite=False, foreach=None):
-
-
-# # 假设我们有一个模型
-# model = tf.keras.Sequential([
-#     tf.keras.layers.Dense(10, activation='relu', input_shape=(5,)),
-#     tf.keras.layers.Dense(1)
-# ])
-
-# # 获取模型参数
-# parameters = model.trainable_variables
-
-# # 创建一个优化器
-# optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
-
-# # 创建输入数据
-# x = tf.random.normal([32, 5])
-# y = tf.random.normal([32, 1])
-
-# # 使用梯度带计算梯度
-# with tf.GradientTape() as tape:
-#     output = model(x)
-#     loss = tf.reduce_mean(tf.square(output - y))
-
-# # 计算梯度
-# grads = tape.gradient(loss, parameters)
-
-# # 裁剪梯度
-# clipped_grads = tensorflow_clip_grad_norm_(grads, max_norm=1.0)
-
-# # 应用裁剪后的梯度
-# optimizer.apply_gradients(zip(clipped_grads, parameters))
-
-# print("Training finished.")
-
-
-
 
 
 
@@ -50,7 +11,7 @@ import numpy as np
 import tensorflow as tf
 
 
-from util.torch_to_tf import torch_optim_Adam, nn_Linear, nn_ReLU, nn_Sequential
+from util.torch_to_tf import torch_optim_Adam, nn_Linear, nn_ReLU, nn_Sequential, model_forward_backward_gradients, torch_nn_utils_clip_grad_norm_and_step
 
 
 
@@ -93,10 +54,9 @@ _ = tf_model(tf.constant(np.random.randn(1, 5).astype(np.float32)))
 
 # 同步初始化权重 (尽量接近)
 with torch.no_grad():
-    # print("dir(tf_model[0]) = ", dir(tf_model[0]))
-    print("tf_model = ", tf_model)
-    print("tf_model[0] = ", tf_model[0])
-    print("tf_model[0].trainable_variables = ", tf_model[0].trainable_variables)
+    # print("tf_model = ", tf_model)
+    # print("tf_model[0] = ", tf_model[0])
+    # print("tf_model[0].trainable_variables = ", tf_model[0].trainable_variables)
     torch_model.linear1.weight.copy_(torch.from_numpy(tf_model[0].model.kernel.numpy().T))
     torch_model.linear1.bias.copy_(torch.from_numpy(tf_model[0].model.bias.numpy()))
     torch_model.linear2.weight.copy_(torch.from_numpy(tf_model[2].model.kernel.numpy().T))
@@ -116,48 +76,31 @@ torch_x = torch.tensor(tf_x.numpy(), dtype=torch.float32)
 torch_y = torch.tensor(tf_y.numpy(), dtype=torch.float32)
 
 
-# TensorFlow 训练和梯度裁剪
-with tf.GradientTape() as tape:
-    tf_output = tf_model(tf_x)
-    tf_loss = tf.reduce_mean(tf.square(tf_output - tf_y))
-tf_grads = tape.gradient(tf_loss, tf_model.trainable_variables)
+# # TensorFlow 训练和梯度裁剪
+# with tf.GradientTape() as tape:
+#     tf_output = tf_model(tf_x)
+#     tf_loss = tf.reduce_mean(tf.square(tf_output - tf_y))
+# tf_grads = tape.gradient(tf_loss, tf_model.trainable_variables)
 
-clipped_tf_grads = torch_nn_utils_clip_grad_norm_(tf_model.trainable_variables, max_norm=1.0, grads = tf_grads)
+# clipped_tf_grads = torch_nn_utils_clip_grad_norm_and_step(tf_model.trainable_variables, tf_optimizer, max_norm=1.0, grads = tf_grads)
 
-# 计算 TensorFlow 裁剪后梯度的范数
-clipped_tf_grad_norm = tf.norm(tf.stack([tf.norm(g) for g in clipped_tf_grads if g is not None]))
-print(f"TensorFlow clipped grad norm: {clipped_tf_grad_norm.numpy()}")
+# stacked_tf_clipped_grad = tf.stack([tf.norm(g) for g in clipped_tf_grads if g is not None])
+# # 计算 TensorFlow 裁剪后梯度的范数
+# clipped_tf_grad_norm = tf.norm(stacked_tf_clipped_grad)
 
-# temp = zip(clipped_tf_grads, tf_model.trainable_variables)
+# print("stacked_tf_clipped_grad = ", stacked_tf_clipped_grad)
 
-# print("temp = ", temp)
-# print( "type(temp) = ", type(temp) )
+# print(f"TensorFlow clipped grad norm: {clipped_tf_grad_norm.numpy()}")
 
-# tf_optimizer.apply_gradients(zip(clipped_tf_grads, tf_model.trainable_variables))
-tf_optimizer.apply_gradients(clipped_tf_grads)
+# # temp = zip(clipped_tf_grads, tf_model.trainable_variables)
 
-print("tensorflow Training finished.")
+# # print("temp = ", temp)
+# # print( "type(temp) = ", type(temp) )
 
+# # tf_optimizer.apply_gradients(zip(clipped_tf_grads, tf_model.trainable_variables))
+# # tf_optimizer.apply_gradients(clipped_tf_grads)
 
-
-
-
-
-
-# PyTorch 训练和梯度裁剪
-torch_output = torch_model(torch_x)
-torch_loss = torch.nn.functional.mse_loss(torch_output, torch_y)
-torch_optimizer.zero_grad()
-torch_loss.backward()
-torch.nn.utils.clip_grad_norm_(torch_model.parameters(), max_norm=1.0)
-
-# 计算 PyTorch 裁剪后梯度的范数
-total_norm = torch.norm(torch.stack([torch.norm(p.grad) for p in torch_model.parameters() if p.grad is not None]))
-print(f"PyTorch clipped grad norm: {total_norm.item()}")
-
-
-torch_optimizer.step()
-print("pytorch Training finished.")
+# print("tensorflow Training finished.")
 
 
 
@@ -165,9 +108,108 @@ print("pytorch Training finished.")
 
 
 
+# # PyTorch 训练和梯度裁剪
+# torch_output = torch_model(torch_x)
+# torch_loss = torch.nn.functional.mse_loss(torch_output, torch_y)
+# torch_optimizer.zero_grad()
+# torch_loss.backward()
+# torch.nn.utils.clip_grad_norm_(torch_model.parameters(), max_norm=1.0)
+
+# clipped_grad = torch.stack([torch.norm(p.grad) for p in torch_model.parameters() if p.grad is not None])
+
+# print("PyTorch: clipped_grad = ", clipped_grad)
+
+# # 计算 PyTorch 裁剪后梯度的范数
+# total_norm = torch.norm(clipped_grad)
+# print(f"PyTorch clipped grad norm: {total_norm.item()}")
+
+
+# torch_optimizer.step()
+# print("pytorch Training finished.")
+
+
+# print("np.allclose( stacked_tf_clipped_grad.numpy(), clipped_grad.numpy() ) = ", np.allclose( stacked_tf_clipped_grad.numpy(), clipped_grad.numpy() ))
+
+
+# assert np.allclose( stacked_tf_clipped_grad.numpy(), clipped_grad.numpy() )
 
 
 
+
+
+
+
+# Training loop
+for step in range(5):
+    
+    # PyTorch 训练和梯度裁剪
+    torch_optimizer.zero_grad()
+    torch_output = torch_model(torch_x)
+    torch_loss = torch.nn.functional.mse_loss(torch_output, torch_y)
+    torch_loss.backward()
+    torch.nn.utils.clip_grad_norm_(torch_model.parameters(), max_norm=1.0)
+
+    clipped_grad = torch.stack([torch.norm(p.grad) for p in torch_model.parameters() if p.grad is not None])
+
+    print("PyTorch: clipped_grad = ", clipped_grad)
+
+    # 计算 PyTorch 裁剪后梯度的范数
+    total_norm = torch.norm(clipped_grad)
+    print(f"PyTorch clipped grad norm: {total_norm.item()}")
+
+    torch_optimizer.step()
+    print("pytorch Training finished.")
+
+
+
+    tf_loss_fn = lambda x, y: tf.reduce_mean(tf.square(x - y))
+
+    tf_loss, tf_gradients = model_forward_backward_gradients(tf_x, tf_y, tf_loss_fn, tf_model)
+
+
+    # with tf.GradientTape() as tape:
+    #     tf_output = tf_model(tf_x)
+    #     tf_loss = tf.reduce_mean(tf.square(tf_output - tf_y))
+    # tf_grads = tape.gradient(tf_loss, tf_model.trainable_variables)
+
+    clipped_tf_grads = torch_nn_utils_clip_grad_norm_and_step(tf_model.trainable_variables, tf_optimizer, max_norm=1.0, grads = tf_gradients)
+
+    stacked_tf_clipped_grad = tf.stack([tf.norm(g) for g in clipped_tf_grads if g is not None])
+    # 计算 TensorFlow 裁剪后梯度的范数
+    clipped_tf_grad_norm = tf.norm(stacked_tf_clipped_grad)
+
+    print("stacked_tf_clipped_grad = ", stacked_tf_clipped_grad)
+
+    print(f"TensorFlow clipped grad norm: {clipped_tf_grad_norm.numpy()}")
+
+
+    print("np.allclose( stacked_tf_clipped_grad.numpy(), clipped_grad.numpy() ) = ", np.allclose( stacked_tf_clipped_grad.numpy(), clipped_grad.numpy() ))
+
+    # # TensorFlow
+    # with tf.GradientTape() as tape:
+    #     tf_outputs = tf_model(inputs)
+    #     tf_loss = tf_loss_fn(targets, tf_outputs)
+    # tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
+
+    # tf_optimizer.step(tf_gradients)
+
+    # Print losses
+    print(f"Step {step + 1}:")
+    print(f"  PyTorch Loss: {torch_loss.item():.6f}")
+    print(f"  TensorFlow Loss: {tf_loss.numpy():.6f}")
+
+    # print("np.allclose(torch_loss.item(), tf_loss.numpy()) = ", np.allclose(torch_loss.item(), tf_loss.numpy()) )
+    assert np.allclose(torch_loss.item(), tf_loss.numpy(), atol = 1e-6)
+
+# Compare final outputs
+torch_final_output = torch_model(torch.tensor(torch_x)).detach().numpy()
+tf_final_output = tf_model(tf_x).numpy()
+
+print("\nFinal Output Comparison:")
+print(f"  PyTorch: {torch_final_output}")
+print(f"  TensorFlow: {tf_final_output}")
+print("np.allclose(torch_final_output, tf_final_output) = ", np.allclose(torch_final_output, tf_final_output, atol=1e-4) )
+assert np.allclose(torch_final_output, tf_final_output, atol=1e-4)
 
 
 

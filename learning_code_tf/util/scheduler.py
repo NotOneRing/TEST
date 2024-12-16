@@ -87,16 +87,23 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
 
         print("scheduler.py: CosineAnnealingWarmupRestarts.get_lr()")
 
+        print("self.base_lrs = ", self.base_lrs)
+
+
+
         if self.step_in_cycle == -1:
-            return self.base_lrs
+            print("get_lr: branch1")
+            result =  self.base_lrs
         elif self.step_in_cycle < self.warmup_steps:
-            return [
+            print("get_lr: branch2")
+            result = [
                 (self.max_lr - base_lr) * self.step_in_cycle / self.warmup_steps
                 + base_lr
                 for base_lr in self.base_lrs
             ]
         else:
-            return [
+            print("get_lr: branch3")
+            result = [
                 base_lr
                 + (self.max_lr - base_lr)
                 * (
@@ -111,14 +118,21 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
                 for base_lr in self.base_lrs
             ]
 
+        print("result = ", result)
+        
+        return result
+        
     def step(self, epoch=None):
 
         print("scheduler.py: CosineAnnealingWarmupRestarts.step()")
+        print("step: epoch = ", epoch)
 
         if epoch is None:
+            print("step: branch1")
             epoch = self.last_epoch + 1
             self.step_in_cycle = self.step_in_cycle + 1
             if self.step_in_cycle >= self.cur_cycle_steps:
+                print("step: branch1-1")
                 self.cycle += 1
                 self.step_in_cycle = self.step_in_cycle - self.cur_cycle_steps
                 self.cur_cycle_steps = (
@@ -126,11 +140,15 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
                     + self.warmup_steps
                 )
         else:
+            print("step: branch2")
             if epoch >= self.first_cycle_steps:
+                print("step: branch2-1")
                 if self.cycle_mult == 1.0:
+                    print("step: branch2-1-1")
                     self.step_in_cycle = epoch % self.first_cycle_steps
                     self.cycle = epoch // self.first_cycle_steps
                 else:
+                    print("step: branch2-1-2")
                     n = int(
                         math.log(
                             (
@@ -141,15 +159,25 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
                         )
                     )
                     self.cycle = n
+
+                    print("self.cycle = ", self.cycle)
+
                     self.step_in_cycle = epoch - int(
                         self.first_cycle_steps
                         * (self.cycle_mult**n - 1)
                         / (self.cycle_mult - 1)
                     )
+
+                    print("self.step_in_cycle = ", self.step_in_cycle)
+
                     self.cur_cycle_steps = self.first_cycle_steps * self.cycle_mult ** (
                         n
                     )
+
+                    print("self.cur_cycle_steps = ", self.cur_cycle_steps)
+
             else:
+                print("step: branch2-2")
                 self.cur_cycle_steps = self.first_cycle_steps
                 self.step_in_cycle = epoch
 
@@ -157,3 +185,22 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
         self.last_epoch = math.floor(epoch)
         for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
             param_group["lr"] = lr
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -24,8 +24,8 @@ from agent.finetune.train_agent import TrainAgent
 from util.scheduler import CosineAnnealingWarmupRestarts
 
 
-from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_flatten, torch_tensor_float, torch_exp, torch_clamp, torch_mean
-
+from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_flatten, torch_tensor_float, torch_exp, torch_clamp, torch_mean\
+, torch_optim_AdamW
 
 def td_values(
     states,
@@ -86,11 +86,13 @@ class TrainAWRDiffusionAgent(TrainAgent):
         self.n_critic_warmup_itr = cfg.train.n_critic_warmup_itr
 
         # Optimizer
-        self.actor_optimizer = torch.optim.AdamW(
-            self.model.actor.parameters(),
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.actor.parameters(),
+            self.model.trainable_variables,
             lr=cfg.train.actor_lr,
             weight_decay=cfg.train.actor_weight_decay,
         )
+        
         self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
             self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
@@ -100,11 +102,14 @@ class TrainAWRDiffusionAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_optimizer = torch.optim.AdamW(
-            self.model.critic.parameters(),
+
+        self.critic_optimizer = torch_optim_AdamW(
+            # self.model.critic.parameters(),
+            self.model.critic.trainable_variables,
             lr=cfg.train.critic_lr,
             weight_decay=cfg.train.critic_weight_decay,
         )
+
         self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
             self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
