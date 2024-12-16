@@ -98,6 +98,7 @@ def test_torch_and_tf_adam():
         # PyTorch
         torch_inputs = torch.tensor(inputs)
         torch_targets = torch.tensor(targets)
+        print("torch_targets.device = ", torch_targets.device)
 
         torch_optimizer.zero_grad()
         torch_outputs = torch_model(torch_inputs)
@@ -126,6 +127,7 @@ def test_torch_and_tf_adam():
     # Compare final outputs
     torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
     tf_final_output = tf_model(inputs).numpy()
+
 
     print("\nFinal Output Comparison:")
     print(f"  PyTorch: {torch_final_output}")

@@ -2198,18 +2198,13 @@ def with_torch_no_grad():
 
 
 
-def torch_tensor_to():
-    pass
-
-
-
-
 
 
 
 
 
 def torch_tensor_cpu(tensor):
+
     return 
 
 
@@ -2217,6 +2212,12 @@ def torch_tensor_cpu(tensor):
 
 
 
+
+
+
+
+# def torch_tensor_to():
+#     pass
 
 
 
@@ -2307,27 +2308,43 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
         self.step_in_cycle = last_epoch
 
         self.base_lr = self.min_lr
-        
-    def __call__(self, epoch = None):
-        import math
-        # print("scheduler.py: tf_CosineAnnealingWarmupRestarts.__call__()")
-        # print("epoch = ", epoch)
 
-        # print("type(epoch) = ", type(epoch))
-        # print("epoch = ", epoch)
+        self.last_epoch = last_epoch
+
+        self.lr = self.base_lr
+
+        self.step()
+
+    def __call__(self, step):
+        return self.lr
+        
+    # def __call__(self, epoch = None):
+    def step(self, epoch = None):
+        import math
+        print("tf_CosineAnnealingWarmupRestarts.__call__()")
+        print("tf: epoch = ", epoch)
+
+        print("tf: type(epoch) = ", type(epoch))
+        print("tf: epoch = ", epoch)
+
+        print("tf: self.last_epoch = ", self.last_epoch)
+
+        #Because tensorflow automatically set epoch for each epoch，to achieve the same optimizer as the pytorch version, we choose to fix epoch=None manually
         if epoch is not None:
             epoch = int(epoch)  # 强制转换为整数
 
-        print("2epoch = ", epoch)
+        print("tf: 2epoch = ", epoch)
+        epoch = None
+        print("tf: 3epoch = ", epoch)
 
-        print("self.base_lr = ", self.base_lr)
+        print("tf: self.base_lr = ", self.base_lr)
 
         if epoch is None:
-            print("step: branch1")
+            print("tf: step: branch1")
             epoch = self.last_epoch + 1
             self.step_in_cycle = self.step_in_cycle + 1
             if self.step_in_cycle >= self.cur_cycle_steps:
-                print("step: branch1-1")
+                print("tf: step: branch1-1")
                 self.cycle += 1
                 self.step_in_cycle = self.step_in_cycle - self.cur_cycle_steps
                 self.cur_cycle_steps = (
@@ -2335,15 +2352,15 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
                     + self.warmup_steps
                 )
         else:
-            print("step: branch2")
+            print("tf: step: branch2")
             if epoch >= self.first_cycle_steps:
-                print("step: branch2-1")
+                print("tf: step: branch2-1")
                 if self.cycle_mult == 1.0:
-                    print("step: branch2-1-1")
+                    print("tf: step: branch2-1-1")
                     self.step_in_cycle = epoch % self.first_cycle_steps
                     self.cycle = epoch // self.first_cycle_steps
                 else:
-                    print("step: branch2-1-2")
+                    print("tf: step: branch2-1-2")
                     n = int(
                         math.log(
                             (
@@ -2355,7 +2372,7 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
                     )
                     self.cycle = n
 
-                    print("self.cycle = ", self.cycle)
+                    print("tf: self.cycle = ", self.cycle)
 
                     self.step_in_cycle = epoch - int(
                         self.first_cycle_steps
@@ -2363,16 +2380,16 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
                         / (self.cycle_mult - 1)
                     )
 
-                    print("self.step_in_cycle = ", self.step_in_cycle)
+                    print("tf: self.step_in_cycle = ", self.step_in_cycle)
 
                     self.cur_cycle_steps = self.first_cycle_steps * self.cycle_mult ** (
                         n
                     )
 
-                    print("self.cur_cycle_steps = ", self.cur_cycle_steps)
+                    print("tf: self.cur_cycle_steps = ", self.cur_cycle_steps)
 
             else:
-                print("step: branch2-2")
+                print("tf: step: branch2-2")
                 self.cur_cycle_steps = self.first_cycle_steps
                 self.step_in_cycle = epoch
 
@@ -2382,17 +2399,17 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
 
         if self.step_in_cycle == -1:
             # return self.base_lrs
-            print("get_lr: branch1")
-            lr = self.base_lr
+            print("tf: get_lr: branch1")
+            self.lr = self.base_lr
         elif self.step_in_cycle < self.warmup_steps:
-            print("get_lr: branch2")
-            lr = (self.max_lr - self.base_lr) * self.step_in_cycle / self.warmup_steps + self.base_lr
+            print("tf: get_lr: branch2")
+            self.lr = (self.max_lr - self.base_lr) * self.step_in_cycle / self.warmup_steps + self.base_lr
             # [
                 # for base_lr in self.base_lrs
             # ]
         else:
-            print("get_lr: branch3")
-            lr = self.base_lr + (self.max_lr - self.base_lr) * ( 1
+            print("tf: get_lr: branch3")
+            self.lr = self.base_lr + (self.max_lr - self.base_lr) * ( 1
                     + math.cos(
                         math.pi
                         * (self.step_in_cycle - self.warmup_steps)
@@ -2401,8 +2418,50 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
                 ) / 2
 
         # 更新学习率
-        # tf.keras.backend.set_value(self.model.optimizer.lr, lr)
+        # tf.keras.backend.set_value(self.optimizer.lr, lr)
 
-        print("lr = ", lr)
+        print("tf: lr = ", self.lr)
 
-        return lr
+        return self.lr
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -18,7 +18,7 @@ from collections import deque
 log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
-from util.scheduler import CosineAnnealingWarmupRestarts
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_Adam, torch_optim_AdamW
 
 from util.torch_to_tf import torch_from_numpy, torch_tensor, torch_cat, torch_tensor_exp
 
@@ -40,15 +40,8 @@ class TrainCalQLAgent(TrainAgent):
         # note the discount factor gamma here is applied to reward every act_steps, instead of every env step
         self.gamma = cfg.train.gamma
 
-        # Optimizer
-        self.actor_optimizer = torch.optim.AdamW(
-            self.model.network.parameters(),
-            lr=cfg.train.actor_lr,
-            weight_decay=cfg.train.actor_weight_decay,
-        )
-
-        self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -57,14 +50,18 @@ class TrainCalQLAgent(TrainAgent):
             gamma=1.0,
         )
 
-        self.critic_optimizer = torch.optim.AdamW(
-            self.model.critic.parameters(),
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
+        # Optimizer
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.network.parameters(),
+            self.model.network.trainable_variables,
+            # lr=cfg.train.actor_lr,
+            lr=self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
 
-        self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_optimizer,
+
+        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -72,6 +69,15 @@ class TrainCalQLAgent(TrainAgent):
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
+
+        self.critic_optimizer = torch_optim_AdamW(
+            # self.model.critic.parameters(),
+            self.model.critic.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr=self.critic_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
+        )
+
 
         # Perturbation scale
         self.target_ema_rate = cfg.train.target_ema_rate
@@ -101,14 +107,18 @@ class TrainCalQLAgent(TrainAgent):
 
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
-        self.log_alpha = torch_tensor(np.log(init_temperature)).to(self.device)
+        self.log_alpha = torch_tensor(np.log(init_temperature))
+        # .to(self.device)
         self.log_alpha.requires_grad = True
         self.automatic_entropy_tuning = cfg.train.automatic_entropy_tuning
         self.target_entropy = cfg.train.target_entropy
-        self.log_alpha_optimizer = torch.optim.Adam(
+
+
+        self.log_alpha_optimizer = torch_optim_Adam(
             [self.log_alpha],
             lr=cfg.train.critic_lr,
         )
+
 
     def run(self):
 
@@ -202,7 +212,7 @@ class TrainCalQLAgent(TrainAgent):
                         cond = {
                             "state": torch_from_numpy(prev_obs_venv["state"])
                             .float()
-                            .to(self.device)
+                            # .to(self.device)
                         }
                         samples = (
                             self.model(
@@ -334,64 +344,66 @@ class TrainCalQLAgent(TrainAgent):
                         self.batch_size // 2 if self.train_online else self.batch_size,
                     )
                     obs_b = (
-                        torch_from_numpy(obs_buffer_off[inds]).float().to(self.device)
+                        torch_from_numpy(obs_buffer_off[inds]).float()
+                        # .to(self.device)
                     )
                     next_obs_b = (
                         torch_from_numpy(next_obs_buffer_off[inds])
                         .float()
-                        .to(self.device)
+                        # .to(self.device)
                     )
                     actions_b = (
                         torch_from_numpy(action_buffer_off[inds])
                         .float()
-                        .to(self.device)
+                        # .to(self.device)
                     )
                     rewards_b = (
                         torch_from_numpy(reward_buffer_off[inds])
                         .float()
-                        .to(self.device)
+                        # .to(self.device)
                     )
                     terminated_b = (
                         torch_from_numpy(terminated_buffer_off[inds])
                         .float()
-                        .to(self.device)
+                        # .to(self.device)
                     )
                     reward_to_go_b = (
                         torch_from_numpy(reward_to_go_buffer_off[inds])
                         .float()
-                        .to(self.device)
+                        # .to(self.device)
                     )
 
                     # Sample from ONLINE buffer
                     if self.train_online:
                         inds = np.random.choice(len(obs_buffer), self.batch_size // 2)
                         obs_b_on = (
-                            torch_from_numpy(obs_array[inds]).float().to(self.device)
+                            torch_from_numpy(obs_array[inds]).float()
+                            # .to(self.device)
                         )
                         next_obs_b_on = (
                             torch_from_numpy(next_obs_array[inds])
                             .float()
-                            .to(self.device)
+                            # .to(self.device)
                         )
                         actions_b_on = (
                             torch_from_numpy(actions_array[inds])
                             .float()
-                            .to(self.device)
+                            # .to(self.device)
                         )
                         rewards_b_on = (
                             torch_from_numpy(rewards_array[inds])
                             .float()
-                            .to(self.device)
+                            # .to(self.device)
                         )
                         terminated_b_on = (
                             torch_from_numpy(terminated_array[inds])
                             .float()
-                            .to(self.device)
+                            # .to(self.device)
                         )
                         reward_to_go_b_on = (
                             torch_from_numpy(reward_to_go_array[inds])
                             .float()
-                            .to(self.device)
+                            # .to(self.device)
                         )
 
                         # merge offline and online data
