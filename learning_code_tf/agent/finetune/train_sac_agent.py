@@ -21,21 +21,29 @@ from agent.finetune.train_agent import TrainAgent
 
 from util.torch_to_tf import torch_tensor, torch_from_numpy, torch_tensor_float
 
+from util.torch_to_tf import torch_no_grad, torch_optim_Adam, torch_exp, torch_tensor_item, torch_tensor_requires_grad_
+
 
 class TrainSACAgent(TrainAgent):
     def __init__(self, cfg):
         print("train_sac_agent.py: TrainSACAgent.__init__()")
 
         super().__init__(cfg)
-
-
-        # Configuration and hyperparameters
-        self.cfg = cfg
                 
         
         # note the discount factor gamma here is applied to reward every act_steps, instead of every env step
         self.gamma = cfg.train.gamma
 
+        
+        # Optimizer
+        self.actor_optimizer = torch_optim_Adam(
+            self.model.network.trainable_variables,
+            lr=cfg.train.actor_lr,
+        )
+        self.critic_optimizer = torch_optim_Adam(
+            self.model.critic.trainable_variables,
+            lr=cfg.train.critic_lr,
+        )
 
         # Perturbation scale
         self.target_ema_rate = cfg.train.target_ema_rate
@@ -61,37 +69,18 @@ class TrainSACAgent(TrainAgent):
         self.n_explore_steps = cfg.train.n_explore_steps
 
 
-
-        
-        # Initialize model, optimizers, and buffers
-        self.model = self.initialize_model(cfg)  # Placeholder for model
-        
-        self.actor_optimizer = tf.keras.optimizers.Adam(cfg.train.actor_lr)
-        self.critic_optimizer = tf.keras.optimizers.Adam(cfg.train.critic_lr)
-
-        self.log_alpha = tf.Variable(np.log(cfg.train.init_temperature), dtype=tf.float32, trainable=True)
-        self.log_alpha_optimizer = tf.keras.optimizers.Adam(cfg.train.critic_lr)
-
-        # Replay buffers
-        self.obs_buffer = deque(maxlen=self.buffer_size)
-        self.next_obs_buffer = deque(maxlen=self.buffer_size)
-        self.action_buffer = deque(maxlen=self.buffer_size)
-        self.reward_buffer = deque(maxlen=self.buffer_size)
-        self.terminated_buffer = deque(maxlen=self.buffer_size)
-
-
-
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
-
-        # self.log_alpha = torch.tensor(np.log(init_temperature)).to(self.device)
         self.log_alpha = torch_tensor(np.log(init_temperature))
         # .to(self.device)
 
-        self.log_alpha.requires_grad = True
+
+        # self.log_alpha.requires_grad = True
+        torch_tensor_requires_grad_(self.log_alpha, True)
+
         self.target_entropy = cfg.train.target_entropy
         
-        self.log_alpha_optimizer = torch.optim.Adam(
+        self.log_alpha_optimizer = torch_optim_Adam(
             [self.log_alpha],
             lr=cfg.train.critic_lr,
         )
@@ -133,7 +122,18 @@ class TrainSACAgent(TrainAgent):
             n_steps = (
                 self.n_steps if not eval_mode else int(1e5)
             )  # large number for eval mode
+            
+
+
+
+
+            
             self.model.eval() if eval_mode else self.model.train()
+
+
+
+
+
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) at the beginning
             firsts_trajs = np.zeros((self.n_steps + 1, self.n_envs))
@@ -153,11 +153,12 @@ class TrainSACAgent(TrainAgent):
                 if self.itr < self.n_explore_steps:
                     action_venv = self.venv.action_space.sample()
                 else:
-                    with torch.no_grad():
+                    # with torch.no_grad():
+                    with torch_no_grad() as tape:
                         cond = {
                             "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
                             # .float()
-                            .to(self.device)
+                            # .to(self.device)
                         }
                         samples = (
                             self.model(
@@ -248,44 +249,51 @@ class TrainSACAgent(TrainAgent):
                 obs_b = (
                     torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
                     # .float()
-                    .to(self.device)
+                    # .to(self.device)
                 )
                 next_obs_b = (
                     torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
                     # .float()
-                    .to(self.device)
+                    # .to(self.device)
                 )
                 actions_b = (
                     torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
                     # .float()
-                    .to(self.device)
+                    # .to(self.device)
                 )
                 rewards_b = (
                     torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
                     # .float()
-                    .to(self.device)
+                    # .to(self.device)
                 )
                 terminated_b = (
                     torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
                     # .float()
-                    .to(self.device)
+                    # .to(self.device)
                 )
 
                 # Update critic
-                alpha = self.log_alpha.exp().item()
-                loss_critic = self.model.loss_critic(
-                    {"state": obs_b},
-                    {"state": next_obs_b},
-                    actions_b,
-                    rewards_b,
-                    terminated_b,
-                    self.gamma,
-                    alpha,
-                )
+                # alpha = self.log_alpha.exp().item()
 
-                self.critic_optimizer.zero_grad()
-                loss_critic.backward()
-                self.critic_optimizer.step()
+                alpha = torch_tensor_item( torch_exp(self.log_alpha) )
+
+
+
+                with tf.GradientTape() as tape:
+                    loss_critic = self.model.loss_critic(
+                        {"state": obs_b},
+                        {"state": next_obs_b},
+                        actions_b,
+                        rewards_b,
+                        terminated_b,
+                        self.gamma,
+                        alpha,
+                    )
+
+                tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
+
+                self.critic_optimizer.step(tf_gradients)
+
 
                 # Update target critic every critic update
                 self.model.update_target_critic(self.target_ema_rate)
@@ -294,25 +302,28 @@ class TrainSACAgent(TrainAgent):
                 loss_actor = 0
                 if self.itr % self.actor_update_freq == 0:
                     for _ in range(2):
-                        loss_actor = self.model.loss_actor(
-                            {"state": obs_b},
-                            alpha,
-                        )
 
-                        self.actor_optimizer.zero_grad()
-                        loss_actor.backward()
-                        self.actor_optimizer.step()
 
-                        # Update temperature parameter
-                        loss_alpha = self.model.loss_temperature(
-                            {"state": obs_b},
-                            self.log_alpha.exp(),  # with grad
-                            self.target_entropy,
-                        )
+                        with tf.GradientTape() as tape:
+                            loss_actor = self.model.loss_actor(
+                                {"state": obs_b},
+                                alpha,
+                            )
 
-                        self.log_alpha_optimizer.zero_grad()
-                        loss_alpha.backward()
-                        self.log_alpha_optimizer.step()
+
+                        tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+                        self.actor_optimizer.step(tf_gradients)
+
+                        with tf.GradientTape() as tape:
+                            # Update temperature parameter
+                            loss_alpha = self.model.loss_temperature(
+                                {"state": obs_b},
+                                self.log_alpha.exp(),  # with grad
+                                self.target_entropy,
+                            )
+
+                        tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])
+                        self.log_alpha_optimizer.step(tf_gradients)
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:

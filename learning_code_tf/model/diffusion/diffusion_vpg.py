@@ -26,6 +26,8 @@ import numpy as np
 
 from util.torch_to_tf import torch_flatten, torch_arange, Normal
 
+from util.torch_to_tf import torch_no_grad
+
 
 class VPGDiffusion(DiffusionModel):
 
@@ -268,6 +270,7 @@ class VPGDiffusion(DiffusionModel):
 
     # override
     # @torch.no_grad()
+    @tf.function
     def call(
         self,
         cond,
@@ -553,7 +556,8 @@ class VPGDiffusion(DiffusionModel):
 
         # Get advantage
         # with tf.GradientTape() as tape:
-        value = tf.squeeze(self.critic(cond))  # (b,)
+        with torch_no_grad() as tape:
+            value = tf.squeeze(self.critic(cond))  # (b,)
 
         # with torch.no_grad():
         #     value = self.critic(cond).squeeze()

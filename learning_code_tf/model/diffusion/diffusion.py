@@ -227,8 +227,8 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-    # @tf.function
     # def forward(self, cond, deterministic=True):
+    @tf.function
     def call(self, cond, deterministic=True):
         """
         Forward pass for sampling actions. Used in evaluating pre-trained/fine-tuned policy. Not modifying diffusion clipping.

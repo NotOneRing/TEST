@@ -9,7 +9,9 @@ import os
 import pickle
 import einops
 import numpy as np
-import torch
+
+# import torch
+
 import logging
 import wandb
 from copy import deepcopy
@@ -18,7 +20,14 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from collections import deque
 from agent.finetune.train_agent import TrainAgent
-from util.scheduler import CosineAnnealingWarmupRestarts
+
+# from util.scheduler import CosineAnnealingWarmupRestarts
+
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_Adam, torch_optim_AdamW,\
+torch_from_numpy, torch_tensor_float, torch_tensor_detach, torch_nn_utils_clip_grad_norm_and_step, \
+torch_no_grad
+
+import tensorflow as tf
 
 
 class TrainIDQLDiffusionAgent(TrainAgent):
@@ -36,13 +45,8 @@ class TrainIDQLDiffusionAgent(TrainAgent):
         self.n_critic_warmup_itr = cfg.train.n_critic_warmup_itr
 
         # Optimizer
-        self.actor_optimizer = torch.optim.AdamW(
-            self.model.actor.parameters(),
-            lr=cfg.train.actor_lr,
-            weight_decay=cfg.train.actor_weight_decay,
-        )
-        self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -50,18 +54,19 @@ class TrainIDQLDiffusionAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_q_optimizer = torch.optim.AdamW(
-            self.model.critic_q.parameters(),
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
+
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.actor.parameters(),
+            self.model.actor.trainable_variables,
+            # lr=cfg.train.actor_lr,
+            lr = self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
-        self.critic_v_optimizer = torch.optim.AdamW(
-            self.model.critic_v.parameters(),
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
-        )
-        self.critic_v_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_v_optimizer,
+
+
+
+        self.critic_v_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_v_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -69,8 +74,8 @@ class TrainIDQLDiffusionAgent(TrainAgent):
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_q_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_q_optimizer,
+        self.critic_q_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_q_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -78,6 +83,23 @@ class TrainIDQLDiffusionAgent(TrainAgent):
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
+
+        self.critic_q_optimizer = torch_optim_AdamW(
+            # self.model.critic_q.parameters(),
+            self.model.critic_q.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr = self.critic_q_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
+        )
+        self.critic_v_optimizer = torch_optim_AdamW(
+            # self.model.critic_v.parameters(),
+            self.model.critic_v.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr = self.critic_v_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
+        )
+
+
 
         # Buffer size
         self.buffer_size = cfg.train.buffer_size
@@ -145,11 +167,12 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                with torch.no_grad():
+                # with torch.no_grad():
+                with torch_no_grad() as tape:
                     cond = {
-                        "state": torch.from_numpy(prev_obs_venv["state"])
-                        .float()
-                        .to(self.device)
+                        "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
+                        # .float()
+                        # .to(self.device)
                     }
                     samples = (
                         self.model(
@@ -259,58 +282,82 @@ class TrainIDQLDiffusionAgent(TrainAgent):
 
                     # Sample batch
                     inds = np.random.choice(len(obs_trajs), self.batch_size)
-                    obs_b = torch.from_numpy(obs_trajs[inds]).float().to(self.device)
+                    obs_b = torch_tensor_float( torch_from_numpy(obs_trajs[inds]) )
+                    # .float().to(self.device)
                     next_obs_b = (
-                        torch.from_numpy(next_obs_trajs[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(next_obs_trajs[inds]) )
+                    # .float().to(self.device)
                     )
                     actions_b = (
-                        torch.from_numpy(action_trajs[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(action_trajs[inds]) )
+                        # .float().to(self.device)
                     )
                     reward_b = (
-                        torch.from_numpy(reward_trajs[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(reward_trajs[inds]) )
+                        # .float().to(self.device)
                     )
                     terminated_b = (
-                        torch.from_numpy(terminated_trajs[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(terminated_trajs[inds]) )
+                        # .float().to(self.device)
                     )
 
-                    # update critic value function
-                    critic_loss_v = self.model.loss_critic_v(
-                        {"state": obs_b}, actions_b
-                    )
-                    self.critic_v_optimizer.zero_grad()
-                    critic_loss_v.backward()
-                    self.critic_v_optimizer.step()
 
-                    # update critic q function
-                    critic_loss_q = self.model.loss_critic_q(
-                        {"state": obs_b},
-                        {"state": next_obs_b},
-                        actions_b,
-                        reward_b,
-                        terminated_b,
-                        self.gamma,
-                    )
-                    self.critic_q_optimizer.zero_grad()
-                    critic_loss_q.backward()
-                    self.critic_q_optimizer.step()
+                    with tf.GradientTape() as tape:
+                        
+                        # update critic value function
+                        critic_loss_v = self.model.loss_critic_v(
+                            {"state": obs_b}, actions_b
+                        )
+                    tf_gradients = tape.gradient(critic_loss_v, self.model.critic_v.trainable_variables)
+
+                    self.critic_v_optimizer.step(tf_gradients)
+
+                    with tf.GradientTape() as tape:
+
+                        # update critic q function
+                        critic_loss_q = self.model.loss_critic_q(
+                            {"state": obs_b},
+                            {"state": next_obs_b},
+                            actions_b,
+                            reward_b,
+                            terminated_b,
+                            self.gamma,
+                        )
+                    tf_gradients = tape.gradient(critic_loss_q, self.model.critic_q.trainable_variables)
+            
+                    # self.critic_q_optimizer.zero_grad()
+                    # critic_loss_q.backward()
+                    self.critic_q_optimizer.step(critic_loss_q)
 
                     # update target q function
                     self.model.update_target_critic(self.critic_tau)
-                    loss_critic = critic_loss_q.detach() + critic_loss_v.detach()
 
-                    # Update policy with collected trajectories - no weighting
-                    loss_actor = self.model.loss(
-                        actions_b,
-                        {"state": obs_b},
-                    )
-                    self.actor_optimizer.zero_grad()
-                    loss_actor.backward()
+                    loss_critic = torch_tensor_detach( critic_loss_q ) + torch_tensor_detach( critic_loss_v )
+
+                    with tf.GradientTape() as tape:
+
+                        # Update policy with collected trajectories - no weighting
+                        loss_actor = self.model.loss(
+                            actions_b,
+                            {"state": obs_b},
+                        )
+
+                    # self.actor_optimizer.zero_grad()
+                    # loss_actor.backward()
+                    tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+
+
                     if self.itr >= self.n_critic_warmup_itr:
                         if self.max_grad_norm is not None:
-                            torch.nn.utils.clip_grad_norm_(
-                                self.model.actor.parameters(), self.max_grad_norm
+                            torch_nn_utils_clip_grad_norm_and_step(
+                                # self.model.actor.parameters()
+                                self.model.actor.trainable_variables,
+                                self.actor_optimizer,
+                                self.max_grad_norm,
+                                tf_gradients
                             )
-                        self.actor_optimizer.step()
+                        else:
+                            self.actor_optimizer.step(tf_gradients)
 
             # Update lr
             self.actor_lr_scheduler.step()
@@ -369,3 +416,11 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+
+
+
+
+
+

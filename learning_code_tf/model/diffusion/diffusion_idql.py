@@ -14,7 +14,8 @@ log = logging.getLogger(__name__)
 
 from model.diffusion.diffusion_rwr import RWRDiffusion
 
-from util.torch_to_tf import torch_gather
+from util.torch_to_tf import torch_gather, torch_no_grad
+
 
 def expectile_loss(diff, expectile=0.8):
 
@@ -53,8 +54,8 @@ class IDQLDiffusion(RWRDiffusion):
         print("diffusion_idql.py: IDQLDiffusion.compute_advantages()")
 
         # get current Q-function, stop gradient
-
-        current_q1, current_q2 = self.target_q(obs, actions)
+        with torch_no_grad() as tape:
+            current_q1, current_q2 = self.target_q(obs, actions)
         q = tf.minimum(current_q1, current_q2)
 
         # get the current V-function
@@ -84,7 +85,8 @@ class IDQLDiffusion(RWRDiffusion):
         current_q1, current_q2 = self.critic_q(obs, actions)
 
         # get the next V-function, stop gradient
-        next_v = self.critic_v(next_obs)
+        with torch_no_grad() as tape:
+            next_v = self.critic_v(next_obs)
 
         # terminal state mask
         mask = 1 - terminated
@@ -141,7 +143,7 @@ class IDQLDiffusion(RWRDiffusion):
 
 
 
-
+    @tf.function
     def call(
         self,
         cond,

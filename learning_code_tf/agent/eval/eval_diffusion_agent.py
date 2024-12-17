@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.eval.eval_agent import EvalAgent
 
+from util.torch_to_tf import torch_no_grad
 
 class EvalDiffusionAgent(EvalAgent):
 
@@ -59,17 +60,18 @@ class EvalDiffusionAgent(EvalAgent):
 
             # Select action
             # with torch.no_grad():
-            cond = {
-                # "state": torch.from_numpy(prev_obs_venv["state"])
-                # .float()
-                # .to(self.device)
-            "state": tf.convert_to_tensor(prev_obs_venv["state"], dtype=tf.float32)
-            }
-            samples = self.model(cond=cond, deterministic=True)
-            output_venv = (
-                # samples.trajectories.cpu().numpy()
-                samples.trajectories.numpy()
-            )  # n_env x horizon x act
+            with torch_no_grad() as tape:
+                cond = {
+                    # "state": torch.from_numpy(prev_obs_venv["state"])
+                    # .float()
+                    # .to(self.device)
+                "state": tf.convert_to_tensor(prev_obs_venv["state"], dtype=tf.float32)
+                }
+                samples = self.model(cond=cond, deterministic=True)
+                output_venv = (
+                    # samples.trajectories.cpu().numpy()
+                    samples.trajectories.numpy()
+                )  # n_env x horizon x act
 
             action_venv = output_venv[:, : self.act_steps]
 

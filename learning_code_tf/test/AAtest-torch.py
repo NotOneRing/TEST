@@ -23,3 +23,28 @@ tensor_cpu = tensor_gpu.cpu()
 print(f"Tensor on device: {tensor_cpu.device}\n{tensor_cpu}")
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

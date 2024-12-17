@@ -19,6 +19,8 @@ from model.rl.gmm_vpg import VPG_GMM
 
 from util.torch_to_tf import torch_clamp, torch_max, torch_nanmean
 
+from util.torch_to_tf import torch_no_grad
+
 
 class PPO_GMM(VPG_GMM):
 
@@ -84,10 +86,9 @@ class PPO_GMM(VPG_GMM):
         # with torch.no_grad():
         # approx_kl = ((ratio - 1) - logratio).nanmean()
 
-        approx_kl = torch_nanmean((ratio - 1) - logratio)
-
-
-        clipfrac = tf.reduce_mean( tf.cast( tf.greater( tf.abs(ratio - 1.0), self.clip_ploss_coef ), tf.float32) )
+        with torch_no_grad() as tape:
+            approx_kl = torch_nanmean((ratio - 1) - logratio)
+            clipfrac = tf.reduce_mean( tf.cast( tf.greater( tf.abs(ratio - 1.0), self.clip_ploss_coef ), tf.float32) )
 
 
         advantages_std = tf.reduce_std(advantages)

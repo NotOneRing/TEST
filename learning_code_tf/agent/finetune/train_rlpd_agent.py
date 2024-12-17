@@ -10,7 +10,8 @@ import numpy as np
 
 
 
-import torch
+# import torch
+import tensorflow as tf
 
 
 
@@ -22,7 +23,13 @@ from collections import deque
 log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
-from util.scheduler import CosineAnnealingWarmupRestarts
+
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts
+
+
+from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, \
+    torch_tensor, torch_optim_Adam, torch_tensor_float, torch_from_numpy, \
+    torch_cat, torch_exp, torch_tensor_item
 
 
 class TrainRLPDAgent(TrainAgent):
@@ -38,13 +45,9 @@ class TrainRLPDAgent(TrainAgent):
         self.gamma = cfg.train.gamma
 
         # Optimizer
-        self.actor_optimizer = torch.optim.AdamW(
-            self.model.network.parameters(),
-            lr=cfg.train.actor_lr,
-            weight_decay=cfg.train.actor_weight_decay,
-        )
-        self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -52,13 +55,18 @@ class TrainRLPDAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_optimizer = torch.optim.AdamW(
-            self.model.ensemble_params.values(),  # https://github.com/pytorch/pytorch/issues/120581
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
+
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.network.parameters(),
+            self.model.network.trainable_variables,
+            # lr=cfg.train.actor_lr,
+            lr = self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
-        self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_optimizer,
+
+
+        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -66,6 +74,15 @@ class TrainRLPDAgent(TrainAgent):
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
+
+        self.critic_optimizer = torch_optim_AdamW(
+            # self.model.ensemble_params.values(),  # https://github.com/pytorch/pytorch/issues/120581
+            self.model.ensemble_params.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr = self.critic_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
+        )
+
 
         # Perturbation scale
         self.target_ema_rate = cfg.train.target_ema_rate
@@ -87,10 +104,11 @@ class TrainRLPDAgent(TrainAgent):
 
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
-        self.log_alpha = torch.tensor(np.log(init_temperature)).to(self.device)
+        self.log_alpha = torch_tensor(np.log(init_temperature))
+        # .to(self.device)
         self.log_alpha.requires_grad = True
         self.target_entropy = cfg.train.target_entropy
-        self.log_alpha_optimizer = torch.optim.Adam(
+        self.log_alpha_optimizer = torch_optim_Adam(
             [self.log_alpha],
             lr=cfg.train.critic_lr,
         )
@@ -111,6 +129,9 @@ class TrainRLPDAgent(TrainAgent):
             batch_size=len(self.dataset_offline),
             drop_last=False,
         )
+
+
+
         for batch in dataloader_offline:
             actions, states_and_next, rewards, terminated = batch
             states = states_and_next["state"]
@@ -167,11 +188,12 @@ class TrainRLPDAgent(TrainAgent):
                 if self.itr < self.n_explore_steps:
                     action_venv = self.venv.action_space.sample()
                 else:
-                    with torch.no_grad():
+                    # with torch.no_grad():
+                    with torch_no_grad() as tape:
                         cond = {
-                            "state": torch.from_numpy(prev_obs_venv["state"])
-                            .float()
-                            .to(self.device)
+                            "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
+                            # .float()
+                            # .to(self.device)
                         }
                         samples = (
                             self.model(
@@ -261,100 +283,123 @@ class TrainRLPDAgent(TrainAgent):
                     # Sample from OFFLINE buffer
                     inds = np.random.choice(len(obs_buffer_off), self.batch_size // 2)
                     obs_b_off = (
-                        torch.from_numpy(obs_buffer_off[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(obs_buffer_off[inds]) )
+                        # .float().to(self.device)
                     )
                     next_obs_b_off = (
-                        torch.from_numpy(next_obs_buffer_off[inds])
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(next_obs_buffer_off[inds]) )
+                        # .float()
+                        # .to(self.device)
                     )
                     actions_b_off = (
-                        torch.from_numpy(action_buffer_off[inds])
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(action_buffer_off[inds]) )
+                        # .float()
+                        # .to(self.device)
                     )
                     rewards_b_off = (
-                        torch.from_numpy(reward_buffer_off[inds])
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(reward_buffer_off[inds]) )
+                        # .float()
+                        # .to(self.device)
                     )
                     terminated_b_off = (
-                        torch.from_numpy(terminated_buffer_off[inds])
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(terminated_buffer_off[inds]) )
+                        # .float()
+                        # .to(self.device)
                     )
 
                     # Sample from ONLINE buffer
                     inds = np.random.choice(len(obs_buffer), self.batch_size // 2)
                     obs_b_on = (
-                        torch.from_numpy(np.array([obs_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
                     next_obs_b_on = (
-                        torch.from_numpy(np.array([next_obs_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
                     actions_b_on = (
-                        torch.from_numpy(np.array([action_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
                     rewards_b_on = (
-                        torch.from_numpy(np.array([reward_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
                     terminated_b_on = (
-                        torch.from_numpy(np.array([terminated_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
 
                     # merge offline and online data
-                    obs_b = torch.cat([obs_b_off, obs_b_on], dim=0)
-                    next_obs_b = torch.cat([next_obs_b_off, next_obs_b_on], dim=0)
-                    actions_b = torch.cat([actions_b_off, actions_b_on], dim=0)
-                    rewards_b = torch.cat([rewards_b_off, rewards_b_on], dim=0)
-                    terminated_b = torch.cat([terminated_b_off, terminated_b_on], dim=0)
+                    obs_b = torch_cat([obs_b_off, obs_b_on], dim=0)
+                    next_obs_b = torch_cat([next_obs_b_off, next_obs_b_on], dim=0)
+                    actions_b = torch_cat([actions_b_off, actions_b_on], dim=0)
+                    rewards_b = torch_cat([rewards_b_off, rewards_b_on], dim=0)
+                    terminated_b = torch_cat([terminated_b_off, terminated_b_on], dim=0)
 
                     # Update critic
-                    alpha = self.log_alpha.exp().item()
-                    loss_critic = self.model.loss_critic(
-                        {"state": obs_b},
-                        {"state": next_obs_b},
-                        actions_b,
-                        rewards_b,
-                        terminated_b,
-                        self.gamma,
-                        alpha,
-                    )
-                    self.critic_optimizer.zero_grad()
-                    loss_critic.backward()
-                    self.critic_optimizer.step()
+                    # alpha = self.log_alpha.exp().item()
+                    alpha = torch_tensor_item( torch_exp( self.log_alpha) )
+
+
+
+
+                    with tf.GradientTape() as tape:
+                        loss_critic = self.model.loss_critic(
+                            {"state": obs_b},
+                            {"state": next_obs_b},
+                            actions_b,
+                            rewards_b,
+                            terminated_b,
+                            self.gamma,
+                            alpha,
+                        )
+                    
+                    tf_gradients = tape.gradient(loss_critic, self.model.ensemble_params.trainable_variables)
+
+                    self.critic_optimizer.step(tf_gradients)
+
 
                     # Update target critic every critic update
                     self.model.update_target_critic(self.target_ema_rate)
 
-                # Update actor once with the final batch
-                loss_actor = self.model.loss_actor(
-                    {"state": obs_b},
-                    alpha,
-                )
-                self.actor_optimizer.zero_grad()
-                loss_actor.backward()
-                self.actor_optimizer.step()
 
-                # Update temperature parameter
-                self.log_alpha_optimizer.zero_grad()
-                loss_alpha = self.model.loss_temperature(
-                    {"state": obs_b},
-                    self.log_alpha.exp(),  # with grad
-                    self.target_entropy,
-                )
-                loss_alpha.backward()
-                self.log_alpha_optimizer.step()
+
+
+
+
+
+                with tf.GradientTape() as tape:
+                    # Update actor once with the final batch
+                    loss_actor = self.model.loss_actor(
+                        {"state": obs_b},
+                        alpha,
+                    )
+
+                tf_gradients = tape.gradient(loss_actor, self.model.network.trainable_variables)
+
+                self.actor_optimizer.step(tf_gradients)
+
+
+
+
+
+                with tf.GradientTape() as tape:
+                    loss_alpha = self.model.loss_temperature(
+                        {"state": obs_b},
+                        self.log_alpha.exp(),  # with grad
+                        self.target_entropy,
+                    )
+                tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])
+
+                self.log_alpha_optimizer.step(tf_gradients)
+
+
 
             # Update lr
             self.actor_lr_scheduler.step()

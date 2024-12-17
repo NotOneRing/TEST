@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 from util.torch_to_tf import torch_zeros, torch_unsqueeze, torch_ones, torch_triu, torch_arange, torch_tensor_expand,\
-torch_meshgrid, torch_view, torch_tensor_masked_fill, torch_tensor_float, torch_tensor_transpose, torch_register_buffer
+torch_meshgrid, torch_tensor_view, torch_tensor_masked_fill, torch_tensor_float, torch_tensor_transpose, torch_register_buffer
 
 
 
@@ -198,7 +198,7 @@ class GMM_Transformer(tf.keras.Model):
 
         # flatten history
         # state = cond["state"].view(B, -1)
-        state = torch_view( cond["state"], B, -1)
+        state = torch_tensor_view( cond["state"], B, -1)
 
         # input to transformer
         # state = state.unsqueeze(1)  # (B,1,cond_dim)

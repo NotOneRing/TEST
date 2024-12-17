@@ -18,7 +18,11 @@ from collections import deque
 log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
-from util.scheduler import CosineAnnealingWarmupRestarts
+
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW,\
+torch_from_numpy, torch_tensor_float, torch_no_grad
+
+import tensorflow as tf
 
 
 class TrainIBRLAgent(TrainAgent):
@@ -31,18 +35,16 @@ class TrainIBRLAgent(TrainAgent):
         # Build dataset
         self.dataset_offline = hydra.utils.instantiate(cfg.offline_dataset)
 
+        print("self.dataset_offline = ", self.dataset_offline)
+
+
         # note the discount factor gamma here is applied to reward every act_steps, instead of every env step
         self.gamma = cfg.train.gamma
 
-        # Optimizer
-        self.actor_optimizer = torch.optim.AdamW(
-            self.model.network.parameters(),
-            lr=cfg.train.actor_lr,
-            weight_decay=cfg.train.actor_weight_decay,
-        )
         
-        self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
+
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -50,19 +52,34 @@ class TrainIBRLAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_optimizer = torch.optim.AdamW(
-            self.model.ensemble_params.values(),  # https://github.com/pytorch/pytorch/issues/120581
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
+
+
+        # Optimizer
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.network.parameters(),
+            self.model.network.trainable_variables,
+            # lr=cfg.train.actor_lr,
+            lr = self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
-        self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_optimizer,
+
+
+        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
             min_lr=cfg.train.critic_lr_scheduler.min_lr,
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
+        )
+
+        self.critic_optimizer = torch_optim_AdamW(
+            # self.model.ensemble_params.values(),  # https://github.com/pytorch/pytorch/issues/120581
+            self.model.ensemble_params.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr = self.critic_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
         )
 
         # Perturbation scale
@@ -102,6 +119,7 @@ class TrainIBRLAgent(TrainAgent):
             batch_size=len(self.dataset_offline),
             drop_last=False,
         )
+
         for batch in dataloader_offline:
             actions, states_and_next, rewards, terminated = batch
             states = states_and_next["state"]
@@ -139,7 +157,20 @@ class TrainIBRLAgent(TrainAgent):
             n_steps = (
                 self.n_steps if not eval_mode else int(1e5)
             )  # large number for eval mode
+
+
+
+
+
+
+
             self.model.eval() if eval_mode else self.model.train()
+
+
+
+
+
+
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) at the beginning
             firsts_trajs = np.zeros((n_steps + 1, self.n_envs))
@@ -155,11 +186,12 @@ class TrainIBRLAgent(TrainAgent):
             cnt_episode = 0
             for step in range(n_steps):
                 # Select action
-                with torch.no_grad():
+                # with torch.no_grad():
+                with torch_no_grad() as tape:
                     cond = {
-                        "state": torch.from_numpy(prev_obs_venv["state"])
-                        .float()
-                        .to(self.device)
+                        "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
+                        # .float()
+                        # .to(self.device)
                     }
                     samples = (
                         self.model(
@@ -255,52 +287,60 @@ class TrainIBRLAgent(TrainAgent):
                     # Sample from online buffer
                     inds = np.random.choice(len(obs_buffer), self.batch_size)
                     obs_b = (
-                        torch.from_numpy(np.array([obs_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
                     next_obs_b = (
-                        torch.from_numpy(np.array([next_obs_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
                     actions_b = (
-                        torch.from_numpy(np.array([action_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
                     rewards_b = (
-                        torch.from_numpy(np.array([reward_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
                     terminated_b = (
-                        torch.from_numpy(np.array([terminated_buffer[i] for i in inds]))
-                        .float()
-                        .to(self.device)
+                        torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
+                        # .float()
+                        # .to(self.device)
                     )
-                    loss_critic = self.model.loss_critic(
-                        {"state": obs_b},
-                        {"state": next_obs_b},
-                        actions_b,
-                        rewards_b,
-                        terminated_b,
-                        self.gamma,
-                    )
-                    self.critic_optimizer.zero_grad()
-                    loss_critic.backward()
-                    self.critic_optimizer.step()
+
+                    with tf.GradientTape() as tape:
+
+                        loss_critic = self.model.loss_critic(
+                            {"state": obs_b},
+                            {"state": next_obs_b},
+                            actions_b,
+                            rewards_b,
+                            terminated_b,
+                            self.gamma,
+                        )
+                    # self.critic_optimizer.zero_grad()
+                    # loss_critic.backward()
+                    tf_gradients = tape.gradient(loss_critic, self.model.ensemble_params.trainable_variables)
+                    self.critic_optimizer.step(tf_gradients)
 
                     # Update target critic every critic update
                     self.model.update_target_critic(self.target_ema_rate)
 
-                # Update actor once with the final batch
-                loss_actor = self.model.loss_actor(
-                    {"state": obs_b},
-                )
-                self.actor_optimizer.zero_grad()
-                loss_actor.backward()
-                self.actor_optimizer.step()
+                with tf.GradientTape() as tape:
+
+                    # Update actor once with the final batch
+                    loss_actor = self.model.loss_actor(
+                        {"state": obs_b},
+                    )
+                # self.actor_optimizer.zero_grad()
+                # loss_actor.backward()
+                tf_gradients = tape.gradient(loss_actor, self.model.network.trainable_variables)
+                self.actor_optimizer.step(tf_gradients)
+
 
                 # Update target actor
                 self.model.update_target_actor(self.target_ema_rate)

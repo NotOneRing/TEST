@@ -10,6 +10,7 @@ from util.torch_to_tf import torch_min, torch_argmax, torch_arange, torch_tensor
 
 from util.torch_to_tf import torch_prod, torch_max, torch_clamp, torch_mean, torch_tensor_view, torch_mse_loss, torch_repeat_interleave
 
+from util.torch_to_tf import torch_no_grad
 
 import logging
 from copy import deepcopy
@@ -99,32 +100,33 @@ class CalQL_Gaussian(GaussianModel):
         q_data1, q_data2 = self.critic(obs, actions)
         # with torch.no_grad():
         # repeat for action samples
-        next_obs_repeated = {"state": torch_repeat_interleave( next_obs["state"],
-            self.cql_n_actions, dim=0 )
-        }
+        with torch_no_grad() as tape:
+            next_obs_repeated = {"state": torch_repeat_interleave( next_obs["state"],
+                self.cql_n_actions, dim=0 )
+            }
 
-        # Get the next actions and logprobs
-        next_actions, next_logprobs = self.call(
-            next_obs_repeated,
-            deterministic=False,
-            get_logprob=True,
-        )
-        next_q1, next_q2 = self.target_critic(next_obs_repeated, next_actions)
-        next_q = torch_min(next_q1, next_q2)
+            # Get the next actions and logprobs
+            next_actions, next_logprobs = self.call(
+                next_obs_repeated,
+                deterministic=False,
+                get_logprob=True,
+            )
+            next_q1, next_q2 = self.target_critic(next_obs_repeated, next_actions)
+            next_q = torch_min(next_q1, next_q2)
 
-        # Reshape the next_q to match the number of samples
-        # next_q = next_q.view(B, self.cql_n_actions)  # (B, n_sample)
-        # next_logprobs = next_logprobs.view(B, self.cql_n_actions)  # (B, n_sample)
-        next_q = torch_tensor_view(next_q, B, self.cql_n_actions)  # (B, n_sample)
-        next_logprobs = torch_tensor_view( next_logprobs, B, self.cql_n_actions)  # (B, n_sample)
+            # Reshape the next_q to match the number of samples
+            # next_q = next_q.view(B, self.cql_n_actions)  # (B, n_sample)
+            # next_logprobs = next_logprobs.view(B, self.cql_n_actions)  # (B, n_sample)
+            next_q = torch_tensor_view(next_q, B, self.cql_n_actions)  # (B, n_sample)
+            next_logprobs = torch_tensor_view( next_logprobs, B, self.cql_n_actions)  # (B, n_sample)
 
-        # Get the max indices over the samples, and index into the next_q and next_log_probs
-        max_idx = torch_argmax(next_q, dim=1)
-        next_q = next_q[torch_arange(B), max_idx]
-        next_logprobs = next_logprobs[torch_arange(B), max_idx]
+            # Get the max indices over the samples, and index into the next_q and next_log_probs
+            max_idx = torch_argmax(next_q, dim=1)
+            next_q = next_q[torch_arange(B), max_idx]
+            next_logprobs = next_logprobs[torch_arange(B), max_idx]
 
-        # Get the target Q values
-        target_q = rewards + gamma * (1 - terminated) * next_q
+            # Get the target Q values
+            target_q = rewards + gamma * (1 - terminated) * next_q
 
         # TD loss
         td_loss_1 = torch_mse_loss(q_data1, target_q)
@@ -236,11 +238,12 @@ class CalQL_Gaussian(GaussianModel):
         print("gaussian_calql.py: CalQL_Gaussian.loss_temperature()")
 
         # with torch.no_grad():
-        _, logprob = self.call(
-            obs,
-            deterministic=False,
-            get_logprob=True,
-        )
+        with torch_no_grad() as tape:
+            _, logprob = self.call(
+                obs,
+                deterministic=False,
+                get_logprob=True,
+            )
         loss_alpha = -torch_mean(alpha * (logprob + target_entropy))
         return loss_alpha
 

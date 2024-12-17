@@ -7,7 +7,11 @@ import os
 import pickle
 import einops
 import numpy as np
-import torch
+
+# import torch
+
+import tensorflow as tf
+
 import logging
 import wandb
 import math
@@ -16,6 +20,10 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_ppo_gaussian_agent import TrainPPOGaussianAgent
 from model.common.modules import RandomShiftsAug
+
+from util.torch_to_tf import torch_no_grad, torch_from_numpy, torch_tensor_float, torch_split, torch_reshape, torch_tensor, torch_randperm, \
+torch_nn_utils_clip_grad_norm_and_step
+
 
 
 class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
@@ -58,7 +66,9 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
 
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
+            
             self.model.eval() if eval_mode else self.model.train()
+
             last_itr_eval = eval_mode
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) right after eval mode
@@ -94,11 +104,12 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                with torch.no_grad():
+                # with torch.no_grad():
+                with torch_no_grad() as tape:
                     cond = {
-                        key: torch.from_numpy(prev_obs_venv[key])
-                        .float()
-                        .to(self.device)
+                        key: torch_tensor_float( torch_from_numpy(prev_obs_venv[key]) )
+                        # .float()
+                        # .to(self.device)
                         for key in self.obs_dims
                     }
                     samples = self.model(
@@ -165,13 +176,16 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
 
             # Update models
             if not eval_mode:
-                with torch.no_grad():
+                # with torch.no_grad():
+                with torch_no_grad() as tape:
                     # apply image randomization
                     obs_trajs["rgb"] = (
-                        torch.from_numpy(obs_trajs["rgb"]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(obs_trajs["rgb"]) )
+                        # .float().to(self.device)
                     )
                     obs_trajs["state"] = (
-                        torch.from_numpy(obs_trajs["state"]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(obs_trajs["state"]) )
+                        # .float().to(self.device)
                     )
                     if self.augment:
                         rgb = einops.rearrange(
@@ -196,7 +210,7 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                             obs_trajs[k],
                             "s e ... -> (s e) ...",
                         )
-                        obs_ts_k = torch.split(obs_k, self.logprob_batch_size, dim=0)
+                        obs_ts_k = torch_split(obs_k, self.logprob_batch_size, dim=0)
                         for i, obs_t in enumerate(obs_ts_k):
                             obs_ts[i][k] = obs_t
                     values_trajs = np.empty((0, self.n_envs))
@@ -211,10 +225,10 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                             (values_trajs, values.reshape(-1, self.n_envs))
                         )
                     samples_t = einops.rearrange(
-                        torch.from_numpy(samples_trajs).float().to(self.device),
+                        torch_from_numpy(samples_trajs).float().to(self.device),
                         "s e h d -> (s e) h d",
                     )
-                    samples_ts = torch.split(samples_t, self.logprob_batch_size, dim=0)
+                    samples_ts = torch_split(samples_t, self.logprob_batch_size, dim=0)
                     logprobs_trajs = np.empty((0))
                     for obs_t, samples_t in zip(obs_ts, samples_ts):
                         logprobs = (
@@ -236,7 +250,7 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
 
                     # bootstrap value with GAE if not terminal - apply reward scaling with constant if specified
                     obs_venv_ts = {
-                        key: torch.from_numpy(obs_venv[key]).float().to(self.device)
+                        key: torch_from_numpy(obs_venv[key]).float().to(self.device)
                         for key in self.obs_dims
                     }
                     advantages_trajs = np.zeros_like(reward_trajs)
@@ -244,8 +258,7 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                     for t in reversed(range(self.n_steps)):
                         if t == self.n_steps - 1:
                             nextvalues = (
-                                self.model.critic(obs_venv_ts, no_augment=True)
-                                .reshape(1, -1)
+                                torch_reshape( self.model.critic(obs_venv_ts, no_augment=True), 1, -1)
                                 .cpu()
                                 .numpy()
                             )
@@ -274,19 +287,19 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                     for k in obs_trajs
                 }
                 samples_k = einops.rearrange(
-                    torch.tensor(samples_trajs, device=self.device).float(),
+                    torch_tensor_float( torch_tensor(samples_trajs ) ),
                     "s e h d -> (s e) h d",
                 )
                 returns_k = (
-                    torch.tensor(returns_trajs, device=self.device).float().reshape(-1)
+                    torch_reshape( torch_tensor_float( torch_tensor(returns_trajs ) ), -1)
                 )
                 values_k = (
-                    torch.tensor(values_trajs, device=self.device).float().reshape(-1)
+                    torch_reshape( torch_tensor_float( torch_tensor(values_trajs ) ), -1)
                 )
                 advantages_k = (
-                    torch.tensor(advantages_trajs, device=self.device).float().reshape(-1)
+                    torch_reshape( torch_tensor_float( torch_tensor(advantages_trajs ) ), -1)
                 )
-                logprobs_k = torch.tensor(logprobs_trajs, device=self.device).float()
+                logprobs_k = torch_tensor_float( torch_tensor(logprobs_trajs ) )
 
                 # Update policy and critic
                 total_steps = self.n_steps * self.n_envs
@@ -295,7 +308,7 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
 
                     # for each epoch, go through all data in batches
                     flag_break = False
-                    inds_k = torch.randperm(total_steps, device=self.device)
+                    inds_k = torch_randperm(total_steps, device=self.device)
                     num_batch = max(1, total_steps // self.batch_size)  # skip last ones
                     for batch in range(num_batch):
                         start = batch * self.batch_size
@@ -308,46 +321,56 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                         advantages_b = advantages_k[inds_b]
                         logprobs_b = logprobs_k[inds_b]
 
-                        # get loss
-                        (
-                            pg_loss,
-                            entropy_loss,
-                            v_loss,
-                            clipfrac,
-                            approx_kl,
-                            ratio,
-                            bc_loss,
-                            std,
-                        ) = self.model.loss(
-                            obs_b,
-                            samples_b,
-                            returns_b,
-                            values_b,
-                            advantages_b,
-                            logprobs_b,
-                            use_bc_loss=self.use_bc_loss,
-                        )
-                        loss = (
-                            pg_loss
-                            + entropy_loss * self.ent_coef
-                            + v_loss * self.vf_coef
-                            + bc_loss * self.bc_loss_coeff
-                        )
-                        clipfracs += [clipfrac]
+
+                        with tf.GradientTape(persistent=True) as tape:
+                            # get loss
+                            (
+                                pg_loss,
+                                entropy_loss,
+                                v_loss,
+                                clipfrac,
+                                approx_kl,
+                                ratio,
+                                bc_loss,
+                                std,
+                            ) = self.model.loss(
+                                obs_b,
+                                samples_b,
+                                returns_b,
+                                values_b,
+                                advantages_b,
+                                logprobs_b,
+                                use_bc_loss=self.use_bc_loss,
+                            )
+
+                            loss = (
+                                pg_loss
+                                + entropy_loss * self.ent_coef
+                                + v_loss * self.vf_coef
+                                + bc_loss * self.bc_loss_coeff
+                            )
+                            clipfracs += [clipfrac]
+
+                        tf_gradients_actor_ft = tape.gradient(loss, self.model.actor_ft.trainable_variables)
+
+                        tf_gradients_critic = tape.gradient(loss, self.model.critic.trainable_variables)
+
 
                         # update policy and critic
-                        loss.backward()
                         if (batch + 1) % self.grad_accumulate == 0:
                             if self.itr >= self.n_critic_warmup_itr:
                                 if self.max_grad_norm is not None:
-                                    torch.nn.utils.clip_grad_norm_(
-                                        self.model.actor_ft.parameters(),
+                                    torch_nn_utils_clip_grad_norm_and_step(
+                                        # self.model.actor_ft.parameters(),
+                                        self.model.actor_ft.trainable_variables,
+                                        self.actor_optimizer,
                                         self.max_grad_norm,
+                                        tf_gradients_actor_ft
                                     )
-                                self.actor_optimizer.step()
-                            self.critic_optimizer.step()
-                            self.actor_optimizer.zero_grad()
-                            self.critic_optimizer.zero_grad()
+                                else:
+                                    self.actor_optimizer.step(tf_gradients_actor_ft)
+
+                            self.critic_optimizer.step(tf_gradients_critic)
 
 
                             log.info(f"run grad update at batch {batch}")

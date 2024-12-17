@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 from .diffusion_vpg import VPGDiffusion
 from .exact_likelihood import get_likelihood_fn
 
+from util.torch_to_tf import torch_no_grad
 
 class PPOExactDiffusion(VPGDiffusion):
 
@@ -128,8 +129,9 @@ class PPOExactDiffusion(VPGDiffusion):
         # old_approx_kl: the approximate Kullback–Leibler divergence, measured by (-logratio).mean(), which corresponds to the k1 estimator in John Schulman’s blog post on approximating KL http://joschu.net/blog/kl-approx.html
         # approx_kl: better alternative to old_approx_kl measured by (logratio.exp() - 1) - logratio, which corresponds to the k3 estimator in approximating KL http://joschu.net/blog/kl-approx.html
         # old_approx_kl = (-logratio).mean()
-        approx_kl = tf.reduce_mean((ratio - 1) - logratio)
-        clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
+        with torch_no_grad() as tape:
+            approx_kl = tf.reduce_mean((ratio - 1) - logratio)
+            clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
 
 
         # Normalize advantages

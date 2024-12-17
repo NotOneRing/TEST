@@ -4,13 +4,21 @@ Parent PPO fine-tuning agent class.
 """
 
 from typing import Optional
-import torch
+
+# import torch
+
 import logging
-from util.scheduler import CosineAnnealingWarmupRestarts
+
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW
 
 log = logging.getLogger(__name__)
 from agent.finetune.train_agent import TrainAgent
 from util.reward_scaling import RunningRewardScaler
+
+import tensorflow as tf
+
+
+
 
 
 class TrainPPOAgent(TrainAgent):
@@ -33,15 +41,9 @@ class TrainPPOAgent(TrainAgent):
         # Wwarm up period for critic before actor updates
         self.n_critic_warmup_itr = cfg.train.n_critic_warmup_itr
 
-        # Optimizer
-        self.actor_optimizer = torch.optim.AdamW(
-            self.model.actor_ft.parameters(),
-            lr=cfg.train.actor_lr,
-            weight_decay=cfg.train.actor_weight_decay,
-        )
         # use cosine scheduler with linear warmup
-        self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -49,19 +51,32 @@ class TrainPPOAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_optimizer = torch.optim.AdamW(
-            self.model.critic.parameters(),
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
+
+        # Optimizer
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.actor_ft.parameters(),
+            self.model.actor_ft.trainable_variables,
+            lr=self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
-        self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_optimizer,
+
+
+        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
             min_lr=cfg.train.critic_lr_scheduler.min_lr,
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
+        )
+
+        self.critic_optimizer = torch_optim_AdamW(
+            # self.model.critic.parameters(),
+            self.model.critic.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr = self.critic_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
         )
 
         # Generalized advantage estimation
@@ -95,16 +110,12 @@ class TrainPPOAgent(TrainAgent):
         print("train_ppo_agent.py: TrainPPOAgent.reset_actor_optimizer()")
 
         """Not used anywhere currently"""
-        new_optimizer = torch.optim.AdamW(
-            self.model.actor_ft.parameters(),
-            lr=self.cfg.train.actor_lr,
-            weight_decay=self.cfg.train.actor_weight_decay,
-        )
-        new_optimizer.load_state_dict(self.actor_optimizer.state_dict())
-        self.actor_optimizer = new_optimizer
 
-        new_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+        assert 1 == 0, "assume Not used anywhere currently"
+
+
+        new_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
             first_cycle_steps=self.cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=self.cfg.train.actor_lr,
@@ -112,8 +123,20 @@ class TrainPPOAgent(TrainAgent):
             warmup_steps=self.cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        new_scheduler.load_state_dict(self.actor_lr_scheduler.state_dict())
+
         self.actor_lr_scheduler = new_scheduler
+
+        new_optimizer = torch_optim_AdamW(
+            # self.model.actor_ft.parameters(),
+            self.model.actor_ft.trainable_variables,
+            lr=self.actor_lr_scheduler,
+            weight_decay=self.cfg.train.actor_weight_decay,
+        )
+
+        # new_optimizer.load_state_dict(self.actor_optimizer.state_dict())
+        self.actor_optimizer = new_optimizer
+
+        # new_scheduler.load_state_dict(self.actor_lr_scheduler.state_dict())
         log.info("Reset actor optimizer")
 
 

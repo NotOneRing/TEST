@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 
 from model.diffusion.diffusion_rwr import RWRDiffusion
 
+from util.torch_to_tf import torch_no_grad
 
 class QSMDiffusion(RWRDiffusion):
 
@@ -88,7 +89,10 @@ class QSMDiffusion(RWRDiffusion):
 
         # get next Q-function - with noise, same as QSM https://github.com/Alescontrela/score_matching_rl/blob/f02a21969b17e322eb229ceb2b0f5a9111b1b968/jaxrl5/agents/score_matching/score_matching_learner.py#L193
         next_actions = self.call(cond=next_obs, deterministic=False)
-        next_q1, next_q2 = self.target_q([next_obs, next_actions], training=False)
+
+        with torch_no_grad() as tape:
+            next_q1, next_q2 = self.target_q([next_obs, next_actions], training=False)
+
         next_q = tf.minimum(next_q1, next_q2)
 
         # terminal state mask

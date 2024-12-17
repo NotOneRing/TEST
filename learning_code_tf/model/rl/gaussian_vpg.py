@@ -9,6 +9,8 @@ from copy import deepcopy
 import logging
 from model.common.gaussian import GaussianModel
 
+from util.torch_to_tf import torch_no_grad
+
 
 class VPG_Gaussian(GaussianModel):
 
@@ -42,6 +44,7 @@ class VPG_Gaussian(GaussianModel):
     # ---------- Sampling ----------#
 
     # @torch.no_grad()
+    @tf.function
     def call(
         self,
         cond,

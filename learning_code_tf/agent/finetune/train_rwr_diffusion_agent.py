@@ -19,10 +19,14 @@ import wandb
 log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
-from util.scheduler import CosineAnnealingWarmupRestarts
+# from util.scheduler import CosineAnnealingWarmupRestarts
 
 
-from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_tensor
+from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_tensor, torch_nn_utils_clip_grad_norm_and_step, torch_exp
+
+from util.torch_to_tf import torch_no_grad, tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW, torch_std, torch_reshape, torch_tensor_clamp_
+
+import tensorflow as tf
 
 
 class TrainRWRDiffusionAgent(TrainAgent):
@@ -34,20 +38,23 @@ class TrainRWRDiffusionAgent(TrainAgent):
         # note the discount factor gamma here is applied to reward every act_steps, instead of every env step
         self.gamma = cfg.train.gamma
 
-        # Build optimizer
-        self.optimizer = torch.optim.AdamW(
-            self.model.parameters(),
-            lr=cfg.train.lr,
-            weight_decay=cfg.train.weight_decay,
-        )
-        self.lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.optimizer,
+        self.lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.optimizer,
             first_cycle_steps=cfg.train.lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.lr,
             min_lr=cfg.train.lr_scheduler.min_lr,
             warmup_steps=cfg.train.lr_scheduler.warmup_steps,
             gamma=1.0,
+        )
+
+        # Build optimizer
+        self.optimizer = torch_optim_AdamW(
+            # self.model.parameters(),
+            self.model.trainable_variables,
+            # lr=cfg.train.lr,
+            lr = self.lr_scheduler,
+            weight_decay=cfg.train.weight_decay,
         )
 
         # Reward exponential
@@ -113,11 +120,12 @@ class TrainRWRDiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                with torch.no_grad():
+                # with torch.no_grad():
+                with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
                         # .float()
-                        .to(self.device)
+                        # .to(self.device)
                     }
                     samples = (
                         self.model(
@@ -224,27 +232,27 @@ class TrainRWRDiffusionAgent(TrainAgent):
                     ) 
                     )
                     # .float()
-                    .to(self.device)
+                    # .to(self.device)
                 }
                 samples_k = (
                     torch_tensor_float( torch_tensor(np.concatenate(samples_trajs_split)) )
                     # .float()
-                    .to(self.device)
+                    # .to(self.device)
                 )
 
                 # Normalize reward
                 returns_trajs_split = (
                     returns_trajs_split - np.mean(returns_trajs_split)
-                ) / (returns_trajs_split.std() + 1e-3)
+                ) / ( torch_std( returns_trajs_split ) + 1e-3)
                 rewards_k = (
-                    torch_tensor_float( torch_tensor(returns_trajs_split) )
+                    torch_reshape( torch_tensor_float( torch_tensor(returns_trajs_split) ), -1)
                     # .float()
-                    .to(self.device)
-                    .reshape(-1)
+                    # .to(self.device)
+                    # .reshape(-1)
                 )
 
-                rewards_k_scaled = torch.exp(self.beta * rewards_k)
-                rewards_k_scaled.clamp_(max=self.max_reward_weight)
+                rewards_k_scaled = torch_exp(self.beta * rewards_k)
+                torch_tensor_clamp_(rewards_k_scaled, max=self.max_reward_weight)
 
 
                 # Update policy and critic
@@ -262,21 +270,27 @@ class TrainRWRDiffusionAgent(TrainAgent):
                         samples_b = samples_k[inds_b]
                         rewards_b = rewards_k_scaled[inds_b]
 
-                        # Update policy with collected trajectories
-                        loss = self.model.loss(
-                            samples_b,
-                            obs_b,
-                            rewards_b,
-                        )
 
-
-                        self.optimizer.zero_grad()
-                        loss.backward()
-                        if self.max_grad_norm is not None:
-                            torch.nn.utils.clip_grad_norm_(
-                                self.model.parameters(), self.max_grad_norm
+                        with tf.GradientTape() as tape:
+                            # Update policy with collected trajectories
+                            loss = self.model.loss(
+                                samples_b,
+                                obs_b,
+                                rewards_b,
                             )
-                        self.optimizer.step()
+
+                        tf_gradients = tape.gradient(loss, self.model.trainable_variables)
+
+                        if self.max_grad_norm is not None:
+                            torch_nn_utils_clip_grad_norm_and_step(
+                                # self.model.parameters(), 
+                                self.model.trainable_variables,
+                                self.optimizer,
+                                self.max_grad_norm,
+                                tf_gradients
+                            )
+                        else:
+                            self.optimizer.step(tf_gradients)
 
 
             # Update lr
@@ -333,3 +347,10 @@ class TrainRWRDiffusionAgent(TrainAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+
+
+
+
+

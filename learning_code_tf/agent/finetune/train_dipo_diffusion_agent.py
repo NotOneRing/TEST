@@ -12,7 +12,7 @@ Do not support pixel input right now.
 import os
 import pickle
 import numpy as np
-import torch
+
 import logging
 import wandb
 
@@ -20,10 +20,17 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from collections import deque
 from agent.finetune.train_agent import TrainAgent
-from util.scheduler import CosineAnnealingWarmupRestarts
 
 
-from util.torch_to_tf import torch_from_numpy, torch_ones_like, torch_zeros_like, torch_min, torch_tensor_float, torch_tensor_reshape, torch_reshape
+
+import tensorflow as tf
+
+from util.torch_to_tf import torch_from_numpy, torch_min, \
+    torch_tensor_float, torch_reshape, torch_nn_utils_clip_grad_norm_and_step, torch_tensor_clamp_,\
+    torch_tensor_requires_grad_, torch_sum, torch_tensor_detach, \
+    torch_no_grad, torch_nn_utils_clip_grad_norm_and_step
+
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW, torch_optim_Adam
 
 
 class TrainDIPODiffusionAgent(TrainAgent):
@@ -39,15 +46,9 @@ class TrainDIPODiffusionAgent(TrainAgent):
         # Wwarm up period for critic before actor updates
         self.n_critic_warmup_itr = cfg.train.n_critic_warmup_itr
 
-        # Optimizer
-        self.actor_optimizer = torch.optim.AdamW(
-            self.model.actor.parameters(),
-            lr=cfg.train.actor_lr,
-            weight_decay=cfg.train.actor_weight_decay,
-        )
         # use cosine scheduler with linear warmup
-        self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -55,19 +56,31 @@ class TrainDIPODiffusionAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_optimizer = torch.optim.AdamW(
-            self.model.critic.parameters(),
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
+
+        # Optimizer
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.actor.parameters(),
+            self.model.actor.trainable_variables,
+            lr=self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
-        self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_optimizer,
+        
+        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
             min_lr=cfg.train.critic_lr_scheduler.min_lr,
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
+        )
+
+        self.critic_optimizer = torch_optim_AdamW(
+            # self.model.critic.parameters(),
+            self.model.critic.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr = self.critic_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
         )
 
         # target update rate
@@ -138,7 +151,8 @@ class TrainDIPODiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                with torch.no_grad():
+                # with torch.no_grad():
+                with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
                         # .float()
@@ -253,18 +267,21 @@ class TrainDIPODiffusionAgent(TrainAgent):
                         # .float().to(self.device)
                     )
 
-                    # Update critic
-                    loss_critic = self.model.loss_critic(
-                        {"state": obs_b},
-                        {"state": next_obs_b},
-                        actions_b,
-                        rewards_b,
-                        terminated_b,
-                        self.gamma,
-                    )
-                    self.critic_optimizer.zero_grad()
-                    loss_critic.backward()
-                    self.critic_optimizer.step()
+                    with tf.GradientTape() as tape:
+
+                        # Update critic
+                        loss_critic = self.model.loss_critic(
+                            {"state": obs_b},
+                            {"state": next_obs_b},
+                            actions_b,
+                            rewards_b,
+                            terminated_b,
+                            self.gamma,
+                        )
+
+                    tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
+                    
+                    self.critic_optimizer.step(tf_gradients)
 
                     # Actor learning
                     loss_actor = 0.0
@@ -282,52 +299,78 @@ class TrainDIPODiffusionAgent(TrainAgent):
                         # get Q-perturbed actions by optimizing
                         actions_flat = torch_reshape( actions_b, len(actions_b), -1)
                         
-                        actions_optim = torch.optim.Adam(
+                        actions_optim = torch_optim_Adam(
                             [actions_flat], lr=self.action_lr, eps=1e-5
                         )
 
                         for _ in range(self.action_gradient_steps):
                             
-                            actions_flat.requires_grad_(True)
+                            # actions_flat.requires_grad_(True)
+                            torch_tensor_requires_grad_(actions_flat, True)
 
-                            q_values_1, q_values_2 = self.model.critic(
-                                {"state": obs_b}, actions_flat
-                            )
-                            q_values = torch_min(q_values_1, q_values_2)
-                            action_opt_loss = -q_values.sum()
+                            with tf.GradientTape() as tape:
+                            
+                                q_values_1, q_values_2 = self.model.critic(
+                                    {"state": obs_b}, actions_flat
+                                )
+                                q_values = torch_min(q_values_1, q_values_2)
+                                action_opt_loss = - torch_sum(q_values)
+                            # .sum()
 
-                            actions_optim.zero_grad()
+                            tf_gradients = tape.gradient(action_opt_loss, [actions_flat])
 
-                            action_opt_loss.backward(torch_ones_like(action_opt_loss))
-                            torch.nn.utils.clip_grad_norm_(
+                            # actions_optim.zero_grad()
+                            # action_opt_loss.backward(torch_ones_like(action_opt_loss))
+
+
+                            torch_nn_utils_clip_grad_norm_and_step(
                                 [actions_flat],
+                                actions_optim,
                                 max_norm=self.action_grad_norm,
+                                grads = tf_gradients,
                                 norm_type=2,
                             )
-                            actions_optim.step()
+                            actions_optim.step(tf_gradients)
 
-                            actions_flat.requires_grad_(False)
-                            actions_flat.clamp_(-1.0, 1.0)
-                        guided_action = actions_flat.reshape(
+                            # actions_flat.requires_grad_(False)
+                            torch_tensor_requires_grad_(actions_flat, False)
+                            
+                            torch_tensor_clamp_(actions_flat, -1.0, 1.0)
+
+                        guided_action = torch_reshape( actions_flat,
                             len(actions_flat), self.horizon_steps, self.action_dim
                         )
-                        guided_action_np = guided_action.detach().cpu().numpy()
+                        guided_action_np = torch_tensor_detach( guided_action
+                                                            #    .detach()
+                                                               .cpu().numpy()
+                                                               )
 
                         # Add back to buffer
                         action_array[inds] = guided_action_np
 
-                        # Update policy with collected trajectories
-                        loss_actor = self.model.loss(
-                            guided_action.detach(), {"state": obs_b}
-                        )
-
-                        self.actor_optimizer.zero_grad()
-                        loss_actor.backward()
-                        if self.max_grad_norm is not None:
-                            torch.nn.utils.clip_grad_norm_(
-                                self.model.actor.parameters(), self.max_grad_norm
+                        with tf.GradientTape() as tape:
+                            # Update policy with collected trajectories
+                            loss_actor = self.model.loss(
+                                # guided_action.detach()
+                                torch_tensor_detach(guided_action),
+                                {"state": obs_b}
                             )
-                        self.actor_optimizer.step()
+                        
+                        tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+
+                        # self.actor_optimizer.zero_grad()
+                        # loss_actor.backward()
+
+                        if self.max_grad_norm is not None:
+                            torch_nn_utils_clip_grad_norm_and_step(
+                                # self.model.actor.parameters()
+                                self.model.actor.trainable_variables,
+                                self.actor_optimizer,
+                                self.max_grad_norm,
+                                tf_gradients
+                            )
+                        else:
+                            self.actor_optimizer.step(tf_gradients)
 
                     # Update target critic and actor
                     self.model.update_target_critic(self.target_ema_rate)
@@ -385,7 +428,8 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             "avg episode reward - train": avg_episode_reward,
                             "num episode - train": num_episode_finished,
                         }
-                        if type(loss_actor) == torch.Tensor:
+                        # if type(loss_actor) == torch.Tensor:
+                        if isinstance(loss_actor, tf.tensor):
                             wandb_log["loss - actor"] = loss_actor
                         wandb.log(wandb_log, step=self.itr, commit=True)
                     run_results[-1]["train_episode_reward"] = avg_episode_reward

@@ -11,6 +11,7 @@ from model.common.gaussian import GaussianModel
 
 from util.torch_to_tf import Normal
 
+from util.torch_to_tf import torch_no_grad
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class RWR_Gaussian(GaussianModel):
 
     # override
     # @torch.no_grad()
+    @tf.function
     def call(self, cond, deterministic=False, **kwargs):
 
         print("gaussian_rwr.py: RWR_Gaussian.call()")

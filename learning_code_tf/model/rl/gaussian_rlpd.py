@@ -10,6 +10,8 @@ Use ensemble of critics.
 
 from util.torch_to_tf import torch_mean, torch_min, torch_randperm, torch_func_functional_call, torch_func_stack_module_state, torch_vmap
 
+from util.torch_to_tf import torch_no_grad
+
 import logging
 from copy import deepcopy
 
@@ -96,24 +98,24 @@ class RLPD_Gaussian(GaussianModel):
         # get random critic index
         q1_ind, q2_ind = self.get_random_indices()
         # with torch.no_grad():
-
-        next_actions, next_logprobs = self.call(
-            cond=next_obs,
-            deterministic=False,
-            get_logprob=True,
-        )
-        next_q1 = self.target_networks[q1_ind](next_obs, next_actions)
-        next_q2 = self.target_networks[q2_ind](next_obs, next_actions)
-        next_q = torch_min(next_q1, next_q2)
-
-        # target value
-        target_q = rewards + gamma * (1 - terminated) * next_q  # (B,)
-
-        # add entropy term to the target
-        if self.backup_entropy:
-            target_q = target_q + gamma * (1 - terminated) * alpha * (
-                -next_logprobs
+        with torch_no_grad() as tape:
+            next_actions, next_logprobs = self.call(
+                cond=next_obs,
+                deterministic=False,
+                get_logprob=True,
             )
+            next_q1 = self.target_networks[q1_ind](next_obs, next_actions)
+            next_q2 = self.target_networks[q2_ind](next_obs, next_actions)
+            next_q = torch_min(next_q1, next_q2)
+
+            # target value
+            target_q = rewards + gamma * (1 - terminated) * next_q  # (B,)
+
+            # add entropy term to the target
+            if self.backup_entropy:
+                target_q = target_q + gamma * (1 - terminated) * alpha * (
+                    -next_logprobs
+                )
 
         # # run all critics in batch
         # current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
@@ -153,11 +155,13 @@ class RLPD_Gaussian(GaussianModel):
         print("gaussian_rlpd.py: RLPD_Gaussian.loss_temperature()")
 
         # with torch.no_grad():
-        _, logprob = self.call(
-            obs,
-            deterministic=False,
-            get_logprob=True,
-        )
+
+        with torch_no_grad() as tape:
+            _, logprob = self.call(
+                obs,
+                deterministic=False,
+                get_logprob=True,
+            )
 
         loss_alpha = -torch_mean(alpha * (logprob + target_entropy))
         return loss_alpha

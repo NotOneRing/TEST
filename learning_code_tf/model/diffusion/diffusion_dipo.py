@@ -13,6 +13,8 @@ log = logging.getLogger(__name__)
 from model.diffusion.diffusion import DiffusionModel
 from model.diffusion.sampling import make_timesteps
 
+from util.torch_to_tf import torch_no_grad
+
 
 class DIPODiffusion(DiffusionModel):
 
@@ -54,23 +56,24 @@ class DIPODiffusion(DiffusionModel):
         current_q1, current_q2 = self.critic(obs, actions)
 
         # Get next Q-function
-        next_actions = self.call(
-            cond=next_obs,
-            deterministic=False,
-        )  # forward() has no gradient, which is desired here.
-        next_q1, next_q2 = self.critic_target(next_obs, next_actions)
-        next_q = tf.minimum(next_q1, next_q2)
+        with torch_no_grad() as tape:
+            next_actions = self.call(
+                cond=next_obs,
+                deterministic=False,
+            )  # forward() has no gradient, which is desired here.
+            next_q1, next_q2 = self.critic_target(next_obs, next_actions)
+            next_q = tf.minimum(next_q1, next_q2)
 
-        # terminal state mask
-        mask = 1 - terminated
+            # terminal state mask
+            mask = 1 - terminated
 
-        # flatten
-        rewards = tf.reshape(rewards, [-1])
-        next_q = tf.reshape(next_q, [-1])
-        mask = tf.reshape(mask, [-1])
+            # flatten
+            rewards = tf.reshape(rewards, [-1])
+            next_q = tf.reshape(next_q, [-1])
+            mask = tf.reshape(mask, [-1])
 
-        # target value
-        target_q = rewards + gamma * next_q * mask
+            # target value
+            target_q = rewards + gamma * next_q * mask
 
         # Update critic loss
         loss_critic = tf.reduce_mean(tf.square(current_q1 - target_q)) + tf.reduce_mean(

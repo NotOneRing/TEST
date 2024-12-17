@@ -17,6 +17,8 @@ log = logging.getLogger(__name__)
 from util.torch_to_tf import torch_mean, torch_where, torch_softmax, torch_stack, torch_multinomial, torch_func_functional_call, \
     torch_min, torch_func_stack_module_state, torch_vmap
 
+from util.torch_to_tf import torch_no_grad
+
 
 
 class IBRL_Gaussian(GaussianModel):
@@ -117,7 +119,8 @@ class IBRL_Gaussian(GaussianModel):
         # get random critic index
         q1_ind, q2_ind = self.get_random_indices()
 
-        with tf.GradientTape(persistent=True) as tape:
+        # with tf.GradientTape(persistent=True) as tape:
+        with torch_no_grad() as tape:
             next_actions_bc = super().call(
                 cond=next_obs,
                 deterministic=True,

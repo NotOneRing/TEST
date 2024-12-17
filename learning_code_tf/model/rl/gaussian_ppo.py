@@ -18,6 +18,8 @@ import tensorflow as tf
 
 from model.rl.gaussian_vpg import VPG_Gaussian
 
+from util.torch_to_tf import torch_no_grad
+
 
 class PPO_Gaussian(VPG_Gaussian):
 
@@ -98,11 +100,12 @@ class PPO_Gaussian(VPG_Gaussian):
         ratio = tf.exp(logratio)
 
         # get kl difference and whether value clipped
-        approx_kl = tf.reduce_mean(
-            tf.boolean_mask((ratio - 1) - logratio, ~tf.is_nan((ratio - 1) - logratio))
-        )
+        with torch_no_grad() as tape:
+            approx_kl = tf.reduce_mean(
+                tf.boolean_mask((ratio - 1) - logratio, ~tf.is_nan((ratio - 1) - logratio))
+            )
 
-        clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
+            clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
 
         # Normalize advantages
         if self.norm_adv:

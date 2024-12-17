@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.eval.eval_agent import EvalAgent
 
+from util.torch_to_tf import torch_no_grad
 
 class EvalImgDiffusionAgent(EvalAgent):
 
@@ -55,16 +56,17 @@ class EvalImgDiffusionAgent(EvalAgent):
 
             # Select action
             # with torch.no_grad():
-            cond = {
-                # key: torch.from_numpy(prev_obs_venv[key]).float().to(self.device)
-                key: tf.convert_to_tensor(prev_obs_venv[key], dtype=tf.float32)
-                for key in self.obs_dims
-            }  # batch each type of obs and put into dict
-            samples = self.model(cond=cond, deterministic=True)
-            output_venv = (
-                samples.trajectories.cpu().numpy()
-            )  # n_env x horizon x act
-            
+            with torch_no_grad() as tape:
+                cond = {
+                    # key: torch.from_numpy(prev_obs_venv[key]).float().to(self.device)
+                    key: tf.convert_to_tensor(prev_obs_venv[key], dtype=tf.float32)
+                    for key in self.obs_dims
+                }  # batch each type of obs and put into dict
+                samples = self.model(cond=cond, deterministic=True)
+                output_venv = (
+                    samples.trajectories.cpu().numpy()
+                )  # n_env x horizon x act
+                
             action_venv = output_venv[:, : self.act_steps]
 
             # Apply multi-step action

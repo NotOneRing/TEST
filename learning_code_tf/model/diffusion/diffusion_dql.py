@@ -18,7 +18,7 @@ from model.diffusion.sampling import make_timesteps
 from util.torch_to_tf import torch_tensor_detach, \
     torch_mean, torch_tensor_view, torch_min, torch_abs, \
         torch_square, torch_randn, torch_exp, torch_clip,\
-        torch_zeros_like, 
+        torch_zeros_like, torch_no_grad
 
 
 
@@ -58,24 +58,25 @@ class DQLDiffusion(DiffusionModel):
         # get current Q-function
         current_q1, current_q2 = self.critic(obs, actions)
 
-        # get next Q-function
-        next_actions = self.call(
-            cond=next_obs,
-            deterministic=False,
-        )  # forward() has no gradient, which is desired here.
-        next_q1, next_q2 = self.critic_target(next_obs, next_actions)
-        next_q = torch_min(next_q1, next_q2)
+        with torch_no_grad() as tape:
+            # get next Q-function
+            next_actions = self.call(
+                cond=next_obs,
+                deterministic=False,
+            )  # forward() has no gradient, which is desired here.
+            next_q1, next_q2 = self.critic_target(next_obs, next_actions)
+            next_q = torch_min(next_q1, next_q2)
 
-        # terminal state mask
-        mask = 1 - terminated
+            # terminal state mask
+            mask = 1 - terminated
 
-        # flatten
-        rewards = torch_tensor_view(rewards, -1)
-        next_q = torch_tensor_view(next_q, -1)
-        mask = torch_tensor_view(mask, -1)
+            # flatten
+            rewards = torch_tensor_view(rewards, -1)
+            next_q = torch_tensor_view(next_q, -1)
+            mask = torch_tensor_view(mask, -1)
 
-        # target value
-        target_q = rewards + gamma * next_q * mask
+            # target value
+            target_q = rewards + gamma * next_q * mask
 
         # Update critic
         loss_critic = torch_mean(torch_square(current_q1 - target_q)) + torch_mean(

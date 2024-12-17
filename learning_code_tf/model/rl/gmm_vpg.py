@@ -3,6 +3,8 @@ import tensorflow as tf
 import logging
 from model.common.gmm import GMMModel
 
+from util.torch_to_tf import torch_no_grad
+
 
 class VPG_GMM(GMMModel):
     def __init__(
@@ -26,6 +28,7 @@ class VPG_GMM(GMMModel):
     # ---------- Sampling ----------#
 
     # @torch.no_grad()
+    @tf.function
     def call(self, cond, deterministic=False):
 
         print("gmm_vpg.py: VPG_GMM.call()")

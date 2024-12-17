@@ -22,6 +22,8 @@ import tensorflow as tf
 from util.torch_to_tf import tf_quantile
 # import tensorflow_probability as tfp
 
+from util.torch_to_tf import torch_no_grad
+
 
 log = logging.getLogger(__name__)
 from model.diffusion.diffusion_vpg import VPGDiffusion
@@ -186,8 +188,9 @@ class PPODiffusion(VPGDiffusion):
         # approx_kl: better alternative to old_approx_kl measured by (logratio.exp() - 1) - logratio, which corresponds to the k3 estimator in approximating KL http://joschu.net/blog/kl-approx.html
         # old_approx_kl = (-logratio).mean()
 
-        approx_kl = tf.reduce_mean((ratio - 1) - logratio)
-        clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > clip_ploss_coef, tf.float32))
+        with torch_no_grad() as tape:
+            approx_kl = tf.reduce_mean((ratio - 1) - logratio)
+            clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > clip_ploss_coef, tf.float32))
 
         # Policy loss with clipping
         pg_loss1 = -advantages * ratio

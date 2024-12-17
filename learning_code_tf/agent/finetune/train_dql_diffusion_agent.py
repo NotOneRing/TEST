@@ -13,7 +13,7 @@ Do not support pixel input right now.
 import os
 import pickle
 import numpy as np
-import torch
+# import torch
 import logging
 import wandb
 
@@ -21,7 +21,13 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from collections import deque
 from agent.finetune.train_agent import TrainAgent
-from util.scheduler import CosineAnnealingWarmupRestarts
+# from util.scheduler import CosineAnnealingWarmupRestarts
+
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_Adam, torch_optim_AdamW,\
+    torch_from_numpy, torch_tensor_float, torch_nn_utils_clip_grad_norm_and_step, torch_no_grad
+
+
+import tensorflow as tf
 
 
 class TrainDQLDiffusionAgent(TrainAgent):
@@ -38,13 +44,8 @@ class TrainDQLDiffusionAgent(TrainAgent):
         self.n_critic_warmup_itr = cfg.train.n_critic_warmup_itr
 
         # Optimizer
-        self.actor_optimizer = torch.optim.AdamW(
-            self.model.actor.parameters(),
-            lr=cfg.train.actor_lr,
-            weight_decay=cfg.train.actor_weight_decay,
-        )
-        self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -52,19 +53,30 @@ class TrainDQLDiffusionAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_optimizer = torch.optim.AdamW(
-            self.model.critic.parameters(),
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
+
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.actor.parameters(),
+            self.model.actor.trainable_variables,
+            lr=self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
-        self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_optimizer,
+
+        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
             min_lr=cfg.train.critic_lr_scheduler.min_lr,
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
+        )
+
+        self.critic_optimizer = torch_optim_AdamW(
+            # self.model.critic.parameters(),
+            self.model.critic.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr=self.critic_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
         )
 
         # Buffer size
@@ -110,7 +122,15 @@ class TrainDQLDiffusionAgent(TrainAgent):
 
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
+            
+            
+            
+            
             self.model.eval() if eval_mode else self.model.train()
+
+
+
+
             last_itr_eval = eval_mode
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) right after eval mode
@@ -129,11 +149,12 @@ class TrainDQLDiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                with torch.no_grad():
+                # with torch.no_grad():
+                with torch_no_grad() as tape:
                     cond = {
-                        "state": torch.from_numpy(prev_obs_venv["state"])
-                        .float()
-                        .to(self.device)
+                        "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
+                        # .float()
+                        # .to(self.device)
                     }
                     samples = (
                         self.model(
@@ -225,39 +246,57 @@ class TrainDQLDiffusionAgent(TrainAgent):
                 # Critic learning
                 for _ in range(num_batch):
                     inds = np.random.choice(len(obs_buffer), self.batch_size)
-                    obs_b = torch.from_numpy(obs_array[inds]).float().to(self.device)
-                    next_obs_b = torch.from_numpy(next_obs_array[inds]).float().to(self.device)
-                    actions_b = torch.from_numpy(action_array[inds]).float().to(self.device)
-                    rewards_b = torch.from_numpy(reward_array[inds]).float().to(self.device)
-                    terminated_b = torch.from_numpy(terminated_array[inds]).float().to(self.device)
+                    obs_b = torch_tensor_float( torch_from_numpy(obs_array[inds]) )
+                    # .float().to(self.device)
+                    next_obs_b = torch_tensor_float( torch_from_numpy(next_obs_array[inds]) )
+                    # .float().to(self.device)
+                    actions_b = torch_tensor_float( torch_from_numpy(action_array[inds]) )
+                    # .float().to(self.device)
+                    rewards_b = torch_tensor_float( torch_from_numpy(reward_array[inds]) )
+                    # .float().to(self.device)
+                    terminated_b = torch_tensor_float( torch_from_numpy(terminated_array[inds]) )
+                    # .float().to(self.device)
 
-                    # Update critic
-                    loss_critic = self.model.loss_critic(
-                        {"state": obs_b},
-                        {"state": next_obs_b},
-                        actions_b,
-                        rewards_b,
-                        terminated_b,
-                        self.gamma,
-                    )
-                    self.critic_optimizer.zero_grad()
-                    loss_critic.backward()
-                    self.critic_optimizer.step()
+                    with tf.GradientTape() as tape:
+
+                        # Update critic
+                        loss_critic = self.model.loss_critic(
+                            {"state": obs_b},
+                            {"state": next_obs_b},
+                            actions_b,
+                            rewards_b,
+                            terminated_b,
+                            self.gamma,
+                        )
+
+                    tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
+
+                    self.critic_optimizer.step(tf_gradients)
 
                     # Update policy with collected trajectories
-                    self.actor_optimizer.zero_grad()
-                    loss_actor = self.model.loss_actor(
-                        {"state": obs_b},
-                        self.eta,
-                        self.act_steps,
-                    )
-                    loss_actor.backward()
+
+                    # self.actor_optimizer.zero_grad()
+                    with tf.GradientTape() as tape:
+                        loss_actor = self.model.loss_actor(
+                            {"state": obs_b},
+                            self.eta,
+                            self.act_steps,
+                        )
+                    # loss_actor.backward()
+                    tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+
+
                     if self.itr >= self.n_critic_warmup_itr:
                         if self.max_grad_norm is not None:
-                            torch.nn.utils.clip_grad_norm_(
-                                self.model.actor.parameters(), self.max_grad_norm
+                            torch_nn_utils_clip_grad_norm_and_step(
+                                # self.model.actor.parameters()
+                                self.model.actor.trainable_variables, 
+                                self.actor_optimizer,
+                                self.max_grad_norm,
+                                tf_gradients
                             )
-                        self.actor_optimizer.step()
+                        else:
+                            self.actor_optimizer.step(tf_gradients)
 
                     # update target
                     self.model.update_target_critic(self.target_ema_rate)
@@ -318,3 +357,20 @@ class TrainDQLDiffusionAgent(TrainAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

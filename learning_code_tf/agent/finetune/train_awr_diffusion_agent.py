@@ -12,6 +12,7 @@ import pickle
 import einops
 import numpy as np
 
+import tensorflow as tf
 
 import logging
 import wandb
@@ -21,11 +22,15 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from collections import deque
 from agent.finetune.train_agent import TrainAgent
-from util.scheduler import CosineAnnealingWarmupRestarts
+
 
 
 from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_flatten, torch_tensor_float, torch_exp, torch_clamp, torch_mean\
-, torch_optim_AdamW
+, torch_optim_AdamW, torch_nn_utils_clip_grad_norm_and_step, torch_std, torch_tensor_float, tf_CosineAnnealingWarmupRestarts,\
+torch_tensor_detach, torch_no_grad
+
+
+
 
 def td_values(
     states,
@@ -85,16 +90,9 @@ class TrainAWRDiffusionAgent(TrainAgent):
         # Wwarm up period for critic before actor updates
         self.n_critic_warmup_itr = cfg.train.n_critic_warmup_itr
 
-        # Optimizer
-        self.actor_optimizer = torch_optim_AdamW(
-            # self.model.actor.parameters(),
-            self.model.trainable_variables,
-            lr=cfg.train.actor_lr,
-            weight_decay=cfg.train.actor_weight_decay,
-        )
         
-        self.actor_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.actor_optimizer,
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -103,21 +101,32 @@ class TrainAWRDiffusionAgent(TrainAgent):
             gamma=1.0,
         )
 
-        self.critic_optimizer = torch_optim_AdamW(
-            # self.model.critic.parameters(),
-            self.model.critic.trainable_variables,
-            lr=cfg.train.critic_lr,
-            weight_decay=cfg.train.critic_weight_decay,
+        # Optimizer
+        self.actor_optimizer = torch_optim_AdamW(
+            # self.model.actor.parameters(),
+            self.model.actor.trainable_variables,
+            # lr=cfg.train.actor_lr,
+            lr = self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
 
-        self.critic_lr_scheduler = CosineAnnealingWarmupRestarts(
-            self.critic_optimizer,
+
+        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
             min_lr=cfg.train.critic_lr_scheduler.min_lr,
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
+        )
+
+        self.critic_optimizer = torch_optim_AdamW(
+            # self.model.critic.parameters(),
+            self.model.critic.trainable_variables,
+            # lr=cfg.train.critic_lr,
+            lr = self.critic_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
         )
 
         # Buffer size
@@ -183,7 +192,8 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                with torch.no_grad():
+                # with torch.no_grad():
+                with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy( prev_obs_venv["state"] ) )
                         # .to(self.device)
@@ -289,13 +299,21 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 for _ in range(num_batch // self.critic_update_ratio):
                     inds = np.random.choice(len(obs_trajs), self.batch_size)
 
-                    loss_critic = self.model.loss_critic(
-                        {"state": obs_t[inds]}, td_t[inds]
-                    )
+                    # loss_critic = self.model.loss_critic(
+                    #     {"state": obs_t[inds]}, td_t[inds]
+                    # )
 
-                    self.critic_optimizer.zero_grad()
-                    loss_critic.backward()
-                    self.critic_optimizer.step()
+                    # self.critic_optimizer.zero_grad()
+                    # loss_critic.backward()
+                    # self.critic_optimizer.step()
+
+                    with tf.GradientTape() as tape:
+                        loss_critic = self.model.loss_critic(
+                            {"state": obs_t[inds]}, td_t[inds]
+                        )
+
+                    tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
+                    self.critic_optimizer.step(tf_gradients)
 
                 # Update policy - use a new copy of data
                 obs_trajs = np.array(deepcopy(obs_buffer))
@@ -343,35 +361,58 @@ class TrainAWRDiffusionAgent(TrainAgent):
                         # .to(self.device)
                     }
                     actions_b = (
-                        torch_from_numpy(samples_trajs[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(samples_trajs[inds]) )
+                        # .float().to(self.device)
                     )
                     advantages_b = (
-                        torch_from_numpy(advantages_trajs[inds]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(advantages_trajs[inds]) )
+                        # .float().to(self.device)
                     )
                     advantages_b = (advantages_b - torch_mean( advantages_b) ) / (
-                        advantages_b.std() + 1e-6
+                        torch_std( advantages_b )
+                        # .std()
+                        + 1e-6
                     )
                     
                     advantages_b_scaled = torch_exp(self.beta * advantages_b)
                     
                     advantages_b_scaled = torch_clamp( advantages_b_scaled, max=self.max_adv_weight)
 
-                    # Update policy with collected trajectories
-                    loss_actor = self.model.loss(
-                        actions_b,
-                        obs_b,
-                        advantages_b_scaled.detach()
-                        ,
-                    )
-                    self.actor_optimizer.zero_grad()
-                    loss_actor.backward()
+                    # # Update policy with collected trajectories
+                    # loss_actor = self.model.loss(
+                    #     actions_b,
+                    #     obs_b,
+                    #     torch_tensor_detach( advantages_b_scaled )
+                    #     # .detach()
+                    #     ,
+                    # )
+                    # self.actor_optimizer.zero_grad()
+                    # loss_actor.backward()
+
+                    with tf.GradientTape() as tape:
+                        # Update policy with collected trajectories
+                        loss_actor = self.model.loss(
+                            actions_b,
+                            obs_b,
+                            torch_tensor_detach( advantages_b_scaled )
+                            # .detach()
+                            ,
+                        )
+
+                    tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+
 
                     if self.itr >= self.n_critic_warmup_itr:
                         if self.max_grad_norm is not None:
-                            torch.nn.utils.clip_grad_norm_(
-                                self.model.actor.parameters(), self.max_grad_norm
+                            torch_nn_utils_clip_grad_norm_and_step(
+                                # self.model.actor.parameters()
+                                self.model.actor.trainable_variables,
+                                self.actor_optimizer,
+                                self.max_grad_norm,
+                                tf_gradients
                             )
-                        self.actor_optimizer.step()
+                        else:
+                            self.actor_optimizer.step(tf_gradients)
 
             # Update lr
             self.actor_lr_scheduler.step()
@@ -429,3 +470,25 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

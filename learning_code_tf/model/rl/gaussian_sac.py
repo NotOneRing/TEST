@@ -13,6 +13,8 @@ log = logging.getLogger(__name__)
 
 from util.torch_to_tf import torch_mse_loss, torch_min, torch_mean
 
+from util.torch_to_tf import torch_no_grad
+
 import tensorflow as tf
 
 class SAC_Gaussian(GaussianModel):
@@ -49,19 +51,20 @@ class SAC_Gaussian(GaussianModel):
         print("gaussian_sac.py: SAC_Gaussian.loss_critic()")
 
         # with torch.no_grad():
-        next_actions, next_logprobs = self.call(
-            cond=next_obs,
-            deterministic=False,
-            get_logprob=True,
-        )
-        next_q1, next_q2 = self.target_critic(
-            next_obs,
-            next_actions,
-        )
-        next_q = torch_min(next_q1, next_q2) - alpha * next_logprobs
+        with torch_no_grad() as tape:
+            next_actions, next_logprobs = self.call(
+                cond=next_obs,
+                deterministic=False,
+                get_logprob=True,
+            )
+            next_q1, next_q2 = self.target_critic(
+                next_obs,
+                next_actions,
+            )
+            next_q = torch_min(next_q1, next_q2) - alpha * next_logprobs
 
-        # target value
-        target_q = rewards + gamma * next_q * (1 - terminated)
+            # target value
+            target_q = rewards + gamma * next_q * (1 - terminated)
 
         current_q1, current_q2 = self.critic(obs, actions)
         loss_critic = torch_mse_loss(current_q1, target_q) + torch_mse_loss(
@@ -88,11 +91,12 @@ class SAC_Gaussian(GaussianModel):
         print("gaussian_sac.py: SAC_Gaussian.loss_temperature()")
 
         # with torch.no_grad():
-        _, logprob = self.call(
-            obs,
-            deterministic=False,
-            get_logprob=True,
-        )
+        with torch_no_grad() as tape:
+            _, logprob = self.call(
+                obs,
+                deterministic=False,
+                get_logprob=True,
+            )
 
         loss_alpha = -torch_mean(alpha * (logprob + target_entropy))
         return loss_alpha

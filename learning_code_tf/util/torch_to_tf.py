@@ -2,6 +2,9 @@ import tensorflow as tf
 import numpy as np
 
 
+def torch_tensor_item(tensor):
+    return tensor.numpy().item()
+
 def torch_gather(input_tensor, dim, index_tensor):
     """
     Mimics the behavior of indexing in PyTorch. 
@@ -476,10 +479,6 @@ class MixtureSameFamily:
 
         return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]
 
-
-
-def torch_logsumexp(input, dim):
-    return tf.reduce_logsumexp(input, axis=dim)
 
 
 
@@ -1053,6 +1052,19 @@ def torch_func_functional_call(model, params, x):
 
 
 
+
+
+
+
+
+
+def torch_model_train():
+    pass
+
+
+
+def torch_model_eval():
+    pass
 
 
 
@@ -1753,8 +1765,8 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
 
 def torch_tensor_detach(tensor):
-    tensor = tf.stop_gradient(tensor)
-    return tensor
+    output_tensor = tf.stop_gradient(tensor)
+    return output_tensor
 
 
 
@@ -2184,12 +2196,9 @@ def torch_utils_data_DataLoader(dataset, batch_size=1, shuffle=False, sampler=No
 
 
 
-def with_torch_no_grad():
-    # with torch.no_grad():
-    pass
 
-
-
+def torch_no_grad():
+    return tf.GradientTape(watch_accessed_variables=False, persistent=True)
 
 
 
