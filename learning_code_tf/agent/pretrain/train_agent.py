@@ -8,6 +8,10 @@ import hydra
 from omegaconf import OmegaConf
 # import wandb
 
+from copy import deepcopy
+
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW
+
 
 # DEVICE = "/GPU:0"
 
@@ -59,6 +63,7 @@ class PreTrainAgent:
     def __init__(self, cfg):
         print("train_agent.py: PreTrainAgent.__init__()")
 
+        print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
         # Set seeds
         self.seed = cfg.get("seed", 42)
@@ -66,18 +71,13 @@ class PreTrainAgent:
         np.random.seed(self.seed)
         tf.random.set_seed(self.seed)
 
-        # # Wandb
-        # self.use_wandb = cfg.wandb is not None
-        # if self.use_wandb:
-        #     wandb.init(
-        #         entity=cfg.wandb.entity,
-        #         project=cfg.wandb.project,
-        #         name=cfg.wandb.run,
-        #         config=OmegaConf.to_container(cfg, resolve=True),
-        #     )
+        print("cfg = ", cfg)
+
+        print("cfg.model = ", cfg.model)
 
         # Build model
-        self.model = self.instantiate_model(cfg.model)
+        # self.model = self.instantiate_model(cfg.model)
+        self.model = hydra.utils.instantiate(cfg.model)
 
         print("after instantiate_model")
 
@@ -85,7 +85,7 @@ class PreTrainAgent:
 
         print("self.ema = EMA()")
 
-        # self.ema_model = deepcopy(self.model)
+        self.ema_model = deepcopy(self.model)
         #把这部分拿到train_diffusion_agent里面去
 
         # # 获取 model 的输入形状
@@ -120,7 +120,7 @@ class PreTrainAgent:
         print("after logging checkpoints")
 
         # Build dataset
-        self.dataset_train = self.instantiate_dataset(cfg.train_dataset)
+        self.dataset_train = hydra.utils.instantiate(cfg.train_dataset)
         
         print("after instantiate_dataset()")
 
@@ -136,42 +136,31 @@ class PreTrainAgent:
 
         print("after dataloader_train")
 
+
+
         self.dataloader_val = None
 
         print("after build dataset")
 
-        # Optimizer and scheduler
-        self.optimizer = tf.keras.optimizers.Adam(
-            learning_rate=tf.keras.optimizers.schedules.CosineDecayRestarts(
-                initial_learning_rate=cfg.train.learning_rate,
-                first_decay_steps=cfg.train.lr_scheduler.first_cycle_steps,
-                t_mul=1.0,
-                alpha=cfg.train.lr_scheduler.min_lr / cfg.train.learning_rate,
-            ),
+        self.lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            first_cycle_steps=cfg.train.lr_scheduler.first_cycle_steps,
+            cycle_mult=1.0,
+            max_lr=cfg.train.learning_rate,
+            min_lr=cfg.train.lr_scheduler.min_lr,
+            warmup_steps=cfg.train.lr_scheduler.warmup_steps,
+            gamma=1.0,
         )
 
-        # print("self.batch_size = ", self.batch_size)
 
-        # # 使用 `take(1)` 仅获取第一个批次并获取其形状
-        # sample_input = next(iter(self.dataloader_train.take(1)))  # 获取第一个batch的数据
-        # input_shape = sample_input[0].shape  # 获取输入特征的形状
+        self.optimizer = torch_optim_AdamW(
+            self.model.trainable_variables,
+            lr=self.lr_scheduler,
+            weight_decay=cfg.train.weight_decay,
+        )
 
-        # print(f"Input shape: {input_shape}")
-        # # 假设输入是一个张量，初始化一个 dummy variable
-        # dummy_input = tf.zeros(*input_shape)  # 创建一个 shape 为 (input_shape) 的张量
 
-        # print("before model")
-        # # # 初始化模型
-        # # self.model.build(dummy_input.shape)
-        # # self.ema_model.build(dummy_input.shape)
-        # self.model(dummy_input)  # 这会触发权重的创建
-        # self.ema_model(dummy_input)  # 同样触发 ema_model 的权重创建
+        self.reset_parameters()
 
-        # print("after optimizer")
-
-        # self.reset_parameters()
-
-        # print("after reset_parameters()")
 
     def instantiate_model(self, model_cfg):
         print("train_agent.py: instantiate_model()")
@@ -192,11 +181,11 @@ class PreTrainAgent:
         # # Example: return MyModel(**model_cfg)
         # return hydra.utils.instantiate(model_cfg)
 
-    def instantiate_dataset(self, dataset_cfg):
-        print("train_agent.py: instantiate_dataset()")
-        # Implement dataset instantiation
-        # Example: return MyDataset(**dataset_cfg)
-        return hydra.utils.instantiate(dataset_cfg)
+    # def instantiate_dataset(self, dataset_cfg):
+    #     print("train_agent.py: instantiate_dataset()")
+    #     # Implement dataset instantiation
+    #     # Example: return MyDataset(**dataset_cfg)
+    #     return hydra.utils.instantiate(dataset_cfg)
 
 
     def run(self):
@@ -225,22 +214,29 @@ class PreTrainAgent:
         
         print("savepath = ", savepath)
 
-        self.model.save_weights(savepath)
-
-        ema_savepath = savepath.replace(".h5", "_ema.h5")
+        # self.model.save_weights(savepath)
+        self.model.save(savepath)
 
         print("ema_savepath = ", ema_savepath)
 
-        self.ema_model.save_weights(ema_savepath)
+        ema_savepath = savepath.replace(".h5", "_ema.h5")
+
+        # self.ema_model.save_weights(ema_savepath)
+        self.ema_model.save(ema_savepath)
+
         print(f"Saved model to {savepath}")
+
+        print(f"Saved ema_model to {ema_savepath}")
 
 
     def load(self, epoch):
         print("train_agent.py: PreTrainAgent.load()")
         loadpath = os.path.join(self.checkpoint_dir, f"state_{epoch}.h5")
-        self.model.load_weights(loadpath)
-        self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
+        # self.model.load_weights(loadpath)
+        # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
 
+        self.model = tf.keras.models.load_model(loadpath)
+        self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"))
 
 
 

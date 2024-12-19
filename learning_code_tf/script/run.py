@@ -47,8 +47,9 @@ import tensorflow as tf
 
 import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,4,5,6,7"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,4,5,6,7"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,4,5,6,7"
 
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 # DPPO_WANDB_ENTITY=None
 

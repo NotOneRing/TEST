@@ -41,10 +41,14 @@ class TrainAgent:
         #         config=OmegaConf.to_container(cfg, resolve=True),
         #     )
 
+        print("before cgf.env")
+
         # Make vectorized env
         self.env_name = cfg.env.name
         env_type = cfg.env.get("env_type", None)
-        
+
+        print("after cgf.env")
+
         self.venv = make_async(
             cfg.env.name,
             env_type=env_type,
@@ -61,6 +65,8 @@ class TrainAgent:
             action_dim=cfg.action_dim,
             **cfg.env.specific if "specific" in cfg.env else {},
         )
+
+        print("after make_async")
 
 
         if not env_type == "furniture":

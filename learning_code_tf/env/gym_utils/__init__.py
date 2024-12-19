@@ -73,9 +73,14 @@ def make_async(
 
 
     if env_type == "furniture":
+
+        print("env_type == 'furniture'")
+
         from furniture_bench.envs.observation import DEFAULT_STATE_OBS
         from furniture_bench.envs.furniture_rl_sim_env import FurnitureRLSimEnv
         from env.gym_utils.wrapper.furniture import FurnitureRLSimEnvMultiStepWrapper
+
+        print("before env")
 
         env = FurnitureRLSimEnv(
             act_rot_repr="rot_6d",
@@ -97,6 +102,9 @@ def make_async(
             stiffness=1_000,
             damping=200,
         )
+
+        print("before FurnitureRLSimEnvMultiStepWrapper")
+
         env = FurnitureRLSimEnvMultiStepWrapper(
             env,
             n_obs_steps=obs_steps,
@@ -107,7 +115,12 @@ def make_async(
             normalization_path=normalization_path,
             sparse_reward=sparse_reward,
         )
+
+        print("after FurnitureRLSimEnvMultiStepWrapper")
+
         return env
+
+    print("env_type != 'furniture'")
 
     # avoid import error due incompatible gym versions
     from gym import spaces
@@ -125,12 +138,35 @@ def make_async(
 
     # import the envs
     if robomimic_env_cfg_path is not None:
+
+        print("robomimic_env_cfg_path is not None")
+
         import robomimic.utils.env_utils as EnvUtils
         import robomimic.utils.obs_utils as ObsUtils
     elif "avoiding" in id:
+
+        print("avoiding")
+
         import gym_avoiding
     else:
+
+        print("d4rl.gym_mujoco")
+        import sys
+        print(sys.path)  # This will print all directories Python is searching for modules
+
+        print("before import d4rl")
+        
+        import d4rl
+
+        print("after import d4rl")
+
+        # Check if gym_mujoco is available in d4rl
+        print(d4rl.__file__)  # This prints the location of the d4rl package
+
         import d4rl.gym_mujoco
+
+    print("before make")
+
     from gym.envs import make as make_
 
     def _make_env():
@@ -238,5 +274,13 @@ def make_async(
         if asynchronous
         else SyncVectorEnv(env_fns)
     )
+
+
+
+
+
+
+
+
 
 

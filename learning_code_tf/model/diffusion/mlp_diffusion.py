@@ -11,6 +11,9 @@ from model.common.modules import SpatialEmb, RandomShiftsAug
 
 log = tf.get_logger()
 
+from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+from util.torch_to_tf import torch_tensor_float, torch_cat, torch_flatten, torch_view, torch_reshape
 
 # class VisionDiffusionMLP(tf.keras.layers.Layer):
 class VisionDiffusionMLP(tf.keras.Model):
@@ -67,20 +70,21 @@ class VisionDiffusionMLP(tf.keras.Model):
                 )
             visual_feature_dim = spatial_emb * num_img
         else:
-            self.compress = tf.keras.Sequential([
-                tf.keras.layers.Dense(visual_feature_dim),
-                tf.keras.layers.LayerNormalization(),
-                tf.keras.layers.Dropout(dropout),
-                tf.keras.layers.ReLU(),
+            self.compress = nn_Sequential([
+                nn_Linear(self.backbone.repr_dim, visual_feature_dim),
+                nn_LayerNorm(),
+                nn_Dropout(dropout),
+                nn_ReLU(),
             ])
 
         # diffusion
         input_dim = time_dim + action_dim * horizon_steps + visual_feature_dim + cond_dim
         output_dim = action_dim * horizon_steps
-        self.time_embedding = tf.keras.Sequential([
+        self.time_embedding = nn_Sequential([
             SinusoidalPosEmb(time_dim),
-            tf.keras.layers.Dense(time_dim * 2, activation="mish"),
-            tf.keras.layers.Dense(time_dim),
+            nn_Linear(time_dim, time_dim * 2),
+            nn_Mish(),
+            nn_Linear(time_dim * 2, time_dim),
         ])
 
         if residual_style:
@@ -121,13 +125,13 @@ class VisionDiffusionMLP(tf.keras.Model):
 
         # concatenate images in cond by channels
         if self.num_img > 1:
-            rgb = tf.reshape(rgb, [B, T_rgb, self.num_img, 3, H, W])
+            rgb = torch_reshape(rgb, [B, T_rgb, self.num_img, 3, H, W])
             rgb = einops.rearrange(rgb, "b t n c h w -> b n (t c) h w")
         else:
             rgb = einops.rearrange(rgb, "b t c h w -> b (t c) h w")
 
         # convert rgb to float32 for augmentation
-        rgb = tf.cast(rgb, tf.float32)
+        rgb = torch_tensor_float(rgb)
 
         # get vit output - pass in two images separately
         if self.num_img > 1:
@@ -140,7 +144,7 @@ class VisionDiffusionMLP(tf.keras.Model):
             feat2 = self.backbone(rgb2)
             feat1 = self.compress1(feat1, state)
             feat2 = self.compress2(feat2, state)
-            feat = tf.concat([feat1, feat2], axis=-1)
+            feat = torch_cat([feat1, feat2], axis=-1)
         else:
             if self.augment:
                 rgb = self.aug(rgb)
@@ -148,21 +152,22 @@ class VisionDiffusionMLP(tf.keras.Model):
 
             # compress
             if isinstance(self.compress, SpatialEmb):
-                feat = self.compress(feat, state)
+                feat = self.compress.call(feat, state)
             else:
-                feat = tf.reshape(feat, [B, -1])
+                # feat = torch_reshape(feat, [B, -1])
+                feat = torch_flatten(feat, 1, -1)
                 feat = self.compress(feat)
 
-        cond_encoded = tf.concat([feat, state], axis=-1)
+        cond_encoded = tf.concat([feat, state], dim=-1)
 
         # append time and cond
-        time = tf.reshape(time, [B, 1])
-        time_emb = self.time_embedding(time)
-        x = tf.concat([x, time_emb, cond_encoded], axis=-1)
+        time = torch_view(time, [B, 1])
+        time_emb = torch_view( self.time_embedding(time), B, self.time_dim )
+        x = torch_cat([x, time_emb, cond_encoded], dim=-1)
 
         # mlp
         out = self.mlp_mean(x)
-        return tf.reshape(out, [B, Ta, Da])
+        return torch_view(out, [B, Ta, Da])
 
 
 import math
@@ -290,11 +295,11 @@ class DiffusionMLP(tf.keras.Model):
 
         print("self.time_dim = ", self.time_dim)
 
-        self.time_embedding = tf.keras.Sequential([
+        self.time_embedding = nn_Sequential([
             SinusoidalPosEmb(time_dim),
-            tf.keras.layers.Dense(time_dim * 2),      # 等效于 nn.Linear
-            tf.keras.layers.Activation('mish'),       # Mish 激活函数
-            tf.keras.layers.Dense(time_dim),        
+            nn_Linear(time_dim, time_dim * 2),
+            nn_Mish(),
+            nn_Linear(time_dim * 2, time_dim),        
         ])
 
 
@@ -368,23 +373,22 @@ class DiffusionMLP(tf.keras.Model):
         """
 
         # print("mlp_diffusion.py: DiffusionMLP.call()")
-
         # print("x.shape = ", x.shape)
-
         # print("time.shape = ", time.shape)
-
         # • cond={'state': 'tf.Tensor(shape=(128, 1, 11), dtype=float32)'}
         # • kwargs={'training': 'True'}
         # print("cond.shape = ", cond.shape)
 
-        # B, Ta, Da = x.shape
+        B, Ta, Da = x.shape
         # B, Ta, Da = x_shape
 
-        B = x.shape[0]
-        Ta = self.horizon_steps
-        Da = self.action_dim
+        assert B == x.shape[0]
+        assert Ta == self.horizon_steps
+        assert Da == self.action_dim
 
+        x = torch_view(x, B, -1)
 
+        # state = torch_view(cond["state"], B, -1)
         # # flatten chunk
         # x = tf.reshape(x, [B, -1])
 
@@ -525,7 +529,26 @@ class DiffusionMLP(tf.keras.Model):
 
 
     def get_config(self):
+
+        print("DiffusionMLP: get_config()")
+
         config = super(DiffusionMLP, self).get_config()
+
+        # 打印每个属性及其类型和值
+        print("Checking DiffusionMLP Config elements:")
+        print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
+        print(f"horizon_steps: {self.horizon_steps}, type: {type(self.horizon_steps)}")
+        print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
+        print(f"time_dim: {self.time_dim}, type: {type(self.time_dim)}")
+        print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
+        print(f"cond_mlp_dims: {self.cond_mlp_dims}, type: {type(self.cond_mlp_dims)}")
+        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+        print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
+        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+        print(f"residual_style: {self.residual_style}, type: {type(self.residual_style)}")
+        print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
+        print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
+        
         config.update({
             "action_dim": self.action_dim,
             "horizon_steps": self.horizon_steps,

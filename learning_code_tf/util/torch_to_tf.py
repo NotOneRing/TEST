@@ -552,7 +552,12 @@ def torch_clamp(input, min = float('-inf'), max = float('inf'), out=None):
 
 
 
+def torch_log(input):
+    tensor = input
+    if tensor.dtype == tf.int32 or tensor.dtype == tf.int64:
+        tensor = tf.cast(tensor, tf.float32)
 
+    return tf.math.log(tensor)
 
 
 
@@ -891,6 +896,13 @@ def torch_exp(input):
 
 
 
+
+
+
+
+
+def torch_flip(input, dims):
+    return tf.reverse(input, axis=dims)
 
 
 
@@ -1266,12 +1278,16 @@ class nn_Mish(tf.keras.layers.Layer):
 
 # Define TensorFlow nn.ReLU wrapper
 class nn_ReLU(tf.keras.layers.Layer):
-    def __init__(self):
+    def __init__(self, inplace=False):
         super(nn_ReLU, self).__init__()
         self.relu = tf.keras.layers.ReLU()
-
+        self.inplace = inplace
     def call(self, x):
-        return self.relu(x)
+        if self.inplace:
+            x = self.relu(x)
+            return x
+        else:
+            return self.relu(x)
 
 
 

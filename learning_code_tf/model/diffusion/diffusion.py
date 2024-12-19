@@ -25,6 +25,14 @@ Sample = namedtuple("Sample", "trajectories chains")
 import tensorflow as tf
 import numpy as np
 
+
+
+from util.torch_to_tf import torch_cumprod, torch_ones, torch_cat, torch_sqrt,\
+torch_clamp, torch_log, torch_arange, torch_tensor_clamp_, torch_zeros_like, \
+torch_clip, torch_exp, torch_randn_like, torch_randn, torch_full, torch_full_like, \
+torch_flip
+
+
 # class DiffusionModel(tf.keras.layers.Layer):
 class DiffusionModel(tf.keras.Model):
     def __init__(
@@ -85,11 +93,12 @@ class DiffusionModel(tf.keras.Model):
         self.network_path = network_path
 
         if self.network_path is not None:
+            print("self.network_path is not None")
             checkpoint = tf.train.Checkpoint(network=self.network)
             checkpoint.restore(network_path)
             print(f"Loaded policy from {network_path}")
 
-        # print("after set up models")
+        print("after set up models")
 
         """
         DDPM parameters
@@ -105,18 +114,22 @@ class DiffusionModel(tf.keras.Model):
 
         # print("self.alphas = ", self.alphas)
 
-        self.alphas_cumprod = tf.math.cumprod(self.alphas)
+        self.alphas_cumprod = torch_cumprod(self.alphas, dim=0)
 
         # print("self.alphas_cumprod = ", self.alphas_cumprod)
         
-        # 创建一个值为1的Tensor，数据类型和设备与 self.alphas_cumprod 相同
-        ones_tensor = tf.ones([1], dtype=self.alphas_cumprod.dtype)
+        # # 创建一个值为1的Tensor，数据类型和设备与 self.alphas_cumprod 相同
+        # ones_tensor = tf.ones([1], dtype=self.alphas_cumprod.dtype)
 
-        # 将 self.alphas_cumprod 的第一个值从序列中移除
-        alphas_cumprod_truncated = self.alphas_cumprod[:-1]
+        # # 将 self.alphas_cumprod 的第一个值从序列中移除
+        # alphas_cumprod_truncated = self.alphas_cumprod[:-1]
 
-        # 将 ones_tensor 和 alphas_cumprod_truncated 进行拼接
-        self.alphas_cumprod_prev = tf.concat([ones_tensor, alphas_cumprod_truncated], axis=0)
+        # # 将 ones_tensor 和 alphas_cumprod_truncated 进行拼接
+        # self.alphas_cumprod_prev = tf.concat([ones_tensor, alphas_cumprod_truncated], axis=0)
+
+        self.alphas_cumprod_prev = torch_cat(
+            [torch_ones(1), self.alphas_cumprod[:-1]]
+        )
 
         # print("self.alphas_cumprod_prev = ", self.alphas_cumprod_prev)
 
@@ -126,38 +139,52 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-
-
-
-
-
-        self.sqrt_alphas_cumprod = tf.sqrt(self.alphas_cumprod)
-        self.sqrt_one_minus_alphas_cumprod = tf.sqrt(1.0 - self.alphas_cumprod)
-        
-        
-        # print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
-        # print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
+        """
+        √ α̅ₜ
+        """
+        self.sqrt_alphas_cumprod = torch_sqrt(self.alphas_cumprod)
+        """
+        √ 1-α̅ₜ
+        """
+        self.sqrt_one_minus_alphas_cumprod = torch_sqrt(1.0 - self.alphas_cumprod)
         
         
         
+        print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
+        print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
         
-        self.sqrt_recip_alphas_cumprod = tf.sqrt(1.0 / self.alphas_cumprod)
-        self.sqrt_recipm1_alphas_cumprod = tf.sqrt(1.0 / self.alphas_cumprod - 1)
-
-        # print("before sqrt_recipm1_alphas_cumprod")
-
+        
+        
+        
+        """
+        √ 1\α̅ₜ
+        """
+        self.sqrt_recip_alphas_cumprod = torch_sqrt(1.0 / self.alphas_cumprod)
+        """
+        √ 1\α̅ₜ-1
+        """
+        self.sqrt_recipm1_alphas_cumprod = torch_sqrt(1.0 / self.alphas_cumprod - 1)
+        """
+        β̃ₜ = σₜ² = βₜ (1-α̅ₜ₋₁)/(1-α̅ₜ)
+        """
         self.ddpm_var = (
             self.betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
         )
-        self.ddpm_logvar_clipped = tf.math.log(tf.clip_by_value(self.ddpm_var, 1e-20, 1e20))
+        self.ddpm_logvar_clipped = torch_log(torch_clamp(self.ddpm_var, min=1e-20))
+        """
+        μₜ = β̃ₜ √ α̅ₜ₋₁/(1-α̅ₜ)x₀ + √ αₜ (1-α̅ₜ₋₁)/(1-α̅ₜ)xₜ
+        """
         self.ddpm_mu_coef1 = (
-            self.betas * tf.sqrt(self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+            self.betas
+            * torch_sqrt(self.alphas_cumprod_prev)
+            / (1.0 - self.alphas_cumprod)
         )
         self.ddpm_mu_coef2 = (
-            (1.0 - self.alphas_cumprod_prev) * tf.sqrt(self.alphas) / (1.0 - self.alphas_cumprod)
+            (1.0 - self.alphas_cumprod_prev)
+            * torch_sqrt(self.alphas)
+            / (1.0 - self.alphas_cumprod)
         )
 
-        # print("before ddpm_mu_coef2")
 
         if use_ddim:
 
@@ -166,7 +193,9 @@ class DiffusionModel(tf.keras.Model):
             assert predict_epsilon, "DDIM requires predicting epsilon for now."
             if ddim_discretize == "uniform":
                 step_ratio = self.denoising_steps // ddim_steps
-                self.ddim_t = tf.range(0, ddim_steps) * step_ratio
+                self.ddim_t = (
+                    torch_arange(0, ddim_steps, device=self.device) * step_ratio
+                )
 
                 print("after ddim_discretize == uniform")
 
@@ -176,17 +205,27 @@ class DiffusionModel(tf.keras.Model):
             print("after ddim_discretize")
 
             self.ddim_alphas = tf.gather(self.alphas_cumprod, self.ddim_t)
-            # self.ddim_alphas = tf_index_gather(self.alphas_cumprod, self.ddim_t)
-            
+            self.ddim_alphas = tf.cast(self.ddim_alphas, tf.float32)
+
             self.ddim_alphas_sqrt = tf.sqrt(self.ddim_alphas)
-            self.ddim_alphas_prev = tf.concat(
-                [tf.constant([1.0]), self.alphas_cumprod[:-1]], axis=0
+            # self.ddim_alphas_prev = tf.concat(
+            #     [tf.constant([1.0]), self.alphas_cumprod[:-1]], axis=0
+            # )
+
+            self.ddim_alphas_prev = torch_cat(
+                [
+                    tf.cast(tf.constant([1.0]), tf.float32),
+                    self.alphas_cumprod[self.ddim_t[:-1]],
+                ]
             )
+
 
             print("after ddim_alphas_prev")
 
             self.ddim_sqrt_one_minus_alphas = tf.sqrt(1.0 - self.ddim_alphas)
+
             ddim_eta = 0
+
             self.ddim_sigmas = ddim_eta * (
                 (1 - self.ddim_alphas_prev)
                 / (1 - self.ddim_alphas)
@@ -194,6 +233,88 @@ class DiffusionModel(tf.keras.Model):
             ) ** 0.5
 
             print("after ddim_sigmas")
+
+            # Flip all
+            self.ddim_t = torch_flip(self.ddim_t, [0])
+            
+            self.ddim_alphas = torch_flip(self.ddim_alphas, [0])
+
+            self.ddim_alphas_sqrt = torch_flip(self.ddim_alphas_sqrt, [0])
+            self.ddim_alphas_prev = torch_flip(self.ddim_alphas_prev, [0])
+            self.ddim_sqrt_one_minus_alphas = torch_flip(
+                self.ddim_sqrt_one_minus_alphas, [0]
+            )
+            self.ddim_sigmas = torch_flip(self.ddim_sigmas, [0])
+
+
+
+
+
+
+
+    def p_mean_var(self, x, t, cond, index=None, network_override=None):
+
+        print("diffusion.py: DiffusionModel.p_mean_var()", flush = True)
+
+        if network_override is not None:
+            noise = network_override(x, t, cond=cond)
+        else:
+            noise = self.network(x, t, cond=cond)
+
+        # Predict x_0
+        if self.predict_epsilon:
+            if self.use_ddim:
+                """
+                x₀ = (xₜ - √ (1-αₜ) ε )/ √ αₜ
+                """
+                alpha = extract(self.ddim_alphas, index, x.shape)
+                alpha_prev = extract(self.ddim_alphas_prev, index, x.shape)
+                sqrt_one_minus_alpha = extract(
+                    self.ddim_sqrt_one_minus_alphas, index, x.shape
+                )
+                x_recon = (x - sqrt_one_minus_alpha * noise) / (alpha**0.5)
+            else:
+                """
+                x₀ = √ 1\α̅ₜ xₜ - √ 1\α̅ₜ-1 ε
+                """
+                x_recon = (
+                    extract(self.sqrt_recip_alphas_cumprod, t, x.shape) * x
+                    - extract(self.sqrt_recipm1_alphas_cumprod, t, x.shape) * noise
+                )
+        else:  # directly predicting x₀
+            x_recon = noise
+        if self.denoised_clip_value is not None:
+            torch_tensor_clamp_(x_recon, -self.denoised_clip_value, self.denoised_clip_value)
+            if self.use_ddim:
+                # re-calculate noise based on clamped x_recon - default to false in HF, but let's use it here
+                noise = (x - alpha ** (0.5) * x_recon) / sqrt_one_minus_alpha
+
+        # Clip epsilon for numerical stability in policy gradient - not sure if this is helpful yet, but the value can be huge sometimes. This has no effect if DDPM is used
+        if self.use_ddim and self.eps_clip_value is not None:
+            torch_tensor_clamp_(noise, -self.eps_clip_value, self.eps_clip_value)
+
+        # Get mu
+        if self.use_ddim:
+            """
+            μ = √ αₜ₋₁ x₀ + √(1-αₜ₋₁ - σₜ²) ε
+
+            eta=0
+            """
+            sigma = extract(self.ddim_sigmas, index, x.shape)
+            dir_xt = (1.0 - alpha_prev - sigma**2).sqrt() * noise
+            mu = (alpha_prev**0.5) * x_recon + dir_xt
+            var = sigma**2
+            logvar = torch_log(var)
+        else:
+            """
+            μₜ = β̃ₜ √ α̅ₜ₋₁/(1-α̅ₜ)x₀ + √ αₜ (1-α̅ₜ₋₁)/(1-α̅ₜ)xₜ
+            """
+            mu = (
+                extract(self.ddpm_mu_coef1, t, x.shape) * x_recon
+                + extract(self.ddpm_mu_coef2, t, x.shape) * x
+            )
+            logvar = extract(self.ddpm_logvar_clipped, t, x.shape)
+        return mu, logvar
 
 
 
@@ -204,10 +325,27 @@ class DiffusionModel(tf.keras.Model):
 
         print("get_config: diffusion.py: DiffusionModel.get_config()")
 
+        # Debugging each attribute to make sure they are initialized correctly
+        print(f"ddim_discretize: {self.ddim_discretize}")
+        print(f"device: {self.device}")
+        print(f"horizon_steps: {self.horizon_steps}")
+        print(f"obs_dim: {self.obs_dim}")
+        print(f"action_dim: {self.action_dim}")
+        print(f"denoising_steps: {self.denoising_steps}")
+        print(f"predict_epsilon: {self.predict_epsilon}")
+        print(f"use_ddim: {self.use_ddim}")
+        print(f"ddim_steps: {self.ddim_steps}")
+        print(f"denoised_clip_value: {self.denoised_clip_value}")
+        print(f"final_action_clip_value: {self.final_action_clip_value}")
+        print(f"randn_clip_value: {self.randn_clip_value}")
+        print(f"eps_clip_value: {self.eps_clip_value}")
+        print(f"network: {self.network}")
+        print(f"network_path: {self.network_path}")
+
+
         config.update({
             "ddim_discretize": self.ddim_discretize,
             "device": self.device,
-
             "horizon_steps": self.horizon_steps,
             "obs_dim": self.obs_dim,
             "action_dim": self.action_dim,
@@ -215,7 +353,6 @@ class DiffusionModel(tf.keras.Model):
             "predict_epsilon": self.predict_epsilon,
             "use_ddim": self.use_ddim,
             "ddim_steps": self.ddim_steps,
-
             "denoised_clip_value": self.denoised_clip_value,
             "final_action_clip_value": self.final_action_clip_value,
             "randn_clip_value": self.randn_clip_value,
@@ -224,6 +361,8 @@ class DiffusionModel(tf.keras.Model):
             "network_path": self.network_path,
         })
         return config
+
+
 
 
 
@@ -266,13 +405,14 @@ class DiffusionModel(tf.keras.Model):
         print("self.action_dim = ", self.action_dim)
 
         # Starting random noise
-        x = tf.random.normal((B, self.horizon_steps, self.action_dim))
+        # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
+        x = torch_randn(B, self.horizon_steps, self.action_dim)
 
         # Define timesteps
         if self.use_ddim:
             t_all = self.ddim_t
         else:
-            t_all = tf.range(self.denoising_steps - 1, -1, -1)
+            t_all = list(reversed(range(self.denoising_steps)))
 
         # Main loop
         for i, t in enumerate(t_all):
@@ -286,73 +426,29 @@ class DiffusionModel(tf.keras.Model):
                 cond=cond,
                 index=index_b,
             )
-            std = tf.exp(0.5 * logvar)
+            std = torch_exp(0.5 * logvar)
 
             # Determine noise level
             if self.use_ddim:
-                std = tf.zeros_like(std)
+                std = torch_zeros_like(std)
             else:
                 if t == 0:
-                    std = tf.zeros_like(std)
+                    std = torch_zeros_like(std)
                 else:
-                    std = tf.clip_by_value(std, clip_value_min=1e-3, clip_value_max=tf.float32.max)
+                    std = torch_clip(std, clip_value_min=1e-3, clip_value_max=tf.float32.max)
 
             # Sample noise and update `x`
             # noise = tf.random.normal(tf.shape(x))
-            noise = tf.random.normal(x.shape())
-            noise = tf.clip_by_value(noise, -self.randn_clip_value, self.randn_clip_value)
+            noise = torch_randn_like(x.shape())
+            torch_tensor_clamp_(noise, -self.randn_clip_value, self.randn_clip_value)
             x = mean + std * noise
 
             # Clamp action at the final step
             if self.final_action_clip_value is not None and i == len(t_all) - 1:
-                x = tf.clip_by_value(x, -self.final_action_clip_value, self.final_action_clip_value)
+                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
 
         # Return the result as a namedtuple
         return Sample(x, None)
-
-
-    # def _cosine_beta_schedule(self, denoising_steps):
-    #     """
-    #     Implements the cosine schedule for betas.
-    #     """
-    #     steps = tf.linspace(0, denoising_steps, denoising_steps)
-    #     beta_schedule = 0.1 * (1 - tf.cos(steps / denoising_steps * np.pi))
-    #     return beta_schedule
-
-    def p_mean_var(self, x, t, cond):
-        """
-        Compute the mean and variance for the denoising process.
-
-        Args:
-            x: (batch_size, horizon_steps, action_dim)
-            t: (batch_size,) - time steps
-            cond: dict - condition inputs
-
-        Returns:
-            mean: predicted mean
-            var: predicted variance
-        """
-        # Model prediction
-        model_output = self.model(x, t, **cond)
-        
-        # Get parameters
-        alphas_cumprod_t = tf.gather(self.alphas_cumprod, t)
-        alphas_cumprod_prev = tf.gather(self.alphas_cumprod_prev, t)
-        sqrt_recip_alphas_t = tf.gather(self.sqrt_recip_alphas, t)
-
-        # Expand dimensions for broadcasting if necessary
-        alphas_cumprod_t = tf.expand_dims(alphas_cumprod_t, axis=-1)
-        alphas_cumprod_prev = tf.expand_dims(alphas_cumprod_prev, axis=-1)
-        sqrt_recip_alphas_t = tf.expand_dims(sqrt_recip_alphas_t, axis=-1)
-
-        # Mean prediction
-        model_mean = sqrt_recip_alphas_t * (x - model_output)
-
-        # Variance prediction
-        var = 1 - alphas_cumprod_prev
-
-        return model_mean, var
-
 
 
 
@@ -393,12 +489,7 @@ class DiffusionModel(tf.keras.Model):
         print("batch_size = ", batch_size)
 
         # # 生成 [0, self.denoising_steps) 范围的随机整数
-        t = tf.random.uniform(
-            shape=(batch_size,),
-            minval=0,
-            maxval=self.denoising_steps,
-            dtype=tf.int32,
-        )
+        t = tf.cast( torch_full((batch_size,), 3), tf.long)  # 固定为 3
 
         # t = tf.fill([batch_size], 3)  # 固定为 3
 
@@ -422,7 +513,9 @@ class DiffusionModel(tf.keras.Model):
         print("diffusion.py: DiffusionModel.p_losses()")
 
         # # Forward process
-        noise = tf.random.normal(tf.shape(x_start), dtype=x_start.dtype)
+        # noise = tf.random.normal(tf.shape(x_start), dtype=x_start.dtype)
+        fixed_value = 1.0
+        noise = torch_full_like(x_start, fixed_value)  # 使用固定值替代随机噪声
 
         # # 假设 x_start 是一个已定义的张量
         # fixed_value = 1.0  # 固定数值
@@ -504,7 +597,8 @@ class DiffusionModel(tf.keras.Model):
         # Generate noise if not provided
         if noise is None:
             # noise = tf.random.normal(shape=tf.shape(x_start), dtype=x_start.dtype)
-            noise = tf.random.normal(shape = x_start.shape, dtype=x_start.dtype)
+            # noise = tf.random.normal(shape = x_start.shape, dtype=x_start.dtype)
+            noise = torch_randn_like(x_start)
 
         # print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
         # print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
