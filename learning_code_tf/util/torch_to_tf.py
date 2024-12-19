@@ -2,8 +2,10 @@ import tensorflow as tf
 import numpy as np
 
 
+
 def torch_tensor_item(tensor):
     return tensor.numpy().item()
+
 
 def torch_gather(input_tensor, dim, index_tensor):
     """
@@ -968,6 +970,47 @@ def torch_item(x):
 
 
 
+def nn_functional_pad_replicate(x, pad):
+    # Extract dimensions
+    # batch, height, width, channels = x.shape
+    from copy import deepcopy
+ 
+    result = deepcopy(x)
+ 
+    total_dim = len(x.shape)
+    assert len(pad) % 2 == 0
+    pad_dim = len(pad) / 2
+
+
+    for i in range(int(pad_dim)):
+        pad_left_number = pad[2 * i]
+        pad_right_number = pad[2 * i + 1]
+
+        axis = total_dim - i - 1
+
+        left = tf.gather(result, 0, axis=axis)
+        right = tf.gather(result, x.shape[axis]-1, axis=axis)
+
+        left = tf.expand_dims(left, axis=axis)
+        right = tf.expand_dims(right, axis=axis)
+
+        left = tf.repeat(left, repeats=pad_left_number, axis=axis)
+        right = tf.repeat(right, repeats=pad_right_number, axis=axis)
+        result = tf.concat([left, result, right], axis=axis)
+
+    return result
+ 
+    # # Pad height (top and bottom)
+    # top = tf.repeat(x[:, :, :, :1], repeats=pad, axis=1)  # Replicate the first row `pad` times
+    # bottom = tf.repeat(x[:, :, :, -1:], repeats=pad, axis=1)  # Replicate the last row `pad` times
+    # x = tf.concat([top, x, bottom], axis=1)
+
+    # # Pad width (left and right)
+    # left = tf.repeat(x[:, :, :1, :], repeats=pad, axis=2)  # Replicate the first column `pad` times
+    # right = tf.repeat(x[:, :, -1:, :], repeats=pad, axis=2)  # Replicate the last column `pad` times
+    # x = tf.concat([left, x, right], axis=2)
+
+    # return x
 
 
 

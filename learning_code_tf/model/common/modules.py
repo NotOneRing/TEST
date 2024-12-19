@@ -9,7 +9,8 @@ import numpy as np
 
 from util.torch_to_tf import nn_Sequential, nn_Linear,\
 nn_LayerNorm, nn_ReLU, nn_Parameter, torch_zeros, nn_Dropout,\
-
+torch_tensor_transpose, torch_cat, torch_tensor_repeat, torch_unsqueeze,\
+torch_sum, torch_tensor
 
 # class SpatialEmb(nn.Module):
 class SpatialEmb(tf.keras.layers.Layer):
@@ -67,36 +68,26 @@ class SpatialEmb(tf.keras.layers.Layer):
         print("modules.py: SpatialEmb.call()")
 
         # Transpose dimensions for TensorFlow
-        feat = tf.transpose(feat, perm=[0, 2, 1])
+        # feat = tf.transpose(feat, perm=[0, 2, 1])
+        feat = torch_tensor_transpose(feat, 1, 2)
 
         if self.prop_dim > 0 and prop is not None:
-            repeated_prop = tf.expand_dims(prop, axis=1)
-            repeated_prop = tf.tile(repeated_prop, [1, tf.shape(feat)[1], 1])
-            feat = tf.concat([feat, repeated_prop], axis=-1)
+            # repeated_prop = tf.expand_dims(prop, axis=1)
+            # repeated_prop = tf.tile(repeated_prop, [1, tf.shape(feat)[1], 1])
+
+            repeated_prop = torch_tensor_repeat( torch_unsqueeze(prop, 1), 1, feat.shape[1], 1)
+
+            feat = torch_cat((feat, repeated_prop), dim=-1)
 
         y = self.input_proj(feat, training=training)
-        z = tf.reduce_sum(self.weight * y, axis=1)
+        z = torch_sum(self.weight * y, dim=1)
         z = self.dropout(z, training=training)
         return z
 
 
 
-def replicate_pad(x, pad):
-    # Extract dimensions
-    batch, height, width, channels = x.shape
-
-    # Pad height (top and bottom)
-    top = tf.repeat(x[:, :1, :, :], repeats=pad, axis=1)  # Replicate the first row `pad` times
-    bottom = tf.repeat(x[:, -1:, :, :], repeats=pad, axis=1)  # Replicate the last row `pad` times
-    x = tf.concat([top, x, bottom], axis=1)
-
-    # Pad width (left and right)
-    left = tf.repeat(x[:, :, :1, :], repeats=pad, axis=2)  # Replicate the first column `pad` times
-    right = tf.repeat(x[:, :, -1:, :], repeats=pad, axis=2)  # Replicate the last column `pad` times
-    x = tf.concat([left, x, right], axis=2)
-
-    return x
-
+from util.torch_to_tf import nn_functional_pad_replicate, torch_linspace,\
+torch_randint
 
 class RandomShiftsAug:
     def __init__(self, pad):
@@ -110,26 +101,38 @@ class RandomShiftsAug:
 
         print("modules.py: RandomShiftsAug.__call__()")
 
-        n, c, h, w = x.size()
+        # n, c, h, w = x.size()
+        n, c, h, w = x.shape
+
         assert h == w
 
         # # Add padding with replication
-        x = replicate_pad(x, self.pad)
+        x = nn_functional_pad_replicate(x, self.pad)
 
         # Create a random shift grid
         eps = 1.0 / (h + 2 * self.pad)
-        arange = tf.linspace(-1.0 + eps, 1.0 - eps, h + 2 * self.pad)[:h]
+        arange = torch_linspace(-1.0 + eps, 1.0 - eps, h + 2 * self.pad)[:h]
 
-        arange = tf.reshape(arange, (1, h, 1))
-        arange = tf.tile(arange, [h, 1, 1])
+        # arange = tf.reshape(arange, (1, h, 1))
+        # arange = tf.tile(arange, [h, 1, 1])
+        arange = torch_unsqueeze( torch_tensor_repeat( torch_unsqueeze(arange, 0), h, 1), 2)
 
 
-        base_grid = tf.concat([arange, tf.transpose(arange, perm=[1, 0, 2])], axis=-1)
-        base_grid = tf.expand_dims(base_grid, axis=0)
-        base_grid = tf.tile(base_grid, [n, 1, 1, 1])
+        # base_grid = tf.concat([arange, tf.transpose(arange, perm=[1, 0, 2])], axis=-1)
+        # base_grid = tf.expand_dims(base_grid, axis=0)
+        # base_grid = tf.tile(base_grid, [n, 1, 1, 1])
 
-        shift = tf.random.uniform(
-            shape=(n, 1, 1, 2), minval=0, maxval=2 * self.pad + 1, dtype=tf.float32
+
+        base_grid = torch_cat([arange, torch_tensor_transpose(arange, 1, 0)], dim=2)
+
+        base_grid = torch_tensor_repeat( torch_unsqueeze(base_grid, 0), n, 1, 1, 1)
+
+        # shift = tf.random.uniform(
+        #     shape=(n, 1, 1, 2), minval=0, maxval=2 * self.pad + 1, dtype=tf.float32
+        # )
+        # shift *= 2.0 / (h + 2 * self.pad)
+        shift = torch_randint(
+            0, 2 * self.pad + 1, size=(n, 1, 1, 2), dtype=x.dtype
         )
         shift *= 2.0 / (h + 2 * self.pad)
 
@@ -140,10 +143,41 @@ class RandomShiftsAug:
 
 
 
+# # test random shift
+# if __name__ == "__main__":
+
+#     print("modules.py: main()")
+
+#     from PIL import Image
+#     import requests
+#     import numpy as np
+
+#     image_url = "https://rail.eecs.berkeley.edu/datasets/bridge_release/raw/bridge_data_v2/datacol2_toykitchen7/drawer_pnp/01/2023-04-19_09-18-15/raw/traj_group0/traj0/images0/im_30.jpg"
+#     image = Image.open(requests.get(image_url, stream=True).raw)
+#     image = image.resize((96, 96))
+
+
+#     image = tf.convert_to_tensor(image, dtype=tf.float32)
+#     image = tf.expand_dims(image, axis=0)  # Add batch dimension
+#     image = tf.transpose(image, perm=[2, 0, 1, 3])  # Convert to NHWC format
+
+#     aug = RandomShiftsAug(pad=4)
+#     image_aug = aug(image)
+#     image_aug = tf.squeeze(image_aug)
+
+#     image = tf.transpose(image, perm=[1, 2, 0, 3])
+#     image_aug = image_aug.numpy()
+#     image_aug = Image.fromarray(image_aug.astype(np.uint8))
+
+#     image_aug.show()
+
+
+
+
 # test random shift
 if __name__ == "__main__":
 
-    print("modules.py: main()")
+    print("modules.py: main()", flush = True)
 
     from PIL import Image
     import requests
@@ -153,20 +187,21 @@ if __name__ == "__main__":
     image = Image.open(requests.get(image_url, stream=True).raw)
     image = image.resize((96, 96))
 
-
-    image = tf.convert_to_tensor(image, dtype=tf.float32)
-    image = tf.expand_dims(image, axis=0)  # Add batch dimension
-    image = tf.transpose(image, perm=[2, 0, 1, 3])  # Convert to NHWC format
-
+    image = torch_tensor(np.array(image)).permute(2, 0, 1).unsqueeze(0).float()
+    
     aug = RandomShiftsAug(pad=4)
     image_aug = aug(image)
-    image_aug = tf.squeeze(image_aug)
 
-    image = tf.transpose(image, perm=[1, 2, 0, 3])
-    image_aug = image_aug.numpy()
+    image_aug = image_aug.squeeze().permute(1, 2, 0).numpy()
     image_aug = Image.fromarray(image_aug.astype(np.uint8))
-
     image_aug.show()
+
+
+
+
+
+
+
 
 
 
