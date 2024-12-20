@@ -105,6 +105,13 @@ output_torch = F.grid_sample(image_torch, grid_torch, align_corners=True)
 
 # 对比结果
 output_tf_np = output_tf.numpy().transpose(0, 3, 1, 2)  # 转换为 (N, C, H, W)
+
+
+
+
+print("output_torch.shape = ", output_torch.shape)
+print("output_tf_np.shape = ", output_tf_np.shape)
+
 print("TensorFlow Output:\n", output_tf_np)
 print("PyTorch Output:\n", output_torch.numpy())
 assert np.allclose(output_tf_np, output_torch.numpy(), atol=1e-5), "Outputs do not match!"
