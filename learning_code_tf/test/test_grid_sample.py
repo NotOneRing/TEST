@@ -29,21 +29,108 @@ def bilinear_interpolation(x, y, points):
 # print(result)  # 输出插值结果
 
 
-def tf_grid_sample(input_tensor, grid):
-    batch_size, height, width, channels = input_tensor.shape
+def tf_grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=False):
+    assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+    assert mode == "bilinear", "only bilinear is implemented right now"
+    assert len(input.shape) == 4, "len(input.shape) must be 4"
+    batch_size, channels, height_in, width_in = input.shape
+
+    batch_grid, height_out, width_out, _ = grid.shape
+
+    print("batch_size = ", batch_size)
+
+    print("channels = ", channels)
+
+    print("height_in = ", height_in)
+
+    print("width_in = ", width_in)
+
+    print("batch_grid = ", batch_grid)
+
+    print("height_out = ", height_out)
+
+    print("width_out = ", width_out)
+
+    assert batch_size == batch_grid, "input has the same batch size as grid"
+
     grid_x, grid_y = grid[..., 0], grid[..., 1]
 
-    # 通过grid选择输入张量的对应位置
-    grid_x = tf.clip_by_value(grid_x, 0.0, width-1.0)
-    grid_y = tf.clip_by_value(grid_y, 0.0, height-1.0)
+
+    grid_x_rescaled = (grid_x + 1) / 2 * (width_in - 1)
+    # grid_x_ceil_pos = (grid_x_ceil + 1) / 2 * (width_in - 1)
     
-    grid_x = tf.cast(grid_x, tf.int32)
-    grid_y = tf.cast(grid_y, tf.int32)
+    grid_y_rescaled = (-grid_y + 1) / 2 * (height_in - 1)    
+    # grid_y_ceil_pos = (-grid_y_ceil + 1) / 2 * (height_in - 1)
 
-    gathered_values = tf.gather(input_tensor, grid_x, axis=2, batch_dims=1)
-    gathered_values = tf.gather(gathered_values, grid_y, axis=1, batch_dims=1)
 
-    return gathered_values
+    grid_x_ceil = tf.math.ceil(grid_x_rescaled)
+    grid_x_floor = tf.math.floor(grid_x_rescaled)
+
+    grid_y_ceil = tf.math.ceil(grid_y_rescaled)
+    grid_y_floor = tf.math.floor(grid_y_rescaled)
+
+
+
+    result_tensor = np.zeros((batch_size, channels, height_out, width_out))
+
+    for batch_index in range(batch_size):
+        for h_out in range(height_out):
+            for w_out in range(width_out):
+                x_floor = grid_x_floor[batch_index, h_out, w_out]
+                x_ceil = grid_x_ceil[batch_index, h_out, w_out]
+                y_floor = grid_y_floor[batch_index, h_out, w_out]
+                y_ceil = grid_y_ceil[batch_index, h_out, w_out]
+                x_floor = tf.cast(x_floor, tf.int32).numpy().item()
+                x_ceil = tf.cast(x_ceil, tf.int32).numpy().item()
+                y_floor = tf.cast(y_floor, tf.int32).numpy().item()
+                y_ceil = tf.cast(y_ceil, tf.int32).numpy().item()
+
+
+                x_index = (grid_x[batch_index, h_out, w_out].numpy().item() + 1) / 2 * (width_in - 1)
+                y_index = (grid_y[batch_index, h_out, w_out].numpy().item() + 1) / 2 * (height_in - 1)    
+
+                if h_out == 1 and w_out == 1:
+                    print("x_index = ", x_index)
+                    print("y_index = ", y_index)
+
+                    print("x_floor = ", x_floor)
+                    print("x_ceil = ", x_ceil)
+                    print("y_floor = ", y_floor)
+                    print("y_ceil = ", y_ceil)
+                    print(" = ", input[batch_index, :, y_floor, x_floor])
+                    print(" = ", input[batch_index, :, y_floor, x_ceil])
+                    print(" = ", input[batch_index, :, y_ceil, x_floor])
+                    print(" = ", input[batch_index, :, y_ceil, x_ceil])
+
+                point0 = (x_floor, y_floor, input[batch_index, :, y_floor, x_floor])
+
+
+                point1 = (x_ceil, y_floor, input[batch_index, :, y_floor, x_ceil])
+                point2 = (x_floor, y_ceil, input[batch_index, :, y_ceil, x_floor])
+                point3 = (x_ceil, y_ceil, input[batch_index, :, y_ceil, x_ceil])
+
+                # print("point0[2].shape = ", point0[2].shape)
+
+
+                bilinear_result = bilinear_interpolation(
+                    x_index, y_index,
+                    [
+                        point0, point1, point2, point3
+                    ]
+                )
+
+                result_tensor[batch_index, :, h_out, w_out] = bilinear_result.numpy()
+                
+    result_tensor = tf.convert_to_tensor(result_tensor)
+
+    return result_tensor
+            
+    # grid_x_floor_pos.shape = batch_size, height_out, width_out
+    #接下来，可以给进去batch_size的index，height_in和width_in的index，
+    #然后根据这个index得到[batch_size, channels, height_out, width_out]的output
+
+    # output.shape = batch_size, channels, height_out, width_out
+
 
 # 固定种子以确保相同的随机数
 seed = 42
@@ -52,17 +139,28 @@ np.random.seed(seed)
 tf.random.set_seed(seed)
 
 # 创建相同的输入张量（[batch_size, height, width, channels]）
-input_tensor_torch = torch.rand(1, 32, 32, 3)  # Batch size 1, 32x32 image, 3 channels
+# input_tensor_torch = torch.rand(1, 32, 32, 3)  # Batch size 1, 32x32 image, 3 channels
 
-input_tensor_tf = tf.convert_to_tensor(input_tensor_torch.numpy())
+# input_tensor_torch = torch.range(start = 1, end = 1*32*32*3).reshape(1, 32, 32, 3)
+
+input_tensor_torch = torch.range(start = 1, end = 1*3*3*3).reshape(1, 3, 3, 3)
 
 input_tensor_torch = input_tensor_torch.permute(0, 3, 1, 2)  # Convert to NCHW format for PyTorch
+
+input_tensor_tf = tf.convert_to_tensor(input_tensor_torch.numpy())
 
 # input_tensor_tf = tf.random.normal([1, 32, 32, 3])  # TensorFlow uses NHWC format
 
 # 创建相同的网格张量（[batch_size, height, width, 2]）
-grid_torch = torch.rand(1, 32, 32, 2)  # Batch size 1, height 32, width 32, 2 for (x, y) coordinates
+# grid_torch = torch.rand(1, 32, 32, 2)  # Batch size 1, height 32, width 32, 2 for (x, y) coordinates
+
 # grid_tf = tf.random.normal([1, 32, 32, 2])  # TensorFlow uses (x, y) coordinates for grid
+
+# grid_torch = torch.range(start = 1, end = 1*32*32*2).reshape(1, 32, 32, 2)
+grid_torch = torch.range(start = 1, end = 1*3*3*2).reshape(1, 3, 3, 2)
+
+# grid_torch = (grid_torch - 1*32*32*2  / 2) / (1*32*32*2)
+grid_torch = (grid_torch - 1*3*3*2  / 2) / (1*3*3*2)
 
 grid_tf = tf.convert_to_tensor(grid_torch.numpy())
 
@@ -81,7 +179,25 @@ print("torch_output.shape = ", torch_output.shape)
 print("tensorflow_output.shape = ", tensorflow_output.shape)
 
 
-tensorflow_output = np.transpose(tensorflow_output, (0, 3, 1, 2))  # 转换为 (1, 3, 32, 32)
+
+
+
+print("torch_output = ", torch_output)
+print("tensorflow_output = ", tensorflow_output)
+
+
+
+
+
+# 使用 np.isnan() 检查 NaN 的位置
+nan_positions = np.where(np.isnan(tensorflow_output))
+
+print("NaN 位置的索引:", nan_positions)
+
+print("tensorflow_output[0, 0, 1, 1] = ", tensorflow_output[0, 0, 1, 1])
+print("tensorflow_output[0, 1, 1, 1] = ", tensorflow_output[0, 1, 1, 1])
+print("tensorflow_output[0, 2, 1, 1] = ", tensorflow_output[0, 2, 1, 1])
+
 
 
 
