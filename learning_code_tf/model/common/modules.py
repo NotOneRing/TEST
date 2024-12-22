@@ -86,8 +86,8 @@ class SpatialEmb(tf.keras.layers.Layer):
 
 
 
-from util.torch_to_tf import nn_functional_pad_replicate, torch_linspace,\
-torch_randint
+from util.torch_to_tf import nn_functional_pad, torch_linspace,\
+torch_randint, torch_nn_functional_grid_sample
 
 class RandomShiftsAug:
     def __init__(self, pad):
@@ -105,74 +105,41 @@ class RandomShiftsAug:
         n, c, h, w = x.shape
 
         assert h == w
+        padding = tuple([self.pad] * 4)
 
         # # Add padding with replication
-        x = nn_functional_pad_replicate(x, self.pad)
+        x = nn_functional_pad(x, padding, "replicate")
+
 
         # Create a random shift grid
         eps = 1.0 / (h + 2 * self.pad)
         arange = torch_linspace(-1.0 + eps, 1.0 - eps, h + 2 * self.pad)[:h]
 
-        # arange = tf.reshape(arange, (1, h, 1))
-        # arange = tf.tile(arange, [h, 1, 1])
+
         arange = torch_unsqueeze( torch_tensor_repeat( torch_unsqueeze(arange, 0), h, 1), 2)
 
 
-        # base_grid = tf.concat([arange, tf.transpose(arange, perm=[1, 0, 2])], axis=-1)
-        # base_grid = tf.expand_dims(base_grid, axis=0)
-        # base_grid = tf.tile(base_grid, [n, 1, 1, 1])
 
 
         base_grid = torch_cat([arange, torch_tensor_transpose(arange, 1, 0)], dim=2)
 
         base_grid = torch_tensor_repeat( torch_unsqueeze(base_grid, 0), n, 1, 1, 1)
 
-        # shift = tf.random.uniform(
-        #     shape=(n, 1, 1, 2), minval=0, maxval=2 * self.pad + 1, dtype=tf.float32
-        # )
-        # shift *= 2.0 / (h + 2 * self.pad)
+
         shift = torch_randint(
-            0, 2 * self.pad + 1, size=(n, 1, 1, 2), dtype=x.dtype
+            low = 0, high = 2 * self.pad + 1, size=(n, 1, 1, 2), dtype=x.dtype
         )
         shift *= 2.0 / (h + 2 * self.pad)
 
         grid = base_grid + shift
         
-        return tf.nn.grid_sample(x, grid, padding_mode="zeros", align_corners=False)
+        
+        return torch_nn_functional_grid_sample(x, grid, padding_mode="zeros", align_corners=False)
 
 
 
 
-# # test random shift
-# if __name__ == "__main__":
-
-#     print("modules.py: main()")
-
-#     from PIL import Image
-#     import requests
-#     import numpy as np
-
-#     image_url = "https://rail.eecs.berkeley.edu/datasets/bridge_release/raw/bridge_data_v2/datacol2_toykitchen7/drawer_pnp/01/2023-04-19_09-18-15/raw/traj_group0/traj0/images0/im_30.jpg"
-#     image = Image.open(requests.get(image_url, stream=True).raw)
-#     image = image.resize((96, 96))
-
-
-#     image = tf.convert_to_tensor(image, dtype=tf.float32)
-#     image = tf.expand_dims(image, axis=0)  # Add batch dimension
-#     image = tf.transpose(image, perm=[2, 0, 1, 3])  # Convert to NHWC format
-
-#     aug = RandomShiftsAug(pad=4)
-#     image_aug = aug(image)
-#     image_aug = tf.squeeze(image_aug)
-
-#     image = tf.transpose(image, perm=[1, 2, 0, 3])
-#     image_aug = image_aug.numpy()
-#     image_aug = Image.fromarray(image_aug.astype(np.uint8))
-
-#     image_aug.show()
-
-
-
+from util.torch_to_tf import torch_tensor_permute, torch_unsqueeze, torch_tensor_float, torch_squeeze
 
 # test random shift
 if __name__ == "__main__":
@@ -187,14 +154,35 @@ if __name__ == "__main__":
     image = Image.open(requests.get(image_url, stream=True).raw)
     image = image.resize((96, 96))
 
-    image = torch_tensor(np.array(image)).permute(2, 0, 1).unsqueeze(0).float()
+    # image = torch_tensor(np.array(image)).permute(2, 0, 1).unsqueeze(0).float()
+    image = torch_tensor_float( torch_unsqueeze(torch_tensor_permute( torch_tensor(np.array(image)), 2, 0, 1), 0) )
+
     
     aug = RandomShiftsAug(pad=4)
     image_aug = aug(image)
 
-    image_aug = image_aug.squeeze().permute(1, 2, 0).numpy()
+    image_matrix = np.array(image_aug)
+    print("Shape of the image matrix:", image_matrix.shape)
+
+
+
+    image_aug = torch_tensor_permute( torch_squeeze( image_aug ), 1, 2, 0).numpy()
     image_aug = Image.fromarray(image_aug.astype(np.uint8))
     image_aug.show()
+
+    image_aug.save("augmented_image.jpg", format="JPEG")
+
+    # # Convert to NumPy array (matrix)
+    # image_matrix = np.array(image_aug)
+
+    # # Print the shape and matrix
+    # print("Shape of the image matrix:", image_matrix.shape)
+
+    # # Loop over pixels and print values
+    # for i in range(image_matrix.shape[0]):  # Loop over height
+    #     for j in range(image_matrix.shape[1]):  # Loop over width
+    #         pixel = image_matrix[i, j]
+    #         print(f"Pixel at ({i}, {j}): {pixel}")
 
 
 

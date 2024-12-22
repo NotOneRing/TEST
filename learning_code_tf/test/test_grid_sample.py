@@ -38,6 +38,10 @@ def test_case1_align_corners():
     torch_output = output_torch.detach().numpy()
     tensorflow_output = output_tf.numpy()
 
+    # print("torch_output = ", torch_output)
+    # print("tensorflow_output = ", tensorflow_output)
+
+
     assert np.allclose(torch_output, tensorflow_output, atol=1e-5)
 
 
@@ -66,6 +70,9 @@ def test_case2_align_corners():
     torch_output = output_torch.detach().numpy()
     tensorflow_output = output_tf.numpy()
 
+    # print("torch_output = ", torch_output)
+    # print("tensorflow_output = ", tensorflow_output)
+
     assert np.allclose(torch_output, tensorflow_output, atol=1e-5)
 
 
@@ -93,11 +100,18 @@ def test_case3():
     torch_output = output_torch.detach().numpy()
     tensorflow_output = output_tf.numpy()
 
+    # print("torch_output = ", torch_output)
+    # print("tensorflow_output = ", tensorflow_output)
+
     assert np.allclose(torch_output, tensorflow_output, atol=1e-5)
 
 
 
+test_case1_align_corners()
 
+test_case2_align_corners()
+
+test_case3()
 
 
 

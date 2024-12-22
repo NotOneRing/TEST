@@ -151,3 +151,8 @@ cfg/robomimic/*.sh
 *.out
 
 *.pyc
+
+
+*.jpg
+
+

@@ -2,6 +2,16 @@ import tensorflow as tf
 import numpy as np
 
 
+def torch_tensor_permute(input, *dims):
+    if isinstance(dims[0], (tuple, list)):
+        result = tf.transpose(input, perm = dims[0] )
+    else:
+        result = tf.transpose(input, perm = [*dims] )
+
+    return result
+
+
+
 
 def torch_tensor_item(tensor):
     return tensor.numpy().item()
@@ -970,7 +980,8 @@ def torch_item(x):
 
 
 
-def nn_functional_pad_replicate(x, pad):
+def nn_functional_pad(x, pad, mode='replicate'):
+    assert mode=="replicate", "only replicate is implemented right now"
     # Extract dimensions
     # batch, height, width, channels = x.shape
     from copy import deepcopy
@@ -2525,22 +2536,28 @@ def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="
     assert mode == "bilinear", "only bilinear is implemented right now"
     assert len(image.shape) == 4, "len(input.shape) must be 4"
 
-    N, H, W, C = image.shape  # TensorFlow uses NHWC format
-    grid_H = grid.shape[1]
-    grid_W = grid.shape[2]
+    N, C, H_in, W_in = image.shape
+
+    H_out = grid.shape[1]
+    W_out = grid.shape[2]
     
     # output_tensor = tf.zeros_like(image)
-    output_tensor = np.zeros_like(image)
+    
+    output_tensor = np.zeros( [N, C, H_out, W_out] )
+    # np.zeros_like(image)
+
+
+
     for n in range(N):
-        for w in range(grid_W):
-            for h in range(grid_H):
+        for w in range(W_out):
+            for h in range(H_out):
                 # Get corresponding grid x and y
                 x = grid[n, h, w, 1]
                 y = grid[n, h, w, 0]
                 
                 # Unnormalize with align_corners condition
-                ix = grid_sampler_compute_source_index_tf(x, W, align_corners)
-                iy = grid_sampler_compute_source_index_tf(y, H, align_corners)
+                ix = grid_sampler_compute_source_index_tf(x, W_in, align_corners)
+                iy = grid_sampler_compute_source_index_tf(y, H_in, align_corners)
                 
                 x0 = tf.floor(ix)
                 x1 = x0 + 1
@@ -2556,10 +2573,10 @@ def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="
                 
                 # Get values of the image by provided x0, y0, x1, y1 by channel
                 for c in range(C):
-                    Ia = safe_get_tf(image, n, c, y0, x0, H, W)
-                    Ib = safe_get_tf(image, n, c, y1, x0, H, W)
-                    Ic = safe_get_tf(image, n, c, y0, x1, H, W)
-                    Id = safe_get_tf(image, n, c, y1, x1, H, W)
+                    Ia = safe_get_tf(image, n, c, y0, x0, H_in, W_in)
+                    Ib = safe_get_tf(image, n, c, y1, x0, H_in, W_in)
+                    Ic = safe_get_tf(image, n, c, y0, x1, H_in, W_in)
+                    Id = safe_get_tf(image, n, c, y1, x1, H_in, W_in)
                     out_ch_val = Ia * wa + Ib * wb + Ic * wc + Id * wd
 
                     # output_tensor[n, h, w, c] = out_ch_val
@@ -2567,6 +2584,19 @@ def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="
                     output_tensor[n, c, h, w] = out_ch_val.numpy()
     output_tensor = tf.convert_to_tensor(output_tensor)
     return output_tensor
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
