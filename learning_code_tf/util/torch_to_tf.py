@@ -2499,7 +2499,74 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
 
 
 
+def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="zeros", align_corners=False):
 
+
+    def grid_sampler_unnormalize_tf(coord, side, align_corners):
+        if align_corners:
+            return ((coord + 1) / 2) * (side - 1)
+        else:
+            return ((coord + 1) * side - 1) / 2
+            
+    def grid_sampler_compute_source_index_tf(coord, size, align_corners):
+        return grid_sampler_unnormalize_tf(coord, size, align_corners)
+
+    def safe_get_tf(image, n, c, x, y, H, W):
+        value = tf.zeros([1])
+        x = tf.cast(x, tf.int32)  # Ensure x is an integer type
+        y = tf.cast(y, tf.int32)  # Ensure y is an integer type
+        if x >= 0 and x < W and y >= 0 and y < H:
+            value = image[n, c, y, x]
+        return value
+
+
+    assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+    assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+    assert mode == "bilinear", "only bilinear is implemented right now"
+    assert len(image.shape) == 4, "len(input.shape) must be 4"
+
+    N, H, W, C = image.shape  # TensorFlow uses NHWC format
+    grid_H = grid.shape[1]
+    grid_W = grid.shape[2]
+    
+    # output_tensor = tf.zeros_like(image)
+    output_tensor = np.zeros_like(image)
+    for n in range(N):
+        for w in range(grid_W):
+            for h in range(grid_H):
+                # Get corresponding grid x and y
+                x = grid[n, h, w, 1]
+                y = grid[n, h, w, 0]
+                
+                # Unnormalize with align_corners condition
+                ix = grid_sampler_compute_source_index_tf(x, W, align_corners)
+                iy = grid_sampler_compute_source_index_tf(y, H, align_corners)
+                
+                x0 = tf.floor(ix)
+                x1 = x0 + 1
+
+                y0 = tf.floor(iy)
+                y1 = y0 + 1
+    
+                # Get W matrix before I matrix, as I matrix requires Channel information
+                wa = (x1 - ix) * (y1 - iy)
+                wb = (x1 - ix) * (iy - y0)
+                wc = (ix - x0) * (y1 - iy)
+                wd = (ix - x0) * (iy - y0)
+                
+                # Get values of the image by provided x0, y0, x1, y1 by channel
+                for c in range(C):
+                    Ia = safe_get_tf(image, n, c, y0, x0, H, W)
+                    Ib = safe_get_tf(image, n, c, y1, x0, H, W)
+                    Ic = safe_get_tf(image, n, c, y0, x1, H, W)
+                    Id = safe_get_tf(image, n, c, y1, x1, H, W)
+                    out_ch_val = Ia * wa + Ib * wb + Ic * wc + Id * wd
+
+                    # output_tensor[n, h, w, c] = out_ch_val
+                    # output_tensor[n, h, w, c] = out_ch_val.numpy()
+                    output_tensor[n, c, h, w] = out_ch_val.numpy()
+    output_tensor = tf.convert_to_tensor(output_tensor)
+    return output_tensor
 
 
 
