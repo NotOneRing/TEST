@@ -25,8 +25,8 @@ import io
 from copy import deepcopy
 
 
-# DEBUG = True
-DEBUG = False
+DEBUG = True
+# DEBUG = False
 
 
 
@@ -37,7 +37,7 @@ class TrainDiffusionAgent(PreTrainAgent):
         super().__init__(cfg)
         self.model.batch_size = self.batch_size
 
-        # # # Use tf's model handling
+        # # # # Use tf's model handling
         # self.model = self.build_model(cfg)
 
     def build_model(self, cfg):
@@ -46,6 +46,8 @@ class TrainDiffusionAgent(PreTrainAgent):
         print("train_diffusion_agent.py: TrainDiffusionAgent.build_model()")
 
         model = hydra.utils.instantiate(cfg.model)
+
+        print("cfg.model.input_shape = ", cfg.model.input_shape)
 
         model.build(input_shape=(None, *cfg.model.input_shape))  # Ensure the model is built
 
@@ -74,6 +76,10 @@ class TrainDiffusionAgent(PreTrainAgent):
             "rgb": [],
         }
 
+
+        print("self.model = ", self.model)
+
+        print("1self.model.loss = ", self.model.loss)
 
 
         print("self.batch_size = ", self.batch_size)
@@ -160,6 +166,14 @@ class TrainDiffusionAgent(PreTrainAgent):
             cond = {}
             cond['state'] = item["states"]
 
+            # #初始化
+            # cond_input1 = deepcopy(cond)
+            # cond_input2 = deepcopy(cond)
+            # _ = self.model(cond_input1)
+            # _ = self.ema_model(cond_input2)
+
+            item_actions_copy = deepcopy(item['actions'])
+            cond_copy = deepcopy(cond)
 
 
             with tf.GradientTape() as tape:
@@ -167,18 +181,51 @@ class TrainDiffusionAgent(PreTrainAgent):
                 # loss_train = self.model.loss(*batch_train, training_flag=True)
                 # loss_train = self.model.loss(training_flag=True, *batch_train)
                 training_flag=True
-                loss_train = self.model.loss(training_flag, item['actions'], cond)
+                
+                print("item['actions'] = ", item['actions'])
+                print("cond = ", cond)
+                print("self.model = ", self.model)
+
+                print("self.model.loss = ", self.model.loss)
+
+                loss_train = self.model.loss_ori(training_flag, item['actions'], cond)
+
+                print("self.model.network = ", self.model.network)
+                # print("self.ema_model.network = ", self.ema_model.network)
+
+                if epoch == 0:
+                    self.ema_model.network = tf.keras.models.clone_model(self.model.network)
+                    print("self.ema_model.network = ", self.ema_model.network)
+                    loss_train_ema = self.ema_model.loss_ori(training_flag, item_actions_copy, cond_copy)
+
 
             print("self.model.get_config() = ", self.model.get_config())
 
-            # # self.ema_model = deepcopy(self.model)
 
             if epoch == 0:
-                self.ema_model = tf.keras.models.clone_model(self.model)
-                self.ema_model.set_weights(self.model.get_weights())
+                # self.ema_model = tf.keras.models.clone_model(self.model)
+                # _ = self.ema_model(cond)
+                # self.ema_model = deepcopy(self.model)
+                print('self.model = ', self.model)
+                print('self.ema_model = ', self.ema_model)
+                # self.ema_model.set_weights(self.model.get_weights())
+                print(self.model.summary())
+                print(self.ema_model.summary())
+
+
 
             gradients = tape.gradient(loss_train, self.model.trainable_variables)
-            self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+            
+            # print("gradients = ", gradients)
+            # print("self.model.trainable_variables = ", self.model.trainable_variables)
+
+            # zip_gradients_params = zip(gradients, self.model.trainable_variables)
+
+            # for item in zip_gradients_params:
+            #     print("item = ", item)
+
+            # self.optimizer.apply_gradients(zip_gradients_params)
+            self.optimizer.step(gradients)
 
             loss_train_epoch.append(loss_train.numpy())
 

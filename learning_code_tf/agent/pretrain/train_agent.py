@@ -79,14 +79,24 @@ class PreTrainAgent:
         # self.model = self.instantiate_model(cfg.model)
         self.model = hydra.utils.instantiate(cfg.model)
 
+
+        print("self.model = ", self.model)
+        print("Model attributes:", dir(self.model))  # 查看模型的所有属性
+
+        # print("0self.model.loss() = ", self.model.loss())
+
         print("after instantiate_model")
 
         self.ema = EMA(cfg.ema)
 
-        print("self.ema = EMA()")
 
         self.ema_model = deepcopy(self.model)
         #把这部分拿到train_diffusion_agent里面去
+
+
+        print("self.ema = EMA()")
+
+        print("self.model = ", self.model)
 
         # # 获取 model 的输入形状
         # input_shape = self.model.input_shape
@@ -200,12 +210,15 @@ class PreTrainAgent:
 
     def step_ema(self):
         print("train_agent.py: PreTrainAgent.step_ema()")
+        print("self.epoch_start_ema = ", self.epoch_start_ema)
 
         if self.epoch < self.epoch_start_ema:
             self.reset_parameters()
             return
 
         self.ema.update_model_average(self.ema_model, self.model)
+
+
 
 
     def save_model(self):

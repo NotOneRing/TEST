@@ -13,7 +13,7 @@ log = tf.get_logger()
 
 from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
 
-from util.torch_to_tf import torch_tensor_float, torch_cat, torch_flatten, torch_view, torch_reshape
+from util.torch_to_tf import torch_tensor_float, torch_cat, torch_flatten, torch_tensor_view, torch_reshape
 
 # class VisionDiffusionMLP(tf.keras.layers.Layer):
 class VisionDiffusionMLP(tf.keras.Model):
@@ -161,13 +161,13 @@ class VisionDiffusionMLP(tf.keras.Model):
         cond_encoded = tf.concat([feat, state], dim=-1)
 
         # append time and cond
-        time = torch_view(time, [B, 1])
-        time_emb = torch_view( self.time_embedding(time), B, self.time_dim )
+        time = torch_tensor_view(time, [B, 1])
+        time_emb = torch_tensor_view( self.time_embedding(time), B, self.time_dim )
         x = torch_cat([x, time_emb, cond_encoded], dim=-1)
 
         # mlp
         out = self.mlp_mean(x)
-        return torch_view(out, [B, Ta, Da])
+        return torch_tensor_view(out, [B, Ta, Da])
 
 
 import math
@@ -283,7 +283,12 @@ class DiffusionMLP(tf.keras.Model):
         # print("self.time_dim = ", time_dim)
 
         self.time_dim = time_dim
-        self.mlp_dims = mlp_dims
+        
+        # self.mlp_dims = mlp_dims
+        self.mlp_dims = list(mlp_dims)
+        print("self.mlp_dims = ", self.mlp_dims)
+        print( "type(self.mlp_dims) = ", type(self.mlp_dims) )
+
         self.cond_mlp_dims = cond_mlp_dims
         self.activation_type = activation_type
         self.out_activation_type = out_activation_type
@@ -363,8 +368,123 @@ class DiffusionMLP(tf.keras.Model):
 
 
 
-    # def call(self, x, time, cond, **kwargs):
-    def call(self, x, time, state, **kwargs):
+    # # def call(self, x, time, cond, **kwargs):
+    # def call(self, x, time, state, **kwargs):
+    #     """
+    #     x: (B, Ta, Da)
+    #     time: (B,) or int, diffusion step
+    #     cond: dict with key state/rgb; more recent obs at the end
+    #         state: (B, To, Do)
+    #     """
+
+    #     # print("mlp_diffusion.py: DiffusionMLP.call()")
+    #     # print("x.shape = ", x.shape)
+    #     # print("time.shape = ", time.shape)
+    #     # • cond={'state': 'tf.Tensor(shape=(128, 1, 11), dtype=float32)'}
+    #     # • kwargs={'training': 'True'}
+    #     # print("cond.shape = ", cond.shape)
+
+    #     B, Ta, Da = x.shape
+    #     # B, Ta, Da = x_shape
+
+    #     assert B == x.shape[0]
+    #     assert Ta == self.horizon_steps
+    #     assert Da == self.action_dim
+
+    #     x = torch_tensor_view(x, B, -1)
+
+    #     # state = torch_tensor_view(cond["state"], B, -1)
+    #     # # flatten chunk
+    #     # x = tf.reshape(x, [B, -1])
+
+    #     # # flatten history
+    #     # state = tf.reshape(cond["state"], [B, -1])
+
+    #     # # append time and cond
+    #     # time = tf.reshape(time, [B, 1])
+
+    #     # obs encoder
+    #     if hasattr(self, "cond_mlp"):
+    #         state = self.cond_mlp(state)
+
+
+    #     # print("B = ", B)
+
+    #     # print("time = ", time)
+
+    #     # print("state = ", state)
+        
+    #     # print("1time.shape = ", time.shape)
+
+    #     # time = tf.squeeze(time, axis=1)
+    #     # time = tf.squeeze(time, axis=-1)
+    #     # time = tf.reshape(time, [B])
+
+    #     # print("2time.shape = ", time.shape)
+
+
+    #     time_emb = self.time_embedding(time)
+
+    #     # print("time_emb = ", time_emb)
+
+    #     # print("time_emb.shape = ", time_emb.shape)
+
+    #     time_emb = tf.squeeze(time_emb, axis=1)
+
+    #     # print("after tf.squeeze")
+
+    #     # for layer in self.time_embedding.layers:
+    #     #     if isinstance(layer, CustomDense):
+    #     #         print("TensorFlow Dense weights:", layer.kernel.numpy())
+    #     #         print("TensorFlow Dense bias:", layer.bias.numpy())
+
+
+    #     # print("x = ", x)
+
+    #     # print("time_emb = ", time_emb)
+
+    #     # print("state = ", state)
+        
+
+    #     # print("x.shape = ", x.shape)
+
+    #     # print("time_emb.shape = ", time_emb.shape)
+
+    #     # print("state.shape = ", state.shape)
+
+
+    #     x = tf.concat([x, time_emb, state], axis=-1)
+
+    #     # mlp head
+    #     out = self.mlp_mean(x)
+
+
+    #     # print("out.shape[0] = ", out.shape[0])
+    #     # print("out.shape = ", out.shape)
+
+    #     if out.shape[0]:
+    #         # print("branch1")
+    #         # print("out.shape[0] = ", out.shape[0])
+    #         final_out = tf.reshape(out, [-1, Ta, Da])
+    #     else:
+    #         # print("branch2")
+    #         # print("out.shape[0] = ", out.shape[0])
+    #         # final_out = tf.reshape(out, [None, Ta, Da])
+    #         final_out = tf.reshape(out, [-1, Ta, Da])
+
+    #     # print("final_out.shape = ", final_out.shape)
+
+    #     # return tf.reshape(out, [B, Ta, Da])
+    #     return final_out
+
+
+    def call(
+        self,
+        x,
+        time,
+        cond,
+        **kwargs,
+    ):
         """
         x: (B, Ta, Da)
         time: (B,) or int, diffusion step
@@ -372,105 +492,64 @@ class DiffusionMLP(tf.keras.Model):
             state: (B, To, Do)
         """
 
-        # print("mlp_diffusion.py: DiffusionMLP.call()")
-        # print("x.shape = ", x.shape)
-        # print("time.shape = ", time.shape)
-        # • cond={'state': 'tf.Tensor(shape=(128, 1, 11), dtype=float32)'}
-        # • kwargs={'training': 'True'}
-        # print("cond.shape = ", cond.shape)
+        print("mlp_diffusion.py: DiffusionMLP.forward()", flush = True)
 
+        print("x.shape = ", x.shape)
+        
         B, Ta, Da = x.shape
-        # B, Ta, Da = x_shape
 
-        assert B == x.shape[0]
-        assert Ta == self.horizon_steps
-        assert Da == self.action_dim
+        # flatten chunk
+        x = torch_tensor_view(x, B, -1)
 
-        x = torch_view(x, B, -1)
-
-        # state = torch_view(cond["state"], B, -1)
-        # # flatten chunk
-        # x = tf.reshape(x, [B, -1])
-
-        # # flatten history
-        # state = tf.reshape(cond["state"], [B, -1])
-
-        # # append time and cond
-        # time = tf.reshape(time, [B, 1])
+        # flatten history
+        state = torch_tensor_view( cond["state"], B, -1 )
 
         # obs encoder
         if hasattr(self, "cond_mlp"):
             state = self.cond_mlp(state)
 
+        # append time and cond
+        time = torch_tensor_view(time, B, 1)
 
-        # print("B = ", B)
+        print("time = ", time)
 
-        # print("time = ", time)
-
-        # print("state = ", state)
-        
-        # print("1time.shape = ", time.shape)
-
-        # time = tf.squeeze(time, axis=1)
-        # time = tf.squeeze(time, axis=-1)
-        # time = tf.reshape(time, [B])
-
-        # print("2time.shape = ", time.shape)
+        time_emb = torch_tensor_view(self.time_embedding(time), B, self.time_dim)
 
 
-        time_emb = self.time_embedding(time)
+        for layer in self.time_embedding:
+            if isinstance(layer, nn_Linear):
+                print("Linear weights:", layer.trainable_weights[0])
+                print("Linear bias:", layer.trainable_weights[1])
+                
+                
+        print("x = ", x)
 
-        # print("time_emb = ", time_emb)
+        print("time_emb = ", time_emb)
 
-        # print("time_emb.shape = ", time_emb.shape)
-
-        time_emb = tf.squeeze(time_emb, axis=1)
-
-        # print("after tf.squeeze")
-
-        # for layer in self.time_embedding.layers:
-        #     if isinstance(layer, CustomDense):
-        #         print("TensorFlow Dense weights:", layer.kernel.numpy())
-        #         print("TensorFlow Dense bias:", layer.bias.numpy())
+        print("state = ", state)
 
 
-        # print("x = ", x)
+                
+        print("x.shape = ", x.shape)
 
-        # print("time_emb = ", time_emb)
+        print("time_emb.shape = ", time_emb.shape)
 
-        # print("state = ", state)
-        
-
-        # print("x.shape = ", x.shape)
-
-        # print("time_emb.shape = ", time_emb.shape)
-
-        # print("state.shape = ", state.shape)
+        print("state.shape = ", state.shape)
 
 
-        x = tf.concat([x, time_emb, state], axis=-1)
+        x = torch_cat([x, time_emb, state], dim=-1)
 
         # mlp head
         out = self.mlp_mean(x)
+        return torch_tensor_view(out, B, Ta, Da)
 
 
-        # print("out.shape[0] = ", out.shape[0])
-        # print("out.shape = ", out.shape)
 
-        if out.shape[0]:
-            # print("branch1")
-            # print("out.shape[0] = ", out.shape[0])
-            final_out = tf.reshape(out, [-1, Ta, Da])
-        else:
-            # print("branch2")
-            # print("out.shape[0] = ", out.shape[0])
-            # final_out = tf.reshape(out, [None, Ta, Da])
-            final_out = tf.reshape(out, [-1, Ta, Da])
 
-        # print("final_out.shape = ", final_out.shape)
 
-        # return tf.reshape(out, [B, Ta, Da])
-        return final_out
+
+
+
 
 
     
@@ -528,11 +607,16 @@ class DiffusionMLP(tf.keras.Model):
 
 
 
+
+
+
+        
     def get_config(self):
 
         print("DiffusionMLP: get_config()")
 
-        config = super(DiffusionMLP, self).get_config()
+        config = {}
+        # = super(DiffusionMLP, self).get_config()
 
         # 打印每个属性及其类型和值
         print("Checking DiffusionMLP Config elements:")
@@ -540,7 +624,12 @@ class DiffusionMLP(tf.keras.Model):
         print(f"horizon_steps: {self.horizon_steps}, type: {type(self.horizon_steps)}")
         print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
         print(f"time_dim: {self.time_dim}, type: {type(self.time_dim)}")
+        
         print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
+
+        # print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
+        # print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
+
         print(f"cond_mlp_dims: {self.cond_mlp_dims}, type: {type(self.cond_mlp_dims)}")
         print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
         print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
@@ -560,12 +649,22 @@ class DiffusionMLP(tf.keras.Model):
             "out_activation_type": self.out_activation_type,
             "use_layernorm": self.use_layernorm,
             "residual_style": self.residual_style,
-            "output_dim": self.output_dim,
-            "input_dim": self.input_dim,
-            "time_dim": self.time_dim,
+            # "output_dim": self.output_dim,
+            # "input_dim": self.input_dim,
+            # "time_dim": self.time_dim,
         })
         return config
 
+        # action_dim,
+        # horizon_steps,
+        # cond_dim,
+        # time_dim=16,
+        # mlp_dims=[256, 256],
+        # cond_mlp_dims=None,
+        # activation_type="Mish",
+        # out_activation_type="Identity",
+        # use_layernorm=False,
+        # residual_style=False,
 
 
     @classmethod

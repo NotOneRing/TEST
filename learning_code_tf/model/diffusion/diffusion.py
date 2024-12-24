@@ -27,10 +27,11 @@ import numpy as np
 
 
 
+
 from util.torch_to_tf import torch_cumprod, torch_ones, torch_cat, torch_sqrt,\
 torch_clamp, torch_log, torch_arange, torch_tensor_clamp_, torch_zeros_like, \
 torch_clip, torch_exp, torch_randn_like, torch_randn, torch_full, torch_full_like, \
-torch_flip
+torch_flip, torch_randint
 
 
 # class DiffusionModel(tf.keras.layers.Layer):
@@ -59,6 +60,10 @@ class DiffusionModel(tf.keras.Model):
     ):
         super(DiffusionModel, self).__init__()
         print("diffusion.py: DiffusionModel.__init__()")
+
+        # print("self.loss = ", self.loss)
+
+        # print("self.loss() = ", self.loss())
 
         self.ddim_discretize = ddim_discretize
         
@@ -251,6 +256,140 @@ class DiffusionModel(tf.keras.Model):
 
 
 
+    def loss_ori(self, training_flag, x_start, cond):
+        """
+        Compute the loss for the given data and condition.
+
+        Args:
+            x_start: (batch_size, horizon_steps, action_dim)
+            cond: dict with keys as step and value as observation
+
+        Returns:
+            loss: float
+        """
+        print("diffusion.py: DiffusionModel.loss()")
+
+        # print("x_start = ", x_start)
+        
+        # print("cond = ", cond)
+
+
+        # batch_size = tf.shape(x_start)[0]
+        # batch_size = x_start.get_shape().as_list()[0]
+        batch_size = x_start.shape[0]
+
+        self.batch_size = batch_size
+        self.network.batch_size = batch_size
+
+        # print("tf.shape(x_start):", tf.shape(x_start))  # 返回形状
+        # print("tf.shape(x_start)[0]:", tf.shape(x_start)[0])  # 直接获取第一个维度
+
+        # print("int(batch_size.numpy()) = ", int(batch_size.numpy()))
+        # print("int(batch_size) = ", int(batch_size))
+
+        # batch_size = int(batch_size)
+
+        print("batch_size = ", batch_size)
+
+        # # 生成 [0, self.denoising_steps) 范围的随机整数
+        t =  tf.cast( torch_randint(
+            low = 0, high = self.denoising_steps, size = (batch_size,)
+        ), tf.int64)
+        # t = tf.cast( torch_full((batch_size,), 3), tf.int64)  # 固定为 3
+
+
+        # t = tf.fill([batch_size], 3)  # 固定为 3
+
+
+
+        # Compute loss
+        return self.p_losses(x_start, cond, t, training_flag)
+
+
+
+    def p_losses(self, x_start, cond, t, training_flag):
+        """
+        If predicting epsilon: E_{t, x0, ε} [||ε - ε_θ(√α̅ₜx0 + √(1-α̅ₜ)ε, t)||²
+
+        Args:
+            x_start: (batch_size, horizon_steps, action_dim)
+            cond: dict with keys as step and value as observation
+            t: batch of integers
+        """
+        print("diffusion.py: DiffusionModel.p_losses()")
+
+        # # Forward process
+        noise = torch_randn_like(x_start)
+
+        # fixed_value = 1.0
+        # noise = torch_full_like(x_start, fixed_value)  # 使用固定值替代随机噪声
+
+        # # 假设 x_start 是一个已定义的张量
+        # fixed_value = 1.0  # 固定数值
+        # # noise = tf.fill(tf.shape(x_start), fixed_value)  # 使用 tf.fill 填充固定值
+        # noise = tf.fill(x_start.shape, fixed_value)
+
+        # print("x_start = ", x_start)
+        
+        # print("t = ", t)
+
+        # print("noise = ", noise)
+
+        # print("before q_sample")
+
+
+        # print("type(self.network) = ", type(self.network))
+
+        # print("self.network = ", self.network)
+
+
+        # print("x_start.shape = ", x_start.shape)
+
+        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+
+        # # print("x_noisy.shape = ", x_noisy.shape)
+
+
+        # # print("type(self.network) = ", type(self.network))
+
+        # # print("self.network = ", self.network)
+
+        # B, Ta, Da = x_noisy.shape
+
+        # assert Ta == self.horizon_steps, "Ta != self.horizon_steps"
+        # assert Da == self.action_dim, "Da != self.action_dim"
+
+        # # flatten chunk
+        # x_noisy = tf.reshape(x_noisy, [B, -1])
+
+        # # flatten history
+        # state = tf.reshape(cond["state"], [B, -1])
+
+        # # print("t.shape = ", t.shape)
+
+        # # append time and cond
+        # time = tf.reshape(t, [B, 1])
+
+        # # 提前展平 Batch * -1
+        # # # # Predict
+        # # x_recon = self.network(x_noisy, t, cond=cond, training=training_flag)
+
+
+
+        # # Predict
+        # x_recon = self.network(x_noisy, time, state, training=training_flag)
+
+        x_recon = self.network(x_noisy, t, cond = cond, training=training_flag)
+
+        
+        if self.predict_epsilon:
+            return tf.reduce_mean(tf.square(x_recon - noise))  # Mean squared error
+        else:
+            return tf.reduce_mean(tf.square(x_recon - x_start))
+
+
+
+
 
     def p_mean_var(self, x, t, cond, index=None, network_override=None):
 
@@ -259,6 +398,7 @@ class DiffusionModel(tf.keras.Model):
         if network_override is not None:
             noise = network_override(x, t, cond=cond)
         else:
+            print("self.network = ", self.network)
             noise = self.network(x, t, cond=cond)
 
         # Predict x_0
@@ -435,11 +575,15 @@ class DiffusionModel(tf.keras.Model):
                 if t == 0:
                     std = torch_zeros_like(std)
                 else:
-                    std = torch_clip(std, clip_value_min=1e-3, clip_value_max=tf.float32.max)
+                    std = torch_clip(std, min=1e-3, max=tf.float32.max)
 
             # Sample noise and update `x`
             # noise = tf.random.normal(tf.shape(x))
-            noise = torch_randn_like(x.shape())
+            print("x.shape = ", x.shape)
+
+            print("type(x.shape) = ", type(x.shape) )
+            
+            noise = torch_randn_like( x  )
             torch_tensor_clamp_(noise, -self.randn_clip_value, self.randn_clip_value)
             x = mean + std * noise
 
@@ -450,133 +594,9 @@ class DiffusionModel(tf.keras.Model):
         # Return the result as a namedtuple
         return Sample(x, None)
 
-
-
-
-    def loss(self, training_flag, x_start, cond):
-        """
-        Compute the loss for the given data and condition.
-
-        Args:
-            x_start: (batch_size, horizon_steps, action_dim)
-            cond: dict with keys as step and value as observation
-
-        Returns:
-            loss: float
-        """
-        print("diffusion.py: DiffusionModel.loss()")
-
-        # print("x_start = ", x_start)
         
-        # print("cond = ", cond)
 
 
-        # batch_size = tf.shape(x_start)[0]
-        # batch_size = x_start.get_shape().as_list()[0]
-        batch_size = x_start.shape[0]
-
-        self.batch_size = batch_size
-        self.network.batch_size = batch_size
-
-        # print("tf.shape(x_start):", tf.shape(x_start))  # 返回形状
-        # print("tf.shape(x_start)[0]:", tf.shape(x_start)[0])  # 直接获取第一个维度
-
-        # print("int(batch_size.numpy()) = ", int(batch_size.numpy()))
-        # print("int(batch_size) = ", int(batch_size))
-
-        # batch_size = int(batch_size)
-
-        print("batch_size = ", batch_size)
-
-        # # 生成 [0, self.denoising_steps) 范围的随机整数
-        t = tf.cast( torch_full((batch_size,), 3), tf.long)  # 固定为 3
-
-        # t = tf.fill([batch_size], 3)  # 固定为 3
-
-
-
-        # Compute loss
-        return self.p_losses(x_start, cond, t, training_flag)
-
-
-
-
-    def p_losses(self, x_start, cond, t, training_flag):
-        """
-        If predicting epsilon: E_{t, x0, ε} [||ε - ε_θ(√α̅ₜx0 + √(1-α̅ₜ)ε, t)||²
-
-        Args:
-            x_start: (batch_size, horizon_steps, action_dim)
-            cond: dict with keys as step and value as observation
-            t: batch of integers
-        """
-        print("diffusion.py: DiffusionModel.p_losses()")
-
-        # # Forward process
-        # noise = tf.random.normal(tf.shape(x_start), dtype=x_start.dtype)
-        fixed_value = 1.0
-        noise = torch_full_like(x_start, fixed_value)  # 使用固定值替代随机噪声
-
-        # # 假设 x_start 是一个已定义的张量
-        # fixed_value = 1.0  # 固定数值
-        # # noise = tf.fill(tf.shape(x_start), fixed_value)  # 使用 tf.fill 填充固定值
-        # noise = tf.fill(x_start.shape, fixed_value)
-
-        # print("x_start = ", x_start)
-        
-        # print("t = ", t)
-
-        # print("noise = ", noise)
-
-        # print("before q_sample")
-
-
-        # print("type(self.network) = ", type(self.network))
-
-        # print("self.network = ", self.network)
-
-
-        # print("x_start.shape = ", x_start.shape)
-
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
-
-        # print("x_noisy.shape = ", x_noisy.shape)
-
-
-        # print("type(self.network) = ", type(self.network))
-
-        # print("self.network = ", self.network)
-
-        B, Ta, Da = x_noisy.shape
-
-        assert Ta == self.horizon_steps, "Ta != self.horizon_steps"
-        assert Da == self.action_dim, "Da != self.action_dim"
-
-        # flatten chunk
-        x_noisy = tf.reshape(x_noisy, [B, -1])
-
-        # flatten history
-        state = tf.reshape(cond["state"], [B, -1])
-
-        # print("t.shape = ", t.shape)
-
-        # append time and cond
-        time = tf.reshape(t, [B, 1])
-
-        # 提前展平 Batch * -1
-        # # # Predict
-        # x_recon = self.network(x_noisy, t, cond=cond, training=training_flag)
-
-
-
-        # Predict
-        x_recon = self.network(x_noisy, time, state, training=training_flag)
-
-        
-        if self.predict_epsilon:
-            return tf.reduce_mean(tf.square(x_recon - noise))  # Mean squared error
-        else:
-            return tf.reduce_mean(tf.square(x_recon - x_start))
 
 
 
@@ -586,7 +606,7 @@ class DiffusionModel(tf.keras.Model):
         q(xₜ | x₀) = 𝒩(xₜ; √ α̅ₜ x₀, (1-α̅ₜ)I)
         xₜ = √ α̅ₜ xₒ + √ (1-α̅ₜ) ε
         """
-        # print("diffusion.py: DiffusionModel.q_sample()")
+        print("diffusion.py: DiffusionModel.q_sample()")
 
         # print("t = ", t)
 

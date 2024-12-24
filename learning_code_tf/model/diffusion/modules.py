@@ -25,7 +25,7 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
         # print("type(emb) = ", type(emb))
         # print("emb = ", emb)
 
-        emb = torch_exp(torch_arange(half_dim) * -emb)
+        emb = torch_exp(torch_arange(0, half_dim) * -emb)
 
         # emb = tf.convert_to_tensor(emb, dtype=tf.float32)
 
@@ -43,7 +43,7 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
         # print("emb[None, :] = ", emb[None, :])
 
         
-        emb = x[:, None] * emb[None, :]
+        emb = tf.cast(x[:, None], tf.float32) * emb[None, :]
         # emb = x[:, None].float() * emb[None, :]
 
         # print("3emb.shape = ", emb.shape)

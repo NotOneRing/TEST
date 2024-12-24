@@ -263,14 +263,17 @@ def test_learning_rate():
         gamma=1.0
     )
 
-    lr_epoch = lr_schedule.step()
+    # lr_epoch = lr_schedule.step()
     # lr_epoch = lr_schedule.step()
 
     # Define a dummy optimizer (just for example)
-    optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
-
+    # optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
+ 
     # Initialize the model (dummy model for testing)
     model = SimpleModel()
+
+    from util.torch_to_tf import torch_optim_Adam
+    optimizer = torch_optim_Adam(model.trainable_variables, lr=lr_schedule)
 
 
     tf_lr_list = []
@@ -286,12 +289,17 @@ def test_learning_rate():
             predictions = model(x, training=True)
             loss = tf.keras.losses.mean_squared_error(y, predictions)
         grads = tape.gradient(loss, model.trainable_variables)
+        # optimizer.apply_gradients(zip(grads, model.trainable_variables))
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
 
         # lr_epoch = lr_schedule(epoch)
         lr_epoch = lr_schedule.step()
-        lr_epoch = optimizer.learning_rate.numpy()
+        # lr_epoch = optimizer.learning_rate.numpy()
+
+        # lr_epoch = optimizer.get_learning_rate()
+
+        # .numpy()
 
         # Print learning rate using the lr_schedule directly
         print(f"Epoch {epoch+1}, Learning rate: {lr_epoch}")  # Accessing the learning rate value

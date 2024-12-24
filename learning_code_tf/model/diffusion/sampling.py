@@ -58,12 +58,19 @@ def extract(a, t, x_shape):
     # print("x_shape = ", x_shape)
     # print("type(x_shape) = ", type(x_shape))
 
+    # print("a = ", a)
+    # print("t = ", t)
 
-    out = tf.gather(a, t, axis=-1)
+    # out = tf.gather(a, t, axis=-1)
 
     from util.torch_to_tf import torch_gather
-    out2 = torch_gather(a, t, axis=-1)
-    assert out == out2, "torch_gather have different result from tf.gather"
+    out2 = torch_gather(a, -1, t)
+
+    # print("out = ", out)
+
+    # print("out2 = ", out2)
+
+    # assert np.allclose( out.numpy(), out2.numpy()) , "torch_gather have different result from tf.gather"
 
     # print("out = ", out)
     # print("out.shape = ", out.shape)
@@ -73,19 +80,24 @@ def extract(a, t, x_shape):
     # print("reshape_shape = ", reshape_shape)
 
     # Reshape the output to match x_shape
-    return tf.reshape(out, reshape_shape)
+    return tf.reshape(out2, reshape_shape)
 
 
 
 def make_timesteps(batch_size, i):
     print("sampling.py: make_timesteps()")
-    t = tf.constant([i] * batch_size, dtype=tf.int64)
+    # t = tf.constant([i] * batch_size, dtype=tf.int64)
 
     from util.torch_to_tf import torch_full
     t2 = torch_full((batch_size,), i, dtype=tf.int64)
-    assert t == t2, "torch_full have different result from tf_make_timesteps"
+    # print("t = ", t)
+    # print("t2 = ", t2)
+    # print( "type(t) = ", type(t) )
+    # print( "type(t2) = ", type(t2) )
 
-    return t
+    # assert np.allclose(t.numpy(), t2.numpy()), "torch_full have different result from tf_make_timesteps"
+
+    return t2
 
 
 

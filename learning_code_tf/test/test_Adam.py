@@ -49,6 +49,10 @@ def test_torch_and_tf_adam():
     # Set seeds for reproducibility
     torch.manual_seed(42)
     tf.random.set_seed(42)
+    
+    np.random.seed(42)
+
+    
 
     # Define a simple model in PyTorch
     torch_model = nn.Sequential(
@@ -107,7 +111,10 @@ def test_torch_and_tf_adam():
 
         torch_optimizer.step()
 
-        tf_loss, tf_gradients = model_forward_backward_gradients(inputs, targets, tf_loss_fn, tf_model)
+        tf_inputs = tf.convert_to_tensor(inputs)
+        tf_targets = tf.convert_to_tensor(targets)
+
+        tf_loss, tf_gradients = model_forward_backward_gradients(tf_inputs, tf_targets, tf_loss_fn, tf_model)
         # # TensorFlow
         # with tf.GradientTape() as tape:
         #     tf_outputs = tf_model(inputs)
