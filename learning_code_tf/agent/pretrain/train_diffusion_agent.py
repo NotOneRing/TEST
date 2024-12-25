@@ -193,39 +193,95 @@ class TrainDiffusionAgent(PreTrainAgent):
                 print("self.model.network = ", self.model.network)
                 # print("self.ema_model.network = ", self.ema_model.network)
 
-                if epoch == 0:
+            gradients = tape.gradient(loss_train, self.model.trainable_variables)
+
+
+            if epoch == 0:
+                with tf.GradientTape() as tape:
                     self.ema_model.network = tf.keras.models.clone_model(self.model.network)
                     print("self.ema_model.network = ", self.ema_model.network)
                     loss_train_ema = self.ema_model.loss_ori(training_flag, item_actions_copy, cond_copy)
 
 
-            print("self.model.get_config() = ", self.model.get_config())
+            # print("self.model.get_config() = ", self.model.get_config())
 
 
-            if epoch == 0:
-                # self.ema_model = tf.keras.models.clone_model(self.model)
-                # _ = self.ema_model(cond)
-                # self.ema_model = deepcopy(self.model)
-                print('self.model = ', self.model)
-                print('self.ema_model = ', self.ema_model)
-                # self.ema_model.set_weights(self.model.get_weights())
-                print(self.model.summary())
-                print(self.ema_model.summary())
+            # if epoch == 0:
+            #     # self.ema_model = tf.keras.models.clone_model(self.model)
+            #     # _ = self.ema_model(cond)
+            #     # self.ema_model = deepcopy(self.model)
+            #     print('self.model = ', self.model)
+            #     print('self.ema_model = ', self.ema_model)
+            #     # self.ema_model.set_weights(self.model.get_weights())
+            #     print(self.model.summary())
+            #     print(self.ema_model.summary())
 
 
+            # print("tf.keras.layers.serialize")
+            # serialized_layer = tf.keras.layers.serialize(self.model.network)
+            # print("tf.keras.layers.deserialize")
+            # print("serialized_layer = ", serialized_layer)
+            
+            # from model.diffusion.mlp_diffusion import DiffusionMLP
+            # self.model.network = tf.keras.layers.deserialize(
+            #     serialized_layer, custom_objects={"DiffusionMLP": DiffusionMLP}
+            # )
 
-            gradients = tape.gradient(loss_train, self.model.trainable_variables)
+            # print("tf.keras.layers.serialize")
+            # serialized_layer = tf.keras.layers.serialize(self.model)
+            # print("tf.keras.layers.deserialize")
+            # print("serialized_layer = ", serialized_layer)
+
+
+            # from model.diffusion.mlp_diffusion import DiffusionMLP
+            # from model.diffusion.diffusion import DiffusionModel
+            # from model.common.mlp import MLP, ResidualMLP
+            # from model.diffusion.modules import SinusoidalPosEmb
+            # from model.common.modules import SpatialEmb, RandomShiftsAug
+            # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+            # from tensorflow.keras.utils import get_custom_objects
+
+            # # Register your custom class with Keras
+            # get_custom_objects().update({
+            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            #     'DiffusionMLP': DiffusionMLP,
+            #     # 'VPGDiffusion': VPGDiffusion,
+            #     'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            #     'MLP': MLP,                            # 自定义的 MLP 层
+            #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            #     'nn_Linear': nn_Linear,
+            #     'nn_LayerNorm': nn_LayerNorm,
+            #     'nn_Dropout': nn_Dropout,
+            #     'nn_ReLU': nn_ReLU,
+            #     'nn_Mish': nn_Mish,
+            #     'SpatialEmb': SpatialEmb,
+            #     'RandomShiftsAug': RandomShiftsAug,
+            #  })
+                        
+            # from model.diffusion.mlp_diffusion import DiffusionMLP
+            # self.model = tf.keras.layers.deserialize(
+            #     serialized_layer, custom_objects=get_custom_objects()
+            # )
+
+
             
             # print("gradients = ", gradients)
-            # print("self.model.trainable_variables = ", self.model.trainable_variables)
+            if epoch == 0:
+                print("self.model.trainable_variables = ", self.model.trainable_variables)
+                print("self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
 
-            # zip_gradients_params = zip(gradients, self.model.trainable_variables)
+            zip_gradients_params = zip(gradients, self.model.trainable_variables)
 
             # for item in zip_gradients_params:
             #     print("item = ", item)
 
             # self.optimizer.apply_gradients(zip_gradients_params)
-            self.optimizer.step(gradients)
+
+            # 不能用step
+            # self.optimizer.step(gradients)
+            self.optimizer.apply_gradients(zip_gradients_params)
 
             loss_train_epoch.append(loss_train.numpy())
 
@@ -238,13 +294,15 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             loss_train = np.mean(loss_train_epoch)
 
-
-            # # Save model
-            if epoch % (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) == 0 or epoch == (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 ):
-                self.save_model()
-
             if DEBUG:
                 self.save_model()
+            # # Save model
+            elif epoch % (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) == 0 or epoch == (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 ):
+                self.save_model()
+
+            # if epoch == 0:
+            #     break
+
 
             # Log loss
             if epoch % self.log_freq == 0:

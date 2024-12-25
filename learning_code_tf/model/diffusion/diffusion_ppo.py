@@ -65,7 +65,40 @@ class PPODiffusion(VPGDiffusion):
         self.clip_advantage_lower_quantile = clip_advantage_lower_quantile
         self.clip_advantage_upper_quantile = clip_advantage_upper_quantile
 
-    def loss(
+
+
+    def get_config(self):
+        """
+        Returns the configuration of the PPODiffusion instance as a dictionary.
+        
+        Returns:
+            dict: Configuration dictionary for the PPODiffusion instance.
+        """
+        # Get the config from the parent class (VPGDiffusion)
+        config = super().get_config()
+        
+        # Add the configuration for PPODiffusion-specific attributes
+        config.update({
+            'gamma_denoising': self.gamma_denoising,
+            'clip_ploss_coef': self.clip_ploss_coef,
+            'clip_ploss_coef_base': self.clip_ploss_coef_base,
+            'clip_ploss_coef_rate': self.clip_ploss_coef_rate,
+            'clip_vloss_coef': self.clip_vloss_coef,
+            'clip_advantage_lower_quantile': self.clip_advantage_lower_quantile,
+            'clip_advantage_upper_quantile': self.clip_advantage_upper_quantile,
+            'norm_adv': self.norm_adv
+        })
+        
+        return config
+    
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
+
+
+    def loss_ori(
         self,
         obs,
         chains_prev,

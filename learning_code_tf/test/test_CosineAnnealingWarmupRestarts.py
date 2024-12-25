@@ -484,6 +484,9 @@ def test_torch_and_tf_learning_rate_model():
 
 
 
+
+
+
 test_learning_rate()
 
 
@@ -500,6 +503,358 @@ test_torch_and_tf_learning_rate_model()
 
 
 
+
+
+
+
+
+
+from util.torch_to_tf import torch_optim_AdamW
+
+
+
+
+
+
+
+
+# Testing torch_optim_Adam vs torch.optim.Adam
+def test_torch_and_tf_learning_rate_model_AdamW():
+    # Set seeds for reproducibility
+    torch.manual_seed(42)
+    tf.random.set_seed(42)
+
+    # Define a simple model in PyTorch
+    torch_model = nn.Sequential(
+        nn.Linear(10, 5),
+        nn.ReLU(),
+        nn.Linear(5, 1)
+    )
+
+    # Define the same model in TensorFlow
+    tf_model = nn_Sequential([
+        # tf.keras.layers.Dense(5, activation='relu', input_shape=(10,)),
+        # tf.keras.layers.Dense(1)
+        nn_Linear(10, 5),
+        nn_ReLU(),
+        nn_Linear(5, 1)
+    ])
+
+    # tf_model.build( input_shape = (None, 10) )
+    _ = tf_model(tf.constant(np.random.randn(1, 10).astype(np.float32)))
+
+    # Initialize weights in TensorFlow model to match PyTorch
+    for torch_layer, tf_layer in zip(torch_model, tf_model):
+        if isinstance(torch_layer, nn.Linear):
+            # tf_layer.model.kernel.assign(tf.convert_to_tensor(torch_layer.weight.data.numpy().T, dtype=tf.float32))
+            # tf_layer.model.bias.assign(tf.convert_to_tensor(torch_layer.bias.data.numpy(), dtype=tf.float32))
+            print("tf_layer = ", tf_layer)
+
+            tf_layer.trainable_weights[0].assign(torch_layer.weight.detach().numpy().T)  # kernel
+            tf_layer.trainable_weights[1].assign(torch_layer.bias.detach().numpy())     # bias
+
+
+
+    # Define inputs and targets
+    inputs = np.random.rand(4, 10).astype(np.float32)
+    targets = np.random.rand(4, 1).astype(np.float32)
+
+    # Define optimizers
+    # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=1)
+    # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=0.0000001)
+    #这里的lr是废的，改多大多小都行，最后被CosineAnnealingWarmupRestarts里面的值替代了
+    torch_optimizer = torch.optim.AdamW(torch_model.parameters(), lr=0.01)
+
+    # from util.scheduler import CosineAnnealingWarmupRestarts
+    # Initialize the scheduler
+    scheduler = CosineAnnealingWarmupRestarts(torch_optimizer, first_cycle_steps=5, cycle_mult=2.0, max_lr=0.1, min_lr=0.001, warmup_steps=2)
+
+
+    initial_learning_rate = 0.1
+    first_cycle_steps = 5
+    warmup_steps = 2
+
+    lr_schedule = tf_CosineAnnealingWarmupRestarts(
+        first_cycle_steps=first_cycle_steps,
+        cycle_mult=2.0,
+        max_lr=0.1,
+        min_lr=0.001,
+        warmup_steps=warmup_steps,
+        gamma=1.0
+    )
+
+    # lr_epoch = lr_schedule.step()
+
+    print("")
+    print("before pass to optimizer")
+    print("")
+
+    tf_optimizer = torch_optim_AdamW(tf_model.trainable_variables, lr=lr_schedule)
+
+    print("")
+    print("after pass to optimizer")
+    print("")
+
+    # Define loss functions
+    torch_loss_fn = nn.MSELoss()
+    tf_loss_fn = tf.keras.losses.MeanSquaredError()
+
+    print("")
+    print("Enter Loop")
+    print("")
+
+    # Training loop
+    for out_step in range(3):
+        for step in range(5):
+            # PyTorch
+            torch_inputs = torch.tensor(inputs)
+            torch_targets = torch.tensor(targets)
+
+            torch_optimizer.zero_grad()
+            torch_outputs = torch_model(torch_inputs)
+            torch_loss = torch_loss_fn(torch_outputs, torch_targets)
+            torch_loss.backward()
+
+            torch_optimizer.step()
+
+
+            tf_loss, tf_gradients = model_forward_backward_gradients(inputs, targets, tf_loss_fn, tf_model)
+            # # TensorFlow
+            # with tf.GradientTape() as tape:
+            #     tf_outputs = tf_model(inputs)
+            #     tf_loss = tf_loss_fn(targets, tf_outputs)
+            # tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
+
+            tf_optimizer.step(tf_gradients)
+
+
+
+            # Print losses
+            print(f"Step {step + 1}:")
+            print(f"  PyTorch Loss: {torch_loss.item():.6f}")
+            print(f"  TensorFlow Loss: {tf_loss.numpy():.6f}")
+
+            # print("np.allclose(torch_loss.item(), tf_loss.numpy()) = ", np.allclose(torch_loss.item(), tf_loss.numpy()) )
+            assert np.allclose(torch_loss.item(), tf_loss.numpy(), atol = 1e-5)
+
+        scheduler.step()
+        lr_epoch = lr_schedule.step()
+
+    # Compare final outputs
+    torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
+    tf_final_output = tf_model(inputs).numpy()
+
+    print("\nFinal Output Comparison:")
+    print(f"  PyTorch: {torch_final_output}")
+    print(f"  TensorFlow: {tf_final_output}")
+    # print("np.allclose(torch_final_output, tf_final_output) = ", np.allclose(torch_final_output, tf_final_output) )
+    assert np.allclose(torch_final_output, tf_final_output, atol = 1e-5)
+
+
+
+
+
+
+
+
+print("Test Cases 3:")
+print("")
+print("")
+
+# Run the test
+test_torch_and_tf_learning_rate_model_AdamW()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from util.torch_to_tf import torch_optim_AdamW
+
+
+
+
+
+
+
+
+# Testing torch_optim_Adam vs torch.optim.Adam
+def test_torch_and_tf_learning_rate_model_AdamW():
+    # Set seeds for reproducibility
+    torch.manual_seed(42)
+    tf.random.set_seed(42)
+
+    # Define a simple model in PyTorch
+    torch_model = nn.Sequential(
+        nn.Linear(10, 5),
+        nn.ReLU(),
+        nn.Linear(5, 1)
+    )
+
+    # Define the same model in TensorFlow
+    tf_model = nn_Sequential([
+        # tf.keras.layers.Dense(5, activation='relu', input_shape=(10,)),
+        # tf.keras.layers.Dense(1)
+        nn_Linear(10, 5),
+        nn_ReLU(),
+        nn_Linear(5, 1)
+    ])
+
+    # tf_model.build( input_shape = (None, 10) )
+    _ = tf_model(tf.constant(np.random.randn(1, 10).astype(np.float32)))
+
+    # Initialize weights in TensorFlow model to match PyTorch
+    for torch_layer, tf_layer in zip(torch_model, tf_model):
+        if isinstance(torch_layer, nn.Linear):
+            # tf_layer.model.kernel.assign(tf.convert_to_tensor(torch_layer.weight.data.numpy().T, dtype=tf.float32))
+            # tf_layer.model.bias.assign(tf.convert_to_tensor(torch_layer.bias.data.numpy(), dtype=tf.float32))
+            print("tf_layer = ", tf_layer)
+
+            tf_layer.trainable_weights[0].assign(torch_layer.weight.detach().numpy().T)  # kernel
+            tf_layer.trainable_weights[1].assign(torch_layer.bias.detach().numpy())     # bias
+
+
+
+    # Define inputs and targets
+    inputs = np.random.rand(4, 10).astype(np.float32)
+    targets = np.random.rand(4, 1).astype(np.float32)
+
+    # Define optimizers
+    # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=1)
+    # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=0.0000001)
+    #这里的lr是废的，改多大多小都行，最后被CosineAnnealingWarmupRestarts里面的值替代了
+    torch_optimizer = torch.optim.AdamW(torch_model.parameters(), lr=0.01)
+
+    # from util.scheduler import CosineAnnealingWarmupRestarts
+    # Initialize the scheduler
+    scheduler = CosineAnnealingWarmupRestarts(torch_optimizer, first_cycle_steps=5, cycle_mult=2.0, max_lr=0.1, min_lr=0.001, warmup_steps=2)
+
+
+    initial_learning_rate = 0.1
+    first_cycle_steps = 5
+    warmup_steps = 2
+
+    lr_schedule = tf_CosineAnnealingWarmupRestarts(
+        first_cycle_steps=first_cycle_steps,
+        cycle_mult=2.0,
+        max_lr=0.1,
+        min_lr=0.001,
+        warmup_steps=warmup_steps,
+        gamma=1.0
+    )
+
+    # lr_epoch = lr_schedule.step()
+
+    print("")
+    print("before pass to optimizer")
+    print("")
+
+    tf_optimizer = torch_optim_AdamW(tf_model.trainable_variables, lr=lr_schedule)
+
+    print("")
+    print("after pass to optimizer")
+    print("")
+
+    # Define loss functions
+    torch_loss_fn = nn.MSELoss()
+    tf_loss_fn = tf.keras.losses.MeanSquaredError()
+
+    print("")
+    print("Enter Loop")
+    print("")
+
+    # Training loop
+    for out_step in range(3):
+        for step in range(5):
+            # PyTorch
+            torch_inputs = torch.tensor(inputs)
+            torch_targets = torch.tensor(targets)
+
+            torch_optimizer.zero_grad()
+            torch_outputs = torch_model(torch_inputs)
+            torch_loss = torch_loss_fn(torch_outputs, torch_targets)
+            torch_loss.backward()
+
+            torch_optimizer.step()
+
+
+            tf_loss, tf_gradients = model_forward_backward_gradients(inputs, targets, tf_loss_fn, tf_model)
+            # # TensorFlow
+            # with tf.GradientTape() as tape:
+            #     tf_outputs = tf_model(inputs)
+            #     tf_loss = tf_loss_fn(targets, tf_outputs)
+            # tf_gradients = tape.gradient(tf_loss, tf_model.trainable_variables)
+
+            # tf_optimizer.step(tf_gradients)
+            tf_optimizer.apply_gradients(zip(tf_gradients, tf_model.trainable_variables))
+
+
+
+            # Print losses
+            print(f"Step {step + 1}:")
+            print(f"  PyTorch Loss: {torch_loss.item():.6f}")
+            print(f"  TensorFlow Loss: {tf_loss.numpy():.6f}")
+
+            # print("np.allclose(torch_loss.item(), tf_loss.numpy()) = ", np.allclose(torch_loss.item(), tf_loss.numpy()) )
+            assert np.allclose(torch_loss.item(), tf_loss.numpy(), atol = 1e-5)
+
+        scheduler.step()
+        lr_epoch = lr_schedule.step()
+
+    # Compare final outputs
+    torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
+    tf_final_output = tf_model(inputs).numpy()
+
+    print("\nFinal Output Comparison:")
+    print(f"  PyTorch: {torch_final_output}")
+    print(f"  TensorFlow: {tf_final_output}")
+    # print("np.allclose(torch_final_output, tf_final_output) = ", np.allclose(torch_final_output, tf_final_output) )
+    assert np.allclose(torch_final_output, tf_final_output, atol = 1e-4)
+
+
+
+
+
+
+
+
+print("Test Cases 4:")
+print("")
+print("")
+
+# Run the test
+test_torch_and_tf_learning_rate_model_AdamW()
 
 
 

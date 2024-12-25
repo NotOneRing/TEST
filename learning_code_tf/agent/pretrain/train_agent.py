@@ -222,17 +222,21 @@ class PreTrainAgent:
 
 
     def save_model(self):
+
+
         print("train_agent.py: PreTrainAgent.save_model()")
-        savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.h5")
-        
+        # savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.h5")
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.keras")
+       
         print("savepath = ", savepath)
 
         # self.model.save_weights(savepath)
         self.model.save(savepath)
 
-        print("ema_savepath = ", ema_savepath)
+        # ema_savepath = savepath.replace(".h5", "_ema.h5")
+        ema_savepath = savepath.replace(".keras", "_ema.keras")
 
-        ema_savepath = savepath.replace(".h5", "_ema.h5")
+        print("ema_savepath = ", ema_savepath)
 
         # self.ema_model.save_weights(ema_savepath)
         self.ema_model.save(ema_savepath)
@@ -244,12 +248,21 @@ class PreTrainAgent:
 
     def load(self, epoch):
         print("train_agent.py: PreTrainAgent.load()")
-        loadpath = os.path.join(self.checkpoint_dir, f"state_{epoch}.h5")
+        # loadpath = os.path.join(self.checkpoint_dir, f"state_{epoch}.h5")
+        loadpath = os.path.join(self.checkpoint_dir, f"state_{epoch}.keras")
+
+        print("loadpath = ", loadpath)
+
         # self.model.load_weights(loadpath)
         # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
 
         self.model = tf.keras.models.load_model(loadpath)
-        self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"))
+        # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"))
+        self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"))
+
+
+
+
 
 
 

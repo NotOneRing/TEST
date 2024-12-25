@@ -184,6 +184,11 @@ class KaimingUniformInitializer(tf.keras.initializers.Initializer):
     def get_config(self):  # 必须实现以支持序列化
         return {'fan_in': self.fan_in}
 
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
+
 
 class CustomDense(tf.keras.layers.Layer):
     def __init__(self, units, input_dim, **kwargs):
@@ -267,10 +272,13 @@ class DiffusionMLP(tf.keras.Model):
         out_activation_type="Identity",
         use_layernorm=False,
         residual_style=False,
+        # name="DiffusionMLP"
+        **kwargs
     ):
         print("mlp_diffusion.py: DiffusionMLP.__init__()")
 
-        super(DiffusionMLP, self).__init__()
+        # super(DiffusionMLP, self).__init__(name=name)
+        super(DiffusionMLP, self).__init__(**kwargs)
 
         print("before sinusiodalPosEmb()")
 
@@ -362,6 +370,69 @@ class DiffusionMLP(tf.keras.Model):
 
         print("after mlp_mean")
         
+    def get_config(self):
+
+        print("DiffusionMLP: get_config()")
+
+        # config = {}
+        config = super(DiffusionMLP, self).get_config()
+
+        # 打印每个属性及其类型和值
+        print("Checking DiffusionMLP Config elements:")
+        print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
+        print(f"horizon_steps: {self.horizon_steps}, type: {type(self.horizon_steps)}")
+        print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
+        print(f"time_dim: {self.time_dim}, type: {type(self.time_dim)}")
+        
+        print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
+
+        # print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
+        # print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
+
+        print(f"cond_mlp_dims: {self.cond_mlp_dims}, type: {type(self.cond_mlp_dims)}")
+        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+        print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
+        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+        print(f"residual_style: {self.residual_style}, type: {type(self.residual_style)}")
+        print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
+        print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
+        
+        config.update({
+            "action_dim": self.action_dim,
+            "horizon_steps": self.horizon_steps,
+            "cond_dim": self.cond_dim,
+            "time_dim": self.time_dim,
+            "mlp_dims": self.mlp_dims,
+            "cond_mlp_dims": self.cond_mlp_dims,
+            "activation_type": self.activation_type,
+            "out_activation_type": self.out_activation_type,
+            "use_layernorm": self.use_layernorm,
+            "residual_style": self.residual_style,
+            # "output_dim": self.output_dim,
+            # "input_dim": self.input_dim,
+            # "time_dim": self.time_dim,
+        })
+        return config
+
+        # action_dim,
+        # horizon_steps,
+        # cond_dim,
+        # time_dim=16,
+        # mlp_dims=[256, 256],
+        # cond_mlp_dims=None,
+        # activation_type="Mish",
+        # out_activation_type="Identity",
+        # use_layernorm=False,
+        # residual_style=False,
+
+
+    @classmethod
+    def from_config(cls, config):
+        print("DiffusionMLP: from_config()")
+        return cls(**config)
+
+
+
 
         # self.time_dim = time_dim
 
@@ -611,68 +682,6 @@ class DiffusionMLP(tf.keras.Model):
 
 
         
-    def get_config(self):
-
-        print("DiffusionMLP: get_config()")
-
-        config = {}
-        # = super(DiffusionMLP, self).get_config()
-
-        # 打印每个属性及其类型和值
-        print("Checking DiffusionMLP Config elements:")
-        print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
-        print(f"horizon_steps: {self.horizon_steps}, type: {type(self.horizon_steps)}")
-        print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
-        print(f"time_dim: {self.time_dim}, type: {type(self.time_dim)}")
-        
-        print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
-
-        # print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
-        # print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
-
-        print(f"cond_mlp_dims: {self.cond_mlp_dims}, type: {type(self.cond_mlp_dims)}")
-        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
-        print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
-        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
-        print(f"residual_style: {self.residual_style}, type: {type(self.residual_style)}")
-        print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
-        print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
-        
-        config.update({
-            "action_dim": self.action_dim,
-            "horizon_steps": self.horizon_steps,
-            "cond_dim": self.cond_dim,
-            "time_dim": self.time_dim,
-            "mlp_dims": self.mlp_dims,
-            "cond_mlp_dims": self.cond_mlp_dims,
-            "activation_type": self.activation_type,
-            "out_activation_type": self.out_activation_type,
-            "use_layernorm": self.use_layernorm,
-            "residual_style": self.residual_style,
-            # "output_dim": self.output_dim,
-            # "input_dim": self.input_dim,
-            # "time_dim": self.time_dim,
-        })
-        return config
-
-        # action_dim,
-        # horizon_steps,
-        # cond_dim,
-        # time_dim=16,
-        # mlp_dims=[256, 256],
-        # cond_mlp_dims=None,
-        # activation_type="Mish",
-        # out_activation_type="Identity",
-        # use_layernorm=False,
-        # residual_style=False,
-
-
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
-
-
-
 
 
 

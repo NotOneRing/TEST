@@ -82,6 +82,30 @@ class MLP(models.Model):
         if verbose:
             logging.info(self.moduleList)
 
+
+    def get_config(self):
+        config = super(MLP, self).get_config()  # Call the base class's get_config
+        config.update({
+            "dim_list": self.dim_list,
+            "append_dim": self.append_dim,
+            "append_layers": self.append_layers,
+            "activation_type": self.activation_type,
+            "out_activation_type": self.out_activation_type,
+            "use_layernorm": self.use_layernorm,
+            "use_layernorm_final": self.use_layernorm_final,
+            "dropout": self.dropout,
+            "use_drop_final": self.use_drop_final,
+        })
+        return config
+    
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
+
+
+    
     def call(self, x, append=None):
         print("mlp.py: MLP.call()")
 
@@ -166,8 +190,29 @@ class ResidualMLP(models.Model):
 
 
 
+
         # print("after append()")
 
+
+    def get_config(self):
+        config = super(ResidualMLP, self).get_config()  # Call the base class's get_config
+        config.update({
+            "dim_list": self.cur_layers[0].input_shape[1:],  # Store dim_list (using input_shape to capture dims)
+            "activation_type": self.activation_type,
+            "out_activation_type": self.out_activation_type,
+            "use_layernorm": self.use_layernorm,
+            "use_layernorm_final": self.use_layernorm_final,
+            "dropout": self.dropout,
+        })
+        return config
+    
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
+
+    
 
     def call(self, x):
         print("mlp.py: ResidualMLP.call()")
@@ -178,6 +223,9 @@ class ResidualMLP(models.Model):
         # return x
         return self.cur_layers(x)
     
+
+
+
 
 class TwoLayerPreActivationResNetLinear(models.Model):
     def __init__(

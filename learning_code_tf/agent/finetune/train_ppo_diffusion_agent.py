@@ -87,7 +87,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
             
             
             
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
 
 
 

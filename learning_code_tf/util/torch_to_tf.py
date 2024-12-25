@@ -1392,21 +1392,23 @@ class nn_Dropout(tf.keras.layers.Layer):
 
 
 class nn_Linear(tf.keras.layers.Layer):
-# torch.nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
-# tf.keras.layers.Dense(
-#     units,
-#     activation=None,
-#     use_bias=True,
-#     kernel_initializer='glorot_uniform',
-#     bias_initializer='zeros',
-#     kernel_regularizer=None,
-#     bias_regularizer=None,
-#     activity_regularizer=None,
-#     kernel_constraint=None,
-#     bias_constraint=None,
-#     lora_rank=None,
-#     **kwargs
-# )
+    """
+    torch.nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
+    tf.keras.layers.Dense(
+        units,
+        activation=None,
+        use_bias=True,
+        kernel_initializer='glorot_uniform',
+        bias_initializer='zeros',
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        activity_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+        lora_rank=None,
+        **kwargs
+    )
+    """
     def __init__(self, in_features, out_features, bias=True, device=None, dtype=None):
         super(nn_Linear, self).__init__()
         self.model = tf.keras.layers.Dense(
@@ -1422,6 +1424,21 @@ class nn_Linear(tf.keras.layers.Layer):
             # bias_constraint=None,
             # ,**kwargs
         )
+
+
+
+    def get_config(self):
+        # Get the configuration of the layer and return it as a dictionary
+        config = super(nn_Linear, self).get_config()  # Call the parent layer's get_config()
+        config.update({
+            "in_features": self.in_features,
+            "out_features": self.out_features,
+            "bias": self.bias,
+            "device": self.device,
+            "dtype": self.dtype
+        })
+        return config
+    
 
     def call(self, x):
         return self.model(x)
@@ -1466,42 +1483,59 @@ class nn_Linear(tf.keras.layers.Layer):
 
 
 
-class nn_LayerNorm(tf.keras.layers.Layer):
-# torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
-# tf.keras.layers.LayerNormalization(
-#     axis=-1,
-#     epsilon=0.001,
-#     center=True,
-#     scale=True,
-#     rms_scaling=False,
-#     beta_initializer='zeros',
-#     gamma_initializer='ones',
-#     beta_regularizer=None,
-#     gamma_regularizer=None,
-#     beta_constraint=None,
-#     gamma_constraint=None,
-#     **kwargs
-# )
-    def __init__(self, normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None):
-        super(nn_LayerNorm, self).__init__()
+# class nn_LayerNorm(tf.keras.layers.Layer):
+#     """
+#     torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
+#     tf.keras.layers.LayerNormalization(
+#         axis=-1,
+#         epsilon=0.001,
+#         center=True,
+#         scale=True,
+#         rms_scaling=False,
+#         beta_initializer='zeros',
+#         gamma_initializer='ones',
+#         beta_regularizer=None,
+#         gamma_regularizer=None,
+#         beta_constraint=None,
+#         gamma_constraint=None,
+#         **kwargs
+#     )
+#     """
+#     def __init__(self, normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None):
+#         super(nn_LayerNorm, self).__init__()
 
-        self.model = tf.keras.layers.LayerNormalization(
-            axis=-1,
-            epsilon=0.001,
-            center=True,
-            scale=True,
-            rms_scaling=False,
-            beta_initializer='zeros',
-            gamma_initializer='ones',
-            beta_regularizer=None,
-            gamma_regularizer=None,
-            beta_constraint=None,
-            gamma_constraint=None
-            # ,**kwargs
-        )   
+#         self.model = tf.keras.layers.LayerNormalization(
+#             axis=-1,
+#             epsilon=0.001,
+#             center=True,
+#             scale=True,
+#             rms_scaling=False,
+#             beta_initializer='zeros',
+#             gamma_initializer='ones',
+#             beta_regularizer=None,
+#             gamma_regularizer=None,
+#             beta_constraint=None,
+#             gamma_constraint=None
+#             # ,**kwargs
+#         )   
 
-    def call(self, x):
-        return self.model(x)
+
+#     def get_config(self):
+#         # Get the configuration of the layer and return it as a dictionary
+#         config = super(nn_LayerNorm, self).get_config()  # Call the parent layer's get_config()
+#         config.update({
+#             "normalized_shape": self.normalized_shape,
+#             "eps": self.eps,
+#             "elementwise_affine": self.elementwise_affine,
+#             "bias": self.bias,
+#             "device": self.device,
+#             "dtype": self.dtype
+#         })
+#         return config
+
+
+#     def call(self, x):
+#         return self.model(x)
 
 
 
@@ -1548,6 +1582,7 @@ class nn_Sequential(tf.keras.layers.Layer):
             for module in args:
                 self.model_list.append(module)
 
+
     def call(self, x):
         output = x
         for module in self.model_list:
@@ -1561,6 +1596,20 @@ class nn_Sequential(tf.keras.layers.Layer):
     def __iter__(self):
         return iter(self.model_list)
 
+
+
+    def get_config(self):
+        # Get the configuration of all layers in the model_list
+        config = super(nn_Sequential, self).get_config()  # Call the parent class get_config()
+        
+        # Create a list of layer configurations
+        layer_configs = [layer.get_config() for layer in self.model_list]
+        
+        # Add the list of layer configurations to the config dictionary
+        config.update({
+            'model_list': layer_configs
+        })
+        return config
 
 
 
@@ -1603,7 +1652,18 @@ class nn_ModuleList(tf.keras.layers.Layer):
         return f"nn_ModuleList({self.modules})"
 
 
+    def get_config(self):
+        # Get the configuration of all layers in the modules list
+        config = super(nn_ModuleList, self).get_config()  # Call the parent class get_config()
 
+        # Create a list of module configurations
+        module_configs = [module.get_config() for module in self.modules]
+        
+        # Add the list of module configurations to the config dictionary
+        config.update({
+            'modules': module_configs
+        })
+        return config
 
 
 
@@ -1690,7 +1750,24 @@ class nn_Embedding(tf.keras.layers.Layer):
 
 
 
+    def get_config(self):
+        # Get the configuration of the embedding layer
+        config = super(nn_Embedding, self).get_config()  # Call parent class get_config()
 
+        # Add custom arguments to config
+        config.update({
+            'num_embeddings': self.num_embeddings,
+            'embedding_dim': self.embedding_dim,
+            'padding_idx': self.padding_idx,
+            'max_norm': self.max_norm,
+            'norm_type': self.norm_type,
+            'scale_grad_by_freq': self.scale_grad_by_freq,
+            'sparse': False,  # Sparse is not used in TensorFlow
+            '_freeze': self._freeze,
+            # Include _weight if it was initialized with custom weights
+            '_weight': self.embeddings.numpy() if hasattr(self.embeddings, 'numpy') else None
+        })
+        return config
 
 
 
@@ -1747,6 +1824,22 @@ class nn_LayerNorm(tf.keras.layers.Layer):
             initializer="zeros",
             trainable=True
         )
+
+
+    def get_config(self):
+        """
+        Returns the configuration of the LayerNorm layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_LayerNorm, self).get_config()  # Call the parent class get_config
+
+        # Add custom arguments to the config
+        config.update({
+            'normalized_shape': self.normalized_shape,
+            'epsilon': self.epsilon
+        })
+        return config
+
 
     def call(self, x):
         """
@@ -1840,6 +1933,19 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
         return output, attention_weights
 
 
+    def get_config(self):
+        """
+        Returns the configuration of the MultiheadAttention layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_MultiheadAttention, self).get_config()  # Call the parent class get_config
+
+        # Add custom arguments to the config
+        config.update({
+            'num_heads': self.num_heads,
+            'd_model': self.d_model
+        })
+        return config
 
 
 
@@ -2100,9 +2206,6 @@ class torch_optim_Adam:
 
     def apply_gradients(self, zipped_gradients):
         self.optimizer.apply_gradients(zipped_gradients)
-
-    def get_learning_rate(self):
-        return self.lr.lr
 
 
 

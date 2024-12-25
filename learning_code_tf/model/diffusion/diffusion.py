@@ -99,8 +99,69 @@ class DiffusionModel(tf.keras.Model):
 
         if self.network_path is not None:
             print("self.network_path is not None")
-            checkpoint = tf.train.Checkpoint(network=self.network)
-            checkpoint.restore(network_path)
+            # checkpoint = tf.train.Checkpoint(network=self.network)
+            # checkpoint.restore(network_path)
+
+            loadpath = network_path
+
+            print("loadpath = ", loadpath)
+
+            # # self.model.load_weights(loadpath)
+            # # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
+
+            # from keras.utils import get_custom_objects
+            # from model.diffusion.mlp_diffusion import DiffusionMLP
+            # # Register your custom class with Keras
+            # get_custom_objects().update({
+            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            #     'DiffusionMLP': DiffusionMLP,
+            #     # 'VPGDiffusion': VPGDiffusion,
+            #     # 'PPODiffusion': PPODiffusion
+            # })
+
+
+            # self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
+            # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
+
+
+            from keras.utils import get_custom_objects
+
+
+            from model.diffusion.mlp_diffusion import DiffusionMLP
+            from model.common.mlp import MLP, ResidualMLP
+            from model.diffusion.modules import SinusoidalPosEmb
+            from model.common.modules import SpatialEmb, RandomShiftsAug
+            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+
+            # Register your custom class with Keras
+            get_custom_objects().update({
+                'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+                'DiffusionMLP': DiffusionMLP,
+                # 'VPGDiffusion': VPGDiffusion,
+                'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+                'MLP': MLP,                            # 自定义的 MLP 层
+                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+                'nn_Linear': nn_Linear,
+                'nn_LayerNorm': nn_LayerNorm,
+                'nn_Dropout': nn_Dropout,
+                'nn_ReLU': nn_ReLU,
+                'nn_Mish': nn_Mish,
+                'SpatialEmb': SpatialEmb,
+                'RandomShiftsAug': RandomShiftsAug,
+                # 'Normal': Normal,
+                # 'Layer': Layer,
+                # 'Sample': Sample,
+                # 'PPODiffusion': PPODiffusion
+            })
+
+
+            self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
+            self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
+
+
+
             print(f"Loaded policy from {network_path}")
 
         print("after set up models")
@@ -463,6 +524,8 @@ class DiffusionModel(tf.keras.Model):
     def get_config(self):
         config = super(DiffusionModel, self).get_config()
 
+        # config = {}
+
         print("get_config: diffusion.py: DiffusionModel.get_config()")
 
         # Debugging each attribute to make sure they are initialized correctly
@@ -484,26 +547,29 @@ class DiffusionModel(tf.keras.Model):
 
 
         config.update({
-            "ddim_discretize": self.ddim_discretize,
-            "device": self.device,
+            "network": self.network,
             "horizon_steps": self.horizon_steps,
             "obs_dim": self.obs_dim,
             "action_dim": self.action_dim,
+            "network_path": self.network_path,
+            "device": self.device,
+            "denoised_clip_value": self.denoised_clip_value,
+            "randn_clip_value": self.randn_clip_value,
+            "final_action_clip_value": self.final_action_clip_value,
+            "eps_clip_value": self.eps_clip_value,
             "denoising_steps": self.denoising_steps,
             "predict_epsilon": self.predict_epsilon,
             "use_ddim": self.use_ddim,
+            "ddim_discretize": self.ddim_discretize,
             "ddim_steps": self.ddim_steps,
-            "denoised_clip_value": self.denoised_clip_value,
-            "final_action_clip_value": self.final_action_clip_value,
-            "randn_clip_value": self.randn_clip_value,
-            "eps_clip_value": self.eps_clip_value,
-            "network": self.network,
-            "network_path": self.network_path,
         })
         return config
 
 
-
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
 
 
     # def forward(self, cond, deterministic=True):

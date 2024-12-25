@@ -106,19 +106,91 @@ class VPGDiffusion(DiffusionModel):
         self.critic = critic
 
         if network_path is not None:
-            # checkpoint = torch.load(
-            #     network_path, map_location=self.device, weights_only=True
-            # )
-            checkpoint = tf.train.Checkpoint(model=self.network)
+            # # checkpoint = torch.load(
+            # #     network_path, map_location=self.device, weights_only=True
+            # # )
+            # checkpoint = tf.train.Checkpoint(model=self.network)
 
-            latest_checkpoint = tf.train.latest_checkpoint(network_path)
+            # latest_checkpoint = tf.train.latest_checkpoint(network_path)
 
-            if "ema" not in checkpoint:  # load trained RL model
-                # self.load_state_dict(checkpoint["model"], strict=False)
+            # if "ema" not in checkpoint:  # load trained RL model
+            #     # self.load_state_dict(checkpoint["model"], strict=False)
 
-                checkpoint.restore(latest_checkpoint)
+            #     checkpoint.restore(latest_checkpoint)
 
-                logging.info("Loaded critic from %s", network_path)
+            #     logging.info("Loaded critic from %s", network_path)
+
+            print("self.network_path is not None")
+
+            loadpath = network_path
+
+            print("loadpath = ", loadpath)
+
+            # self.model.load_weights(loadpath)
+            # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
+
+
+
+            from model.diffusion.mlp_diffusion import DiffusionMLP
+            from model.common.mlp import MLP, ResidualMLP
+            from model.diffusion.modules import SinusoidalPosEmb
+            from model.common.modules import SpatialEmb, RandomShiftsAug
+            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+            from tensorflow.keras.utils import get_custom_objects
+
+            # Register your custom class with Keras
+            get_custom_objects().update({
+                'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+                'DiffusionMLP': DiffusionMLP,
+                'VPGDiffusion': VPGDiffusion,
+                'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+                'MLP': MLP,                            # 自定义的 MLP 层
+                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+                'nn_Linear': nn_Linear,
+                'nn_LayerNorm': nn_LayerNorm,
+                'nn_Dropout': nn_Dropout,
+                'nn_ReLU': nn_ReLU,
+                'nn_Mish': nn_Mish,
+                'SpatialEmb': SpatialEmb,
+                'RandomShiftsAug': RandomShiftsAug,
+             })
+
+
+            self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
+            # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
+            self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"), custom_objects=get_custom_objects())
+
+
+
+
+    def get_config(self):
+        """
+        Returns the configuration of the VPGDiffusion instance as a dictionary.
+        
+        Returns:
+            dict: Configuration dictionary for the VPGDiffusion instance.
+        """
+        
+        config = super().get_config()  # Get the config from the parent (DiffusionModel)
+        
+        # Add the configuration for the VPGDiffusion-specific attributes
+        config.update({
+            'actor': self.actor,  # Actor model (could be any object, make sure it's serializable)
+            'critic': self.critic,  # Critic model (could be any object, make sure it's serializable)
+            'ft_denoising_steps': self.ft_denoising_steps,
+            'ft_denoising_steps_d': self.ft_denoising_steps_d,
+            'ft_denoising_steps_t': self.ft_denoising_steps_t,
+            'min_sampling_denoising_std': self.min_sampling_denoising_std,
+            'min_logprob_denoising_std': self.min_logprob_denoising_std,
+            'eta': self.eta if hasattr(self, 'eta') else None,
+            'learn_eta': self.learn_eta,
+            'kwargs': {}  # You can include any additional arguments passed via kwargs
+        })
+        
+        return config
+    
 
 
 
@@ -540,7 +612,7 @@ class VPGDiffusion(DiffusionModel):
 
 
 
-    def loss(self, cond, chains, reward):
+    def loss_ori(self, cond, chains, reward):
         """
         REINFORCE loss. Not used right now.
 
