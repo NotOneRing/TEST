@@ -23,7 +23,7 @@ from agent.finetune.train_agent import TrainAgent
 from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_Adam, torch_optim_AdamW
 
 from util.torch_to_tf import torch_from_numpy, torch_tensor, torch_cat,\
-torch_tensor_exp, torch_rand, torch_tensor_float, torch_no_grad, torch_item
+torch_tensor_exp, torch_rand, torch_tensor_float, torch_no_grad, torch_tensor_item
 
 import tensorflow as tf
 
@@ -443,7 +443,7 @@ class TrainCalQLAgent(TrainAgent):
 
                     # Update critic
                     # alpha = self.log_alpha.exp().item()
-                    alpha = torch_item( torch_tensor_exp( self.log_alpha ) )
+                    alpha = torch_tensor_item( torch_tensor_exp( self.log_alpha ) )
 
                     with tf.GradientTape() as tape:
 

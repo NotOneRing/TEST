@@ -25,7 +25,7 @@ class TFModel(tf.keras.layers.Layer):
         torch_register_buffer(self, tensor, name)
 
 # Testing function
-def compare_register_buffer():
+def test_register_buffer():
     # Input data
     buffer_name = "memory_mask"
     input_array = np.random.randn(5, 5).astype(np.float32)
@@ -52,8 +52,10 @@ def compare_register_buffer():
     is_close = np.allclose(torch_buffer.numpy(), tf_buffer.numpy(), atol=1e-5)
     print(f"Buffers match: {is_close}")
 
+    assert np.allclose(torch_buffer.numpy(), tf_buffer.numpy(), atol=1e-5)
+
 if __name__ == "__main__":
-    compare_register_buffer()
+    test_register_buffer()
 
 
 

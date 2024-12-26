@@ -24,7 +24,7 @@ from agent.finetune.train_ppo_diffusion_agent import TrainPPODiffusionAgent
 from model.common.modules import RandomShiftsAug
 
 from util.torch_to_tf import torch_no_grad, torch_tensor_float, torch_from_numpy, torch_split, torch_tensor, torch_reshape, \
-torch_randperm, torch_unravel_index, torch_nn_utils_clip_grad_norm_and_step,
+torch_randperm, torch_unravel_index, torch_nn_utils_clip_grad_norm_and_step
 
 
 class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):

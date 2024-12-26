@@ -19,7 +19,7 @@ import math
 
 import tensorflow as tf
 
-from util.torch_to_tf import tf_quantile
+from util.torch_to_tf import torch_quantile
 # import tensorflow_probability as tfp
 
 from util.torch_to_tf import torch_no_grad
@@ -184,8 +184,8 @@ class PPODiffusion(VPGDiffusion):
             advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-8)
 
         # Clip advantages by 5th and 95th percentile
-        advantage_min = tf_quantile(advantages, self.clip_advantage_lower_quantile)
-        advantage_max = tf_quantile(advantages, self.clip_advantage_upper_quantile)
+        advantage_min = torch_quantile(advantages, self.clip_advantage_lower_quantile)
+        advantage_max = torch_quantile(advantages, self.clip_advantage_upper_quantile)
 
         advantages = tf.clip_by_value(advantages, advantage_min, advantage_max)
 

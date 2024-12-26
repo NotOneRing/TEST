@@ -563,9 +563,9 @@ class DiffusionMLP(tf.keras.Model):
             state: (B, To, Do)
         """
 
-        print("mlp_diffusion.py: DiffusionMLP.forward()", flush = True)
+        print("mlp_diffusion.py: DiffusionMLP.call()", flush = True)
 
-        print("x.shape = ", x.shape)
+        # print("x.shape = ", x.shape)
         
         B, Ta, Da = x.shape
 
@@ -582,30 +582,30 @@ class DiffusionMLP(tf.keras.Model):
         # append time and cond
         time = torch_tensor_view(time, B, 1)
 
-        print("time = ", time)
+        # print("time = ", time)
 
         time_emb = torch_tensor_view(self.time_embedding(time), B, self.time_dim)
 
 
-        for layer in self.time_embedding:
-            if isinstance(layer, nn_Linear):
-                print("Linear weights:", layer.trainable_weights[0])
-                print("Linear bias:", layer.trainable_weights[1])
+        # for layer in self.time_embedding:
+        #     if isinstance(layer, nn_Linear):
+        #         print("Linear weights:", layer.trainable_weights[0])
+        #         print("Linear bias:", layer.trainable_weights[1])
                 
                 
-        print("x = ", x)
+        # print("x = ", x)
 
-        print("time_emb = ", time_emb)
+        # print("time_emb = ", time_emb)
 
-        print("state = ", state)
+        # print("state = ", state)
 
 
                 
-        print("x.shape = ", x.shape)
+        # print("x.shape = ", x.shape)
 
-        print("time_emb.shape = ", time_emb.shape)
+        # print("time_emb.shape = ", time_emb.shape)
 
-        print("state.shape = ", state.shape)
+        # print("state.shape = ", state.shape)
 
 
         x = torch_cat([x, time_emb, state], dim=-1)

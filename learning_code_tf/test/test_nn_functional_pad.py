@@ -39,3 +39,7 @@ def test_nn_functional_pad():
 
     print("np.allclose(result.numpy(), x_torch_padded_torch.numpy()) = ", np.allclose(result.numpy(), x_torch_padded_torch.numpy()))
 
+
+test_nn_functional_pad()
+
+

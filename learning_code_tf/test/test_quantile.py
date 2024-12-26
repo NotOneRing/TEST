@@ -74,8 +74,9 @@ a = tf.convert_to_tensor(a.numpy())
 
 q = tf.convert_to_tensor(q.numpy())
 
+from util.torch_to_tf import torch_quantile
 
-temp = tf_quantile(a, q, dim=1)
+temp = torch_quantile(a, q, dim=1)
 
 print("temp = ", temp)
 print("temp.shape = ", temp.shape)

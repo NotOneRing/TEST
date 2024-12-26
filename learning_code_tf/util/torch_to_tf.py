@@ -3,6 +3,7 @@ import numpy as np
 
 
 def torch_tensor_permute(input, *dims):
+    "A wrapper for torch.Tensor.permute() function"
     if isinstance(dims[0], (tuple, list)):
         result = tf.transpose(input, perm = dims[0] )
     else:
@@ -14,6 +15,7 @@ def torch_tensor_permute(input, *dims):
 
 
 def torch_tensor_item(tensor):
+    "A wrapper for torch.Tensor.item() function"
     return tensor.numpy().item()
 
 
@@ -96,7 +98,7 @@ def torch_gather(input_tensor, dim, index_tensor):
 
 
 
-def tf_quantile(input_tensor, q, dim=None, interpolation='linear'):
+def torch_quantile(input_tensor, q, dim=None, interpolation='linear'):
     """
     Compute the quantile of the input_tensor along a specified axis using TensorFlow.
     """
@@ -191,318 +193,6 @@ def torch_square(input, *, out=None):
 
 
 
-class Normal:
-    def __init__(self, loc, scale):
-        #mean
-        self.loc = loc
-
-        # print("self.loc = ", self.loc)
-
-        #std
-        self.scale = scale
-
-        self.batch_shape = self.loc.shape
-
-        self.event_shape = tf.TensorShape([])
-
-        # print("self.batch_shape = ", self.batch_shape)
-        # print("type(self.batch_shape) = ", type(self.batch_shape) )
-        # print("len(self.batch_shape) = ", len(self.batch_shape) )
-
-        # print("self.batch_shape[0] = ", self.batch_shape[:2])
-        # print("self.batch_shape[0] = ", self.batch_shape[:2])
-
-        # print("self.event_shape = ", self.event_shape)
-        # print("len(self.event_shape) = ", len(self.event_shape))
-
-        # self.event_shape = scale.shape
-
-    def log_prob(self, x):
-        """
-        计算正态分布的对数概率密度函数
-
-        Args:
-            x: 需要计算概率密度的点
-            mean: 正态分布的均值
-            std: 正态分布的标准差
-
-        Returns:
-            对数概率密度
-        """
-        # var = self.scale**2
-        log_pdf = -tf.math.log(self.scale * tf.math.sqrt(2 * tf.constant(np.pi))) - 0.5 * ((x - self.loc) ** 2) / (self.scale ** 2)
-
-        # log_pdf = torch.tensor(log_pdf.numpy())
-        
-        return log_pdf
-
-    def sample(self, shape=None):
-        """
-        从正态分布中采样
-
-        Args:
-            shape: 采样的形状。如果为 None，默认返回单个样本。
-
-        Returns:
-            从正态分布中采样的张量
-        """
-        print("1sample.shape = ", shape)
-        if shape == None or shape == tf.TensorShape([]):
-            shape = self.loc.shape
-        print("1sample.shape = ", shape)
-        sampled = tf.random.normal(shape=shape, mean=self.loc, stddev=self.scale)
-
-        # sampled = torch.tensor(sampled.numpy())
-
-        # print("normal: sampled = ", sampled)
-
-        return sampled
-
-    def entropy(self):
-        """
-        计算正态分布的熵
-
-        Returns:
-            正态分布的熵
-        """
-        # 使用公式 H(X) = 0.5 * log(2 * pi * e * std^2)
-        entropy = 0.5 * tf.math.log(2 * tf.constant(np.pi) * tf.constant(np.e) * self.scale ** 2)
-        
-        # entropy = torch.tensor(entropy.numpy())
-
-        return entropy
-
-
-# import tensorflow as tf
-
-def _sum_rightmost(x, n):
-    """
-    对张量的最后 n 个维度进行求和。
-    
-    Args:
-        x: 输入的张量。
-        n: 需要求和的最后 n 个维度的数量。
-        
-    Returns:
-        求和后的张量。
-    """
-    # 获取张量的总维度数
-    num_dims = len(x.shape)
-    
-    # 求和的维度是从最后一个维度向前数 n 个维度
-    axes = list(range(num_dims - n, num_dims))
-    
-    # 使用 tf.reduce_sum 对指定维度进行求和
-    return tf.reduce_sum(x, axis=axes)
-
-
-
-class Independent:
-    def __init__(self, base_distribution, reinterpreted_batch_ndims, validate_args=None):
-        if reinterpreted_batch_ndims > len(base_distribution.batch_shape):
-            raise ValueError(
-                "Expected reinterpreted_batch_ndims <= len(base_distribution.batch_shape), "
-                f"actual {reinterpreted_batch_ndims} vs {len(base_distribution.batch_shape)}"
-            )
-        shape = base_distribution.batch_shape + base_distribution.event_shape
-        # print("shape = ", shape)
-
-        # if base_distribution.event_shape != :
-        event_dim = reinterpreted_batch_ndims + len(base_distribution.event_shape)
-        # print("event_dim = ", event_dim)
-        # print("reinterpreted_batch_ndims = ", reinterpreted_batch_ndims)
-        # print("len(base_distribution.event_shape) = ", len(base_distribution.event_shape))
-
-        self.batch_shape = shape[: len(shape) - event_dim]
-        self.event_shape = shape[len(shape) - event_dim :]
-
-        # print("self.batch_shape = ", self.batch_shape)
-        # print("self.event_shape = ", self.event_shape)
-
-        self.base_dist = base_distribution
-        self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
-        # super().__init__(batch_shape, event_shape, validate_args=validate_args)
-
-    def log_prob(self, value):
-        log_prob = self.base_dist.log_prob(value)
-        # print("log_prob before = ", log_prob)
-        return _sum_rightmost(log_prob, self.reinterpreted_batch_ndims)
-
-    def entropy(self):
-        entropy = self.base_dist.entropy()
-        return _sum_rightmost(entropy, self.reinterpreted_batch_ndims)
-    
-    def sample(self, sample_shape=tf.TensorShape([])):
-        return self.base_dist.sample(sample_shape)
-    
-
-# class Categorical:
-#     # >>> m = Categorical(torch.tensor([ 0.25, 0.25, 0.25, 0.25 ]))
-#     # >>> m.sample()  # equal probability of 0, 1, 2, 3
-#     # tensor(3)
-
-#     def __init__(self, logits):
-#         self.logits = logits
-
-#     def log_prob(self, x):
-#         pass
-
-
-class Categorical:
-    def __init__(self, probs=None, logits=None):
-        
-        # print("logits.shape = ", logits.shape)
-
-        if (probs is None) == (logits is None):
-            raise ValueError(
-                "Either `probs` or `logits` must be specified, but not both."
-            )
-
-
-        if probs is not None:
-            self.probs = probs
-        elif logits is not None:
-            self.logits = logits
-            self.probs = tf.nn.softmax(logits, axis=-1)
-        # else:
-        #     raise ValueError("Must specify either probs or logits.")
-    
-
-        # self.batch_shape = logits.shape
-
-        # self.event_shape = tf.TensorShape([])
-
-        # if self.probs is not None:
-        if len(self.probs.shape) < 1:
-            raise ValueError("`probs` parameter must be at least one-dimensional.")
-        # self.probs = probs / probs.sum(-1, keepdim=True)
-        if probs is not None:
-            self.probs = probs / tf.reduce_sum(probs, axis=-1, keepdims=True)
-
-        # else:
-        #     raise ValueError("must specify probs.")
-            # if logits.dim() < 1:
-            #     raise ValueError("`logits` parameter must be at least one-dimensional.")
-            # Normalize
-            # self.logits = logits - logits.logsumexp(dim=-1, keepdim=True)
-        self._param = self.probs if probs is not None else self.logits
-        self._num_events = self._param.shape[-1]
-        # print("type(self._num_events) = ", type(self._num_events))
-        batch_shape = (
-            self._param.shape[:-1] if len(self._param.shape) > 1 else tf.TensorShape([])
-        )
-        self.batch_shape = batch_shape
-        # super().__init__(batch_shape, validate_args=validate_args)
-
-
-    def sample(self):
-        return tf.random.categorical(self.probs, num_samples = 1, dtype=tf.int32)
-
-    def log_prob(self, value):
-        assert len(value.shape.as_list()) <= 2
-        if self.probs is not None:
-
-            value_shape_list = list(value.shape)
-
-            batch_dim = value_shape_list[0]
-
-            all_tensors = []
-
-            for i in range(batch_dim):
-                index = int(value[i, ...].numpy())  # 获取索引
-
-                log_prob_value = tf.gather(self.probs, index, axis=-1)  # 从 probs 中收集数据
-
-                # 然后计算 log
-                log_prob_value = tf.math.log(log_prob_value)
-
-                # 将结果重新形状化
-                all_tensors.append(tf.reshape(log_prob_value, [1, -1]))
-                
-            if batch_dim == 1:
-                result = all_tensors[0]
-            else:
-                result = tf.concat(all_tensors, axis=0)
-
-            return result
-
-        else:  # logits provided
-            raise ValueError("Must specify probs.")
-
-
-    def entropy(self):
-        return -tf.reduce_sum( self.probs * tf.math.log(self.probs), axis=-1 )
-
-
-
-
-
-class MixtureSameFamily:
-    def __init__(
-            self, mixture_distribution, component_distribution, validate_args=None
-        ):
-        self._mixture_distribution = mixture_distribution
-        self._component_distribution = component_distribution
-
-        if not isinstance(self._mixture_distribution, Categorical):
-            raise ValueError(
-                " The Mixture distribution needs to be an "
-                " instance of torch.distributions.Categorical"
-            )
-
-        # if not isinstance(self._component_distribution, Distribution):
-        #     raise ValueError(
-        #         "The Component distribution need to be an "
-        #         "instance of torch.distributions.Distribution"
-        #     )
-
-        # Check that batch size matches
-        mdbs = self._mixture_distribution.batch_shape
-        print("self._component_distribution.batch_shape = ", self._component_distribution.batch_shape)
-        cdbs = self._component_distribution.batch_shape[:-1]
-        # cdbs = self._component_distribution.batch_shape
-        
-        for size1, size2 in zip(reversed(mdbs), reversed(cdbs)):
-            if size1 != 1 and size2 != 1 and size1 != size2:
-                raise ValueError(
-                    f"`mixture_distribution.batch_shape` ({mdbs}) is not "
-                    "compatible with `component_distribution."
-                    f"batch_shape`({cdbs})"
-                )
-
-        # Check that the number of mixture component matches
-        km = self._mixture_distribution.logits.shape[-1]
-        kc = self._component_distribution.batch_shape[-1]
-        if km is not None and kc is not None and km != kc:
-            raise ValueError(
-                f"`mixture_distribution component` ({km}) does not"
-                " equal `component_distribution.batch_shape[-1]`"
-                f" ({kc})"
-            )
-        self._num_component = km
-
-        event_shape = self._component_distribution.event_shape
-        self._event_ndims = len(event_shape)
-
-        self.batch_shape = cdbs
-        self.event_shape = event_shape
-
-        # super().__init__(
-        #     batch_shape=cdbs, event_shape=event_shape, validate_args=validate_args
-        # )
-
-
-    def log_prob(self, x):
-        # if self._validate_args:
-        #     self._validate_sample(x)
-        x = tf.expand_dims(x, axis=-1 - self._event_ndims)
-        log_prob_x = self.component_distribution.log_prob(x)  # [S, B, k]
-
-
-        log_mix_prob = tf.math.log(self.mixture_distribution.probs)
-
-        return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]
-
 
 
 
@@ -525,7 +215,16 @@ def torch_min(input, dim = None, other = None):
 
 def torch_max(input, dim = None, other = None):
     if other == None:
-        return tf.reduce_max(input, axis=dim)
+        # return tf.reduce_max(input, axis=dim)
+        if dim == None:
+            return tf.reduce_max(input)
+        else:
+            max_values = tf.reduce_max(input, axis=dim)
+            max_indices = tf.math.argmax(input, axis=dim)
+            from collections import namedtuple
+            MaxResult = namedtuple('MaxResult', ['values', 'indices'])
+            result = MaxResult(values=max_values, indices=max_indices)
+            return result
     else:
         return tf.maximum(input, other)
 
@@ -539,7 +238,7 @@ def torch_softmax(input_tensor, dim):
     return tf.nn.softmax(input_tensor, axis=dim)
 
 
-def torch_stack(tensor_list_to_stack, dim):
+def torch_stack(tensor_list_to_stack, dim = 0):
     return tf.stack(tensor_list_to_stack, axis = dim)
 
 
@@ -998,11 +697,6 @@ def torch_tensor_masked_fill(tensor, mask, value):
 
 
 
-def torch_item(x):
-    out = torch_squeeze(x)
-    out = out.numpy().item()
-    return out
-
 
 
 
@@ -1092,7 +786,199 @@ def torch_repeat_interleave(tensor, repeats, dim=None):
         return tf.concat( result, axis=dim )
     
     else:
-        raise ValueError("tensor.shape > 2 is not implemented for hte repeat_interleave()")
+        raise ValueError("tensor.shape > 2 is not implemented for the repeat_interleave()")
+
+
+
+
+def torch_tensor_detach(tensor):
+    output_tensor = tf.stop_gradient(tensor)
+    return output_tensor
+
+
+
+
+
+
+
+
+
+# 定义自定义 torch_std 函数
+def torch_std(input, dim=None, *, correction=1, keepdim=False, out=None):
+    assert out == None, "Tensor is immutable in TensorFlow, but mutable in PyTorch"
+
+    # 计算均值
+    mean = tf.reduce_mean(input, axis=dim, keepdims=True)
+
+    # 计算方差
+    variance = tf.reduce_mean(tf.square(input - mean), axis=dim, keepdims=keepdim)
+
+    # 应用 Bessel's 修正
+    if correction != 0:
+        count = tf.shape(input)[dim] if dim is not None else tf.size(input)
+        count = tf.cast(count, tf.float32)
+        variance *= count / (count - correction)
+
+    return tf.sqrt(variance)
+
+
+
+
+
+
+
+
+
+
+def torch_tensor_repeat(tensor, *repeats):
+    """
+    Mimics the behavior of PyTorch's torch.Tensor.repeat in TensorFlow.
+
+    Args:
+        tensor (tf.Tensor): The input tensor.
+        *repeats: The number of times to repeat along each dimension.
+
+    Returns:
+        tf.Tensor: The repeated tensor.
+    """
+
+    # print("repeats = ", repeats)
+
+    if not isinstance(tensor, tf.Tensor):
+        raise TypeError("Input must be a TensorFlow tensor.")
+    if not repeats:
+        raise ValueError("At least one repeat value must be provided.")
+
+    # processed_repeats = []
+    if isinstance(repeats[0], (tuple, list)):
+        repeat_shape = [ *repeats[0] ]
+        repeats_tensor = tf.constant(repeats[0], dtype=tf.int32)
+    else:
+        repeat_shape = [*repeats]
+        repeats_tensor = tf.constant(repeats, dtype=tf.int32)
+
+    # Compute the target shape for tiling
+    tensor_shape = tf.shape(tensor)
+
+
+    tensor_dim = len(tensor_shape)
+    repeat_dim = len(repeat_shape)
+
+    temp_tensor = tensor
+
+    if repeat_dim > tensor_dim:
+        tensor_shape = [1] * (repeat_dim - tensor_dim) + tensor_shape.numpy().tolist()
+        temp_tensor = tf.reshape(tensor, tensor_shape)
+
+    # Perform tiling
+    repeated_tensor = tf.tile(temp_tensor, repeats_tensor)
+    return repeated_tensor
+
+
+
+
+
+
+
+
+
+
+
+
+
+def torch_unravel_index(indices, shape):
+    """
+    TensorFlow equivalent of torch.unravel_index.
+
+    Args:
+        indices (Tensor): 1D tensor of linear indices.
+        shape (tuple or list): Shape of the target tensor.
+
+    Returns:
+        tuple: A tuple of Tensors representing the unraveled indices for each dimension.
+    """
+    # indices = tf.convert_to_tensor(indices, dtype=tf.int32)
+    # shape = tf.convert_to_tensor(shape, dtype=tf.int32)
+
+    unravel_indices = []
+    for dim in reversed(shape):
+        unravel_indices.append(indices % dim)
+        indices = indices // dim
+
+    return tuple(reversed(unravel_indices))
+
+
+
+
+
+
+
+
+
+def torch_register_buffer(self, input, name):
+    result = tf.constant(input)
+    setattr(self, name, result)
+
+
+
+
+
+
+
+
+# TensorFlow wrap of torch.split
+def torch_split(tensor, split_size_or_sections, dim=0):
+    # torch.split(tensor, split_size_or_sections, dim=0)
+    # tf.split(value, num_or_size_splits, axis=0, num=None, name='split')
+    final_num_or_size_splits_list = []
+
+    if not isinstance(split_size_or_sections, (tuple, list)):
+        tensor_dim = tensor.shape[dim]
+        import math
+        total_splits_number = math.ceil(tensor_dim / split_size_or_sections)
+        residual = tensor_dim % split_size_or_sections
+        
+        if residual > 0:
+            for i in range(total_splits_number - 1):
+                final_num_or_size_splits_list.append(split_size_or_sections)
+
+            final_num_or_size_splits_list.append(residual)
+        else:
+            for i in range(total_splits_number):
+                final_num_or_size_splits_list.append(split_size_or_sections)
+    else:
+        final_num_or_size_splits_list = split_size_or_sections
+
+    return tf.split(value=tensor, num_or_size_splits=final_num_or_size_splits_list, axis=dim)
+
+
+
+
+
+
+
+
+def torch_rand(*size, dtype=tf.dtypes.float32):
+    # torch.rand(*size, *, generator=None, out=None, dtype=None, 
+    # layout=torch.strided, device=None, requires_grad=False, pin_memory=False)
+    # tf.random.uniform(
+    #     shape,
+    #     minval=0,
+    #     maxval=None,
+    #     dtype=tf.dtypes.float32,
+    #     seed=None,
+    #     name=None
+    # )
+
+    print("size = ", size)
+
+    if isinstance(size[0], (tuple, list)):
+        final_size = [ *size[0] ]
+    else:
+        final_size = [*size]
+
+    return tf.random.uniform(shape=final_size, dtype=dtype)
+
 
 
 
@@ -1120,6 +1006,10 @@ def torch_func_stack_module_state(models):
                  for model in models]
     non_trainable = [tf.stack([var for var in model.non_trainable_variables])
                      for model in models]
+    # trainable = {model.name: tf.stack([var for var in model.trainable_variables])
+    #              for model in models}
+    # non_trainable = {model.name: tf.stack([var for var in model.non_trainable_variables])
+    #                  for model in models}
     return trainable, non_trainable
 
 
@@ -1241,104 +1131,10 @@ def torch_nn_init_ones_(tensor):
 
 
 
-class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
-        super(nn_TransformerDecoderLayer, self).__init__()
-        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.ffn = tf.keras.Sequential([
-            tf.keras.layers.Dense(dim_feedforward, activation=activation),
-            tf.keras.layers.Dropout(dropout),
-            tf.keras.layers.Dense(d_model),
-        ])
-        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = tf.keras.layers.Dropout(dropout)
-        self.dropout2 = tf.keras.layers.Dropout(dropout)
-        self.dropout3 = tf.keras.layers.Dropout(dropout)
-
-    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-        # Self-attention on target
-        tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
-        tgt = tgt + self.dropout1(tgt2, training=training)
-        tgt = self.norm1(tgt)
-
-        # Cross-attention between target and memory
-        tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
-        tgt = tgt + self.dropout2(tgt2, training=training)
-        tgt = self.norm2(tgt)
-
-        # Feedforward network
-        tgt2 = self.ffn(tgt, training=training)
-        tgt = tgt + self.dropout3(tgt2, training=training)
-        tgt = self.norm3(tgt)
-
-        return tgt
-
-class nn_TransformerDecoder(tf.keras.layers.Layer):
-    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
-        super(nn_TransformerDecoder, self).__init__()
-        self.layers = [
-            nn_TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
-            for _ in range(n_layers)
-        ]
-        self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-
-    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-        for layer in self.layers:
-            tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
-        return self.norm(tgt)
 
 
 
 
-
-
-
-
-class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
-        super(nn_TransformerEncoderLayer, self).__init__()
-        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.ffn = tf.keras.Sequential([
-            tf.keras.layers.Dense(dim_feedforward, activation=activation),
-            tf.keras.layers.Dropout(dropout),
-            tf.keras.layers.Dense(d_model),
-        ])
-        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = tf.keras.layers.Dropout(dropout)
-        self.dropout2 = tf.keras.layers.Dropout(dropout)
-
-    def call(self, x, training):
-        # Self-attention
-        attn_output = self.self_attn(x, x, training=training)
-        x = x + self.dropout1(attn_output, training=training)
-        x = self.norm1(x)
-
-        # Feedforward network
-        ffn_output = self.ffn(x, training=training)
-        x = x + self.dropout2(ffn_output, training=training)
-        x = self.norm2(x)
-        return x
-
-
-
-
-
-class nn_TransformerEncoder(tf.keras.layers.Layer):
-    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
-        super(nn_TransformerEncoder, self).__init__()
-        self.layers = [
-            nn_TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
-            for _ in range(n_layers)
-        ]
-
-    def call(self, x, training):
-        for layer in self.layers:
-            x = layer(x, training=training)
-        return x
 
 
 
@@ -1966,195 +1762,108 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
 
 
+class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
+        super(nn_TransformerDecoderLayer, self).__init__()
+        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.ffn = tf.keras.Sequential([
+            tf.keras.layers.Dense(dim_feedforward, activation=activation),
+            tf.keras.layers.Dropout(dropout),
+            tf.keras.layers.Dense(d_model),
+        ])
+        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+        self.dropout3 = tf.keras.layers.Dropout(dropout)
 
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+        # Self-attention on target
+        tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
+        tgt = tgt + self.dropout1(tgt2, training=training)
+        tgt = self.norm1(tgt)
 
-def torch_tensor_detach(tensor):
-    output_tensor = tf.stop_gradient(tensor)
-    return output_tensor
+        # Cross-attention between target and memory
+        tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
+        tgt = tgt + self.dropout2(tgt2, training=training)
+        tgt = self.norm2(tgt)
 
+        # Feedforward network
+        tgt2 = self.ffn(tgt, training=training)
+        tgt = tgt + self.dropout3(tgt2, training=training)
+        tgt = self.norm3(tgt)
 
+        return tgt
 
+class nn_TransformerDecoder(tf.keras.layers.Layer):
+    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
+        super(nn_TransformerDecoder, self).__init__()
+        self.layers = [
+            nn_TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+            for _ in range(n_layers)
+        ]
+        self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
 
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+        for layer in self.layers:
+            tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
+        return self.norm(tgt)
 
 
 
 
 
-# 定义自定义 torch_std 函数
-def torch_std(input, dim=None, *, correction=1, keepdim=False, out=None):
-    assert out == None, "Tensor is immutable in TensorFlow, but mutable in PyTorch"
 
-    # 计算均值
-    mean = tf.reduce_mean(input, axis=dim, keepdims=True)
 
-    # 计算方差
-    variance = tf.reduce_mean(tf.square(input - mean), axis=dim, keepdims=keepdim)
 
-    # 应用 Bessel's 修正
-    if correction != 0:
-        count = tf.shape(input)[dim] if dim is not None else tf.size(input)
-        count = tf.cast(count, tf.float32)
-        variance *= count / (count - correction)
+class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation):
+        super(nn_TransformerEncoderLayer, self).__init__()
+        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.ffn = tf.keras.Sequential([
+            tf.keras.layers.Dense(dim_feedforward, activation=activation),
+            tf.keras.layers.Dropout(dropout),
+            tf.keras.layers.Dense(d_model),
+        ])
+        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
 
-    return tf.sqrt(variance)
+    def call(self, x, training):
+        # Self-attention
+        attn_output = self.self_attn(x, x, training=training)
+        x = x + self.dropout1(attn_output, training=training)
+        x = self.norm1(x)
 
+        # Feedforward network
+        ffn_output = self.ffn(x, training=training)
+        x = x + self.dropout2(ffn_output, training=training)
+        x = self.norm2(x)
+        return x
 
 
 
 
 
+class nn_TransformerEncoder(tf.keras.layers.Layer):
+    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
+        super(nn_TransformerEncoder, self).__init__()
+        self.layers = [
+            nn_TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+            for _ in range(n_layers)
+        ]
 
+    def call(self, x, training):
+        for layer in self.layers:
+            x = layer(x, training=training)
+        return x
 
 
 
-def torch_tensor_repeat(tensor, *repeats):
-    """
-    Mimics the behavior of PyTorch's torch.Tensor.repeat in TensorFlow.
 
-    Args:
-        tensor (tf.Tensor): The input tensor.
-        *repeats: The number of times to repeat along each dimension.
-
-    Returns:
-        tf.Tensor: The repeated tensor.
-    """
-
-    # print("repeats = ", repeats)
-
-    if not isinstance(tensor, tf.Tensor):
-        raise TypeError("Input must be a TensorFlow tensor.")
-    if not repeats:
-        raise ValueError("At least one repeat value must be provided.")
-
-    # processed_repeats = []
-    if isinstance(repeats[0], (tuple, list)):
-        repeat_shape = [ *repeats[0] ]
-        repeats_tensor = tf.constant(repeats[0], dtype=tf.int32)
-    else:
-        repeat_shape = [*repeats]
-        repeats_tensor = tf.constant(repeats, dtype=tf.int32)
-
-    # Compute the target shape for tiling
-    tensor_shape = tf.shape(tensor)
-
-
-    tensor_dim = len(tensor_shape)
-    repeat_dim = len(repeat_shape)
-
-    temp_tensor = tensor
-
-    if repeat_dim > tensor_dim:
-        tensor_shape = [1] * (repeat_dim - tensor_dim) + tensor_shape.numpy().tolist()
-        temp_tensor = tf.reshape(tensor, tensor_shape)
-
-    # Perform tiling
-    repeated_tensor = tf.tile(temp_tensor, repeats_tensor)
-    return repeated_tensor
-
-
-
-
-
-
-
-
-
-
-
-
-
-def torch_unravel_index(indices, shape):
-    """
-    TensorFlow equivalent of torch.unravel_index.
-
-    Args:
-        indices (Tensor): 1D tensor of linear indices.
-        shape (tuple or list): Shape of the target tensor.
-
-    Returns:
-        tuple: A tuple of Tensors representing the unraveled indices for each dimension.
-    """
-    # indices = tf.convert_to_tensor(indices, dtype=tf.int32)
-    # shape = tf.convert_to_tensor(shape, dtype=tf.int32)
-
-    unravel_indices = []
-    for dim in reversed(shape):
-        unravel_indices.append(indices % dim)
-        indices = indices // dim
-
-    return tuple(reversed(unravel_indices))
-
-
-
-
-
-
-
-
-
-def torch_register_buffer(self, input, name):
-    result = tf.constant(input)
-    setattr(self, name, result)
-
-
-
-
-
-
-
-
-# TensorFlow wrap of torch.split
-def torch_split(tensor, split_size_or_sections, dim=0):
-    # torch.split(tensor, split_size_or_sections, dim=0)
-    # tf.split(value, num_or_size_splits, axis=0, num=None, name='split')
-    final_num_or_size_splits_list = []
-
-    if not isinstance(split_size_or_sections, (tuple, list)):
-        tensor_dim = tensor.shape[dim]
-        import math
-        total_splits_number = math.ceil(tensor_dim / split_size_or_sections)
-        residual = tensor_dim % split_size_or_sections
-        
-        if residual > 0:
-            for i in range(total_splits_number - 1):
-                final_num_or_size_splits_list.append(split_size_or_sections)
-
-            final_num_or_size_splits_list.append(residual)
-        else:
-            for i in range(total_splits_number):
-                final_num_or_size_splits_list.append(split_size_or_sections)
-    else:
-        final_num_or_size_splits_list = split_size_or_sections
-
-    return tf.split(value=tensor, num_or_size_splits=final_num_or_size_splits_list, axis=dim)
-
-
-
-
-
-
-
-
-def torch_rand(*size, dtype=tf.dtypes.float32):
-    # torch.rand(*size, *, generator=None, out=None, dtype=None, 
-    # layout=torch.strided, device=None, requires_grad=False, pin_memory=False)
-    # tf.random.uniform(
-    #     shape,
-    #     minval=0,
-    #     maxval=None,
-    #     dtype=tf.dtypes.float32,
-    #     seed=None,
-    #     name=None
-    # )
-
-    print("size = ", size)
-
-    if isinstance(size[0], (tuple, list)):
-        final_size = [ *size[0] ]
-    else:
-        final_size = [*size]
-
-    return tf.random.uniform(shape=final_size, dtype=dtype)
 
 
 
@@ -2369,12 +2078,18 @@ def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grad
 
 
 
+# def torch_tensor_requires_grad_(tensor, requires_grad=True):
+#     # torch.tensor.requires_grad_
+#     tensor.trainable = requires_grad
+#     return tensor
+
+
 def torch_tensor_requires_grad_(tensor, requires_grad=True):
-    # torch.tensor.requires_grad_
-    tensor.trainable = requires_grad
-    return tensor
-
-
+    if requires_grad:
+        return tf.Variable(tensor, trainable=True)
+    else:
+        return tf.Variable(tensor, trainable=False)
+    
 
 
 
@@ -2775,3 +2490,315 @@ def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="
 
 
 
+
+class Normal:
+    def __init__(self, loc, scale):
+        #mean
+        self.loc = loc
+
+        # print("self.loc = ", self.loc)
+
+        #std
+        self.scale = scale
+
+        self.batch_shape = self.loc.shape
+
+        self.event_shape = tf.TensorShape([])
+
+        # print("self.batch_shape = ", self.batch_shape)
+        # print("type(self.batch_shape) = ", type(self.batch_shape) )
+        # print("len(self.batch_shape) = ", len(self.batch_shape) )
+
+        # print("self.batch_shape[0] = ", self.batch_shape[:2])
+        # print("self.batch_shape[0] = ", self.batch_shape[:2])
+
+        # print("self.event_shape = ", self.event_shape)
+        # print("len(self.event_shape) = ", len(self.event_shape))
+
+        # self.event_shape = scale.shape
+
+    def log_prob(self, x):
+        """
+        计算正态分布的对数概率密度函数
+
+        Args:
+            x: 需要计算概率密度的点
+            mean: 正态分布的均值
+            std: 正态分布的标准差
+
+        Returns:
+            对数概率密度
+        """
+        # var = self.scale**2
+        log_pdf = -tf.math.log(self.scale * tf.math.sqrt(2 * tf.constant(np.pi))) - 0.5 * ((x - self.loc) ** 2) / (self.scale ** 2)
+
+        # log_pdf = torch.tensor(log_pdf.numpy())
+        
+        return log_pdf
+
+    def sample(self, shape=None):
+        """
+        从正态分布中采样
+
+        Args:
+            shape: 采样的形状。如果为 None，默认返回单个样本。
+
+        Returns:
+            从正态分布中采样的张量
+        """
+        print("1sample.shape = ", shape)
+        if shape == None or shape == tf.TensorShape([]):
+            shape = self.loc.shape
+        print("1sample.shape = ", shape)
+        sampled = tf.random.normal(shape=shape, mean=self.loc, stddev=self.scale)
+
+        # sampled = torch.tensor(sampled.numpy())
+
+        # print("normal: sampled = ", sampled)
+
+        return sampled
+
+    def entropy(self):
+        """
+        计算正态分布的熵
+
+        Returns:
+            正态分布的熵
+        """
+        # 使用公式 H(X) = 0.5 * log(2 * pi * e * std^2)
+        entropy = 0.5 * tf.math.log(2 * tf.constant(np.pi) * tf.constant(np.e) * self.scale ** 2)
+        
+        # entropy = torch.tensor(entropy.numpy())
+
+        return entropy
+
+
+# import tensorflow as tf
+
+def _sum_rightmost(x, n):
+    """
+    对张量的最后 n 个维度进行求和。
+    
+    Args:
+        x: 输入的张量。
+        n: 需要求和的最后 n 个维度的数量。
+        
+    Returns:
+        求和后的张量。
+    """
+    # 获取张量的总维度数
+    num_dims = len(x.shape)
+    
+    # 求和的维度是从最后一个维度向前数 n 个维度
+    axes = list(range(num_dims - n, num_dims))
+    
+    # 使用 tf.reduce_sum 对指定维度进行求和
+    return tf.reduce_sum(x, axis=axes)
+
+
+
+class Independent:
+    def __init__(self, base_distribution, reinterpreted_batch_ndims, validate_args=None):
+        if reinterpreted_batch_ndims > len(base_distribution.batch_shape):
+            raise ValueError(
+                "Expected reinterpreted_batch_ndims <= len(base_distribution.batch_shape), "
+                f"actual {reinterpreted_batch_ndims} vs {len(base_distribution.batch_shape)}"
+            )
+        shape = base_distribution.batch_shape + base_distribution.event_shape
+        # print("shape = ", shape)
+
+        # if base_distribution.event_shape != :
+        event_dim = reinterpreted_batch_ndims + len(base_distribution.event_shape)
+        # print("event_dim = ", event_dim)
+        # print("reinterpreted_batch_ndims = ", reinterpreted_batch_ndims)
+        # print("len(base_distribution.event_shape) = ", len(base_distribution.event_shape))
+
+        self.batch_shape = shape[: len(shape) - event_dim]
+        self.event_shape = shape[len(shape) - event_dim :]
+
+        # print("self.batch_shape = ", self.batch_shape)
+        # print("self.event_shape = ", self.event_shape)
+
+        self.base_dist = base_distribution
+        self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
+        # super().__init__(batch_shape, event_shape, validate_args=validate_args)
+
+    def log_prob(self, value):
+        log_prob = self.base_dist.log_prob(value)
+        # print("log_prob before = ", log_prob)
+        return _sum_rightmost(log_prob, self.reinterpreted_batch_ndims)
+
+    def entropy(self):
+        entropy = self.base_dist.entropy()
+        return _sum_rightmost(entropy, self.reinterpreted_batch_ndims)
+    
+    def sample(self, sample_shape=tf.TensorShape([])):
+        return self.base_dist.sample(sample_shape)
+    
+
+# class Categorical:
+#     # >>> m = Categorical(torch.tensor([ 0.25, 0.25, 0.25, 0.25 ]))
+#     # >>> m.sample()  # equal probability of 0, 1, 2, 3
+#     # tensor(3)
+
+#     def __init__(self, logits):
+#         self.logits = logits
+
+#     def log_prob(self, x):
+#         pass
+
+
+class Categorical:
+    def __init__(self, probs=None, logits=None):
+        
+        # print("logits.shape = ", logits.shape)
+
+        if (probs is None) == (logits is None):
+            raise ValueError(
+                "Either `probs` or `logits` must be specified, but not both."
+            )
+
+
+        if probs is not None:
+            self.probs = probs
+        elif logits is not None:
+            self.logits = logits
+            self.probs = tf.nn.softmax(logits, axis=-1)
+        # else:
+        #     raise ValueError("Must specify either probs or logits.")
+    
+
+        # self.batch_shape = logits.shape
+
+        # self.event_shape = tf.TensorShape([])
+
+        # if self.probs is not None:
+        if len(self.probs.shape) < 1:
+            raise ValueError("`probs` parameter must be at least one-dimensional.")
+        # self.probs = probs / probs.sum(-1, keepdim=True)
+        if probs is not None:
+            self.probs = probs / tf.reduce_sum(probs, axis=-1, keepdims=True)
+
+        # else:
+        #     raise ValueError("must specify probs.")
+            # if logits.dim() < 1:
+            #     raise ValueError("`logits` parameter must be at least one-dimensional.")
+            # Normalize
+            # self.logits = logits - logits.logsumexp(dim=-1, keepdim=True)
+        self._param = self.probs if probs is not None else self.logits
+        self._num_events = self._param.shape[-1]
+        # print("type(self._num_events) = ", type(self._num_events))
+        batch_shape = (
+            self._param.shape[:-1] if len(self._param.shape) > 1 else tf.TensorShape([])
+        )
+        self.batch_shape = batch_shape
+        # super().__init__(batch_shape, validate_args=validate_args)
+
+
+    def sample(self):
+        return tf.random.categorical(self.probs, num_samples = 1, dtype=tf.int32)
+
+    def log_prob(self, value):
+        assert len(value.shape.as_list()) <= 2
+        if self.probs is not None:
+
+            value_shape_list = list(value.shape)
+
+            batch_dim = value_shape_list[0]
+
+            all_tensors = []
+
+            for i in range(batch_dim):
+                index = int(value[i, ...].numpy())  # 获取索引
+
+                log_prob_value = tf.gather(self.probs, index, axis=-1)  # 从 probs 中收集数据
+
+                # 然后计算 log
+                log_prob_value = tf.math.log(log_prob_value)
+
+                # 将结果重新形状化
+                all_tensors.append(tf.reshape(log_prob_value, [1, -1]))
+                
+            if batch_dim == 1:
+                result = all_tensors[0]
+            else:
+                result = tf.concat(all_tensors, axis=0)
+
+            return result
+
+        else:  # logits provided
+            raise ValueError("Must specify probs.")
+
+
+    def entropy(self):
+        return -tf.reduce_sum( self.probs * tf.math.log(self.probs), axis=-1 )
+
+
+
+
+
+class MixtureSameFamily:
+    def __init__(
+            self, mixture_distribution, component_distribution, validate_args=None
+        ):
+        self._mixture_distribution = mixture_distribution
+        self._component_distribution = component_distribution
+
+        if not isinstance(self._mixture_distribution, Categorical):
+            raise ValueError(
+                " The Mixture distribution needs to be an "
+                " instance of torch.distributions.Categorical"
+            )
+
+        # if not isinstance(self._component_distribution, Distribution):
+        #     raise ValueError(
+        #         "The Component distribution need to be an "
+        #         "instance of torch.distributions.Distribution"
+        #     )
+
+        # Check that batch size matches
+        mdbs = self._mixture_distribution.batch_shape
+        print("self._component_distribution.batch_shape = ", self._component_distribution.batch_shape)
+        cdbs = self._component_distribution.batch_shape[:-1]
+        # cdbs = self._component_distribution.batch_shape
+        
+        for size1, size2 in zip(reversed(mdbs), reversed(cdbs)):
+            if size1 != 1 and size2 != 1 and size1 != size2:
+                raise ValueError(
+                    f"`mixture_distribution.batch_shape` ({mdbs}) is not "
+                    "compatible with `component_distribution."
+                    f"batch_shape`({cdbs})"
+                )
+
+        # Check that the number of mixture component matches
+        km = self._mixture_distribution.logits.shape[-1]
+        kc = self._component_distribution.batch_shape[-1]
+        if km is not None and kc is not None and km != kc:
+            raise ValueError(
+                f"`mixture_distribution component` ({km}) does not"
+                " equal `component_distribution.batch_shape[-1]`"
+                f" ({kc})"
+            )
+        self._num_component = km
+
+        event_shape = self._component_distribution.event_shape
+        self._event_ndims = len(event_shape)
+
+        self.batch_shape = cdbs
+        self.event_shape = event_shape
+
+        # super().__init__(
+        #     batch_shape=cdbs, event_shape=event_shape, validate_args=validate_args
+        # )
+
+
+    def log_prob(self, x):
+        # if self._validate_args:
+        #     self._validate_sample(x)
+        x = tf.expand_dims(x, axis=-1 - self._event_ndims)
+        log_prob_x = self.component_distribution.log_prob(x)  # [S, B, k]
+
+
+        log_mix_prob = tf.math.log(self.mixture_distribution.probs)
+
+        return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]

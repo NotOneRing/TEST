@@ -8,34 +8,91 @@ class SimpleNet(nn.Module):
         super().__init__()
         self.fc = nn.Linear(2, 1)
 
+
+
 temp = [SimpleNet()]
 
-stacked_params, stacked_buffers = stack_module_state(temp)
+stacked_params1, stacked_buffers1 = stack_module_state(temp)
 
-print("Stacked Parameters Shape:", {k: v.shape for k, v in stacked_params.items()})
-print("Stacked Buffers:", stacked_buffers)
+
+result1 = []
+
+for k, v in stacked_params1.items():
+    result1.append(v.shape)
+
+
+print("Stacked Parameters Shape:", {k: v.shape for k, v in stacked_params1.items()})
+print("Stacked Buffers:", stacked_buffers1)
 
 
 # 创建多个模型实例
 models = [SimpleNet() for _ in range(3)]
 
 # 堆叠这些模型的参数和缓冲区
-stacked_params, stacked_buffers = stack_module_state(models)
+stacked_params2, stacked_buffers2 = stack_module_state(models)
 
-print("Stacked Parameters Shape:", {k: v.shape for k, v in stacked_params.items()})
-print("Stacked Buffers:", stacked_buffers)
+print("Stacked Parameters Shape:", {k: v.shape for k, v in stacked_params2.items()})
+print("Stacked Buffers:", stacked_buffers2)
+
+
+result2 = []
+
+for k, v in stacked_params2.items():
+    result2.append(v.shape)
+
 
 
 # W的维度是(out_features, in_features)，因为y = xW^{\top} + b
 
+import tensorflow as tf
+
+from util.torch_to_tf import nn_Linear, torch_func_stack_module_state
+
+class tf_SimpleNet(tf.keras.Model):
+    def __init__(self):
+        super().__init__()
+        self.fc = nn_Linear(2, 1)
+
+tf_result1 = []
+
+temp = [tf_SimpleNet()]
+
+tf_stacked_params1, tf_stacked_buffers1 = torch_func_stack_module_state(temp)
+
+print("Stacked Parameters Shape:", {k: v.shape for k, v in tf_stacked_params1.items()})
+print("Stacked Buffers:", tf_stacked_buffers1)
+
+for k, v in tf_stacked_params1.items():
+    tf_result1.append(v.shape)
+
+# 创建多个模型实例
+models = [tf_SimpleNet() for _ in range(3)]
+
+# 堆叠这些模型的参数和缓冲区
+tf_stacked_params2, tf_stacked_buffers2 = torch_func_stack_module_state(models)
+
+print("Stacked Parameters Shape:", {k: v.shape for k, v in tf_stacked_params2.items()})
+print("Stacked Buffers:", tf_stacked_buffers2)
 
 
+tf_result2 = []
+
+for k, v in tf_stacked_params2.items():
+    tf_result2.append(v.shape)
 
 
+import numpy as np
+
+def test_stack_module_state():
+
+    for i in range(len(result1)):
+        assert np.allclose(result1[i], tf_result1[i])
+
+    for i in range(len(result2)):
+        assert np.allclose(result2[i], tf_result2[i])
 
 
-
-
+test_stack_module_state()
 
 
 

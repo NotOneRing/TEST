@@ -53,7 +53,7 @@ def test_tf_modulelist(module_list, input_tensor):
 
 
 # 比较测试
-def compare_results():
+def test_results():
     # 创建相同的输入张量
     torch_input = torch.randn(1, 10)
     tf_input = tf.convert_to_tensor(torch_input.detach().numpy(), dtype=tf.float32)
@@ -102,6 +102,8 @@ def compare_results():
         # 检查值是否接近
         match = np.allclose(torch_out_np, tf_out_np, atol=1e-5)
         print(f"Layer {i} output match: {match}")
+
+        assert match
         
         # 如果不匹配，打印差异
         if not match:
@@ -117,4 +119,4 @@ def compare_results():
 
 
 # 执行测试
-compare_results()
+test_results()

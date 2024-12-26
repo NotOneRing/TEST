@@ -95,38 +95,43 @@ input_data = np.random.rand(3, 4).astype(np.float32)
 
 
 
-# Run multiple epochs
-num_epochs = 5
-for epoch in range(num_epochs):
-    print(f"Epoch {epoch + 1}/{num_epochs}")
 
-    # PyTorch forward pass and detach
-    pytorch_input = torch.tensor(input_data, requires_grad=True)
-    pytorch_output = pytorch_net(pytorch_input)
-    pytorch_detached_output = pytorch_output.detach().numpy()
+def test_detach():
 
-    # TensorFlow forward pass and stop_gradient
-    tensorflow_input = tf.convert_to_tensor(input_data)
-    tensorflow_output = tensorflow_net(tensorflow_input)
-    tensorflow_detached_output = torch_tensor_detach(tensorflow_output).numpy()
+    # Run multiple epochs
+    num_epochs = 5
+    for epoch in range(num_epochs):
+        print(f"Epoch {epoch + 1}/{num_epochs}")
 
-    # Compare the outputs
-    print("PyTorch detached output:\n", pytorch_detached_output)
-    print("TensorFlow detached output:\n", tensorflow_detached_output)
+        # PyTorch forward pass and detach
+        pytorch_input = torch.tensor(input_data, requires_grad=True)
+        pytorch_output = pytorch_net(pytorch_input)
+        pytorch_detached_output = pytorch_output.detach().numpy()
 
-    # Check if the outputs are the same
-    if np.allclose(pytorch_detached_output, tensorflow_detached_output, atol=1e-6):
-        print("The outputs are the same!")
-    else:
-        print("The outputs are different!")
+        # TensorFlow forward pass and stop_gradient
+        tensorflow_input = tf.convert_to_tensor(input_data)
+        tensorflow_output = tensorflow_net(tensorflow_input)
+        tensorflow_detached_output = torch_tensor_detach(tensorflow_output).numpy()
 
-    print("-" * 50)
+        # Compare the outputs
+        print("PyTorch detached output:\n", pytorch_detached_output)
+        print("TensorFlow detached output:\n", tensorflow_detached_output)
+
+        # Check if the outputs are the same
+        if np.allclose(pytorch_detached_output, tensorflow_detached_output, atol=1e-6):
+            print("The outputs are the same!")
+        else:
+            print("The outputs are different!")
+
+        assert np.allclose(pytorch_detached_output, tensorflow_detached_output, atol=1e-6)
+
+        print("-" * 50)
 
 
 
 
 
-
+test_detach()
 
 
 

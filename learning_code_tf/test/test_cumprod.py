@@ -59,4 +59,4 @@ def test_cumprod():
     assert np.array_equal(cumprod_dim_1.numpy(), tf_cumprod_dim_1.numpy())
 
 
-
+test_cumprod()

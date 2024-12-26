@@ -83,118 +83,80 @@ import torch
 import tensorflow as tf
 import numpy as np
 
-# 设置随机种子
-torch.manual_seed(42)
-batch_size, seq_len, d_model = 2, 5, 16
 
-# 在 PyTorch 中生成随机数据
-query_torch = torch.randn(batch_size, seq_len, d_model)
-key_torch = torch.randn(batch_size, seq_len, d_model)
-value_torch = torch.randn(batch_size, seq_len, d_model)
+def test_MultiheadAttention():
+    # 设置随机种子
+    torch.manual_seed(42)
+    batch_size, seq_len, d_model = 2, 5, 16
 
-# 转换为 TensorFlow 张量
-query_tf = tf.convert_to_tensor(query_torch.numpy())
-key_tf = tf.convert_to_tensor(key_torch.numpy())
-value_tf = tf.convert_to_tensor(value_torch.numpy())
+    # 在 PyTorch 中生成随机数据
+    query_torch = torch.randn(batch_size, seq_len, d_model)
+    key_torch = torch.randn(batch_size, seq_len, d_model)
+    value_torch = torch.randn(batch_size, seq_len, d_model)
 
-
-
-
-import torch.nn as nn
-
-# 创建 PyTorch MultiheadAttention
-num_heads = 4
-attention_torch = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, batch_first=True)
-
-# 获取 PyTorch 参数
-query_weight_torch = attention_torch.in_proj_weight
-query_bias_torch = attention_torch.in_proj_bias
-output_weight_torch = attention_torch.out_proj.weight
-output_bias_torch = attention_torch.out_proj.bias
-
-
-
-# 初始化 TensorFlow MultiheadAttention
-attention_tf = nn_MultiheadAttention(num_heads=num_heads, d_model=d_model)
-
-
-
-# 使用虚拟输入触发权重初始化
-dummy_query = tf.random.normal((1, 1, d_model))
-dummy_key = tf.random.normal((1, 1, d_model))
-dummy_value = tf.random.normal((1, 1, d_model))
-attention_tf(dummy_query, dummy_key, dummy_value)
-
-
-# 设置参数
-# 设置参数
-attention_tf.query_dense.kernel.assign(
-    tf.convert_to_tensor(query_weight_torch[:d_model].detach().numpy().T)
-)
-attention_tf.query_dense.bias.assign(
-    tf.convert_to_tensor(query_bias_torch[:d_model].detach().numpy())
-)
-
-attention_tf.key_dense.kernel.assign(
-    tf.convert_to_tensor(query_weight_torch[d_model:2*d_model].detach().numpy().T)
-)
-attention_tf.key_dense.bias.assign(
-    tf.convert_to_tensor(query_bias_torch[d_model:2*d_model].detach().numpy())
-)
-
-attention_tf.value_dense.kernel.assign(
-    tf.convert_to_tensor(query_weight_torch[2*d_model:].detach().numpy().T)
-)
-attention_tf.value_dense.bias.assign(
-    tf.convert_to_tensor(query_bias_torch[2*d_model:].detach().numpy())
-)
-
-attention_tf.output_dense.kernel.assign(
-    tf.convert_to_tensor(output_weight_torch.detach().numpy().T)
-)
-attention_tf.output_dense.bias.assign(
-    tf.convert_to_tensor(output_bias_torch.detach().numpy())
-)
+    # 转换为 TensorFlow 张量
+    query_tf = tf.convert_to_tensor(query_torch.numpy())
+    key_tf = tf.convert_to_tensor(key_torch.numpy())
+    value_tf = tf.convert_to_tensor(value_torch.numpy())
 
 
 
 
+    import torch.nn as nn
+
+    # 创建 PyTorch MultiheadAttention
+    num_heads = 4
+    attention_torch = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads, batch_first=True)
+
+    # 获取 PyTorch 参数
+    query_weight_torch = attention_torch.in_proj_weight
+    query_bias_torch = attention_torch.in_proj_bias
+    output_weight_torch = attention_torch.out_proj.weight
+    output_bias_torch = attention_torch.out_proj.bias
 
 
 
-# 执行 PyTorch MultiheadAttention
-output_torch, attention_weights_torch = attention_torch(query_torch, key_torch, value_torch)
-
-# 执行 TensorFlow MultiheadAttention
-output_tf, attention_weights_tf = attention_tf(query_tf, key_tf, value_tf)
-
-
-# attention_weights_tf = tf.reduce_mean(attention_weights_tf, axis=1)  # 平均所有头
+    # 初始化 TensorFlow MultiheadAttention
+    attention_tf = nn_MultiheadAttention(num_heads=num_heads, d_model=d_model)
 
 
 
-# 转换为 NumPy
-output_torch_np = output_torch.detach().numpy()
-attention_weights_torch_np = attention_weights_torch.detach().numpy()
-
-output_tf_np = output_tf.numpy()
-attention_weights_tf_np = attention_weights_tf.numpy()
-
-
-print("output_torch_np = ", output_torch_np)
-
-print("output_tf_np = ", output_tf_np)
-
-print("attention_weights_torch_np = ", attention_weights_torch_np)
-print("attention_weights_tf_np = ", attention_weights_tf_np)
+    # 使用虚拟输入触发权重初始化
+    dummy_query = tf.random.normal((1, 1, d_model))
+    dummy_key = tf.random.normal((1, 1, d_model))
+    dummy_value = tf.random.normal((1, 1, d_model))
+    attention_tf(dummy_query, dummy_key, dummy_value)
 
 
-# 计算误差
-output_diff = np.mean(np.abs(output_torch_np - output_tf_np))
-attention_weights_diff = np.mean(np.abs(attention_weights_torch_np - attention_weights_tf_np))
+    # 设置参数
+    # 设置参数
+    attention_tf.query_dense.kernel.assign(
+        tf.convert_to_tensor(query_weight_torch[:d_model].detach().numpy().T)
+    )
+    attention_tf.query_dense.bias.assign(
+        tf.convert_to_tensor(query_bias_torch[:d_model].detach().numpy())
+    )
 
-print(f"Output difference: {output_diff}")
-print(f"Attention weights difference: {attention_weights_diff}")
+    attention_tf.key_dense.kernel.assign(
+        tf.convert_to_tensor(query_weight_torch[d_model:2*d_model].detach().numpy().T)
+    )
+    attention_tf.key_dense.bias.assign(
+        tf.convert_to_tensor(query_bias_torch[d_model:2*d_model].detach().numpy())
+    )
+
+    attention_tf.value_dense.kernel.assign(
+        tf.convert_to_tensor(query_weight_torch[2*d_model:].detach().numpy().T)
+    )
+    attention_tf.value_dense.bias.assign(
+        tf.convert_to_tensor(query_bias_torch[2*d_model:].detach().numpy())
+    )
+
+    attention_tf.output_dense.kernel.assign(
+        tf.convert_to_tensor(output_weight_torch.detach().numpy().T)
+    )
+    attention_tf.output_dense.bias.assign(
+        tf.convert_to_tensor(output_bias_torch.detach().numpy())
+    )
 
 
 
@@ -202,8 +164,51 @@ print(f"Attention weights difference: {attention_weights_diff}")
 
 
 
+    # 执行 PyTorch MultiheadAttention
+    output_torch, attention_weights_torch = attention_torch(query_torch, key_torch, value_torch)
+
+    # 执行 TensorFlow MultiheadAttention
+    output_tf, attention_weights_tf = attention_tf(query_tf, key_tf, value_tf)
+
+
+    # attention_weights_tf = tf.reduce_mean(attention_weights_tf, axis=1)  # 平均所有头
+
+
+
+    # 转换为 NumPy
+    output_torch_np = output_torch.detach().numpy()
+    attention_weights_torch_np = attention_weights_torch.detach().numpy()
+
+    output_tf_np = output_tf.numpy()
+    attention_weights_tf_np = attention_weights_tf.numpy()
+
+
+    print("output_torch_np = ", output_torch_np)
+
+    print("output_tf_np = ", output_tf_np)
+
+    print("attention_weights_torch_np = ", attention_weights_torch_np)
+    print("attention_weights_tf_np = ", attention_weights_tf_np)
+
+
+    # 计算误差
+    output_diff = np.mean(np.abs(output_torch_np - output_tf_np))
+    attention_weights_diff = np.mean(np.abs(attention_weights_torch_np - attention_weights_tf_np))
+
+    print(f"Output difference: {output_diff}")
+    print(f"Attention weights difference: {attention_weights_diff}")
 
 
 
 
+    assert np.allclose(output_torch_np , output_tf_np)
+
+    assert np.allclose(attention_weights_torch_np , attention_weights_tf_np)
+
+
+
+
+
+
+test_MultiheadAttention()
 

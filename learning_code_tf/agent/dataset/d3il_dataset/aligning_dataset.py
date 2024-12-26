@@ -21,7 +21,7 @@ from tqdm import tqdm
 from agent.dataset.d3il_dataset.base_dataset import TrajectoryDataset
 from agent.dataset.d3il_dataset import sim_framework_path
 
-from util.torch_to_tf import torch_item
+from util.torch_to_tf import torch_tensor_item
 
 
 class Aligning_Dataset(TrajectoryDataset):
@@ -147,7 +147,7 @@ class Aligning_Dataset(TrajectoryDataset):
 
         print("aligning_dataset.py: get_seq_length()")
 
-        return int( torch_item( self.masks[idx].sum() ) )
+        return int( torch_tensor_item( self.masks[idx].sum() ) )
 
 
 

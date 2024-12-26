@@ -17,3 +17,4 @@ def test_float():
     assert tf_tensor.dtype == tf.float32
 
 
+test_float()

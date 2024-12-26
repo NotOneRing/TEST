@@ -64,13 +64,13 @@ class SimpleNet_tf(tf.keras.Model):
 tensor_tf = tf.Variable([1.0, 2.0], trainable=False)
 
 
-def torch_tensor_requires_grad_(tensor, requires_grad=True):
-    if requires_grad:
-        return tf.Variable(tensor, trainable=True)
-    else:
-        return tf.Variable(tensor, trainable=False)
+# def torch_tensor_requires_grad_(tensor, requires_grad=True):
+#     if requires_grad:
+#         return tf.Variable(tensor, trainable=True)
+#     else:
+#         return tf.Variable(tensor, trainable=False)
     
-
+from util.torch_to_tf import torch_tensor_requires_grad_
 
 # 使用该 wrapper 设置 trainable 属性
 # tensor_tf = torch_tensor_requires_grad_(tensor_tf, requires_grad=True)
@@ -112,12 +112,44 @@ with tf.GradientTape(persistent=True) as tape:
 
 # print("TensorFlow gradient for trainable_variables:", grads)
 
-grads = tape.gradient(output, input_tensor_tf)
+grads0 = tape.gradient(output, input_tensor_tf)
 
-print("TensorFlow gradient for input_tensor:", grads)
+
+grads1 = tape.gradient(output, net_tf.dense1.trainable_weights[0])
+grads2 = tape.gradient(output, net_tf.dense1.trainable_weights[1])
+
+grads3 = tape.gradient(output, net_tf.dense2.trainable_weights[0])
+grads4 = tape.gradient(output, net_tf.dense2.trainable_weights[1])
+
+
+print("TensorFlow gradient for input_tensor:", grads0)
+print("TensorFlow gradient for fc1.weight:", grads1)
+print("TensorFlow gradient for fc1.bias:", grads2)
+print("TensorFlow gradient for fc2.weight:", grads3)
+print("TensorFlow gradient for fc2.bias:", grads4)
+
+if grads0:
+    assert np.allclose(grads0.numpy(), input_tensor.grad.numpy())
+else:
+    assert grads0 == input_tensor.grad
+
+tf_grads1 = grads1.numpy()
+torch_grads1 =  dict(net.named_parameters())['fc1.weight'].grad.detach().numpy()
+
+print("tf_grads1 = ", tf_grads1)
+print("torch_grads1 = ", torch_grads1)
+
+assert np.allclose(tf_grads1, torch_grads1.T)
+
+assert np.allclose(grads2.numpy(), dict(net.named_parameters())['fc1.bias'].grad.detach().numpy())
+
+assert np.allclose(grads3.numpy(), dict(net.named_parameters())['fc2.weight'].grad.detach().numpy().T)
+assert np.allclose(grads4.numpy(), dict(net.named_parameters())['fc2.bias'].grad.detach().numpy())
 
 
 del tape
+
+
 
 
 

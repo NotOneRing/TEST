@@ -9,7 +9,7 @@ from util.torch_to_tf import nn_Embedding
 
 
 # Test functions
-def test_torch_embedding():
+def torch_embedding():
     num_embeddings = 10
     embedding_dim = 5
     padding_idx = 2
@@ -26,7 +26,7 @@ def test_torch_embedding():
 
     return weights.numpy(), input_tensor.numpy(), output.detach().numpy()
 
-def test_tf_embedding(torch_weights, torch_input, num_embeddings, embedding_dim, padding_idx):
+def tf_embedding(torch_weights, torch_input, num_embeddings, embedding_dim, padding_idx):
     tf_embedding = nn_Embedding(num_embeddings, embedding_dim, padding_idx=padding_idx, _weight=torch_weights)
 
     input_tensor = tf.constant(torch_input)
@@ -34,27 +34,28 @@ def test_tf_embedding(torch_weights, torch_input, num_embeddings, embedding_dim,
 
     return output.numpy()
 
-def compare_embeddings():
+def test_embeddings():
     # Parameters
     num_embeddings = 10
     embedding_dim = 5
     padding_idx = 2
 
     # Test PyTorch embedding
-    torch_weights, torch_input, torch_output = test_torch_embedding()
+    torch_weights, torch_input, torch_output = torch_embedding()
 
     # Test TensorFlow embedding
-    tf_output = test_tf_embedding(torch_weights, torch_input, num_embeddings, embedding_dim, padding_idx)
+    tf_output = tf_embedding(torch_weights, torch_input, num_embeddings, embedding_dim, padding_idx)
 
     # Compare outputs
     print("Torch output:", torch_output)
     print("TF output:", tf_output)
 
     match = np.allclose(torch_output, tf_output, atol=1e-5)
+    assert match
     print(f"Output match: {match}")
 
 if __name__ == "__main__":
-    compare_embeddings()
+    test_embeddings()
 
 
 
