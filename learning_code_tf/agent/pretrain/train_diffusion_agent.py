@@ -25,8 +25,8 @@ import io
 from copy import deepcopy
 
 
-DEBUG = True
-# DEBUG = False
+# DEBUG = True
+DEBUG = False
 
 
 

@@ -133,7 +133,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
                 # Select action
                 # with torch.no_grad():
-                with torch_no_grad as tape:
+                with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
                         # .float()

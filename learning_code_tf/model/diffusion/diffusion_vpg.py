@@ -26,7 +26,7 @@ import numpy as np
 
 from util.torch_to_tf import torch_flatten, torch_arange, Normal
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_where
 
 
 class VPGDiffusion(DiffusionModel):
@@ -258,10 +258,22 @@ class VPGDiffusion(DiffusionModel):
             # ft_indices = torch.where(
             #     index >= (self.ddim_steps - self.ft_denoising_steps)
             # )[0]
-            ft_indices = tf.where(index >= (self.ddim_steps - self.ft_denoising_steps))[0]
+            # ft_indices = torch_where(index >= (self.ddim_steps - self.ft_denoising_steps))[0]
+            ft_indices = torch_where(index >= (self.ddim_steps - self.ft_denoising_steps))
+            # [0]
+            print("ft_indices = ", ft_indices)
+            ft_indices = ft_indices[0]
+            print("ft_indices = ", ft_indices)
         else:
+            print("t = ", t)
+            print("self.ft_denoising_steps = ", self.ft_denoising_steps)
+            print("t < self.ft_denoising_steps = ", t < self.ft_denoising_steps)
             # ft_indices = torch.where(t < self.ft_denoising_steps)[0]
-            ft_indices = tf.where(t < self.ft_denoising_steps)[0]
+            ft_indices = torch_where(t < self.ft_denoising_steps)
+            # [0]
+            print("ft_indices = ", ft_indices)
+            ft_indices = ft_indices[0]
+            print("ft_indices = ", ft_indices)
 
         # Use base policy to query expert model, e.g. for imitation loss
         actor = self.actor if use_base_policy else self.actor_ft

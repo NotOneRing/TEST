@@ -550,8 +550,23 @@ def torch_multinomial(input, num_samples, replacement = True):
 
 
 
-def torch_where(index_tensor, input_tensor, replace_value):
-    return tf.where(index_tensor, input_tensor, replace_value)
+def torch_where(index_tensor, input_tensor = None, replace_value = None):
+    if input_tensor != None and replace_value != None:
+        result = tf.where(index_tensor, input_tensor, replace_value)
+    else:
+        result = tf.where(index_tensor, input_tensor, replace_value)
+        assert len(result.shape) == 2, "result reshape must be two"
+        true_num = result.shape[0]
+        result_dim = result.shape[1]
+        print("true_num = ", true_num)
+        print("result_dim = ", result_dim)
+        result_list = []
+        for i in range(result_dim):
+            gather_result = tf.gather(result, i, axis=1)
+            print("gather_result = ", gather_result)
+            result_list.append(gather_result)
+        result = tuple(result_list)
+    return result
 
 
 
