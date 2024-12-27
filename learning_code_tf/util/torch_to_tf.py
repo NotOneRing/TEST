@@ -1001,15 +1001,23 @@ def torch_vmap(func, *parameters, in_dims=0):
 
 
 def torch_func_stack_module_state(models):
-    # 堆叠所有模型的参数和缓冲区
+    # # 堆叠所有模型的参数和缓冲区
     trainable = [tf.stack([var for var in model.trainable_variables])
                  for model in models]
     non_trainable = [tf.stack([var for var in model.non_trainable_variables])
                      for model in models]
-    # trainable = {model.name: tf.stack([var for var in model.trainable_variables])
-    #              for model in models}
-    # non_trainable = {model.name: tf.stack([var for var in model.non_trainable_variables])
-    #                  for model in models}
+
+    print("trainable = ", trainable)
+    print("non_trainable = ", non_trainable)
+
+    trainable = {model.name: tf.stack([var for var in model.trainable_variables])
+                 for model in models}
+    non_trainable = {model.name: tf.stack([var for var in model.non_trainable_variables])
+                     for model in models}
+
+    print("trainable = ", trainable)
+    print("non_trainable = ", non_trainable)
+
     return trainable, non_trainable
 
 
@@ -1235,6 +1243,8 @@ class nn_Linear(tf.keras.layers.Layer):
             # bias_constraint=None,
             # ,**kwargs
         )
+        # print("self.model.trainable_variables = ", self.model.trainable_variables)
+        # print("self.model.non_trainable_variables = ", self.model.non_trainable_variables)
 
 
 
@@ -1254,6 +1264,15 @@ class nn_Linear(tf.keras.layers.Layer):
     def call(self, x):
         return self.model(x)
 
+    @property
+    def trainable_variables(self):
+        # Return the trainable variables of the inner Dense layer
+        return self.model.trainable_variables
+
+    @property
+    def non_trainable_variables(self):
+        # Return the non-trainable variables of the inner Dense layer
+        return self.model.non_trainable_variables
 
     # def __getattr__(self, name):
     #     if hasattr(self.model, name):

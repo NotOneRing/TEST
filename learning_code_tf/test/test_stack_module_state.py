@@ -1,5 +1,8 @@
 import torch
 import torch.nn as nn
+
+import numpy as np
+
 from torch.func import stack_module_state
 
 # 定义简单模型
@@ -53,9 +56,16 @@ class tf_SimpleNet(tf.keras.Model):
         super().__init__()
         self.fc = nn_Linear(2, 1)
 
+    def call(self, x):
+        return self.fc(x)
+
 tf_result1 = []
 
 temp = [tf_SimpleNet()]
+
+for network in temp:
+    _ = network(tf.constant(np.random.randn(1, 2).astype(np.float32)))
+
 
 tf_stacked_params1, tf_stacked_buffers1 = torch_func_stack_module_state(temp)
 
@@ -67,6 +77,9 @@ for k, v in tf_stacked_params1.items():
 
 # 创建多个模型实例
 models = [tf_SimpleNet() for _ in range(3)]
+
+for network in models:
+    _ = network(tf.constant(np.random.randn(1, 2).astype(np.float32)))
 
 # 堆叠这些模型的参数和缓冲区
 tf_stacked_params2, tf_stacked_buffers2 = torch_func_stack_module_state(models)
