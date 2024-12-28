@@ -1001,22 +1001,96 @@ def torch_vmap(func, *parameters, in_dims=0):
 
 
 def torch_func_stack_module_state(models):
-    # # 堆叠所有模型的参数和缓冲区
-    trainable = [tf.stack([var for var in model.trainable_variables])
-                 for model in models]
-    non_trainable = [tf.stack([var for var in model.non_trainable_variables])
-                     for model in models]
+    # # # 堆叠所有模型的参数和缓冲区
+    # trainable = [tf.stack([var for var in model.trainable_variables])
+    #              for model in models]
+    # non_trainable = [tf.stack([var for var in model.non_trainable_variables])
+    #                  for model in models]
 
-    print("trainable = ", trainable)
-    print("non_trainable = ", non_trainable)
+    # print("trainable = ", trainable)
+    # print("non_trainable = ", non_trainable)
 
-    trainable = {model.name: tf.stack([var for var in model.trainable_variables])
-                 for model in models}
-    non_trainable = {model.name: tf.stack([var for var in model.non_trainable_variables])
-                     for model in models}
+    trainable = {}
+    non_trainable = {}
+    
+    import re
 
-    print("trainable = ", trainable)
-    print("non_trainable = ", non_trainable)
+    for model in models:
+
+        pattern = r'[^/]+$'
+
+        # print("1")
+        for var in model.trainable_variables:
+            # Extract last part after the last '/'
+            match = re.search(pattern, var.name)
+            if match:
+                matched_name = match.group()
+                # print("2")
+                get_result = trainable.get(matched_name)
+                # print("type(get_result) = ", type(get_result))
+                # print("get_result = ", get_result)
+                if get_result != None:
+                    # print("3")
+                    cur_tensor = tf.convert_to_tensor(var)
+                    cur_tensor = torch_unsqueeze(cur_tensor, 0)
+                    # print("trainable[matched_name] = ", trainable[matched_name])
+                    # print("cur_tensor = ", cur_tensor)
+                    trainable[matched_name] = torch_cat([tf.convert_to_tensor(trainable[matched_name]), cur_tensor], 0)
+                else:
+                    # print("4")
+                    cur_tensor = tf.convert_to_tensor(var)
+                    cur_tensor = torch_unsqueeze(cur_tensor, 0)
+                    trainable[matched_name] = cur_tensor
+            else:
+                print("var.name = ", var.name)
+                raise RuntimeError("Network name not recognized!")
+        # print("5")
+        for var in model.non_trainable_variables:
+            # Extract last part after the last '/'
+            match = re.search(pattern, var.name)
+            if match:
+                matched_name = match.group()
+                # print("2")
+                get_result = non_trainable.get(matched_name)
+                # print("type(get_result) = ", type(get_result))
+                # print("get_result = ", get_result)
+                if get_result != None:
+                    # print("3")
+                    cur_tensor = tf.convert_to_tensor(var)
+                    cur_tensor = torch_unsqueeze(cur_tensor, 0)
+                    # print("trainable[matched_name] = ", trainable[matched_name])
+                    # print("cur_tensor = ", cur_tensor)
+                    non_trainable[matched_name] = torch_cat([tf.convert_to_tensor(non_trainable[matched_name]), cur_tensor], 0)
+                else:
+                    # print("4")
+                    cur_tensor = tf.convert_to_tensor(var)
+                    cur_tensor = torch_unsqueeze(cur_tensor, 0)
+                    non_trainable[matched_name] = cur_tensor
+            else:
+                print("var.name = ", var.name)
+                raise RuntimeError("Network name not recognized!")
+
+
+            # print(f"Variable Name: {var.name}")
+            # print(f"Variable Shape: {var.shape}")
+            # print(f"Variable Type: {type(var)}")
+            # print(f"Variable Value (as NumPy array): {var.numpy()}")
+            # print("=" * 40)
+
+    #     for var in model.non_trainable_variables:
+    #         print(f"Variable Name: {var.name}")
+    #         print(f"Variable Shape: {var.shape}")
+    #         print(f"Variable Type: {type(var)}")
+    #         print(f"Variable Value (as NumPy array): {var.numpy()}")
+    #         print("=" * 40)
+
+    # trainable = {model.name: tf.stack([var for var in model.trainable_variables])
+    #              for model in models}
+    # non_trainable = {model.name: tf.stack([var for var in model.non_trainable_variables])
+    #                  for model in models}
+
+    # print("trainable = ", trainable)
+    # print("non_trainable = ", non_trainable)
 
     return trainable, non_trainable
 
