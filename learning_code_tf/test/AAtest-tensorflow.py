@@ -8,6 +8,8 @@ print(tf.sysconfig.get_build_info())
 
 
 
+print("CUDA version:", tf.sysconfig.get_build_info()['cuda_version'])
+print("cuDNN version:", tf.sysconfig.get_build_info()['cudnn_version'])
 
 
 

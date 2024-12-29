@@ -300,7 +300,10 @@ def torch_log(input):
 
 
 def torch_tensor_clamp_(input, min = float('-inf'), max = float('inf')):
-    input = tf.clip_by_value(input, min, max)
+    if isinstance(input, tf.Variable):
+        input.assign( tf.clip_by_value(input, min, max) )
+    else:
+        raise RuntimeError("Input must be tf.Variable to be able to changed")
 
 
 
@@ -1889,6 +1892,7 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
         tgt = self.norm3(tgt)
 
         return tgt
+
 
 class nn_TransformerDecoder(tf.keras.layers.Layer):
     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation):
