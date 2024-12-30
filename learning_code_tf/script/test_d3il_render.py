@@ -34,3 +34,17 @@ while 1:
     if input("Press space to stop, or any other key to continue") == " ":
         break
 # video_writer.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -299,6 +299,9 @@ class TrainDiffusionAgent(PreTrainAgent):
             # # Save model
             elif epoch % (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) == 0 or epoch == (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 ):
                 self.save_model()
+            
+            if epoch % (len(self.dataset_train) // self.batch_size) == 0:
+                self.epoch += 1
 
             # if epoch == 0:
             #     break
