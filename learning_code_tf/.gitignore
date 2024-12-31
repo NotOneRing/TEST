@@ -156,4 +156,4 @@ cfg/robomimic/*.sh
 *.jpg
 
 
-# 
+# ./learning_code_tf/installation/d3il/*
