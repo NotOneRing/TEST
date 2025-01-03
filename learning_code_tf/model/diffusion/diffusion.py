@@ -33,6 +33,8 @@ torch_clamp, torch_log, torch_arange, torch_tensor_clamp_, torch_zeros_like, \
 torch_clip, torch_exp, torch_randn_like, torch_randn, torch_full, torch_full_like, \
 torch_flip, torch_randint
 
+from util.torch_to_tf import torch_tensor_clone
+
 
 # class DiffusionModel(tf.keras.layers.Layer):
 class DiffusionModel(tf.keras.Model):
@@ -270,7 +272,11 @@ class DiffusionModel(tf.keras.Model):
 
             print("after ddim_discretize")
 
-            self.ddim_alphas = tf.gather(self.alphas_cumprod, self.ddim_t)
+            self.ddim_alphas = (
+                torch_tensor_clone(self.alphas_cumprod[self.ddim_t])
+            )
+
+            # self.ddim_alphas = tf.gather(self.alphas_cumprod, self.ddim_t)
             self.ddim_alphas = tf.cast(self.ddim_alphas, tf.float32)
 
             self.ddim_alphas_sqrt = tf.sqrt(self.ddim_alphas)

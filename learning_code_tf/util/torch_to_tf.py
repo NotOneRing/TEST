@@ -914,6 +914,24 @@ def torch_unravel_index(indices, shape):
 
 
 
+def torch_tanh(input):
+    return tf.math.tanh(input)
+
+
+
+
+
+def torch_atanh(input):
+    # The domain of the inverse hyperbolic tangent is (-1, 1) 
+    # and values outside this range will be mapped to NaN, 
+    # except for the values 1 and -1 for which the output 
+    # is mapped to +/-INF respectively.
+    return tf.math.atanh(input)
+
+
+
+
+
 
 
 
@@ -1219,8 +1237,62 @@ def torch_nn_init_ones_(tensor):
 
 
 
+def torch_nn_init_xavier_normal_(tensor, gain):
+    if not isinstance(tensor, tf.Variable):
+        raise ValueError("Input variable must be a tf.Variable.")
+    assert len(tensor.shape) == 2, "input tensor must be of shape 2"
+    fan_in = tensor.shape[0]
+    fan_out = tensor.shape[1]
+
+    std = gain * tf.sqrt( 2 / (fan_in + fan_out) )
+
+    normal_values = np.random.normal(loc=0, scale=std, size=tensor.shape)
+
+    # Assign ones to the variable
+    tensor.assign(normal_values.astype(np.float32))
+
+    pass
 
 
+
+
+
+
+
+
+
+
+
+
+class nn_Tanh(tf.keras.layers.Layer):
+    def __init__(self):
+        super(nn_Tanh, self).__init__()
+
+    def call(self, x):
+        return tf.math.tanh(x)
+
+
+
+
+
+
+class nn_Identity(tf.keras.layers.Layer):
+    def __init__(self):
+        super(nn_Identity, self).__init__()
+
+    def call(self, x):
+        return tf.identity(x)
+
+
+
+
+
+class nn_Softplus(tf.keras.layers.Layer):
+    def __init__(self):
+        super(nn_Softplus, self).__init__()
+
+    def call(self, x):
+        return tf.math.softplus(x)
 
 
 
@@ -1235,6 +1307,39 @@ class nn_Mish(tf.keras.layers.Layer):
 
 
 
+
+
+# Define TensorFlow nn.ELU wrapper
+class nn_ELU(tf.keras.layers.Layer):
+    def __init__(self, alpha=1.0):
+        super(nn_ELU, self).__init__()
+        self.elu = tf.keras.layers.ELU(alpha=alpha)
+    def call(self, x):
+        return self.elu(x)
+
+
+
+
+# # Define TensorFlow nn.GELU wrapper
+# class nn_GELU(tf.keras.layers.Layer):
+#     def __init__(self):
+#         super(nn_GELU, self).__init__()
+#         self.gelu = 
+#         # tf.nn.gelu()
+#         # tf.keras.layers.GELU()
+
+#     def call(self, x):
+#         return self.gelu(x)
+
+
+
+class nn_GELU(tf.keras.layers.Layer):
+    def __init__(self):
+        super(nn_GELU, self).__init__()
+
+    def call(self, inputs):
+        # GELU 激活函数公式
+        return tf.nn.gelu(inputs)
 
 
 
@@ -1339,7 +1444,17 @@ class nn_Linear(tf.keras.layers.Layer):
     
 
     def call(self, x):
+
+        # print("self.model.kernel = ", self.model.kernel)
+        # print("self.model.bias = ", self.model.bias)
+        # print("x = ", x)
+
         return self.model(x)
+
+    
+    def build(self, input_shape):
+        self.model.build(input_shape = input_shape)
+
 
     @property
     def trainable_variables(self):
@@ -1350,6 +1465,23 @@ class nn_Linear(tf.keras.layers.Layer):
     def non_trainable_variables(self):
         # Return the non-trainable variables of the inner Dense layer
         return self.model.non_trainable_variables
+
+    @property
+    def kernel(self):
+        return self.model.kernel
+
+    @kernel.setter
+    def kernel(self, value):
+        self.model.kernel.assign(value)
+    
+    @property
+    def bias(self):
+        return self.model.bias
+
+    @bias.setter
+    def bias(self, value):
+        self.model.bias.assign(value)
+
 
     # def __getattr__(self, name):
     #     if hasattr(self.model, name):
@@ -2914,3 +3046,9 @@ class MixtureSameFamily:
         log_mix_prob = tf.math.log(self.mixture_distribution.probs)
 
         return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]
+
+
+
+
+
+

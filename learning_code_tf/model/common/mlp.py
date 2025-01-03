@@ -7,15 +7,27 @@ from tensorflow.keras import models
 from collections import OrderedDict
 import logging
 
+from util.torch_to_tf import nn_ReLU, nn_GELU, nn_Tanh, nn_ELU, nn_Mish, nn_Identity, nn_Softplus
+
+# activation_dict = {
+#     "ReLU": tf.keras.layers.ReLU(),
+#     "ELU": tf.keras.layers.ELU(),
+#     "GELU": tf.keras.layers.Activation(tf.keras.activations.gelu),  # 使用 Activation 层来包装 GELU 函数
+#     "Tanh": tf.keras.layers.Activation(tf.keras.activations.tanh),  # 使用 tf.keras.activations.tanh
+#     "Mish": tf.keras.layers.Activation(lambda x: x * tf.tanh(tf.math.log(1 + tf.exp(x)))),  # Custom Mish implementation
+#     "Identity": tf.keras.layers.Activation("linear"),
+#     "Softplus": tf.keras.layers.Activation(tf.keras.activations.softplus),  # 使用 tf.keras.activations.softplus
+# }
+
 
 activation_dict = {
-    "ReLU": tf.keras.layers.ReLU(),
-    "ELU": tf.keras.layers.ELU(),
-    "GELU": tf.keras.layers.Activation(tf.keras.activations.gelu),  # 使用 Activation 层来包装 GELU 函数
-    "Tanh": tf.keras.layers.Activation(tf.keras.activations.tanh),  # 使用 tf.keras.activations.tanh
-    "Mish": tf.keras.layers.Activation(lambda x: x * tf.tanh(tf.math.log(1 + tf.exp(x)))),  # Custom Mish implementation
-    "Identity": tf.keras.layers.Activation("linear"),
-    "Softplus": tf.keras.layers.Activation(tf.keras.activations.softplus),  # 使用 tf.keras.activations.softplus
+    "ReLU": nn_ReLU(),
+    "ELU": nn_ELU(),
+    "GELU": nn_GELU(),
+    "Tanh": nn_Tanh(),
+    "Mish": nn_Mish(),
+    "Identity": nn_Identity(),
+    "Softplus": nn_Softplus(),
 }
 
 
