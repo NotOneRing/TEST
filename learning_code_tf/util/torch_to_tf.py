@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+from collections import OrderedDict
 
 
 def torch_tensor_permute(input, *dims):
@@ -1616,7 +1617,9 @@ class nn_Sequential(tf.keras.layers.Layer):
         if isinstance(args[0], (tuple, list)):
             for module in args[0]:
                self.model_list.append(module)
-
+        elif isinstance(args[0], (dict, OrderedDict)):
+            for name, module in args[0].items():
+               self.model_list.append(module)
         else:
             for module in args:
                 self.model_list.append(module)
@@ -1839,16 +1842,18 @@ class nn_Embedding(tf.keras.layers.Layer):
 
 class nn_LayerNorm(tf.keras.layers.Layer):
     # torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
-    def __init__(self, normalized_shape, epsilon=1e-5):
+    def __init__(self, normalized_shape, eps=1e-5):
         """
         A wrapper for PyTorch's nn.LayerNorm in TensorFlow.
         Args:
             normalized_shape (int or tuple): Input shape for layer normalization.
             epsilon (float): A small value to add to the denominator for numerical stability.
         """
+        if isinstance(normalized_shape, int):
+            normalized_shape = [normalized_shape]
         super(nn_LayerNorm, self).__init__()
         self.normalized_shape = normalized_shape
-        self.epsilon = epsilon
+        self.epsilon = eps
 
         # Define trainable parameters gamma (scale) and beta (offset)
         self.gamma = self.add_weight(

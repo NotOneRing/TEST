@@ -143,6 +143,9 @@ class TrainAgent:
         print("train_agent.py: TrainAgent.save_model()")
 
         savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.h5")
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
         self.model.save_weights(savepath)
         log.info(f"Saved model to {savepath}")
 

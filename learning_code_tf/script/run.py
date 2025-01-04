@@ -106,7 +106,8 @@ def main(cfg: OmegaConf):
         )
         gdown.download(url=download_url, output=download_target, fuzzy=True)
 
-    print("cfg.base_policy_path = ", cfg.base_policy_path)
+    if "base_policy_path" in cfg:
+        print("cfg.base_policy_path = ", cfg.base_policy_path)
     
     # For for-tuning: download checkpoint if needed
     if "base_policy_path" in cfg and not os.path.exists(cfg.base_policy_path):

@@ -297,7 +297,9 @@ class DiffusionMLP(tf.keras.Model):
         print("self.mlp_dims = ", self.mlp_dims)
         print( "type(self.mlp_dims) = ", type(self.mlp_dims) )
 
-        self.cond_mlp_dims = cond_mlp_dims
+        # self.cond_mlp_dims = cond_mlp_dims
+        self.cond_mlp_dims = list(cond_mlp_dims)
+
         self.activation_type = activation_type
         self.out_activation_type = out_activation_type
         self.use_layernorm = use_layernorm
@@ -413,17 +415,6 @@ class DiffusionMLP(tf.keras.Model):
             # "time_dim": self.time_dim,
         })
         return config
-
-        # action_dim,
-        # horizon_steps,
-        # cond_dim,
-        # time_dim=16,
-        # mlp_dims=[256, 256],
-        # cond_mlp_dims=None,
-        # activation_type="Mish",
-        # out_activation_type="Identity",
-        # use_layernorm=False,
-        # residual_style=False,
 
 
     @classmethod

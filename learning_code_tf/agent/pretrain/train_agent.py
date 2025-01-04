@@ -169,7 +169,10 @@ class PreTrainAgent:
         )
 
 
-        self.reset_parameters()
+        # self.reset_parameters()
+
+
+
 
 
     def instantiate_model(self, model_cfg):
