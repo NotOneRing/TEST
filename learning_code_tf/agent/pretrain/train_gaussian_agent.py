@@ -16,8 +16,8 @@ from agent.pretrain.train_agent import PreTrainAgent
 
 # , batch_to_device
 
-# DEBUG = True
-DEBUG = False
+DEBUG = True
+# DEBUG = False
 
 
 class TrainGaussianAgent(PreTrainAgent):
