@@ -8,6 +8,12 @@ Annotated DDIM/DDPM: https://nn.labml.ai/diffusion/stable_diffusion/sampler/ddpm
 
 """
 
+
+from util.config import DEBUG
+# DEBUG = True
+# DEBUG = False
+
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -319,8 +325,17 @@ class DiffusionModel(tf.keras.Model):
             self.ddim_sigmas = torch_flip(self.ddim_sigmas, [0])
 
 
+            if DEBUG:
+                print("DiffusionModel: __init__() DEBUG = True")
 
-
+                print("DEBUG is True")
+                self.loss_ori_t = None
+                self.p_losses_noise = None
+                self.call_noise = None
+                self.call_noise = None
+                self.call_x = None
+            else:
+                print("DEBUG is False")
 
 
     def loss_ori(self, training_flag, x_start, cond):
@@ -359,9 +374,20 @@ class DiffusionModel(tf.keras.Model):
         print("batch_size = ", batch_size)
 
         # # 生成 [0, self.denoising_steps) 范围的随机整数
-        t =  tf.cast( torch_randint(
-            low = 0, high = self.denoising_steps, size = (batch_size,)
-        ), tf.int64)
+
+        if DEBUG:
+            if self.loss_ori_t is None:
+                self.loss_ori_t =  tf.cast( torch_randint(
+                    low = 0, high = self.denoising_steps, size = (batch_size,)
+                ), tf.int64)
+                t = self.loss_ori_t
+            else:
+                t = self.loss_ori_t
+        else:
+            t =  tf.cast( torch_randint(
+                low = 0, high = self.denoising_steps, size = (batch_size,)
+            ), tf.int64)
+
         # t = tf.cast( torch_full((batch_size,), 3), tf.int64)  # 固定为 3
 
 
@@ -386,7 +412,15 @@ class DiffusionModel(tf.keras.Model):
         print("diffusion.py: DiffusionModel.p_losses()")
 
         # # Forward process
-        noise = torch_randn_like(x_start)
+
+        if DEBUG:
+            if self.p_losses_noise is None:
+                self.p_losses_noise = torch_randn_like(x_start)
+                noise = self.p_losses_noise
+            else:
+                noise = self.p_losses_noise
+        else:
+            noise = torch_randn_like(x_start)
 
         # fixed_value = 1.0
         # noise = torch_full_like(x_start, fixed_value)  # 使用固定值替代随机噪声
@@ -445,6 +479,9 @@ class DiffusionModel(tf.keras.Model):
 
         # # Predict
         # x_recon = self.network(x_noisy, time, state, training=training_flag)
+
+
+        print("self.network = ", self.network)
 
         x_recon = self.network(x_noisy, t, cond = cond, training=training_flag)
 
@@ -568,14 +605,32 @@ class DiffusionModel(tf.keras.Model):
             "use_ddim": self.use_ddim,
             "ddim_discretize": self.ddim_discretize,
             "ddim_steps": self.ddim_steps,
+
         })
+
+        if DEBUG:
+            print("DiffusionModel: get_config DEBUG = True")
+            config.update({
+            "loss_ori_t": self.loss_ori_t,
+            "p_losses_noise": self.p_losses_noise,
+            "call_noise": self.call_noise,
+            "call_noise": self.call_noise,
+            "call_x": self.call_x   
+            })
         return config
 
 
     @classmethod
     def from_config(cls, config):
         """Creates the layer from its config."""
-        return cls(**config)
+        result = cls(**config)
+        if DEBUG:
+            result.loss_ori_t = None
+            result.p_losses_noise = None
+            result.call_noise = None
+            result.call_noise = None
+            result.call_x = None            
+        return result
 
 
     # def forward(self, cond, deterministic=True):
@@ -618,7 +673,14 @@ class DiffusionModel(tf.keras.Model):
 
         # Starting random noise
         # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
-        x = torch_randn(B, self.horizon_steps, self.action_dim)
+        if DEBUG:
+            if self.call_x is None:
+                self.call_x = torch_randn(B, self.horizon_steps, self.action_dim)
+                x = self.call_x
+            else:
+                x = self.call_x
+        else:
+            x = torch_randn(B, self.horizon_steps, self.action_dim)
 
         # Define timesteps
         if self.use_ddim:
@@ -654,8 +716,16 @@ class DiffusionModel(tf.keras.Model):
             print("x.shape = ", x.shape)
 
             print("type(x.shape) = ", type(x.shape) )
-            
-            noise = torch_randn_like( x  )
+
+            if DEBUG:
+                if self.call_noise is None:            
+                    self.call_noise = torch_randn_like( x  )
+                    noise = self.call_noise
+                else:
+                    noise = self.call_noise
+            else:
+                noise = torch_randn_like( x  )
+
             torch_tensor_clamp_(noise, -self.randn_clip_value, self.randn_clip_value)
             x = mean + std * noise
 

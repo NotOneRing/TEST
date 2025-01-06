@@ -272,13 +272,13 @@ class DiffusionMLP(tf.keras.Model):
         out_activation_type="Identity",
         use_layernorm=False,
         residual_style=False,
-        # name="DiffusionMLP"
+        name="DiffusionMLP",
         **kwargs
     ):
         print("mlp_diffusion.py: DiffusionMLP.__init__()")
 
         # super(DiffusionMLP, self).__init__(name=name)
-        super(DiffusionMLP, self).__init__(**kwargs)
+        super(DiffusionMLP, self).__init__(name=name, **kwargs)
 
         print("before sinusiodalPosEmb()")
 

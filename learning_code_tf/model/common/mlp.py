@@ -113,11 +113,13 @@ class MLP(models.Model):
         dropout=0,
         use_drop_final=False,
         verbose=False,
+        name = "MLP",
+        **kwargs
     ):
 
         print("mlp.py: MLP.__init__()", flush = True)
 
-        super(MLP, self).__init__()
+        super(MLP, self).__init__(name=name, **kwargs)
 
         # Construct module list: if use `Python List`, the modules are not
         # added to computation graph. Instead, we should use `nn.ModuleList()`.
@@ -270,11 +272,21 @@ class ResidualMLP(models.Model):
         use_layernorm=False,
         use_layernorm_final=False,
         dropout=0,
+        name = "ResidualMLP",
+        **kwargs
     ):
+
+        self.dim_list = dim_list
+        self.activation_type = activation_type
+        self.out_activation_type = out_activation_type
+        self.use_layernorm = use_layernorm
+        self.use_layernorm_final = use_layernorm_final
+        self.dropout = dropout
 
         print("mlp.py: ResidualMLP.__init__()", flush = True)
 
-        super(ResidualMLP, self).__init__()
+        super(ResidualMLP, self).__init__(name=name, **kwargs)
+
         hidden_dim = dim_list[1]
         num_hidden_layers = len(dim_list) - 3
         assert num_hidden_layers % 2 == 0
@@ -311,7 +323,8 @@ class ResidualMLP(models.Model):
         
 
         config.update({
-            "dim_list": self.my_layers[0].input_shape[1:],  # Store dim_list (using input_shape to capture dims)
+            # "dim_list": self.my_layers[0].input_shape[1:],  # Store dim_list (using input_shape to capture dims)
+            "dim_list": self.dim_list,  # Store dim_list (using input_shape to capture dims)
             "activation_type": self.activation_type,
             "out_activation_type": self.out_activation_type,
             "use_layernorm": self.use_layernorm,

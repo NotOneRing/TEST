@@ -13,6 +13,11 @@ from copy import deepcopy
 from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW
 
 
+# DEBUG = True
+# DEBUG = False
+from util.config import DEBUG
+
+
 # DEVICE = "/GPU:0"
 
 # def to_device(x, device=DEVICE):
@@ -78,6 +83,14 @@ class PreTrainAgent:
         # Build model
         # self.model = self.instantiate_model(cfg.model)
         self.model = hydra.utils.instantiate(cfg.model)
+
+        if DEBUG:
+            print("train_agent.py: __init__() DEBUG == True")
+            self.model.loss_ori_t = None
+            self.model.p_losses_noise = None
+            self.model.call_noise = None
+            self.model.call_noise = None
+            self.model.call_x = None
 
 
         print("self.model = ", self.model)
@@ -216,6 +229,7 @@ class PreTrainAgent:
         print("self.epoch_start_ema = ", self.epoch_start_ema)
 
         if self.epoch < self.epoch_start_ema:
+            print("branch self.epoch < self.epoch_start_ema")
             self.reset_parameters()
             return
 
@@ -224,29 +238,76 @@ class PreTrainAgent:
 
 
 
-    def save_model(self):
+    def save_model(self, epoch):
 
 
         print("train_agent.py: PreTrainAgent.save_model()")
         # savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.h5")
-        savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.keras")
+
+        # savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.keras")
+        savepath = os.path.join(self.checkpoint_dir, f"state_{epoch}.keras")
        
         print("savepath = ", savepath)
 
-        # self.model.save_weights(savepath)
         self.model.save(savepath)
 
-        # ema_savepath = savepath.replace(".h5", "_ema.h5")
+        print(f"Saved model to {savepath}")
+
+
+
+        network_savepath = savepath.replace(".keras", "_network.keras")
+
+        print("network_savepath = ", network_savepath)
+
+        self.model.network.save(network_savepath)
+
+        print(f"Saved model.network to {network_savepath}")
+
+
         ema_savepath = savepath.replace(".keras", "_ema.keras")
 
         print("ema_savepath = ", ema_savepath)
 
-        # self.ema_model.save_weights(ema_savepath)
         self.ema_model.save(ema_savepath)
 
-        print(f"Saved model to {savepath}")
-
         print(f"Saved ema_model to {ema_savepath}")
+
+
+        ema_network_savepath = savepath.replace(".keras", "_ema_network.keras")
+
+        print("ema_network_savepath = ", ema_network_savepath)
+
+        self.ema_model.network.save(ema_network_savepath)
+
+        print(f"Saved ema_model.network to {ema_network_savepath}")
+
+
+
+
+
+
+
+        network_mlpmean_savepath = savepath.replace(".keras", "_network_mlpmean.keras")
+
+        print("network_mlpmean_savepath = ", network_mlpmean_savepath)
+
+        self.model.network.mlp_mean.save(network_mlpmean_savepath)
+
+        print(f"Saved model.network.mlp_mean to {network_mlpmean_savepath}")
+
+
+
+
+        ema_network_mlpmean_savepath = savepath.replace(".keras", "_ema_network_mlpmean.keras")
+
+        print("ema_network_mlpmean_savepath = ", ema_network_mlpmean_savepath)
+
+        self.ema_model.network.mlp_mean.save(ema_network_mlpmean_savepath)
+
+        print(f"Saved ema_model.network.mlp_mean to {ema_network_mlpmean_savepath}")
+
+
+
 
 
     def load(self, epoch):
@@ -260,9 +321,19 @@ class PreTrainAgent:
         # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
 
         self.model = tf.keras.models.load_model(loadpath)
-        # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"))
+
+        self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras"))
+
+
+        self.model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_network_mlpmean.keras"))
+
+
         self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"))
 
+        self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras"))
+
+
+        self.ema_model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network_mlpmean.keras"))
 
 
 

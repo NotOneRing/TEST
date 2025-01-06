@@ -25,10 +25,8 @@ import io
 from copy import deepcopy
 
 
-from util.config import DEBUG
-
 # DEBUG = True
-# DEBUG = False
+DEBUG = False
 
 
 
@@ -81,7 +79,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         print("self.model = ", self.model)
 
-        # print("1self.model.loss = ", self.model.loss)
+        print("1self.model.loss = ", self.model.loss)
 
 
         print("self.batch_size = ", self.batch_size)
@@ -141,7 +139,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         
         if DEBUG:
-            self.n_epochs = 3
+            self.n_epochs = 2
 
         dataset = dataset.batch(
             self.batch_size, drop_remainder=True
@@ -151,29 +149,12 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         loss_train_epoch = []
 
-
-
-        save_epochs = (self.save_model_freq * (len(self.dataset_train) // self.batch_size) )
-
-        final_epochs = (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 )
-
-        increment_epochs = (len(self.dataset_train) // self.batch_size)
-
-        print("save_epochs = ", save_epochs)
-        
-        print("final_epochs = ", final_epochs)
-
-        print("increment_epochs = ", increment_epochs)
-
-
         #最终的，但是太慢了，不适合调试网络结构
         for epoch, item in enumerate(dataset):
 
-            print( f"Current epoch = {epoch}" )
 
-            if DEBUG and epoch != 0 and epoch % 2 == 0:
-                self.load(epoch - 1)
 
+            print( f"Epoch {epoch + 1}" )
 
             # continue
             
@@ -182,48 +163,17 @@ class TrainDiffusionAgent(PreTrainAgent):
             # print("State:", item["states"].numpy())
             # print("Action:", item["actions"].numpy())
 
-            print("self.model = ", self.model)
+            cond = {}
+            cond['state'] = item["states"]
 
-            if DEBUG:
-                if epoch == 0:
-                    print("DEBUG = True and epoch == 0")
-
-                    cond = {}
-                    cond['state'] = item["states"]
-                    cur_actions = item['actions']
-                    item_actions_copy = deepcopy(item['actions'])
-                    cond_copy = deepcopy(cond)
-
-                    self.model.loss_ori_t = None
-                    self.model.p_losses_noise = None
-                    self.model.call_noise = None
-                    self.model.call_noise = None
-                    self.model.call_x = None
-
-                    self.ema_model.loss_ori_t = None
-                    self.ema_model.p_losses_noise = None
-                    self.ema_model.call_noise = None
-                    self.ema_model.call_noise = None
-                    self.ema_model.call_x = None
-
-
-
-            else:
-                cond = {}
-                cond['state'] = item["states"]
-                cur_actions = item['actions']
-                item_actions_copy = deepcopy(item['actions'])
-                cond_copy = deepcopy(cond)
-
-
-
-        
             # #初始化
             # cond_input1 = deepcopy(cond)
             # cond_input2 = deepcopy(cond)
             # _ = self.model(cond_input1)
             # _ = self.ema_model(cond_input2)
 
+            item_actions_copy = deepcopy(item['actions'])
+            cond_copy = deepcopy(cond)
 
 
             with tf.GradientTape() as tape:
@@ -237,18 +187,14 @@ class TrainDiffusionAgent(PreTrainAgent):
                 print("self.model = ", self.model)
                 print("self.ema_model = ", self.ema_model)
 
-                # print("self.model.loss = ", self.model.loss)
+                print("self.model.loss = ", self.model.loss)
 
-                # loss_train = self.model.loss_ori(training_flag, item['actions'], cond)
-                loss_train = self.model.loss_ori(training_flag, cur_actions, cond)
+                loss_train = self.model.loss_ori(training_flag, item['actions'], cond)
 
                 print("self.model.network = ", self.model.network)
                 # print("self.ema_model.network = ", self.ema_model.network)
 
-            if DEBUG:
-                pass
-            else:
-                gradients = tape.gradient(loss_train, self.model.trainable_variables)
+            gradients = tape.gradient(loss_train, self.model.trainable_variables)
 
 
             if epoch == 0:
@@ -324,15 +270,11 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             
             # print("gradients = ", gradients)
-
             if epoch == 0:
                 print("self.model.trainable_variables = ", self.model.trainable_variables)
                 print("self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
 
-            if DEBUG:
-                pass
-            else:
-                zip_gradients_params = zip(gradients, self.model.trainable_variables)
+            zip_gradients_params = zip(gradients, self.model.trainable_variables)
 
             # for item in zip_gradients_params:
             #     print("item = ", item)
@@ -341,31 +283,30 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             # 不能用step
             # self.optimizer.step(gradients)
-
-            if DEBUG:
-                pass
-            else:
-                self.optimizer.apply_gradients(zip_gradients_params)
+            self.optimizer.apply_gradients(zip_gradients_params)
 
             loss_train_epoch.append(loss_train.numpy())
 
             print("loss_train.numpy() = ", loss_train.numpy())
 
             # Update ema
-            if epoch % self.update_ema_freq == 0:
+            if cnt_batch % self.update_ema_freq == 0:
                 self.step_ema()
-            epoch += 1
+            cnt_batch += 1
 
             loss_train = np.mean(loss_train_epoch)
 
             if DEBUG:
-                self.save_model(epoch)
+                self.save_model()
             # # Save model
-            elif epoch % save_epochs == 0 or epoch == final_epochs:
-                self.save_model(epoch)
+            elif epoch % (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) == 0 or epoch == (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 ):
+                self.save_model()
             
-            if epoch % increment_epochs == 0:
+            if epoch % (len(self.dataset_train) // self.batch_size) == 0:
                 self.epoch += 1
+
+            # if epoch == 0:
+            #     break
 
 
             # Log loss
