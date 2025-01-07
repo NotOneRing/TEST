@@ -3,13 +3,27 @@ import numpy as np
 
 from util.torch_to_tf import torch_exp, torch_arange, torch_cat
 
+from tensorflow.keras.saving import register_keras_serializable
+
+@register_keras_serializable(package="Custom")
 class SinusoidalPosEmb(tf.keras.layers.Layer):
-    def __init__(self, dim):
+    def __init__(self, dim, name = "SinusoidalPosEmb", **kwargs):
 
         print("modules.py: SinusoidalPosEmb.__init__()")
 
-        super(SinusoidalPosEmb, self).__init__()
+        super(SinusoidalPosEmb, self).__init__(name=name,**kwargs)
         self.dim = dim
+
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(SinusoidalPosEmb, self).get_config()
+        config.update({"dim": self.dim})
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
 
     def call(self, x):
 
@@ -60,18 +74,6 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
 
         return emb
 
-    def get_config(self):
-        """Returns the config of the layer for serialization."""
-        config = super(SinusoidalPosEmb, self).get_config()
-        config.update({"dim": self.dim})
-        return config
-
-    @classmethod
-    def from_config(cls, config):
-        """Creates the layer from its config."""
-        return cls(**config)
-
-
 
 
 class Downsample1d(tf.keras.layers.Layer):
@@ -93,7 +95,11 @@ class Downsample1d(tf.keras.layers.Layer):
         config.update({"dim": self.dim})
         return config
     
-    
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)    
 
 
 class Upsample1d(tf.keras.layers.Layer):
@@ -115,6 +121,12 @@ class Upsample1d(tf.keras.layers.Layer):
         config.update({"dim": self.dim})
         return config
 
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
+    
 
 class Conv1dBlock(tf.keras.layers.Layer):
     """
@@ -151,15 +163,6 @@ class Conv1dBlock(tf.keras.layers.Layer):
         if n_groups is not None:
             self.group_norm = tf.keras.layers.GroupNormalization(groups=n_groups, epsilon=eps)
 
-    def call(self, x):
-
-        print("modules.py: Conv1dBlock.call()")
-
-        x = self.conv(x)
-        if self.group_norm is not None:
-            x = self.group_norm(x)
-        x = self.activation(x)
-        return x
 
     # 自己实现的
     def get_config(self):
@@ -175,7 +178,22 @@ class Conv1dBlock(tf.keras.layers.Layer):
         return config
     
 
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
 
+
+
+    def call(self, x):
+
+        print("modules.py: Conv1dBlock.call()")
+
+        x = self.conv(x)
+        if self.group_norm is not None:
+            x = self.group_norm(x)
+        x = self.activation(x)
+        return x
 
 
 

@@ -43,6 +43,9 @@ from util.torch_to_tf import torch_tensor_clone
 
 
 # class DiffusionModel(tf.keras.layers.Layer):
+
+from tensorflow.keras.saving import register_keras_serializable
+@register_keras_serializable(package="Custom")
 class DiffusionModel(tf.keras.Model):
     def __init__(
         self,
@@ -338,7 +341,9 @@ class DiffusionModel(tf.keras.Model):
                 print("DEBUG is False")
 
 
-    def loss_ori(self, training_flag, x_start, cond):
+    def loss_ori(self
+                #  , training_flag
+                 , x_start, cond):
         """
         Compute the loss for the given data and condition.
 
@@ -396,11 +401,15 @@ class DiffusionModel(tf.keras.Model):
 
 
         # Compute loss
-        return self.p_losses(x_start, cond, t, training_flag)
+        return self.p_losses(x_start, cond, t, 
+                            #  training_flag
+                             )
 
 
 
-    def p_losses(self, x_start, cond, t, training_flag):
+    def p_losses(self, x_start, cond, t
+                #  , training_flag
+                 ):
         """
         If predicting epsilon: E_{t, x0, ε} [||ε - ε_θ(√α̅ₜx0 + √(1-α̅ₜ)ε, t)||²
 
@@ -483,8 +492,14 @@ class DiffusionModel(tf.keras.Model):
 
         print("self.network = ", self.network)
 
-        x_recon = self.network(x_noisy, t, cond = cond, training=training_flag)
+        # x_recon = self.network(x_noisy, t, cond = cond, training=training_flag)
+        x_recon = self.network([x_noisy, t, cond["state"]])
+                            #    , training=training_flag)
 
+        # summary = self.network.summary(x_noisy, t, cond["state"])
+        # summary = self.network.summary(x_noisy, t, cond)
+
+        # print("self.model.network.summary = ", summary)
         
         if self.predict_epsilon:
             return tf.reduce_mean(tf.square(x_recon - noise))  # Mean squared error
@@ -617,6 +632,10 @@ class DiffusionModel(tf.keras.Model):
             "call_noise": self.call_noise,
             "call_x": self.call_x   
             })
+        
+
+        print("DiffusionModel.config = ", config)
+        
         return config
 
 
@@ -635,7 +654,9 @@ class DiffusionModel(tf.keras.Model):
 
     # def forward(self, cond, deterministic=True):
     @tf.function
-    def call(self, cond, deterministic=True):
+    def call(self, cond
+            #  , deterministic=True
+             ):
         """
         Forward pass for sampling actions. Used in evaluating pre-trained/fine-tuned policy. Not modifying diffusion clipping.
 

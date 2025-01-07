@@ -14,16 +14,21 @@ torch_sum, torch_tensor
 
 # class SpatialEmb(nn.Module):
 class SpatialEmb(tf.keras.layers.Layer):
-    def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout):
+    def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout, serialized_input_proj = None, serialized_weight = None, serialized_dropout = None):
 
         print("modules.py: SpatialEmb.__init__()")
 
         super().__init__()
 
-        proj_in_dim = num_patch + prop_dim
-        num_proj = patch_dim
+        self.num_patch = num_patch
         self.patch_dim = patch_dim
         self.prop_dim = prop_dim
+        self.proj_dim = proj_dim
+
+
+        proj_in_dim = num_patch + prop_dim
+        num_proj = patch_dim
+
 
         # #输入是proj_in_dim维度的
         # # Input projection layers
@@ -35,12 +40,14 @@ class SpatialEmb(tf.keras.layers.Layer):
 
         #输入是proj_in_dim维度的
         # Input projection layers
-        self.input_proj = nn_Sequential([
-            nn_Linear(proj_in_dim, proj_dim),
-            nn_LayerNorm(proj_dim),
-            nn_ReLU(inplace=True)
-        ])
-
+        if serialized_input_proj == None:
+            self.input_proj = nn_Sequential([
+                nn_Linear(proj_in_dim, proj_dim),
+                nn_LayerNorm(proj_dim),
+                nn_ReLU(inplace=True)
+            ])
+        else:
+            self.input_proj = serialized_input_proj
         # # Learnable weights
         # self.weight = self.add_weight(
         #     shape=(1, num_proj, proj_dim),
@@ -48,10 +55,74 @@ class SpatialEmb(tf.keras.layers.Layer):
         #     trainable=True,
         #     name="weight"
         # )
+        
+        if serialized_weight == None:
+            self.weight = nn_Parameter(torch_zeros(1, num_proj, proj_dim))
+        else:
+            self.weight = serialized_weight
 
-        self.weight = nn_Parameter(torch_zeros(1, num_proj, proj_dim))
-        self.dropout = nn_Dropout(dropout)
+        if serialized_dropout == None:
+            self.dropout = nn_Dropout(dropout)
+        else:
+            self.dropout = serialized_dropout
+        
+        
+        
+        
 
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(SpatialEmb, self).get_config()
+        config.update({
+                        "num_patch": self.num_patch,
+                        "patch_dim": self.patch_dim,
+                        "prop_dim": self.prop_dim,
+                        "proj_dim": self.proj_dim,
+
+                       "serialized_input_proj": tf.keras.layers.serialize(self.input_proj),
+                       "serialized_weight": tf.keras.layers.serialize(self.weight),
+                       "serialized_dropout": tf.keras.layers.serialize(self.dropout)
+                       })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        serialized_input_proj = tf.keras.layers.deserialize(config.pop("serialized_input_proj") ,  custom_objects=get_custom_objects() )
+        serialized_weight = tf.keras.layers.deserialize(config.pop("serialized_weight") ,  custom_objects=get_custom_objects() )
+        serialized_dropout = tf.keras.layers.deserialize(config.pop("serialized_dropout") ,  custom_objects=get_custom_objects() )
+
+        return cls(serialized_input_proj=serialized_input_proj, serialized_weight=serialized_weight, serialized_dropout=serialized_dropout, **config)
+    
 
     # def extra_repr(self) -> str:
 
@@ -95,6 +166,19 @@ class RandomShiftsAug:
         print("modules.py: RandomShiftsAug.__init__()")
 
         self.pad = pad
+
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(RandomShiftsAug, self).get_config()
+        config.update({"pad": self.pad,
+                       })
+        return config
+
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
 
 
     def __call__(self, x):

@@ -61,6 +61,9 @@ class TrainDiffusionAgent(PreTrainAgent):
 
     def run(self):
 
+        # 训练模式
+        tf.keras.backend.set_learning_phase(True)
+
         print("train_diffusion_agent.py: TrainDiffusionAgent.run()")
 
         timer = Timer()
@@ -200,12 +203,6 @@ class TrainDiffusionAgent(PreTrainAgent):
                     self.model.call_noise = None
                     self.model.call_x = None
 
-                    self.ema_model.loss_ori_t = None
-                    self.ema_model.p_losses_noise = None
-                    self.ema_model.call_noise = None
-                    self.ema_model.call_noise = None
-                    self.ema_model.call_x = None
-
 
 
             else:
@@ -230,17 +227,19 @@ class TrainDiffusionAgent(PreTrainAgent):
                 # Assuming loss is computed as a callable loss function
                 # loss_train = self.model.loss(*batch_train, training_flag=True)
                 # loss_train = self.model.loss(training_flag=True, *batch_train)
-                training_flag=True
+                # training_flag=True
                 
-                print("item['actions'] = ", item['actions'])
+                # print("item['actions'] = ", item['actions'])
+                print("cur_actions = ", cur_actions)
                 print("cond = ", cond)
                 print("self.model = ", self.model)
-                print("self.ema_model = ", self.ema_model)
 
                 # print("self.model.loss = ", self.model.loss)
 
                 # loss_train = self.model.loss_ori(training_flag, item['actions'], cond)
-                loss_train = self.model.loss_ori(training_flag, cur_actions, cond)
+                loss_train = self.model.loss_ori(
+                    # training_flag, 
+                    cur_actions, cond)
 
                 print("self.model.network = ", self.model.network)
                 # print("self.ema_model.network = ", self.ema_model.network)
@@ -253,9 +252,24 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             if epoch == 0:
                 with tf.GradientTape() as tape:
+                    model_config = self.model.get_config()
+                    
+                    print("model_config = ", model_config)
+
+                    self.ema_model = deepcopy(self.model)
+                    if DEBUG:
+                        self.ema_model.loss_ori_t = None
+                        self.ema_model.p_losses_noise = None
+                        self.ema_model.call_noise = None
+                        self.ema_model.call_noise = None
+                        self.ema_model.call_x = None
+                    print("self.ema_model = ", self.ema_model)
+
                     self.ema_model.network = tf.keras.models.clone_model(self.model.network)
                     print("self.ema_model.network = ", self.ema_model.network)
-                    loss_train_ema = self.ema_model.loss_ori(training_flag, item_actions_copy, cond_copy)
+                    loss_train_ema = self.ema_model.loss_ori(
+                        # training_flag, 
+                        item_actions_copy, cond_copy)
                     
                     self.reset_parameters()
 

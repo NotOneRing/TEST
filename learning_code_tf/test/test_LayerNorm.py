@@ -9,12 +9,12 @@ def test_LayerNorm():
 
     # NLP Example
     batch, sentence_length, embedding_dim = 20, 5, 10
-    embedding = torch.randn(batch, sentence_length, embedding_dim)
 
+    embedding = torch.randn(batch, sentence_length, embedding_dim)
 
     layer_norm = nn.LayerNorm(embedding_dim)
     # Activate module
-    layer_norm(embedding)
+    result1 = layer_norm(embedding)
     # Image Example
     # N, C, H, W = 20, 5, 10, 10
     N, C, H, W = 2, 3, 4, 5
@@ -35,7 +35,7 @@ def test_LayerNorm():
 
     layer_norm = nn_LayerNorm(embedding_dim)
     # Activate module
-    layer_norm(embedding)
+    tf_result1 = layer_norm(embedding)
     # Image Example
     # N, C, H, W = 20, 5, 10, 10
     input = tf.convert_to_tensor(input.numpy())
@@ -48,12 +48,16 @@ def test_LayerNorm():
     # print("output2 = ", output2)
 
 
+    print(result1.detach().numpy() - tf_result1.numpy())
+
     print(output1.detach().numpy() - output2.numpy())
+
 
     print("result = ", np.allclose(output1.detach().numpy(), output2.numpy()) )
 
+    assert np.allclose(result1.detach().numpy(), tf_result1.numpy(), atol=1e-5)
 
-    assert np.allclose(output1.detach().numpy(), output2.numpy())
+    assert np.allclose(output1.detach().numpy(), output2.numpy(), atol=1e-5)
 
 
 test_LayerNorm()

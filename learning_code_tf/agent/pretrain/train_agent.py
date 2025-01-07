@@ -103,7 +103,7 @@ class PreTrainAgent:
         self.ema = EMA(cfg.ema)
 
 
-        self.ema_model = deepcopy(self.model)
+        # self.ema_model = deepcopy(self.model)
         #把这部分拿到train_diffusion_agent里面去
 
 
@@ -242,16 +242,14 @@ class PreTrainAgent:
 
 
         print("train_agent.py: PreTrainAgent.save_model()")
-        # savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.h5")
 
-        # savepath = os.path.join(self.checkpoint_dir, f"state_{self.epoch}.keras")
         savepath = os.path.join(self.checkpoint_dir, f"state_{epoch}.keras")
        
         print("savepath = ", savepath)
 
-        self.model.save(savepath)
+        # self.model.save(savepath)
 
-        print(f"Saved model to {savepath}")
+        # print(f"Saved model to {savepath}")
 
 
 
@@ -259,18 +257,26 @@ class PreTrainAgent:
 
         print("network_savepath = ", network_savepath)
 
+        network_config = self.model.network.get_config()
+        print("network_config = ", network_config)
+
         self.model.network.save(network_savepath)
 
         print(f"Saved model.network to {network_savepath}")
 
 
-        ema_savepath = savepath.replace(".keras", "_ema.keras")
+        # model_network_summary = self.model.network.summary()
+        # print("model_network_summary = ", model_network_summary)
 
-        print("ema_savepath = ", ema_savepath)
 
-        self.ema_model.save(ema_savepath)
 
-        print(f"Saved ema_model to {ema_savepath}")
+        # ema_savepath = savepath.replace(".keras", "_ema.keras")
+
+        # print("ema_savepath = ", ema_savepath)
+
+        # self.ema_model.save(ema_savepath)
+
+        # print(f"Saved ema_model to {ema_savepath}")
 
 
         ema_network_savepath = savepath.replace(".keras", "_ema_network.keras")
@@ -282,29 +288,32 @@ class PreTrainAgent:
         print(f"Saved ema_model.network to {ema_network_savepath}")
 
 
+        # ema_model_network_summary = self.ema_model.network.summary()
+        # print("ema_model_network_summary = ", ema_model_network_summary)
 
 
 
 
 
-        network_mlpmean_savepath = savepath.replace(".keras", "_network_mlpmean.keras")
 
-        print("network_mlpmean_savepath = ", network_mlpmean_savepath)
+        # network_mlpmean_savepath = savepath.replace(".keras", "_network_mlpmean.keras")
 
-        self.model.network.mlp_mean.save(network_mlpmean_savepath)
+        # print("network_mlpmean_savepath = ", network_mlpmean_savepath)
 
-        print(f"Saved model.network.mlp_mean to {network_mlpmean_savepath}")
+        # self.model.network.mlp_mean.save(network_mlpmean_savepath)
+
+        # print(f"Saved model.network.mlp_mean to {network_mlpmean_savepath}")
 
 
 
 
-        ema_network_mlpmean_savepath = savepath.replace(".keras", "_ema_network_mlpmean.keras")
+        # ema_network_mlpmean_savepath = savepath.replace(".keras", "_ema_network_mlpmean.keras")
 
-        print("ema_network_mlpmean_savepath = ", ema_network_mlpmean_savepath)
+        # print("ema_network_mlpmean_savepath = ", ema_network_mlpmean_savepath)
 
-        self.ema_model.network.mlp_mean.save(ema_network_mlpmean_savepath)
+        # self.ema_model.network.mlp_mean.save(ema_network_mlpmean_savepath)
 
-        print(f"Saved ema_model.network.mlp_mean to {ema_network_mlpmean_savepath}")
+        # print(f"Saved ema_model.network.mlp_mean to {ema_network_mlpmean_savepath}")
 
 
 
@@ -317,23 +326,59 @@ class PreTrainAgent:
 
         print("loadpath = ", loadpath)
 
-        # self.model.load_weights(loadpath)
-        # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
 
-        self.model = tf.keras.models.load_model(loadpath)
-
-        self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras"))
+        # self.model = tf.keras.models.load_model(loadpath)
 
 
-        self.model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_network_mlpmean.keras"))
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            "nn_Identity": nn_Identity,
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
 
-        self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"))
+        # model_network_summary = self.model.network.summary()
+        # print("model_network_summary = ", model_network_summary)
 
-        self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras"))
+
+        # self.model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_network_mlpmean.keras"))
 
 
-        self.ema_model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network_mlpmean.keras"))
+        # self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"))
+
+        self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras") ,  custom_objects=get_custom_objects() )
+
+        # ema_model_network_summary = self.ema_model.network.summary()
+        # print("ema_model_network_summary = ", ema_model_network_summary)
+
+
+        # self.ema_model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network_mlpmean.keras"))
 
 
 
