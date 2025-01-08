@@ -102,8 +102,9 @@ class DiffusionModel(tf.keras.Model):
         # print("before set up models")
 
         # Set up models
-        self.network = network
-
+        if not hasattr(self, "network"):
+            self.network = network
+        
         # self.network.batch_size = 
 
         self.network_path = network_path
@@ -337,12 +338,13 @@ class DiffusionModel(tf.keras.Model):
                 self.call_noise = None
                 self.call_noise = None
                 self.call_x = None
+                self.q_sample_noise = None
             else:
                 print("DEBUG is False")
 
 
     def loss_ori(self
-                #  , training_flag
+                 , training
                  , x_start, cond):
         """
         Compute the loss for the given data and condition.
@@ -402,13 +404,13 @@ class DiffusionModel(tf.keras.Model):
 
         # Compute loss
         return self.p_losses(x_start, cond, t, 
-                            #  training_flag
+                             training
                              )
 
 
 
     def p_losses(self, x_start, cond, t
-                #  , training_flag
+                 , training
                  ):
         """
         If predicting epsilon: E_{t, x0, ε} [||ε - ε_θ(√α̅ₜx0 + √(1-α̅ₜ)ε, t)||²
@@ -493,8 +495,9 @@ class DiffusionModel(tf.keras.Model):
         print("self.network = ", self.network)
 
         # x_recon = self.network(x_noisy, t, cond = cond, training=training_flag)
-        x_recon = self.network([x_noisy, t, cond["state"]])
-                            #    , training=training_flag)
+        x_recon = self.network([x_noisy, t, cond["state"]]
+                               , training=training)
+                            #    )
 
         # summary = self.network.summary(x_noisy, t, cond["state"])
         # summary = self.network.summary(x_noisy, t, cond)
@@ -604,8 +607,16 @@ class DiffusionModel(tf.keras.Model):
         print(f"network_path: {self.network_path}")
 
 
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        if isinstance( self.network, DiffusionMLP ):
+            network_repr = self.network.get_config()
+            print("network_repr = ", network_repr)
+        else:
+            print("type(self.network) = ", type(self.network))
+            raise RuntimeError("not recognozed type of self.network")
+
         config.update({
-            "network": self.network,
+            "network": network_repr,
             "horizon_steps": self.horizon_steps,
             "obs_dim": self.obs_dim,
             "action_dim": self.action_dim,
@@ -630,7 +641,8 @@ class DiffusionModel(tf.keras.Model):
             "p_losses_noise": self.p_losses_noise,
             "call_noise": self.call_noise,
             "call_noise": self.call_noise,
-            "call_x": self.call_x   
+            "call_x": self.call_x,
+            "q_sample_noise": self.q_sample_noise,
             })
         
 
@@ -642,13 +654,69 @@ class DiffusionModel(tf.keras.Model):
     @classmethod
     def from_config(cls, config):
         """Creates the layer from its config."""
-        result = cls(**config)
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        # from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            # 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            "nn_Identity": nn_Identity,
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        # print('get_custom_objects() = ', get_custom_objects())
+
+        network = config.pop("network")
+
+        print("DiffusionModel from_config(): network = ", network)
+
+        name = network["name"]
+        print("name = ", name)
+
+        # if name == "diffusion_mlp":
+        #     name = "DiffusionMLP"
+        if name.startswith("diffusion_mlp"):
+            name = "DiffusionMLP"
+            DiffusionMLP.from_config(network)
+        else:
+            raise RuntimeError("name not recognized")
+
+
+        # if name in cur_dict:
+        #     cur_dict[name].from_config(network)
+        # else:
+        #     raise RuntimeError("name not recognized")
+
+
+        result = cls(network=network, **config)
         if DEBUG:
             result.loss_ori_t = None
             result.p_losses_noise = None
             result.call_noise = None
             result.call_noise = None
-            result.call_x = None            
+            result.call_x = None
+        
         return result
 
 
@@ -778,10 +846,25 @@ class DiffusionModel(tf.keras.Model):
 
 
         # Generate noise if not provided
-        if noise is None:
-            # noise = tf.random.normal(shape=tf.shape(x_start), dtype=x_start.dtype)
-            # noise = tf.random.normal(shape = x_start.shape, dtype=x_start.dtype)
-            noise = torch_randn_like(x_start)
+
+        if DEBUG:
+            if self.q_sample_noise is None:            
+                if noise is None:
+                    self.q_sample_noise = torch_randn_like(x_start)
+                    noise = self.q_sample_noise
+            else:
+                if noise is None:
+                    noise = self.q_sample_noise
+        else:
+            if noise is None:
+                noise = torch_randn_like(x_start)
+
+
+        # if noise is None:
+        #     noise = torch_randn_like(x_start)
+
+        print("DiffusionModel q_sample noise = ", noise)
+
 
         # print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
         # print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)

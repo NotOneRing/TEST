@@ -3,6 +3,7 @@ Pre-training diffusion policy
 
 """
 
+from util.torch_to_tf import recursive_clone_model
 
 import logging
 # import wandb
@@ -62,7 +63,7 @@ class TrainDiffusionAgent(PreTrainAgent):
     def run(self):
 
         # 训练模式
-        tf.keras.backend.set_learning_phase(True)
+        # tf.keras.backend.set_learning_phase(True)
 
         print("train_diffusion_agent.py: TrainDiffusionAgent.run()")
 
@@ -178,6 +179,8 @@ class TrainDiffusionAgent(PreTrainAgent):
                 self.load(epoch - 1)
 
 
+            print("train_diffusion_agent.py: run() 1")
+
             # continue
             
             # # Train
@@ -202,6 +205,7 @@ class TrainDiffusionAgent(PreTrainAgent):
                     self.model.call_noise = None
                     self.model.call_noise = None
                     self.model.call_x = None
+                    self.model.q_sample_noise = None
 
 
 
@@ -213,6 +217,8 @@ class TrainDiffusionAgent(PreTrainAgent):
                 cond_copy = deepcopy(cond)
 
 
+
+            print("train_diffusion_agent.py: run() 2")
 
         
             # #初始化
@@ -227,7 +233,7 @@ class TrainDiffusionAgent(PreTrainAgent):
                 # Assuming loss is computed as a callable loss function
                 # loss_train = self.model.loss(*batch_train, training_flag=True)
                 # loss_train = self.model.loss(training_flag=True, *batch_train)
-                # training_flag=True
+                training_flag=True
                 
                 # print("item['actions'] = ", item['actions'])
                 print("cur_actions = ", cur_actions)
@@ -238,11 +244,15 @@ class TrainDiffusionAgent(PreTrainAgent):
 
                 # loss_train = self.model.loss_ori(training_flag, item['actions'], cond)
                 loss_train = self.model.loss_ori(
-                    # training_flag, 
+                    training_flag, 
                     cur_actions, cond)
 
                 print("self.model.network = ", self.model.network)
                 # print("self.ema_model.network = ", self.ema_model.network)
+
+
+            print("train_diffusion_agent.py: run() 3")
+
 
             if DEBUG:
                 pass
@@ -250,28 +260,171 @@ class TrainDiffusionAgent(PreTrainAgent):
                 gradients = tape.gradient(loss_train, self.model.trainable_variables)
 
 
+
+            print("train_diffusion_agent.py: run() 4")
+
+            if epoch == 0:
+                epoch0_model_weights = None
+
             if epoch == 0:
                 with tf.GradientTape() as tape:
                     model_config = self.model.get_config()
                     
                     print("model_config = ", model_config)
 
-                    self.ema_model = deepcopy(self.model)
+                    print("train_diffusion_agent.py: run() 4-1")
+
+                    # self.ema_model = deepcopy(self.model)
+                    # self.ema_model = tf.keras.models.clone_model(self.model)
+
+                    self.ema_model = tf.keras.models.clone_model(self.model)
+                    self.ema_model.network = tf.keras.models.clone_model(self.model.network)
+
+                    print("train_diffusion_agent.py: run() 4-2")
+
                     if DEBUG:
                         self.ema_model.loss_ori_t = None
                         self.ema_model.p_losses_noise = None
                         self.ema_model.call_noise = None
                         self.ema_model.call_noise = None
                         self.ema_model.call_x = None
+                        self.ema_model.q_sample_noise = None
+
                     print("self.ema_model = ", self.ema_model)
 
-                    self.ema_model.network = tf.keras.models.clone_model(self.model.network)
-                    print("self.ema_model.network = ", self.ema_model.network)
+
                     loss_train_ema = self.ema_model.loss_ori(
-                        # training_flag, 
+                        training_flag, 
                         item_actions_copy, cond_copy)
-                    
+
+                    print("loss_train_ema.numpy() = ", loss_train_ema.numpy())
+
+                    print("1self.model.get_weights() = ", self.model.get_weights())
+
+                    print("1self.ema_model.get_weights() = ", self.ema_model.get_weights())
+
                     self.reset_parameters()
+
+                    # # self.ema_model = recursive_clone_model(self.model, self.ema_model)
+                    # self.ema_model.network = recursive_clone_model(self.model.network, self.ema_model.network)
+
+                    print("type(self.model.get_weights()) = ", type(self.model.get_weights()))
+                    print("type(self.model.get_weights()[0]) = ", type(self.model.get_weights()[0]))
+
+                    epoch0_model_weights = self.model.get_weights()
+
+                    epoch0_model_network_weights = self.model.network.get_weights()
+
+                    epoch0_model_network_mlpmean_weights = self.model.network.mlp_mean.get_weights()
+
+                    epoch0_model_network_condmlp_weights = self.model.network.cond_mlp.get_weights()
+
+                    epoch0_model_network_timeemb_weights = self.model.network.time_embedding.get_weights()
+
+                    # [0]
+
+                    print("2self.model.get_weights() = ", self.model.get_weights())
+
+                    print("2self.ema_model.get_weights() = ", self.ema_model.get_weights())
+
+                    # self.ema_model.network = tf.keras.models.clone_model(self.model.network)
+                    # print("self.ema_model.network = ", self.ema_model.network)
+
+                    # print("2self.model.trainable_variables = ", self.model.trainable_variables)
+                    # print("2self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
+
+                    # self.ema_model.set_weights(self.model.get_weights())  # 同步权重
+                    print("1self.model.trainable_variables = ", self.model.trainable_variables)
+                    print("1self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
+
+
+                    print("type(self.model.trainable_variables) = ", type(self.model.trainable_variables))
+                    print("type(self.model.trainable_variables[0]) = ", type(self.model.trainable_variables[0]))
+
+
+
+                    epoch0_model_trainable_variables = self.model.trainable_variables
+
+                    epoch0_model_network_trainable_variables = self.model.network.trainable_variables
+
+                    epoch0_model_network_mlpmean_trainable_variables = self.model.network.mlp_mean.trainable_variables
+
+                    epoch0_model_network_condmlp_trainable_variables = self.model.network.cond_mlp.trainable_variables
+
+                    epoch0_model_network_timeemb_trainable_variables = self.model.network.time_embedding.trainable_variables
+
+
+                    # self.reset_parameters()
+
+            if epoch > 0:
+                epoch_model_weights = self.model.get_weights()
+                # [0]
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_weights)):
+                    # print("epoch_model_weights = ", epoch_model_weights)
+                    print("model weights difference = ", np.sum(epoch0_model_weights[i] - epoch_model_weights[i]))
+                    assert np.sum(epoch0_model_weights[i] - epoch_model_weights[i]) == 0, "np.sum(epoch0_model_weights[i] - epoch_model_weights[i]) != 0"
+
+                epoch_model_network_weights = self.model.network.get_weights()
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_network_weights)):
+                    # print("epoch_model_weights = ", epoch_model_weights)
+                    print("model network weights difference = ", np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]))
+                    assert np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) == 0, "np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) != 0"
+
+                epoch_model_network_mlpmean_weights = self.model.network.mlp_mean.get_weights()
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_network_mlpmean_weights)):
+                    # print("epoch_model_weights = ", epoch_model_weights)
+                    print("model network mlpmean weights difference = ", np.sum(epoch0_model_network_mlpmean_weights[i] - epoch_model_network_mlpmean_weights[i]))
+                    assert np.sum(epoch0_model_network_mlpmean_weights[i] - epoch_model_network_mlpmean_weights[i]) == 0, "np.sum(epoch0_model_network_mlpmean_weights[i] - epoch_model_network_mlpmean_weights[i]) != 0"
+
+                epoch_model_network_condmlp_weights = self.model.network.cond_mlp.get_weights()
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_network_condmlp_weights)):
+                    # print("epoch_model_weights = ", epoch_model_weights)
+                    print("model network condmlp weights difference = ", np.sum(epoch0_model_network_condmlp_weights[i] - epoch_model_network_condmlp_weights[i]))
+                    assert np.sum(epoch0_model_network_condmlp_weights[i] - epoch_model_network_condmlp_weights[i]) == 0, "np.sum(epoch0_model_network_condmlp_weights[i] - epoch_model_network_condmlp_weights[i]) != 0"
+
+                epoch_model_network_timeemb_weights = self.model.network.time_embedding.get_weights()
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_network_timeemb_weights)):
+                    # print("epoch_model_weights = ", epoch_model_weights)
+                    print("model network timeemb weights difference = ", np.sum(epoch0_model_network_timeemb_weights[i] - epoch_model_network_timeemb_weights[i]))
+                    assert np.sum(epoch0_model_network_timeemb_weights[i] - epoch_model_network_timeemb_weights[i]) == 0, "np.sum(epoch0_model_network_timeemb_weights[i] - epoch_model_network_timeemb_weights[i]) != 0"
+
+
+
+                print("epoch = ", epoch)
+                epoch_model_trainable_variables = self.model.trainable_variables
+                for i in range(len(epoch_model_trainable_variables)):
+                    print("model trainable_variables difference = ", np.sum(epoch0_model_trainable_variables[i] - epoch_model_trainable_variables[i]))
+                    assert np.sum(epoch0_model_trainable_variables[i] - epoch_model_trainable_variables[i]) == 0, "np.sum(epoch0_model_trainable_variables[i] - epoch_model_trainable_variables[i]) != 0"
+
+                epoch_model_network_trainable_variables = self.model.network.trainable_variables
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_network_trainable_variables)):
+                    print("model network trainable_variables difference = ", np.sum(epoch0_model_network_trainable_variables[i] - epoch_model_network_trainable_variables[i]))
+                    assert np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) == 0, "np.sum(epoch0_model_network_trainable_variables[i] - epoch_model_network_trainable_variables[i]) != 0"
+
+                epoch_model_network_mlpmean_trainable_variables = self.model.network.mlp_mean.trainable_variables
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_network_mlpmean_trainable_variables)):
+                    print("model network mlpmean trainable_variables difference = ", np.sum(epoch0_model_network_mlpmean_trainable_variables[i] - epoch_model_network_mlpmean_trainable_variables[i]))
+                    assert np.sum(epoch0_model_network_mlpmean_trainable_variables[i] - epoch_model_network_mlpmean_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_mlpmean_trainable_variables[i] - epoch_model_network_mlpmean_trainable_variables[i]) != 0"
+
+                epoch_model_network_condmlp_trainable_variables = self.model.network.cond_mlp.trainable_variables
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_network_condmlp_trainable_variables)):
+                    print("model network condmlp trainable_variables difference = ", np.sum(epoch0_model_network_condmlp_trainable_variables[i] - epoch_model_network_condmlp_trainable_variables[i]))
+                    assert np.sum(epoch0_model_network_condmlp_trainable_variables[i] - epoch_model_network_condmlp_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_condmlp_trainable_variables[i] - epoch_model_network_condmlp_trainable_variables[i]) != 0"
+
+                epoch_model_network_timeemb_trainable_variables = self.model.network.time_embedding.trainable_variables
+                print("epoch = ", epoch)
+                for i in range(len(epoch_model_network_timeemb_trainable_variables)):
+                    print("model network timeemb trainable_variables difference = ", np.sum(epoch0_model_network_timeemb_trainable_variables[i] - epoch_model_network_timeemb_trainable_variables[i]))
+                    assert np.sum(epoch0_model_network_timeemb_trainable_variables[i] - epoch_model_network_timeemb_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_timeemb_trainable_variables[i] - epoch_model_network_timeemb_trainable_variables[i]) != 0"
+
 
             # print("self.model.get_config() = ", self.model.get_config())
 
@@ -339,14 +492,25 @@ class TrainDiffusionAgent(PreTrainAgent):
             
             # print("gradients = ", gradients)
 
-            if epoch == 0:
-                print("self.model.trainable_variables = ", self.model.trainable_variables)
-                print("self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
+
+            print("train_diffusion_agent.py: run() 5")
+
+
+            # if epoch == 0:
+            #     print("self.model.trainable_variables = ", self.model.trainable_variables)
+            #     print("self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
+
+
+            print("train_diffusion_agent.py: run() 6")
 
             if DEBUG:
                 pass
             else:
                 zip_gradients_params = zip(gradients, self.model.trainable_variables)
+
+
+            print("train_diffusion_agent.py: run() 7")
+
 
             # for item in zip_gradients_params:
             #     print("item = ", item)
@@ -361,6 +525,8 @@ class TrainDiffusionAgent(PreTrainAgent):
             else:
                 self.optimizer.apply_gradients(zip_gradients_params)
 
+            print("train_diffusion_agent.py: run() 8")
+
             loss_train_epoch.append(loss_train.numpy())
 
             print("loss_train.numpy() = ", loss_train.numpy())
@@ -370,7 +536,13 @@ class TrainDiffusionAgent(PreTrainAgent):
                 self.step_ema()
             epoch += 1
 
+            print("train_diffusion_agent.py: run() 9")
+
+
             loss_train = np.mean(loss_train_epoch)
+
+
+            print("train_diffusion_agent.py: run() 10")
 
             if DEBUG:
                 self.save_model(epoch)
@@ -381,12 +553,15 @@ class TrainDiffusionAgent(PreTrainAgent):
             if epoch % increment_epochs == 0:
                 self.epoch += 1
 
+            print("train_diffusion_agent.py: run() 11")
 
             # Log loss
             if epoch % self.log_freq == 0:
                 log.info(
                     f"{epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
                 )
+
+            print("train_diffusion_agent.py: run() 12")
 
 
             # # Validate

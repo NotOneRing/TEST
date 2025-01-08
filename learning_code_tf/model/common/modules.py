@@ -42,7 +42,7 @@ class SpatialEmb(tf.keras.layers.Layer):
         # Input projection layers
         if serialized_input_proj == None:
             self.input_proj = nn_Sequential([
-                nn_Linear(proj_in_dim, proj_dim),
+                nn_Linear(proj_in_dim, proj_dim, name_Dense="SpatialEmb_input_proj_1"),
                 nn_LayerNorm(proj_dim),
                 nn_ReLU(inplace=True)
             ])

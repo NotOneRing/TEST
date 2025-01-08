@@ -2,6 +2,8 @@ import tensorflow as tf
 import numpy as np
 from collections import OrderedDict
 
+# tf.random.set_seed(42)
+
 
 def torch_tensor_permute(input, *dims):
     "A wrapper for torch.Tensor.permute() function"
@@ -1427,6 +1429,8 @@ class nn_GELU(tf.keras.layers.Layer):
 # Define TensorFlow nn.ReLU wrapper
 class nn_ReLU(tf.keras.layers.Layer):
     def __init__(self, inplace=False, name = "nn_ReLU", relu = None, **kwargs):
+
+
         super(nn_ReLU, self).__init__(name=name, **kwargs)
 
         if relu == None:
@@ -1488,7 +1492,7 @@ class nn_Dropout(tf.keras.layers.Layer):
 
 
     def get_config(self):
-        config = super(nn_Linear, self).get_config()  # Call the parent layer's get_config()
+        config = super(nn_Dropout, self).get_config()  # Call the parent layer's get_config()
         config.update({
             "p": self.p,
             "model": tf.keras.layers.serialize(self.model),
@@ -1534,8 +1538,14 @@ class nn_Linear(tf.keras.layers.Layer):
     """
     def __init__(self, in_features, out_features, 
                 #  bias=True, 
-                 device=None, dtype=None, name="nn_Linear", model=None, **kwargs):
-        super(nn_Linear, self).__init__(name=name, **kwargs)
+                 device=None, dtype=None, 
+                #  name="nn_Linear", 
+                 name_Dense = None, model=None, **kwargs):
+        
+
+        # super(nn_Linear, self).__init__(name=name, **kwargs)
+        super(nn_Linear, self).__init__(**kwargs)
+
         self.in_features = in_features
         self.out_features = out_features
         # self.bias = bias
@@ -1549,7 +1559,8 @@ class nn_Linear(tf.keras.layers.Layer):
                 use_bias=True,
                 kernel_initializer='glorot_uniform',
                 bias_initializer='zeros',
-                dtype=dtype
+                dtype=dtype,
+                name = name_Dense
                 # kernel_regularizer=None,
                 # bias_regularizer=None,
                 # activity_regularizer=None,
@@ -1563,6 +1574,7 @@ class nn_Linear(tf.keras.layers.Layer):
             # print("self.model.non_trainable_variables = ", self.model.non_trainable_variables)
 
         # print("nn_Linear: self.model = ", self.model)
+        print("nn_Linear: name_Dense = ", name_Dense)
         print("nn_Linear: self.model.name = ", self.model.name)
 
     def get_config(self):
@@ -1574,7 +1586,7 @@ class nn_Linear(tf.keras.layers.Layer):
             # "bias": self.bias,
             # "device": self.device,
             # "dtype": self.dtype,
-            # "dense_layer": tf.keras.layers.serialize(self.model),
+            "dense_layer": tf.keras.layers.serialize(self.model),
         })
         
         print("nn_Linear.config() = ", config)
@@ -1585,9 +1597,9 @@ class nn_Linear(tf.keras.layers.Layer):
     def from_config(cls, config):
         print("nn_Linear: from_config()")
 
-        # model = tf.keras.layers.deserialize(config.pop("dense_layer"))
-        # result = cls(model = model, **config)
-        result = cls(**config)
+        model = tf.keras.layers.deserialize(config.pop("dense_layer"))
+        result = cls(model = model, **config)
+        # result = cls(**config)
         return result
 
 
@@ -1754,12 +1766,25 @@ def nn_Parameter(data=None, requires_grad=True):
 
 # Define TensorFlow nn.Sequential wrapper
 class nn_Sequential(tf.keras.layers.Layer):
-    def __init__(self, *args, name = "nn_Sequential", model_list = None, **kwargs):
-        super(nn_Sequential, self).__init__(name=name, **kwargs)
-        # print("len(args) = ", len(args))
-        # print("args = ", args)
+    def __init__(self, *args, 
+                #  name = "nn_Sequential", 
+                 model_list = None, 
+                 model = None, 
+                 **kwargs):
+        super(nn_Sequential, self).__init__(
+            # name=name, 
+            **kwargs)
 
-        if model_list == None:
+        print("nn_Sequential: __init__()")
+
+        print("len(args) = ", len(args))
+        print("args = ", args)
+        print("model_list = ", model_list)
+        print("model = ", model)
+        print("**kwargs = ", kwargs)
+
+
+        if model == None:
             self.model_list = []
 
             if isinstance(args[0], (tuple, list)):
@@ -1774,15 +1799,32 @@ class nn_Sequential(tf.keras.layers.Layer):
             else:
                 for module in args:
                     self.model_list.append(module)
-        else:
-            self.model_list = model_list
 
+            print("branch1")
+            print("self.model_list = ")
+            self.model = tf.keras.Sequential(self.model_list)
+        else:
+            self.model = model
+
+    
+        # if model_list != None:
+
+        # else:
+        #     self.model_list = model_list
+
+
+        # tf.keras.Sequential(
+        #     layers=None, trainable=True, name=None
+        # )
 
     def call(self, x):
         output = x
-        for module in self.model_list:
-            print("module = ", module)
-            output = module(output)
+        # if self.model_list:
+        #     for module in self.model_list:
+        #         print("module = ", module)
+        #         output = module(output)
+        output = self.model(output)
+        
         return output
     
     def __getitem__(self, id):
@@ -1798,24 +1840,29 @@ class nn_Sequential(tf.keras.layers.Layer):
         # Get the configuration of all layers in the model_list
         config = super(nn_Sequential, self).get_config()  # Call the parent class get_config()
         
-        # Create a list of layer configurations
-        layer_configs = []
+        # # Create a list of layer configurations
+        # layer_configs = []
 
-        for layer in self.model_list:
-            print("layer = ", layer)
-            layer_configs.append( layer.get_config() )
+
+        # for layer in self.model_list:
+        #     print("layer = ", layer)
+        #     layer_configs.append( layer.get_config() )
         
         # Add the list of layer configurations to the config dictionary
         config.update({
-            'model_list': layer_configs
+            'model': tf.keras.layers.serialize(self.model)
+            # layer_configs
         })
+
+        print("nn_Sequential: config = ", config)
+
         return config
 
     @classmethod
     def from_config(cls, config):
         print("nn_Sequential: from_config()")
+        print("config = ", config)
         
-        model_list = config.pop("model_list")
 
         from model.diffusion.mlp_diffusion import DiffusionMLP
         from model.diffusion.diffusion import DiffusionModel
@@ -1851,15 +1898,20 @@ class nn_Sequential(tf.keras.layers.Layer):
         # print("Custom objects:", get_custom_objects())
         # assert 'SinusoidalPosEmb' in get_custom_objects()
 
-        models = []
-        for model in model_list:
-            # print("model = ", model)
-            name = model["name"]
-            if name in cur_dict:
-                models.append( cur_dict[name].from_config(model) )
-            else:
-                models.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
-        return cls(models, **config)
+        # model_list = config.pop("model_list")
+
+        # models = []
+        # for model in model_list:
+        #     # print("model = ", model)
+        #     name = model["name"]
+        #     if name in cur_dict:
+        #         models.append( cur_dict[name].from_config(model) )
+        #     else:
+        #         models.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
+
+        model = tf.keras.layers.deserialize( config.pop("model") ,  custom_objects=get_custom_objects() )
+        
+        return cls(model = model, **config)
 
 
 
@@ -1873,6 +1925,52 @@ class nn_ModuleList(tf.keras.layers.Layer):
                     self.append(module)
         else:
             self.modules = serialized_modules
+
+
+
+    # def get_config(self):
+    #     from tensorflow.python.keras.utils import generic_utils
+    #     import copy
+    #     layer_configs = []
+    #     for layer in self.modules:
+    #         # `super().layers` include the InputLayer if available (it is filtered out
+    #         # of `self.layers`). Note that `self._self_tracked_trackables` is managed
+    #         # by the tracking infrastructure and should not be used.
+    #         layer_configs.append(generic_utils.serialize_keras_object(layer))
+    #     config = {
+    #         'name': self.name,
+    #         'layers': copy.deepcopy(layer_configs)
+    #     }
+    #     if not self._is_graph_network and self._build_input_shape is not None:
+    #         config['build_input_shape'] = self._build_input_shape
+    #     return config
+
+
+    # @classmethod
+    # def from_config(cls, config, custom_objects=None):
+    #     if 'name' in config:
+    #         name = config['name']
+    #         build_input_shape = config.get('build_input_shape')
+    #         layer_configs = config['layers']
+    #     else:
+    #         name = None
+    #         build_input_shape = None
+    #         layer_configs = config
+    #         model = cls(name=name)
+
+    #     from tensorflow.python.keras import layers as layer_module
+
+    #     for layer_config in layer_configs:
+    #         layer = layer_module.deserialize(layer_config,
+    #                                         custom_objects=custom_objects)
+    #         model.add(layer)
+    #     if (not model.inputs and build_input_shape and
+    #         isinstance(build_input_shape, (tuple, list))):
+    #         model.build(build_input_shape)
+    #     return model
+
+
+
 
     def append(self, module):
         if not isinstance(module, tf.keras.layers.Layer):
@@ -1966,6 +2064,8 @@ class nn_ModuleList(tf.keras.layers.Layer):
         print("type(model_list) = ", type(model_list))
         print("model_list = ", model_list)
 
+
+
         for model in model_list:
             print("model = ", model)
             name = model["name"]
@@ -1975,7 +2075,11 @@ class nn_ModuleList(tf.keras.layers.Layer):
             else:
                 print("nn_ModuleList: name = ", name)
                 modules.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
+
+
+
         return cls(serialized_modules = modules, **config)
+
 
 
 
@@ -2127,6 +2231,7 @@ class nn_LayerNorm(tf.keras.layers.Layer):
             normalized_shape (int or tuple): Input shape for layer normalization.
             epsilon (float): A small value to add to the denominator for numerical stability.
         """
+
         if isinstance(normalized_shape, int):
             normalized_shape = [normalized_shape]
         super(nn_LayerNorm, self).__init__(name=name, **kwargs)
@@ -2155,6 +2260,58 @@ class nn_LayerNorm(tf.keras.layers.Layer):
         else:
             self.beta = beta
 
+    def get_config(self):
+        """
+        Returns the configuration of the LayerNorm layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_LayerNorm, self).get_config()  # 获取基础配置
+        # 确保将 `gamma` 和 `beta` 的配置信息添加到返回的配置中
+        config.update({
+            'normalized_shape': self.normalized_shape,
+            'eps': self.epsilon,
+            # 'gamma': self.gamma,
+            # 'beta': self.beta
+        })
+
+        print("nn_LayerNorm.get_config() = ", config)
+
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+        result = super(nn_LayerNorm, cls).from_config(config)
+        return result
+    
+    def call(self, x):
+        """
+        Forward pass for LayerNorm.
+
+        Args:
+            x (tf.Tensor): Input tensor to normalize.
+
+        Returns:
+            tf.Tensor: The normalized tensor.
+        """
+        # print("type(normalized_shape) = ", type(self.normalized_shape))
+        if isinstance(self.normalized_shape, int):
+            dims = 1
+        else:
+            dims = len(self.normalized_shape)
+        dim_list = []
+        for i in range(-dims, 0, 1):
+            dim_list.append(i)
+        mean = tf.reduce_mean(x, axis=dim_list, keepdims=True)
+        variance = tf.reduce_mean(tf.square(x - mean), axis=dim_list, keepdims=True)
+        normalized_x = (x - mean) / tf.sqrt(variance + self.epsilon)
+
+        return self.gamma * normalized_x + self.beta
+
+
+
     # def get_config(self):
     #     """
     #     Returns the configuration of the LayerNorm layer.
@@ -2182,62 +2339,12 @@ class nn_LayerNorm(tf.keras.layers.Layer):
     #     result = super(nn_LayerNorm, cls).from_config(config)
     #     return result
 
-    def get_config(self):
-        """
-        Returns the configuration of the LayerNorm layer.
-        This method is used to save and restore the layer's state.
-        """
-        config = super(nn_LayerNorm, self).get_config()  # 获取基础配置
-        # 确保将 `gamma` 和 `beta` 的配置信息添加到返回的配置中
-        config.update({
-            'normalized_shape': self.normalized_shape,
-            'eps': self.epsilon,
-            # 'gamma': self.gamma,
-            # 'beta': self.beta
-        })
 
-        print("nn_LayerNorm.get_config() = ", config)
-
-        return config
-
-    @classmethod
-    def from_config(cls, config):
-        """
-        Returns an instance of the custom layer from its configuration.
-        """
-        result = super(nn_LayerNorm, cls).from_config(config)
-        return result
-    
     # @classmethod
     # def from_config(cls, config):
     #     print("nn_LayerNorm: from_config()")
     #     result = cls(**config)
     #     return result
-
-    def call(self, x):
-        """
-        Forward pass for LayerNorm.
-
-        Args:
-            x (tf.Tensor): Input tensor to normalize.
-
-        Returns:
-            tf.Tensor: The normalized tensor.
-        """
-        # print("type(normalized_shape) = ", type(self.normalized_shape))
-        if isinstance(self.normalized_shape, int):
-            dims = 1
-        else:
-            dims = len(self.normalized_shape)
-        dim_list = []
-        for i in range(-dims, 0, 1):
-            dim_list.append(i)
-        mean = tf.reduce_mean(x, axis=dim_list, keepdims=True)
-        variance = tf.reduce_mean(tf.square(x - mean), axis=dim_list, keepdims=True)
-        normalized_x = (x - mean) / tf.sqrt(variance + self.epsilon)
-
-        return self.gamma * normalized_x + self.beta
-
 
 
 
@@ -2246,6 +2353,9 @@ class nn_LayerNorm(tf.keras.layers.Layer):
 
 class nn_MultiheadAttention(tf.keras.layers.Layer):
     def __init__(self, num_heads, d_model, name="nn_MultiheadAttention", **kwargs):
+        
+        print("called nn_MultiheadAttention __init__()")
+
         super(nn_MultiheadAttention, self).__init__(name=name, **kwargs)
         self.num_heads = num_heads
         self.d_model = d_model
@@ -2328,6 +2438,9 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
 class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoderLayer", **kwargs):
+
+        print("called nn_TransformerDecoderLayer __init__()")
+
         super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
         self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
         self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
@@ -2379,6 +2492,9 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
 
 class nn_TransformerDecoder(tf.keras.layers.Layer):
     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoder", **kwargs):
+
+        print("called nn_TransformerDecoder __init__()")
+
         super(nn_TransformerDecoder, self).__init__(name=name, **kwargs)
         self.layers = [
             nn_TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
@@ -2400,6 +2516,9 @@ class nn_TransformerDecoder(tf.keras.layers.Layer):
 
 class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoderLayer", **kwargs):
+
+        print("called nn_TransformerEncoderLayer __init__()")
+
         super(nn_TransformerEncoderLayer, self).__init__(name=name, **kwargs)
         self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
         self.ffn = tf.keras.Sequential([
@@ -2430,6 +2549,9 @@ class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
 
 class nn_TransformerEncoder(tf.keras.layers.Layer):
     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoder", **kwargs):
+
+        print("called nn_TransformerEncoder __init__()")
+
         super(nn_TransformerEncoder, self).__init__(name=name, **kwargs)
         self.layers = [
             nn_TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
@@ -3388,3 +3510,109 @@ class MixtureSameFamily:
 
 
 
+
+
+# def recursive_clone_model(original_model, cloned_model):
+#     """
+#     递归克隆模型并复制所有自定义属性。
+#     :param original_model: 原始模型
+#     :return: 克隆后的模型
+#     """
+#     # 克隆顶层模型
+#     #  = tf.keras.models.clone_model(original_model)
+
+#     # 克隆权重
+#     cloned_model.set_weights(original_model.get_weights())
+
+#     # 克隆所有自定义属性
+#     for attr_name in dir(original_model):
+#         # 跳过 Keras 内部属性和私有属性
+#         if attr_name.startswith("_") or attr_name in [
+#             "input", "output", "loss", "metrics", "train_step", "test_step", "compile"
+#         ]:
+#             continue
+
+#         attr_value = getattr(original_model, attr_name)
+
+#         # 检查是否为 Keras 子模型
+#         if isinstance(attr_value, tf.keras.Model):
+#             # 递归克隆子模型
+#             cloned_attr_value = recursive_clone_model(attr_value)
+#         elif isinstance(attr_value, tf.keras.layers.Layer):
+#             # 如果是自定义层，尝试复制
+#             cloned_attr_value = tf.keras.models.clone_model(attr_value)
+#             cloned_attr_value.set_weights(attr_value.get_weights())
+#         else:
+#             # 如果是普通属性，直接赋值
+#             cloned_attr_value = attr_value
+
+#         # 将克隆后的属性赋值回克隆的模型
+#         setattr(cloned_model, attr_name, cloned_attr_value)
+
+#     return cloned_model
+
+
+def recursive_clone_model(original_model, cloned_model = None):
+    """
+    递归克隆模型及其自定义属性。
+    :param original_model: 原始模型
+    :param cloned_model: 克隆模型（可选）
+    :return: 克隆后的模型
+    """
+    if cloned_model is None:
+        # 如果未提供克隆模型，使用 tf.keras.models.clone_model 克隆
+        cloned_model = tf.keras.models.clone_model(original_model)
+
+    # # 初始化权重：执行一次前向传播
+    # dummy_input = tf.zeros([1, *original_model.input_shape[1:]])
+    # original_model(dummy_input)
+    # cloned_model(dummy_input)
+
+    # 克隆权重
+    cloned_model.set_weights(original_model.get_weights())
+
+    # 排除不能设置的属性
+    exclude_attrs = {
+        "compiled_metrics", "compiled_loss", "metrics", "loss", "optimizer", "train_function", "test_function",
+    }
+
+    # 递归克隆自定义属性
+    for attr_name in dir(original_model):
+        if (
+            attr_name.startswith("_") or  # 跳过私有属性
+            attr_name in exclude_attrs or  # 跳过不能设置的属性
+            callable(getattr(original_model, attr_name, None))  # 跳过可调用对象
+        ):
+            continue
+
+        attr_value = getattr(original_model, attr_name, None)
+
+        # if isinstance(attr_value, tf.keras.Model):
+        #     # 递归克隆子模型
+        #     cloned_attr_value = recursive_clone_model(attr_value)
+        # elif isinstance(attr_value, tf.keras.layers.Layer):
+        #     # 克隆自定义层
+        #     cloned_attr_value = tf.keras.models.clone_model(attr_value)
+        #     # dummy_input = tf.zeros([1, *attr_value.input_shape[1:]])
+        #     # attr_value(dummy_input)
+        #     # cloned_attr_value(dummy_input)
+        #     cloned_attr_value.set_weights(attr_value.get_weights())
+        if isinstance(attr_value, tf.keras.Model) or isinstance(attr_value, tf.keras.layers.Layer):
+            # 递归克隆子模型
+            cloned_attr_value = recursive_clone_model(attr_value)
+        else:
+            # 普通属性，直接赋值
+            cloned_attr_value = attr_value
+
+        # 设置属性
+        try:
+            print("setattr(cloned_model, attr_name, cloned_attr_value)")
+            print("cloned_model = ", cloned_model)
+            print("attr_name = ", attr_name)
+            print("cloned_attr_value = ", cloned_attr_value)
+            setattr(cloned_model, attr_name, cloned_attr_value)
+        except AttributeError:
+            # 捕获不可设置的属性
+            print(f"Skipping attribute {attr_name} as it cannot be set.")
+
+    return cloned_model

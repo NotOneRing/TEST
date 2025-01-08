@@ -35,7 +35,10 @@ from util.torch_to_tf import nn_ModuleList, nn_Linear, nn_Sequential, nn_LayerNo
 
 from tensorflow.keras.saving import register_keras_serializable
 @register_keras_serializable(package="Custom")
-class MLP(models.Model):
+class MLP(
+    # models.Model
+    tf.keras.layers.Layer
+    ):
     # def __init__(
     #     self,
     #     dim_list,
@@ -139,17 +142,21 @@ class MLP(models.Model):
         # Construct module list: if use `Python List`, the modules are not
         # added to computation graph. Instead, we should use `nn.ModuleList()`.
         if moduleList == None:
-            self.moduleList = nn_ModuleList()
+            self.moduleList = []
+            # nn_ModuleList()
+
             # self.append_layers = append_layers
             num_layer = len(dim_list) - 1
 
+            print("MLP __init__(): moduleList == None 1")
             print("num_layer = ", num_layer)
             for idx in range(num_layer):
                 i_dim = dim_list[idx]
                 o_dim = dim_list[idx + 1]
                 if append_dim > 0 and idx in append_layers:
                     i_dim += append_dim
-                linear_layer = nn_Linear(i_dim, o_dim)
+                linear_layer = nn_Linear(i_dim, o_dim, name_Dense="MLP_linear" + str(idx) + "-1")
+                # linear_layer = tf.keras.layers.Dense(o_dim, name="MLP_linear" + str(idx) + "-1")
 
                 # Add module components
                 layers = [("linear_1", linear_layer)]
@@ -168,7 +175,7 @@ class MLP(models.Model):
 
                 # re-construct module
                 
-                module = nn_Sequential(OrderedDict(layers))
+                module = nn_Sequential(OrderedDict(layers), name = "MLP_module" + str(idx) + "-1")
 
                 current_config = module.get_config()
 
@@ -181,8 +188,14 @@ class MLP(models.Model):
 
 
                 self.moduleList.append(module)
+            print("MLP __init__(): moduleList == None 1")
+            
+            self.moduleList = nn_Sequential(self.moduleList, name="MLP_moduleList")
+
         else:
+            print("MLP __init__(): moduleList != None 1")
             self.moduleList = moduleList
+            print("MLP __init__(): moduleList != None 1")
         if verbose:
             logging.info(self.moduleList)
 
@@ -250,7 +263,9 @@ class MLP(models.Model):
         print("module_list_str = ", module_list_str)
 
         # moduleList = nn_ModuleList.from_config( module_list_str['config'] )
-        moduleList = nn_ModuleList.from_config( module_list_str )
+
+        # moduleList = nn_ModuleList.from_config( module_list_str )
+        moduleList = nn_Sequential.from_config( module_list_str )
 
         result =  cls(moduleList = moduleList, **config)
 
@@ -265,11 +280,13 @@ class MLP(models.Model):
         append = None
         print("mlp.py: MLP.call()")
 
-        for layer_ind, m in enumerate(self.moduleList):
-            if append is not None and layer_ind in self.append_layers:
-                # x = tf.concat([x, append], axis=-1)
-                x = torch_cat((x, append), dim=-1)
-            x = m(x)
+        # for layer_ind, m in enumerate(self.moduleList):
+        #     if append is not None and layer_ind in self.append_layers:
+        #         # x = tf.concat([x, append], axis=-1)
+        #         x = torch_cat((x, append), dim=-1)
+        #     x = m(x)
+        x = self.moduleList(x)
+
         return x
 
 
@@ -277,7 +294,10 @@ class MLP(models.Model):
 
 
 @register_keras_serializable(package="Custom")
-class ResidualMLP(models.Model):
+class ResidualMLP(
+    tf.keras.layers.Layer
+    # models.Model
+    ):
     # def __init__(
     #     self,
     #     dim_list,
@@ -349,6 +369,8 @@ class ResidualMLP(models.Model):
     #     self.cur_layers.add(activation_dict[out_activation_type])
     #     # print("after append()")
 
+    count_residualMLP = 0
+
     def __init__(
         self,
         dim_list,
@@ -381,7 +403,14 @@ class ResidualMLP(models.Model):
 
             print("num_hidden_layers = ", num_hidden_layers)
 
-            self.my_layers = nn_ModuleList([nn_Linear(dim_list[0], hidden_dim)])
+            # self.my_layers = nn_ModuleList([nn_Linear(dim_list[0], hidden_dim, name_Dense="ResidualMLP_my_layers_1"
+            #                                         #    + str(ResidualMLP.count_residualMLP)
+            #                                            )])
+            self.my_layers = [nn_Linear(dim_list[0], hidden_dim, name_Dense="ResidualMLP_my_layers_1"
+                                                    #    + str(ResidualMLP.count_residualMLP)
+                                                       )]
+
+
             self.my_layers.extend(
                 [
                     TwoLayerPreActivationResNetLinear(
@@ -389,14 +418,25 @@ class ResidualMLP(models.Model):
                         activation_type=activation_type,
                         use_layernorm=use_layernorm,
                         dropout=dropout,
+                        l1_name="TwoLayerPreActivationResNetLinear_l1-" + str(_),
+                        l2_name="TwoLayerPreActivationResNetLinear_l2" + str(_),
+                        name = "TwoLayerPreActivationResNetLinear-" + str(_)
                     )
                     for _ in range(1, num_hidden_layers, 2)
                 ]
             )
-            self.my_layers.append(nn_Linear(hidden_dim, dim_list[-1]))
+            self.my_layers.append(nn_Linear(hidden_dim, dim_list[-1], name_Dense="ResidualMLP_my_layers_2"
+                                            #  + str(ResidualMLP.count_residualMLP)
+                                             ))
+
+            # ResidualMLP.count_residualMLP += 1
+
             if use_layernorm_final:
-                self.my_layers.append(nn_LayerNorm(dim_list[-1]))
+                self.my_layers.append(nn_LayerNorm(dim_list[-1], name="nn_LayerNorm1"))
             self.my_layers.append(activation_dict[out_activation_type])
+            
+            self.my_layers = nn_Sequential(self.my_layers, name = "my_layers")
+
         else:
             self.my_layers = my_layers
 
@@ -468,11 +508,12 @@ class ResidualMLP(models.Model):
 
         # my_layers = tf.keras.layers.deserialize(config.pop("my_layers") ,  custom_objects=get_custom_objects() )
 
-        my_layers = nn_ModuleList.from_config(config.pop("my_layers"))
+        # my_layers = nn_ModuleList.from_config(config.pop("my_layers"))
+        my_layers = nn_Sequential.from_config(config.pop("my_layers"))
 
         config['name'] == "ResidualMLP"
 
-        result =  cls(my_layers = my_layers , **config)
+        result =  cls(my_layers = my_layers, **config)
 
         print("finish ResidualMLP: from_config")
 
@@ -491,10 +532,13 @@ class ResidualMLP(models.Model):
     
     def call(self, x):
 
-        print("mlp.py: ResidualMLP.forward()", flush = True)
+        print("mlp.py: ResidualMLP.call()", flush = True)
 
-        for _, layer in enumerate(self.my_layers):
-            x = layer(x)
+        # for _, layer in enumerate(self.my_layers):
+        #     x = layer(x)
+
+        x = self.my_layers(x)
+
         return x
 
 
@@ -549,6 +593,8 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         norm1 = None,
         norm2 = None,
         name="TwoLayerPreActivationResNetLinear",
+        l1_name = None,
+        l2_name = None,
         **kwargs
     ):
         self.hidden_dim = hidden_dim
@@ -560,12 +606,12 @@ class TwoLayerPreActivationResNetLinear(models.Model):
 
         super(TwoLayerPreActivationResNetLinear, self).__init__(name=name, **kwargs)
         if l1 == None:
-            self.l1 = nn_Linear(hidden_dim, hidden_dim)
+            self.l1 = nn_Linear(hidden_dim, hidden_dim, name_Dense=l1_name)
         else:
             self.l1 = l1
 
         if l2 == None:
-            self.l2 = nn_Linear(hidden_dim, hidden_dim)
+            self.l2 = nn_Linear(hidden_dim, hidden_dim, name_Dense=l2_name)
         else:
             self.l2 = l2
         
@@ -632,7 +678,8 @@ class TwoLayerPreActivationResNetLinear(models.Model):
             # tf.keras.layers.serialize(self.norm1),
             "norm2": self.norm2.get_config(),
 
-            'name': 'TwoLayerPreActivationResNetLinear',
+            # 'name': 'TwoLayerPreActivationResNetLinear',
+            "name": self.name,
             # tf.keras.layers.serialize(self.norm2),
 
         })
@@ -698,3 +745,5 @@ class TwoLayerPreActivationResNetLinear(models.Model):
             act=act, norm1=norm1, norm2=norm2, activation_type=activation_type, **config)
         # result = cls(**config)
         return result
+
+

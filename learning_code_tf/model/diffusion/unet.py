@@ -26,6 +26,8 @@ from model.diffusion.modules import (
 from model.common.mlp import ResidualMLP
 
 
+from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish
+
 # class ResidualBlock1D(nn.Module):
 class ResidualBlock1D(tf.keras.layers.Layer):
     def __init__(
@@ -167,13 +169,24 @@ class Unet1D(tf.keras.Model):
 
         dsed = diffusion_step_embed_dim
         
-        self.time_mlp = tf.keras.Sequential([
-            SinusoidalPosEmb(diffusion_step_embed_dim),
-            tf.keras.layers.Dense(diffusion_step_embed_dim * 4),
-            tf.keras.layers.Activation(self.mish),
-            tf.keras.layers.Dense(diffusion_step_embed_dim),
-        ])
+        # self.time_mlp = tf.keras.Sequential([
+        #     SinusoidalPosEmb(diffusion_step_embed_dim),
+        #     # tf.keras.layers.Dense(diffusion_step_embed_dim * 4),
+        #     # tf.keras.layers.Activation(self.mish),
+        #     # tf.keras.layers.Dense(diffusion_step_embed_dim),
+        #     tf.keras.layers.Dense(diffusion_step_embed_dim * 4),
+        #     tf.keras.layers.Activation(self.mish),
+        #     tf.keras.layers.Dense(diffusion_step_embed_dim),
 
+        # ])
+
+        dsed = diffusion_step_embed_dim
+        self.time_mlp = nn_Sequential(
+            SinusoidalPosEmb(dsed),
+            nn_Linear(dsed, dsed * 4),
+            nn_Mish(),
+            nn_Linear(dsed * 4, dsed),
+        )
 
 
 

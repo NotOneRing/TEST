@@ -91,6 +91,7 @@ class PreTrainAgent:
             self.model.call_noise = None
             self.model.call_noise = None
             self.model.call_x = None
+            self.model.q_sample_noise = None
 
 
         print("self.model = ", self.model)
@@ -218,6 +219,8 @@ class PreTrainAgent:
         print("train_agent.py: PreTrainAgent.run()")
         raise NotImplementedError
 
+
+
     def reset_parameters(self):
         print("train_agent.py: PreTrainAgent.reset_parameters()")
         self.ema_model.set_weights(self.model.get_weights())
@@ -249,7 +252,9 @@ class PreTrainAgent:
 
         # self.model.save(savepath)
 
-        # print(f"Saved model to {savepath}")
+        tf.keras.models.save_model(self.model, savepath)
+
+        print(f"Saved model to {savepath}")
 
 
 
@@ -257,10 +262,11 @@ class PreTrainAgent:
 
         print("network_savepath = ", network_savepath)
 
-        network_config = self.model.network.get_config()
-        print("network_config = ", network_config)
+        # network_config = self.model.network.get_config()
+        # print("network_config = ", network_config)
 
-        self.model.network.save(network_savepath)
+        # self.model.network.save(network_savepath)
+        tf.keras.models.save_model(self.model.network, network_savepath)
 
         print(f"Saved model.network to {network_savepath}")
 
@@ -270,20 +276,22 @@ class PreTrainAgent:
 
 
 
-        # ema_savepath = savepath.replace(".keras", "_ema.keras")
+        ema_savepath = savepath.replace(".keras", "_ema.keras")
 
-        # print("ema_savepath = ", ema_savepath)
+        print("ema_savepath = ", ema_savepath)
 
         # self.ema_model.save(ema_savepath)
+        tf.keras.models.save_model(self.ema_model, ema_savepath)
 
-        # print(f"Saved ema_model to {ema_savepath}")
+        print(f"Saved ema_model to {ema_savepath}")
 
 
         ema_network_savepath = savepath.replace(".keras", "_ema_network.keras")
 
         print("ema_network_savepath = ", ema_network_savepath)
 
-        self.ema_model.network.save(ema_network_savepath)
+        # self.ema_model.network.save(ema_network_savepath)
+        tf.keras.models.save_model(self.ema_model.network, ema_network_savepath)
 
         print(f"Saved ema_model.network to {ema_network_savepath}")
 
@@ -319,16 +327,64 @@ class PreTrainAgent:
 
 
 
+        # network_condmlp_savepath = savepath.replace(".keras", "_network_condmlp.keras")
+
+        # print("network_condmlp_savepath = ", network_condmlp_savepath)
+
+        # self.model.network.cond_mlp.save(network_condmlp_savepath)
+
+        # print(f"Saved model.network.cond_mlp to {network_condmlp_savepath}")
+
+
+
+
+        # ema_network_condmlp_savepath = savepath.replace(".keras", "_ema_network_condmlp.keras")
+
+        # print("ema_network_condmlp_savepath = ", ema_network_condmlp_savepath)
+
+        # self.ema_model.network.cond_mlp.save(ema_network_condmlp_savepath)
+
+        # print(f"Saved ema_model.network.cond_mlp to {ema_network_condmlp_savepath}")
+
+
+
+
+
+
+
+
+
+
+
+        # network_timeemb_savepath = savepath.replace(".keras", "_network_timeemb.keras")
+
+        # print("network_timeemb_savepath = ", network_timeemb_savepath)
+
+        # self.model.network.time_embedding.save(network_timeemb_savepath)
+
+        # print(f"Saved model.network.time_embedding to {network_timeemb_savepath}")
+
+
+
+
+        # ema_network_timeemb_savepath = savepath.replace(".keras", "_ema_network_timeemb.keras")
+
+        # print("ema_network_timeemb_savepath = ", ema_network_timeemb_savepath)
+
+        # self.ema_model.network.time_embedding.save(ema_network_timeemb_savepath)
+
+        # print(f"Saved ema_model.network.time_embedding to {ema_network_timeemb_savepath}")
+
+
+
+
+
     def load(self, epoch):
         print("train_agent.py: PreTrainAgent.load()")
         # loadpath = os.path.join(self.checkpoint_dir, f"state_{epoch}.h5")
         loadpath = os.path.join(self.checkpoint_dir, f"state_{epoch}.keras")
 
         print("loadpath = ", loadpath)
-
-
-        # self.model = tf.keras.models.load_model(loadpath)
-
 
         from model.diffusion.mlp_diffusion import DiffusionMLP
         from model.diffusion.diffusion import DiffusionModel
@@ -360,7 +416,20 @@ class PreTrainAgent:
         # Register your custom class with Keras
         get_custom_objects().update(cur_dict)
 
+
+
+
+
+        self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+
+        # self.model = self.model2
+
+
         self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+
+        # self.model.network.cond_mlp = tf.keras.models.load_model(loadpath.replace(".keras", "_network_condmlp.keras") ,  custom_objects=get_custom_objects() )
+        # self.model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_network_mlpmean.keras") ,  custom_objects=get_custom_objects() )
+        # self.model.network.time_embedding = tf.keras.models.load_model(loadpath.replace(".keras", "_network_timeemb.keras") ,  custom_objects=get_custom_objects() )
 
 
         # model_network_summary = self.model.network.summary()
@@ -371,8 +440,15 @@ class PreTrainAgent:
 
 
         # self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"))
+        self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"),  custom_objects=get_custom_objects() )
+
+        # self.ema_model = self.ema_model2
 
         self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras") ,  custom_objects=get_custom_objects() )
+
+        # self.ema_model.network.cond_mlp = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network_condmlp.keras") ,  custom_objects=get_custom_objects() )
+        # self.ema_model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network_mlpmean.keras") ,  custom_objects=get_custom_objects() )
+        # self.ema_model.network.time_embedding = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network_timeemb.keras") ,  custom_objects=get_custom_objects() )
 
         # ema_model_network_summary = self.ema_model.network.summary()
         # print("ema_model_network_summary = ", ema_model_network_summary)

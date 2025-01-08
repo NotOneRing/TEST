@@ -394,7 +394,7 @@ class Transformer(tf.keras.Model):
 
         # decoder head
         self.ln_f = nn_LayerNorm(n_emb)
-        self.head = nn_Linear(n_emb, output_dim)
+        self.head = nn_Linear(n_emb, output_dim, name_Dense = "Transformer_head")
 
         # constants
         self.T_cond = T_cond

@@ -73,7 +73,7 @@ class VisionDiffusionMLP(tf.keras.Model):
             visual_feature_dim = spatial_emb * num_img
         else:
             self.compress = nn_Sequential([
-                nn_Linear(self.backbone.repr_dim, visual_feature_dim),
+                nn_Linear(self.backbone.repr_dim, visual_feature_dim, name_Dense = "VisionDiffusionMLP_1"),
                 nn_LayerNorm(),
                 nn_Dropout(dropout),
                 nn_ReLU(),
@@ -84,9 +84,9 @@ class VisionDiffusionMLP(tf.keras.Model):
         output_dim = action_dim * horizon_steps
         self.time_embedding = nn_Sequential([
             SinusoidalPosEmb(time_dim),
-            nn_Linear(time_dim, time_dim * 2),
+            nn_Linear(time_dim, time_dim * 2, name_Dense = "VisionDiffusionMLP_time_embedding1"),
             nn_Mish(),
-            nn_Linear(time_dim * 2, time_dim),
+            nn_Linear(time_dim * 2, time_dim, name_Dense = "VisionDiffusionMLP_time_embedding2"),
         ])
 
         if residual_style:
@@ -265,7 +265,8 @@ class CustomDense(tf.keras.layers.Layer):
 
 # class DiffusionMLP(tf.keras.layers.Layer):
 @register_keras_serializable(package="Custom")
-class DiffusionMLP(tf.keras.Model):
+# class DiffusionMLP(tf.keras.Model):
+class DiffusionMLP(tf.keras.layers.Layer):
     
     def __init__(
         self,
@@ -282,7 +283,7 @@ class DiffusionMLP(tf.keras.Model):
         time_embedding = None,
         cond_mlp = None,
         mlp_mean = None,
-        # name="DiffusionMLP",
+        name="DiffusionMLP",
         **kwargs
     ):
         print("mlp_diffusion.py: DiffusionMLP.__init__()")
@@ -324,9 +325,9 @@ class DiffusionMLP(tf.keras.Model):
         if time_embedding == None:
             self.time_embedding = nn_Sequential([
                 SinusoidalPosEmb(time_dim),
-                nn_Linear(time_dim, time_dim * 2),
+                nn_Linear(time_dim, time_dim * 2, name_Dense = "DiffusionMLP_time_embedding_1"),
                 nn_Mish(),
-                nn_Linear(time_dim * 2, time_dim),        
+                nn_Linear(time_dim * 2, time_dim, name_Dense = "DiffusionMLP_time_embedding_2"),        
             ], name = "nn_Sequential_time_embedding")
         else:
             self.time_embedding = time_embedding
@@ -447,12 +448,14 @@ class DiffusionMLP(tf.keras.Model):
         print("mlp_mean_config = ", mlp_mean_config)
 
         config.update({
-            "time_embedding": time_embedding_config,
-            # tf.keras.layers.serialize(self.time_embedding),
-            "cond_mlp": cond_mlp_config,
-            # tf.keras.layers.serialize(self.cond_mlp),
-            # "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
-            "mlp_mean": mlp_mean_config,
+            "time_embedding": 
+            # time_embedding_config,
+            tf.keras.layers.serialize(self.time_embedding),
+            "cond_mlp": 
+            # cond_mlp_config,
+            tf.keras.layers.serialize(self.cond_mlp),
+            "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
+            # "mlp_mean": mlp_mean_config,
         })
 
         # print("DiffusionMLP: config = ", config)
@@ -510,22 +513,22 @@ class DiffusionMLP(tf.keras.Model):
         # Register your custom class with Keras
         get_custom_objects().update(cur_dict)
 
-        time_embedding = nn_Sequential.from_config( config.pop("time_embedding") )
-        # tf.keras.layers.deserialize(config.pop("time_embedding") ,  custom_objects=get_custom_objects() )
+        # time_embedding = nn_Sequential.from_config( config.pop("time_embedding") )
+        time_embedding = tf.keras.layers.deserialize(config.pop("time_embedding") ,  custom_objects=get_custom_objects() )
 
-        cond_mlp = MLP.from_config(config.pop("cond_mlp"))
-        # tf.keras.layers.deserialize(config.pop("cond_mlp") ,  custom_objects=get_custom_objects() )
+        # cond_mlp = MLP.from_config(config.pop("cond_mlp"))
+        cond_mlp = tf.keras.layers.deserialize(config.pop("cond_mlp") ,  custom_objects=get_custom_objects() )
 
         residual_style = config.pop("residual_style")
 
-        # mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean") ,  custom_objects=get_custom_objects() )
+        mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean") ,  custom_objects=get_custom_objects() )
 
-        print("residual_style = ", residual_style)
-        if residual_style:
-            print("ResidualMLP = ", ResidualMLP)
-            mlp_mean = ResidualMLP.from_config(config.pop("mlp_mean"))
-        else:
-            mlp_mean = MLP.from_config(config.pop("mlp_mean"))
+        # print("residual_style = ", residual_style)
+        # if residual_style:
+        #     print("ResidualMLP = ", ResidualMLP)
+        #     mlp_mean = ResidualMLP.from_config(config.pop("mlp_mean"))
+        # else:
+        #     mlp_mean = MLP.from_config(config.pop("mlp_mean"))
 
         result = cls(residual_style = residual_style, time_embedding = time_embedding, cond_mlp = cond_mlp, mlp_mean = mlp_mean, **config)
         return result
@@ -652,8 +655,9 @@ class DiffusionMLP(tf.keras.Model):
 
     def call(
         self,
-        inputs
+        inputs,
         # **kwargs,
+        training = True,
     ):
         """
         x: (B, Ta, Da)
@@ -694,11 +698,21 @@ class DiffusionMLP(tf.keras.Model):
         # append time and cond
         time = torch_tensor_view(time, B, 1)
 
-        # print("time = ", time)
+        print("time = ", time)
+
+
 
         print("self.time_embedding = ", self.time_embedding)
 
-        time_emb = torch_tensor_view(self.time_embedding(time), B, self.time_dim)
+
+        temp_result = self.time_embedding(time)
+        
+        print("temp_result = ", temp_result)
+
+        print("temp_result.shape = ", temp_result.shape)
+
+
+        time_emb = torch_tensor_view(temp_result, B, self.time_dim)
 
 
         # for layer in self.time_embedding:
@@ -726,6 +740,11 @@ class DiffusionMLP(tf.keras.Model):
 
         # mlp head
         out = self.mlp_mean(x)
+
+
+        # print("DiffusionMLP call out = ", out)
+
+
         return torch_tensor_view(out, B, Ta, Da)
 
 
