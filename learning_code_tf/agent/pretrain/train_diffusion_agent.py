@@ -356,7 +356,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
                     # self.reset_parameters()
 
-            if epoch > 0:
+            if DEBUG and epoch > 0:
                 epoch_model_weights = self.model.get_weights()
                 # [0]
                 print("epoch = ", epoch)

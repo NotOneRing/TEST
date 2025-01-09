@@ -711,11 +711,68 @@ class DiffusionModel(tf.keras.Model):
 
         result = cls(network=network, **config)
         if DEBUG:
-            result.loss_ori_t = None
-            result.p_losses_noise = None
-            result.call_noise = None
-            result.call_noise = None
-            result.call_x = None
+
+            # if not isinstance(config.pop("loss_ori_t"), tf.Tensor):
+            loss_ori_t = config.pop("loss_ori_t")
+            if loss_ori_t:
+                print("Enter loss_ori_t")
+                loss_ori_t = dict(loss_ori_t)  # 转换为普通字典
+                values = loss_ori_t['config']['value']
+                dtype = loss_ori_t['config']['dtype']
+                loss_ori_t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+                result.loss_ori_t = loss_ori_t
+            else:
+                result.loss_ori_t = None
+
+
+            p_losses_noise = config.pop("p_losses_noise")
+            if p_losses_noise:
+                print("Enter p_losses_noise")
+                p_losses_noise = dict(p_losses_noise)  # 转换为普通字典
+                values = p_losses_noise['config']['value']
+                dtype = p_losses_noise['config']['dtype']
+                p_losses_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+                result.p_losses_noise = p_losses_noise
+            else:
+                result.p_losses_noise = None
+
+
+            call_noise = config.pop("call_noise")
+            if call_noise:
+                print("Enter call_noise")
+                call_noise = dict()  # 转换为普通字典
+                values = call_noise['config']['value']
+                dtype = call_noise['config']['dtype']
+                call_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+                result.call_noise = call_noise
+            else:
+                result.call_noise = None
+
+
+            call_x = config.pop("call_x")
+            if call_x:
+                print("Enter call_x")
+                call_x = dict()  # 转换为普通字典
+                values = call_x['config']['value']
+                dtype = call_x['config']['dtype']
+                call_x = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+                result.call_x = call_x
+            else:
+                result.call_x = None
+
+
+            q_sample_noise = config.pop("q_sample_noise")
+            if q_sample_noise:
+                print("Enter q_sample_noise")
+                q_sample_noise = dict(q_sample_noise)  # 转换为普通字典
+                values = q_sample_noise['config']['value']
+                dtype = q_sample_noise['config']['dtype']
+                q_sample_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+                result.q_sample_noise = q_sample_noise
+            else:
+                result.q_sample_noise = None
+
+
         
         return result
 
@@ -871,6 +928,25 @@ class DiffusionModel(tf.keras.Model):
 
         # print("x_start.shape = ", x_start.shape)
         # print("noise.shape = ", noise.shape)
+
+        print("type(t) = ", type(t))
+
+        # if isinstance(t, tf.keras.src.utils.tracking.TrackedDict):
+
+        # from tensorflow.__internal__.tracking import TrackedDict
+
+        # if not isinstance(t, tf.Tensor):
+        #     t = dict(t)  # 转换为普通字典
+        #     values = t['config']['value']
+        #     dtype = t['config']['dtype']
+        #     t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+
+
+        print("DiffusionModel q_sample t = ", t)
+
+        print("DiffusionModel q_sample type(t) = ", type(t) )
+
+
 
         # Compute x_t
         return (

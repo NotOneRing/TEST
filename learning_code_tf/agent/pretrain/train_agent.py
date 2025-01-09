@@ -229,6 +229,8 @@ class PreTrainAgent:
 
     def step_ema(self):
         print("train_agent.py: PreTrainAgent.step_ema()")
+
+        print("self.epoch = ", self.epoch)
         print("self.epoch_start_ema = ", self.epoch_start_ema)
 
         if self.epoch < self.epoch_start_ema:
