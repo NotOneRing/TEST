@@ -1008,14 +1008,39 @@ def torch_rand(*size, dtype=tf.dtypes.float32):
 
 
 
+def torch_dot(input, tensor, *, out=None):
+    assert len(input.shape) == 1, "len(input.shape) must be 1"
+    assert len(tensor.shape) == 1, "len(tensor.shape) must be 1"
+    out = tf.reduce_sum(input * tensor)
+    return out
 
 
 
 
 
+def torch_vmap(func, *inputs, in_dims=0, out_dims=0):
+    # print("inputs = ", inputs)
+    # print("type(inputs) = ", type(inputs) )
 
-def torch_vmap(func, *parameters, in_dims=0):
-    outputs = tf.vectorized_map(func, parameters)
+    # print("*inputs = ", *inputs)
+    # print("type(*inputs) = ", type(*inputs))
+    out = []
+    for tensor in inputs:
+        cur_tensor = torch_tensor_clone(tensor)
+        out.append(cur_tensor)
+    # out = tuple(out)
+    print("out = ", out)
+
+    if in_dims != 0:
+        for i, tensor in enumerate(out):
+            out[i] = torch_tensor_transpose(out, 0, in_dims)
+    print("out = ", out)
+    
+    outputs = tf.vectorized_map(func, *out)
+
+    if out_dims != 0:
+        outputs = torch_tensor_transpose(outputs, 0, out_dims)
+
     return outputs
 
 
@@ -3552,67 +3577,67 @@ class MixtureSameFamily:
 #     return cloned_model
 
 
-def recursive_clone_model(original_model, cloned_model = None):
-    """
-    递归克隆模型及其自定义属性。
-    :param original_model: 原始模型
-    :param cloned_model: 克隆模型（可选）
-    :return: 克隆后的模型
-    """
-    if cloned_model is None:
-        # 如果未提供克隆模型，使用 tf.keras.models.clone_model 克隆
-        cloned_model = tf.keras.models.clone_model(original_model)
+# def recursive_clone_model(original_model, cloned_model = None):
+#     """
+#     递归克隆模型及其自定义属性。
+#     :param original_model: 原始模型
+#     :param cloned_model: 克隆模型（可选）
+#     :return: 克隆后的模型
+#     """
+#     if cloned_model is None:
+#         # 如果未提供克隆模型，使用 tf.keras.models.clone_model 克隆
+#         cloned_model = tf.keras.models.clone_model(original_model)
 
-    # # 初始化权重：执行一次前向传播
-    # dummy_input = tf.zeros([1, *original_model.input_shape[1:]])
-    # original_model(dummy_input)
-    # cloned_model(dummy_input)
+#     # # 初始化权重：执行一次前向传播
+#     # dummy_input = tf.zeros([1, *original_model.input_shape[1:]])
+#     # original_model(dummy_input)
+#     # cloned_model(dummy_input)
 
-    # 克隆权重
-    cloned_model.set_weights(original_model.get_weights())
+#     # 克隆权重
+#     cloned_model.set_weights(original_model.get_weights())
 
-    # 排除不能设置的属性
-    exclude_attrs = {
-        "compiled_metrics", "compiled_loss", "metrics", "loss", "optimizer", "train_function", "test_function",
-    }
+#     # 排除不能设置的属性
+#     exclude_attrs = {
+#         "compiled_metrics", "compiled_loss", "metrics", "loss", "optimizer", "train_function", "test_function",
+#     }
 
-    # 递归克隆自定义属性
-    for attr_name in dir(original_model):
-        if (
-            attr_name.startswith("_") or  # 跳过私有属性
-            attr_name in exclude_attrs or  # 跳过不能设置的属性
-            callable(getattr(original_model, attr_name, None))  # 跳过可调用对象
-        ):
-            continue
+#     # 递归克隆自定义属性
+#     for attr_name in dir(original_model):
+#         if (
+#             attr_name.startswith("_") or  # 跳过私有属性
+#             attr_name in exclude_attrs or  # 跳过不能设置的属性
+#             callable(getattr(original_model, attr_name, None))  # 跳过可调用对象
+#         ):
+#             continue
 
-        attr_value = getattr(original_model, attr_name, None)
+#         attr_value = getattr(original_model, attr_name, None)
 
-        # if isinstance(attr_value, tf.keras.Model):
-        #     # 递归克隆子模型
-        #     cloned_attr_value = recursive_clone_model(attr_value)
-        # elif isinstance(attr_value, tf.keras.layers.Layer):
-        #     # 克隆自定义层
-        #     cloned_attr_value = tf.keras.models.clone_model(attr_value)
-        #     # dummy_input = tf.zeros([1, *attr_value.input_shape[1:]])
-        #     # attr_value(dummy_input)
-        #     # cloned_attr_value(dummy_input)
-        #     cloned_attr_value.set_weights(attr_value.get_weights())
-        if isinstance(attr_value, tf.keras.Model) or isinstance(attr_value, tf.keras.layers.Layer):
-            # 递归克隆子模型
-            cloned_attr_value = recursive_clone_model(attr_value)
-        else:
-            # 普通属性，直接赋值
-            cloned_attr_value = attr_value
+#         # if isinstance(attr_value, tf.keras.Model):
+#         #     # 递归克隆子模型
+#         #     cloned_attr_value = recursive_clone_model(attr_value)
+#         # elif isinstance(attr_value, tf.keras.layers.Layer):
+#         #     # 克隆自定义层
+#         #     cloned_attr_value = tf.keras.models.clone_model(attr_value)
+#         #     # dummy_input = tf.zeros([1, *attr_value.input_shape[1:]])
+#         #     # attr_value(dummy_input)
+#         #     # cloned_attr_value(dummy_input)
+#         #     cloned_attr_value.set_weights(attr_value.get_weights())
+#         if isinstance(attr_value, tf.keras.Model) or isinstance(attr_value, tf.keras.layers.Layer):
+#             # 递归克隆子模型
+#             cloned_attr_value = recursive_clone_model(attr_value)
+#         else:
+#             # 普通属性，直接赋值
+#             cloned_attr_value = attr_value
 
-        # 设置属性
-        try:
-            print("setattr(cloned_model, attr_name, cloned_attr_value)")
-            print("cloned_model = ", cloned_model)
-            print("attr_name = ", attr_name)
-            print("cloned_attr_value = ", cloned_attr_value)
-            setattr(cloned_model, attr_name, cloned_attr_value)
-        except AttributeError:
-            # 捕获不可设置的属性
-            print(f"Skipping attribute {attr_name} as it cannot be set.")
+#         # 设置属性
+#         try:
+#             print("setattr(cloned_model, attr_name, cloned_attr_value)")
+#             print("cloned_model = ", cloned_model)
+#             print("attr_name = ", attr_name)
+#             print("cloned_attr_value = ", cloned_attr_value)
+#             setattr(cloned_model, attr_name, cloned_attr_value)
+#         except AttributeError:
+#             # 捕获不可设置的属性
+#             print(f"Skipping attribute {attr_name} as it cannot be set.")
 
-    return cloned_model
+#     return cloned_model
