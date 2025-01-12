@@ -673,16 +673,26 @@ class TwoLayerPreActivationResNetLinear(models.Model):
             # "l2": self.l2.get_config(),
             # # tf.keras.layers.serialize(self.l2),
             "act": self.act.get_config(),
-            # tf.keras.layers.serialize(self.act),
-            "norm1": self.norm1.get_config(),
-            # tf.keras.layers.serialize(self.norm1),
-            "norm2": self.norm2.get_config(),
 
             # 'name': 'TwoLayerPreActivationResNetLinear',
             "name": self.name,
             # tf.keras.layers.serialize(self.norm2),
 
         })
+
+
+        if self.use_layernorm:
+            config.update({
+                "norm1": self.norm1.get_config(),
+                "norm2": self.norm2.get_config(),
+            })
+        else:
+            config.update({
+                "norm1": None,
+                "norm2": None,
+            })
+
+
 
         print("TwoLayerPreActivationResNetLinear config = ", config)
         
@@ -736,9 +746,17 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         
         act = act.from_config( config.pop("act") )
 
+        config_norm1 = config.pop("norm1")
+        if config_norm1:
+            norm1 = nn_LayerNorm.from_config( config_norm1 )
+        else:
+            norm1 = None
 
-        norm1 = nn_LayerNorm.from_config( config.pop("norm1") )
-        norm2 = nn_LayerNorm.from_config( config.pop("norm2") )
+        config_norm2 = config.pop("norm2")
+        if config_norm2:
+            norm2 = nn_LayerNorm.from_config( config_norm2 )
+        else:
+            norm2 = None
 
         result = cls(
             # l1=l1, l2=l2, 

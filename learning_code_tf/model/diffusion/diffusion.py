@@ -249,6 +249,8 @@ class DiffusionModel(tf.keras.Model):
             self.betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
         )
         self.ddpm_logvar_clipped = torch_log(torch_clamp(self.ddpm_var, min=1e-20))
+
+
         """
         μₜ = β̃ₜ √ α̅ₜ₋₁/(1-α̅ₜ)x₀ + √ αₜ (1-α̅ₜ₋₁)/(1-α̅ₜ)xₜ
         """
@@ -545,6 +547,9 @@ class DiffusionModel(tf.keras.Model):
                 )
         else:  # directly predicting x₀
             x_recon = noise
+
+    
+
         if self.denoised_clip_value is not None:
             torch_tensor_clamp_(x_recon, -self.denoised_clip_value, self.denoised_clip_value)
             if self.use_ddim:
@@ -577,6 +582,206 @@ class DiffusionModel(tf.keras.Model):
             )
             logvar = extract(self.ddpm_logvar_clipped, t, x.shape)
         return mu, logvar
+
+
+
+
+    def q_sample(self, x_start, t, noise=None):
+        """
+        q(xₜ | x₀) = 𝒩(xₜ; √ α̅ₜ x₀, (1-α̅ₜ)I)
+        xₜ = √ α̅ₜ xₒ + √ (1-α̅ₜ) ε
+        """
+        print("diffusion.py: DiffusionModel.q_sample()")
+
+        # print("t = ", t)
+
+        # print("extract function module:", extract.__module__)
+        # print("extract function name:", extract.__name__)
+
+
+        # Generate noise if not provided
+
+        if DEBUG:
+            if self.q_sample_noise is None:            
+                if noise is None:
+                    self.q_sample_noise = torch_randn_like(x_start)
+                    noise = self.q_sample_noise
+            else:
+                if noise is None:
+                    noise = self.q_sample_noise
+        else:
+            if noise is None:
+                noise = torch_randn_like(x_start)
+
+
+        # if noise is None:
+        #     noise = torch_randn_like(x_start)
+
+        print("DiffusionModel q_sample noise = ", noise)
+
+
+        # print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
+        # print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
+
+        # print("x_start.shape = ", x_start.shape)
+        # print("noise.shape = ", noise.shape)
+
+        print("type(t) = ", type(t))
+
+        # if isinstance(t, tf.keras.src.utils.tracking.TrackedDict):
+
+        # from tensorflow.__internal__.tracking import TrackedDict
+
+        # if not isinstance(t, tf.Tensor):
+        #     t = dict(t)  # 转换为普通字典
+        #     values = t['config']['value']
+        #     dtype = t['config']['dtype']
+        #     t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+
+
+        print("DiffusionModel q_sample t = ", t)
+
+        print("DiffusionModel q_sample type(t) = ", type(t) )
+
+
+
+        # Compute x_t
+        return (
+            extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
+            + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
+        )
+
+
+
+
+
+
+    # def forward(self, cond, deterministic=True):
+    @tf.function
+    def call(self, cond
+            #  , deterministic=True
+             ):
+        """
+        Forward pass for sampling actions. Used in evaluating pre-trained/fine-tuned policy. Not modifying diffusion clipping.
+
+        Args:
+            cond: dict with keys state/rgb; more recent obs at the end
+                state: (B, To, Do)
+                rgb: (B, To, C, H, W)
+        Return:
+            Sample: namedtuple with fields:
+                trajectories: (B, Ta, Da)
+        """
+
+        print("diffusion.py: DiffusionModel.forward()")
+
+        # # Initialize
+        # device = self.betas.device
+
+        print("after device")
+
+        sample_data = cond["state"] if "state" in cond else cond["rgb"]
+
+        print("after sample_data")
+
+        # B = tf.shape(sample_data)[0]
+        # B = sample_data.get_shape().as_list()[0]
+        B = sample_data.shape[0]
+
+
+
+        print("B = ", B)
+
+        print("self.horizon_steps = ", self.horizon_steps)
+
+        print("self.action_dim = ", self.action_dim)
+
+        # Starting random noise
+        # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
+        if DEBUG:
+            if self.call_x is None:
+                self.call_x = torch_randn(B, self.horizon_steps, self.action_dim)
+                x = self.call_x
+            else:
+                x = self.call_x
+        else:
+            x = torch_randn(B, self.horizon_steps, self.action_dim)
+
+        # Define timesteps
+        if self.use_ddim:
+            t_all = self.ddim_t
+        else:
+            t_all = list(reversed(range(self.denoising_steps)))
+
+        # Main loop
+        for i, t in enumerate(t_all):
+            t_b = make_timesteps(B, t)
+            index_b = make_timesteps(B, i)
+
+            # Compute mean and variance
+            mean, logvar = self.p_mean_var(
+                x=x,
+                t=t_b,
+                cond=cond,
+                index=index_b,
+            )
+            std = torch_exp(0.5 * logvar)
+
+            # Determine noise level
+            if self.use_ddim:
+                std = torch_zeros_like(std)
+            else:
+                if t == 0:
+                    std = torch_zeros_like(std)
+                else:
+                    std = torch_clip(std, min=1e-3, max=tf.float32.max)
+
+            # Sample noise and update `x`
+            # noise = tf.random.normal(tf.shape(x))
+            print("x.shape = ", x.shape)
+
+            print("type(x.shape) = ", type(x.shape) )
+
+            if DEBUG:
+                if self.call_noise is None:            
+                    self.call_noise = torch_randn_like( x  )
+                    noise = self.call_noise
+                else:
+                    noise = self.call_noise
+            else:
+                noise = torch_randn_like( x  )
+
+            torch_tensor_clamp_(noise, -self.randn_clip_value, self.randn_clip_value)
+            x = mean + std * noise
+
+            # Clamp action at the final step
+            if self.final_action_clip_value is not None and i == len(t_all) - 1:
+                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
+
+        # Return the result as a namedtuple
+        return Sample(x, None)
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -775,197 +980,4 @@ class DiffusionModel(tf.keras.Model):
 
         
         return result
-
-
-    # def forward(self, cond, deterministic=True):
-    @tf.function
-    def call(self, cond
-            #  , deterministic=True
-             ):
-        """
-        Forward pass for sampling actions. Used in evaluating pre-trained/fine-tuned policy. Not modifying diffusion clipping.
-
-        Args:
-            cond: dict with keys state/rgb; more recent obs at the end
-                state: (B, To, Do)
-                rgb: (B, To, C, H, W)
-        Return:
-            Sample: namedtuple with fields:
-                trajectories: (B, Ta, Da)
-        """
-
-        print("diffusion.py: DiffusionModel.forward()")
-
-        # # Initialize
-        # device = self.betas.device
-
-        print("after device")
-
-        sample_data = cond["state"] if "state" in cond else cond["rgb"]
-
-        print("after sample_data")
-
-        # B = tf.shape(sample_data)[0]
-        # B = sample_data.get_shape().as_list()[0]
-        B = sample_data.shape[0]
-
-
-
-        print("B = ", B)
-
-        print("self.horizon_steps = ", self.horizon_steps)
-
-        print("self.action_dim = ", self.action_dim)
-
-        # Starting random noise
-        # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
-        if DEBUG:
-            if self.call_x is None:
-                self.call_x = torch_randn(B, self.horizon_steps, self.action_dim)
-                x = self.call_x
-            else:
-                x = self.call_x
-        else:
-            x = torch_randn(B, self.horizon_steps, self.action_dim)
-
-        # Define timesteps
-        if self.use_ddim:
-            t_all = self.ddim_t
-        else:
-            t_all = list(reversed(range(self.denoising_steps)))
-
-        # Main loop
-        for i, t in enumerate(t_all):
-            t_b = make_timesteps(B, t)
-            index_b = make_timesteps(B, i)
-
-            # Compute mean and variance
-            mean, logvar = self.p_mean_var(
-                x=x,
-                t=t_b,
-                cond=cond,
-                index=index_b,
-            )
-            std = torch_exp(0.5 * logvar)
-
-            # Determine noise level
-            if self.use_ddim:
-                std = torch_zeros_like(std)
-            else:
-                if t == 0:
-                    std = torch_zeros_like(std)
-                else:
-                    std = torch_clip(std, min=1e-3, max=tf.float32.max)
-
-            # Sample noise and update `x`
-            # noise = tf.random.normal(tf.shape(x))
-            print("x.shape = ", x.shape)
-
-            print("type(x.shape) = ", type(x.shape) )
-
-            if DEBUG:
-                if self.call_noise is None:            
-                    self.call_noise = torch_randn_like( x  )
-                    noise = self.call_noise
-                else:
-                    noise = self.call_noise
-            else:
-                noise = torch_randn_like( x  )
-
-            torch_tensor_clamp_(noise, -self.randn_clip_value, self.randn_clip_value)
-            x = mean + std * noise
-
-            # Clamp action at the final step
-            if self.final_action_clip_value is not None and i == len(t_all) - 1:
-                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
-
-        # Return the result as a namedtuple
-        return Sample(x, None)
-
-        
-
-
-
-
-
-
-    def q_sample(self, x_start, t, noise=None):
-        """
-        q(xₜ | x₀) = 𝒩(xₜ; √ α̅ₜ x₀, (1-α̅ₜ)I)
-        xₜ = √ α̅ₜ xₒ + √ (1-α̅ₜ) ε
-        """
-        print("diffusion.py: DiffusionModel.q_sample()")
-
-        # print("t = ", t)
-
-        # print("extract function module:", extract.__module__)
-        # print("extract function name:", extract.__name__)
-
-
-        # Generate noise if not provided
-
-        if DEBUG:
-            if self.q_sample_noise is None:            
-                if noise is None:
-                    self.q_sample_noise = torch_randn_like(x_start)
-                    noise = self.q_sample_noise
-            else:
-                if noise is None:
-                    noise = self.q_sample_noise
-        else:
-            if noise is None:
-                noise = torch_randn_like(x_start)
-
-
-        # if noise is None:
-        #     noise = torch_randn_like(x_start)
-
-        print("DiffusionModel q_sample noise = ", noise)
-
-
-        # print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
-        # print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
-
-        # print("x_start.shape = ", x_start.shape)
-        # print("noise.shape = ", noise.shape)
-
-        print("type(t) = ", type(t))
-
-        # if isinstance(t, tf.keras.src.utils.tracking.TrackedDict):
-
-        # from tensorflow.__internal__.tracking import TrackedDict
-
-        # if not isinstance(t, tf.Tensor):
-        #     t = dict(t)  # 转换为普通字典
-        #     values = t['config']['value']
-        #     dtype = t['config']['dtype']
-        #     t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
-
-
-        print("DiffusionModel q_sample t = ", t)
-
-        print("DiffusionModel q_sample type(t) = ", type(t) )
-
-
-
-        # Compute x_t
-        return (
-            extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
-            + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
-        )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

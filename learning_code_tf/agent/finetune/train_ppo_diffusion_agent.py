@@ -41,6 +41,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
         # Eta - between DDIM (=0 for eval) and DDPM (=1 for training)
         self.learn_eta = self.model.learn_eta
+
+
         if self.learn_eta:
             self.eta_update_interval = cfg.train.eta_update_interval
 
@@ -71,6 +73,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
         cnt_train_step = 0
         last_itr_eval = False
         done_venv = np.zeros((1, self.n_envs))
+
+        
         while self.itr < self.n_train_itr:
             # Prepare video paths for each envs --- only applies for the first set of episodes if allowing reset within iteration and each iteration has multiple episodes from one env
             options_venv = [{} for _ in range(self.n_envs)]
@@ -109,6 +113,9 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     (self.n_steps, self.n_envs, self.n_cond_step, self.obs_dim)
                 )
             }
+
+
+
             chains_trajs = np.zeros(
                 (
                     self.n_steps,
@@ -118,18 +125,27 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     self.action_dim,
                 )
             )
+
+
+
             terminated_trajs = np.zeros((self.n_steps, self.n_envs))
+
             reward_trajs = np.zeros((self.n_steps, self.n_envs))
+            
+            
             if self.save_full_observations:  # state-only
                 obs_full_trajs = np.empty((0, self.n_envs, self.obs_dim))
                 obs_full_trajs = np.vstack(
                     (obs_full_trajs, prev_obs_venv["state"][:, -1][None])
                 )
 
+
+
             # Collect a set of trajectories from env
             for step in range(self.n_steps):
                 if step % 10 == 0:
                     print(f"Processed step {step} of {self.n_steps}")
+
 
                 # Select action
                 # with torch.no_grad():
@@ -139,18 +155,27 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         # .float()
                         # .to(self.device)
                     }
+
+
                     samples = self.model(
                         cond=cond,
                         deterministic=eval_mode,
                         return_chain=True,
                     )
+
+
                     output_venv = (
                         samples.trajectories.cpu().numpy()
                     )  # n_env x horizon x act
+
+
                     chains_venv = (
                         samples.chains.cpu().numpy()
                     )  # n_env x denoising x horizon x act
+
+
                 action_venv = output_venv[:, : self.act_steps]
+
 
                 # Apply multi-step action
                 (
@@ -160,16 +185,25 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     truncated_venv,
                     info_venv,
                 ) = self.venv.step(action_venv)
+
+
                 done_venv = terminated_venv | truncated_venv
+
+
                 if self.save_full_observations:  # state-only
                     obs_full_venv = np.array(
                         [info["full_obs"]["state"] for info in info_venv]
                     )  # n_envs x act_steps x obs_dim
+
+
                     obs_full_trajs = np.vstack(
                         (obs_full_trajs, 
                          obs_full_venv.transpose(1, 0, 2))
                     )
+
+                
                 obs_trajs["state"][step] = prev_obs_venv["state"]
+
                 chains_trajs[step] = chains_venv
                 reward_trajs[step] = reward_venv
                 terminated_trajs[step] = terminated_venv
@@ -190,6 +224,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     end = env_steps[i + 1]
                     if end - start > 1:
                         episodes_start_end.append((env_ind, start, end - 1))
+
+            
             if len(episodes_start_end) > 0:
                 reward_trajs_split = [
                     reward_trajs[start : end + 1, env_ind]
@@ -222,6 +258,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 avg_best_reward = 0
                 success_rate = 0
                 log.info("[WARNING] No episode completed within the iteration!")
+
+
 
             # Update models
             if not eval_mode:
@@ -396,6 +434,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         tf_gradients_critic = tape.gradient(loss, self.model.critic.trainable_variables)
                         tf_gradients_eta = tape.gradient(loss, self.model.eta.trainable_variables)
 
+
+
                         # # update policy and critic
                         # self.actor_optimizer.zero_grad()
                         # self.critic_optimizer.zero_grad()
@@ -416,6 +456,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
                             if self.learn_eta and batch % self.eta_update_interval == 0:
                                 self.eta_optimizer.step(tf_gradients_eta)
+
+                        
                         self.critic_optimizer.step(tf_gradients_critic)
 
 
@@ -456,6 +498,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 self.actor_lr_scheduler.step()
                 if self.learn_eta:
                     self.eta_lr_scheduler.step()
+            
+
             self.critic_lr_scheduler.step()
 
 
@@ -476,6 +520,11 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
                 self.save_model()
+
+
+
+
+
 
             # Log loss and save metrics
             run_results.append(

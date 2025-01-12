@@ -310,7 +310,10 @@ class DiffusionMLP(tf.keras.layers.Layer):
         print( "type(self.mlp_dims) = ", type(self.mlp_dims) )
 
         # self.cond_mlp_dims = cond_mlp_dims
-        self.cond_mlp_dims = list(cond_mlp_dims)
+        if cond_mlp_dims != None:
+            self.cond_mlp_dims = list(cond_mlp_dims)
+        else:
+            self.cond_mlp_dims = None
 
         self.activation_type = activation_type
         self.out_activation_type = out_activation_type
@@ -374,6 +377,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
             self.input_dim = self.time_dim + self.action_dim * self.horizon_steps + self.cond_mlp_dims[-1]
         else:
             self.input_dim = self.time_dim + self.action_dim * self.horizon_steps + self.cond_dim
+            self.cond_mlp = None
 
 
         # print("after cond_mlp and input_dim")
@@ -438,7 +442,12 @@ class DiffusionMLP(tf.keras.layers.Layer):
         })
 
         time_embedding_config = self.time_embedding.get_config()
-        cond_mlp_config = self.cond_mlp.get_config()
+
+        if self.cond_mlp:
+            cond_mlp_config = self.cond_mlp.get_config()
+        else:
+            cond_mlp_config = None            
+
         mlp_mean_config = self.mlp_mean.get_config()
 
         print("time_embedding_config = ", time_embedding_config)
@@ -517,7 +526,12 @@ class DiffusionMLP(tf.keras.layers.Layer):
         time_embedding = tf.keras.layers.deserialize(config.pop("time_embedding") ,  custom_objects=get_custom_objects() )
 
         # cond_mlp = MLP.from_config(config.pop("cond_mlp"))
-        cond_mlp = tf.keras.layers.deserialize(config.pop("cond_mlp") ,  custom_objects=get_custom_objects() )
+
+        config_cond_mlp = config.pop("cond_mlp")
+        if config_cond_mlp:
+            cond_mlp = tf.keras.layers.deserialize(config_cond_mlp,  custom_objects=get_custom_objects() )
+        else:
+            cond_mlp = None
 
         residual_style = config.pop("residual_style")
 
@@ -692,7 +706,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
         state = torch_tensor_view( cond_state, B, -1 )
 
         # obs encoder
-        if hasattr(self, "cond_mlp"):
+        if hasattr(self, "cond_mlp") and self.cond_mlp:
             state = self.cond_mlp(state)
 
         # append time and cond

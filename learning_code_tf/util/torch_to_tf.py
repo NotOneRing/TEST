@@ -1028,20 +1028,28 @@ def torch_vmap(func, *inputs, in_dims=0, out_dims=0):
     for tensor in inputs:
         cur_tensor = torch_tensor_clone(tensor)
         out.append(cur_tensor)
-    # out = tuple(out)
     print("out = ", out)
 
     if in_dims != 0:
         for i, tensor in enumerate(out):
             out[i] = torch_tensor_transpose(out, 0, in_dims)
-    print("out = ", out)
-    
-    outputs = tf.vectorized_map(func, *out)
 
+    out = tuple(out)
+    print("out = ", out)
+
+
+    outputs_tf = tf.vectorized_map(lambda out: torch_dot(out[0], out[1]), out)
+    
+    print("outputs_tf = ", outputs_tf)
+
+    
     if out_dims != 0:
         outputs = torch_tensor_transpose(outputs, 0, out_dims)
 
     return outputs
+
+
+
 
 
 
