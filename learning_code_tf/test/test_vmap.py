@@ -7,11 +7,16 @@ from util.torch_to_tf import torch_vmap
 def outer_product(a):
   return tf.tensordot(a, a, 0)
 
+def outer_product2(a, b):
+  return tf.tensordot(a, b, 0)
+
 batch_size = 100
 a = tf.ones((batch_size, 32, 32))
-c = tf.vectorized_map(outer_product, a)
+b = 3 * a
+c = tf.vectorized_map(outer_product2, a, b)
 assert c.shape == (batch_size, 32, 32, 32, 32)
 
+print("c = ", c)
 
 
 
