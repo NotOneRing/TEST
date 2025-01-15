@@ -66,7 +66,6 @@ class EMA:
 
             epoch0_model_network_mlpmean_weights = self.model.network.mlp_mean.get_weights()
 
-
             if self.model.network.cond_mlp:
                 epoch0_model_network_condmlp_weights = self.model.network.cond_mlp.get_weights()
 
@@ -79,8 +78,6 @@ class EMA:
 
             epoch0_model_network_mlpmean_trainable_variables = self.model.network.mlp_mean.trainable_variables
 
-
-
             if self.model.network.cond_mlp:
                 epoch0_model_network_condmlp_trainable_variables = self.model.network.cond_mlp.trainable_variables
 
@@ -89,21 +86,66 @@ class EMA:
 
 
 
+
+
+
+
+
+
+            epoch0_ema_model_weights = self.ema_model.get_weights()
+
+            epoch0_ema_model_network_weights = self.ema_model.network.get_weights()
+
+            epoch0_ema_model_network_mlpmean_weights = self.ema_model.network.mlp_mean.get_weights()
+
+            if self.ema_model.network.cond_mlp:
+                epoch0_ema_model_network_condmlp_weights = self.ema_model.network.cond_mlp.get_weights()
+
+
+            epoch0_ema_model_network_timeemb_weights = self.ema_model.network.time_embedding.get_weights()
+
+            epoch0_ema_model_trainable_variables = self.ema_model.trainable_variables
+
+            epoch0_ema_model_network_trainable_variables = self.ema_model.network.trainable_variables
+
+            epoch0_ema_model_network_mlpmean_trainable_variables = self.ema_model.network.mlp_mean.trainable_variables
+
+            if self.ema_model.network.cond_mlp:
+                epoch0_ema_model_network_condmlp_trainable_variables = self.ema_model.network.cond_mlp.trainable_variables
+
+            epoch0_ema_model_network_timeemb_trainable_variables = self.ema_model.network.time_embedding.trainable_variables
+
+
+
+
+
+
+
+
+        ma_weights.assign(updated_parameters)
+
+
+
+        # ema_model * self.beta + (1 - self.beta) * model
+
+        if DEBUG:
+
+
             epoch_model_weights = self.model.get_weights()
 
             for i in range(len(epoch_model_weights)):
-                assert np.sum(epoch0_model_weights[i] - epoch_model_weights[i]) == 0, "np.sum(epoch0_model_weights[i] - epoch_model_weights[i]) != 0"
+                assert np.sum(epoch0_model_weights[i] * (1-self.beta) + epoch0_ema_model_weights[i] * self.beta - epoch_model_weights[i]) == 0, "np.sum(epoch0_model_weights[i] - epoch_model_weights[i]) != 0"
 
             epoch_model_network_weights = self.model.network.get_weights()
 
             for i in range(len(epoch_model_network_weights)):
-                assert np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) == 0, "np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) != 0"
+                assert np.sum(epoch0_model_network_weights[i] * (1-self.beta) + epoch0_ema_model_network_weights[i] * self.beta - epoch_model_network_weights[i]) == 0, "np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) != 0"
 
             epoch_model_network_mlpmean_weights = self.model.network.mlp_mean.get_weights()
 
 
             for i in range(len(epoch_model_network_mlpmean_weights)):
-                assert np.sum(epoch0_model_network_mlpmean_weights[i] - epoch_model_network_mlpmean_weights[i]) == 0, "np.sum(epoch0_model_network_mlpmean_weights[i] - epoch_model_network_mlpmean_weights[i]) != 0"
+                assert np.sum(epoch0_model_network_mlpmean_weights[i] * (1-self.beta) + epoch0_ema_model_network_mlpmean_weights[i] * self.beta - epoch_model_network_mlpmean_weights[i]) == 0, "np.sum(epoch0_model_network_mlpmean_weights[i] - epoch_model_network_mlpmean_weights[i]) != 0"
 
 
 
@@ -112,26 +154,26 @@ class EMA:
                 epoch_model_network_condmlp_weights = self.model.network.cond_mlp.get_weights()
 
                 for i in range(len(epoch_model_network_condmlp_weights)):
-                    assert np.sum(epoch0_model_network_condmlp_weights[i] - epoch_model_network_condmlp_weights[i]) == 0, "np.sum(epoch0_model_network_condmlp_weights[i] - epoch_model_network_condmlp_weights[i]) != 0"
+                    assert np.sum(epoch0_model_network_condmlp_weights[i] * (1-self.beta) + epoch0_ema_model_network_condmlp_weights[i] * self.beta - epoch_model_network_condmlp_weights[i]) == 0, "np.sum(epoch0_model_network_condmlp_weights[i] - epoch_model_network_condmlp_weights[i]) != 0"
 
             epoch_model_network_timeemb_weights = self.model.network.time_embedding.get_weights()
 
             for i in range(len(epoch_model_network_timeemb_weights)):
-                assert np.sum(epoch0_model_network_timeemb_weights[i] - epoch_model_network_timeemb_weights[i]) == 0, "np.sum(epoch0_model_network_timeemb_weights[i] - epoch_model_network_timeemb_weights[i]) != 0"
+                assert np.sum(epoch0_model_network_timeemb_weights[i] * (1-self.beta) + epoch0_ema_model_network_timeemb_weights[i] * self.beta - epoch_model_network_timeemb_weights[i]) == 0, "np.sum(epoch0_model_network_timeemb_weights[i] - epoch_model_network_timeemb_weights[i]) != 0"
 
 
 
             epoch_model_trainable_variables = self.model.trainable_variables
             for i in range(len(epoch_model_trainable_variables)):
-                assert np.sum(epoch0_model_trainable_variables[i] - epoch_model_trainable_variables[i]) == 0, "np.sum(epoch0_model_trainable_variables[i] - epoch_model_trainable_variables[i]) != 0"
+                assert np.sum(epoch0_model_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_trainable_variables[i] * self.beta - epoch_model_trainable_variables[i]) == 0, "np.sum(epoch0_model_trainable_variables[i] - epoch_model_trainable_variables[i]) != 0"
 
             epoch_model_network_trainable_variables = self.model.network.trainable_variables
             for i in range(len(epoch_model_network_trainable_variables)):
-                assert np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) == 0, "np.sum(epoch0_model_network_trainable_variables[i] - epoch_model_network_trainable_variables[i]) != 0"
+                assert np.sum(epoch0_model_network_weights[i] * (1-self.beta) + epoch0_ema_model_network_weights[i] * self.beta - epoch_model_network_weights[i]) == 0, "np.sum(epoch0_model_network_trainable_variables[i] - epoch_model_network_trainable_variables[i]) != 0"
 
             epoch_model_network_mlpmean_trainable_variables = self.model.network.mlp_mean.trainable_variables
             for i in range(len(epoch_model_network_mlpmean_trainable_variables)):
-                assert np.sum(epoch0_model_network_mlpmean_trainable_variables[i] - epoch_model_network_mlpmean_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_mlpmean_trainable_variables[i] - epoch_model_network_mlpmean_trainable_variables[i]) != 0"
+                assert np.sum(epoch0_model_network_mlpmean_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_mlpmean_trainable_variables[i] * self.beta - epoch_model_network_mlpmean_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_mlpmean_trainable_variables[i] - epoch_model_network_mlpmean_trainable_variables[i]) != 0"
 
 
 
@@ -140,16 +182,15 @@ class EMA:
 
                 epoch_model_network_condmlp_trainable_variables = self.model.network.cond_mlp.trainable_variables
                 for i in range(len(epoch_model_network_condmlp_trainable_variables)):
-                    assert np.sum(epoch0_model_network_condmlp_trainable_variables[i] - epoch_model_network_condmlp_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_condmlp_trainable_variables[i] - epoch_model_network_condmlp_trainable_variables[i]) != 0"
+                    assert np.sum(epoch0_model_network_condmlp_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_condmlp_trainable_variables[i] * self.beta - epoch_model_network_condmlp_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_condmlp_trainable_variables[i] - epoch_model_network_condmlp_trainable_variables[i]) != 0"
 
 
             epoch_model_network_timeemb_trainable_variables = self.model.network.time_embedding.trainable_variables
             for i in range(len(epoch_model_network_timeemb_trainable_variables)):
-                assert np.sum(epoch0_model_network_timeemb_trainable_variables[i] - epoch_model_network_timeemb_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_timeemb_trainable_variables[i] - epoch_model_network_timeemb_trainable_variables[i]) != 0"
+                assert np.sum(epoch0_model_network_timeemb_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_timeemb_trainable_variables[i] * self.beta - epoch_model_network_timeemb_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_timeemb_trainable_variables[i] - epoch_model_network_timeemb_trainable_variables[i]) != 0"
 
 
 
-        ma_weights.assign(updated_parameters)
 
         
 
@@ -158,6 +199,8 @@ class EMA:
         if old is None:
             return new
         return old * self.beta + (1 - self.beta) * new
+
+
 
 
 class PreTrainAgent:
@@ -334,6 +377,8 @@ class PreTrainAgent:
             print("branch self.epoch < self.epoch_start_ema")
             self.reset_parameters()
             return
+
+        print("self.ema.update_model_average(self.ema_model, self.model)")
 
         self.ema.update_model_average(self.ema_model, self.model)
 

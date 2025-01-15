@@ -145,7 +145,8 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         
         if DEBUG:
-            self.n_epochs = 3
+            # self.n_epochs = 3
+            self.n_epochs = 200
 
         dataset = dataset.batch(
             self.batch_size, drop_remainder=True
@@ -299,9 +300,9 @@ class TrainDiffusionAgent(PreTrainAgent):
 
                     print("loss_train_ema.numpy() = ", loss_train_ema.numpy())
 
-                    print("1self.model.get_weights() = ", self.model.get_weights())
+                    # print("1self.model.get_weights() = ", self.model.get_weights())
 
-                    print("1self.ema_model.get_weights() = ", self.ema_model.get_weights())
+                    # print("1self.ema_model.get_weights() = ", self.ema_model.get_weights())
 
                     self.reset_parameters()
 
@@ -309,8 +310,8 @@ class TrainDiffusionAgent(PreTrainAgent):
                         # # self.ema_model = recursive_clone_model(self.model, self.ema_model)
                         # self.ema_model.network = recursive_clone_model(self.model.network, self.ema_model.network)
 
-                        print("type(self.model.get_weights()) = ", type(self.model.get_weights()))
-                        print("type(self.model.get_weights()[0]) = ", type(self.model.get_weights()[0]))
+                        # print("type(self.model.get_weights()) = ", type(self.model.get_weights()))
+                        # print("type(self.model.get_weights()[0]) = ", type(self.model.get_weights()[0]))
 
                         epoch0_model_weights = self.model.get_weights()
 
@@ -327,9 +328,9 @@ class TrainDiffusionAgent(PreTrainAgent):
 
                         # [0]
 
-                        print("2self.model.get_weights() = ", self.model.get_weights())
+                        # print("2self.model.get_weights() = ", self.model.get_weights())
 
-                        print("2self.ema_model.get_weights() = ", self.ema_model.get_weights())
+                        # print("2self.ema_model.get_weights() = ", self.ema_model.get_weights())
 
                         # self.ema_model.network = tf.keras.models.clone_model(self.model.network)
                         # print("self.ema_model.network = ", self.ema_model.network)
@@ -338,12 +339,12 @@ class TrainDiffusionAgent(PreTrainAgent):
                         # print("2self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
 
                         # self.ema_model.set_weights(self.model.get_weights())  # 同步权重
-                        print("1self.model.trainable_variables = ", self.model.trainable_variables)
-                        print("1self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
+                        # print("1self.model.trainable_variables = ", self.model.trainable_variables)
+                        # print("1self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
 
 
-                        print("type(self.model.trainable_variables) = ", type(self.model.trainable_variables))
-                        print("type(self.model.trainable_variables[0]) = ", type(self.model.trainable_variables[0]))
+                        # print("type(self.model.trainable_variables) = ", type(self.model.trainable_variables))
+                        # print("type(self.model.trainable_variables[0]) = ", type(self.model.trainable_variables[0]))
 
 
 
@@ -549,7 +550,7 @@ class TrainDiffusionAgent(PreTrainAgent):
             print("loss_train.numpy() = ", loss_train.numpy())
 
             # Update ema
-            if epoch % self.update_ema_freq == 0:
+            if epoch % (self.update_ema_freq * increment_epochs) == 0:
                 self.step_ema()
             epoch += 1
 
