@@ -168,13 +168,144 @@ class DiffusionModel(tf.keras.Model):
                 # 'PPODiffusion': PPODiffusion
             })
 
-
-            self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
-            self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
+            
 
 
+            if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
+                print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
+                self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
+                self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
+            else:
 
-            print(f"Loaded policy from {network_path}")
+
+                print(f"Loaded policy from {network_path}")
+            
+                # # hopper
+                # 'betas', 
+                # 'alphas_cumprod', 
+                # 'alphas_cumprod_prev', 
+                # 'sqrt_alphas_cumprod', 
+                # 'sqrt_one_minus_alphas_cumprod', 
+                # 'log_one_minus_alphas_cumprod', 
+                # 'sqrt_recip_alphas_cumprod', 
+                # 'sqrt_recipm1_alphas_cumprod', 
+                # 'posterior_variance', 
+                # 'posterior_log_variance_clipped', 
+                # 'posterior_mean_coef1', 
+                # 'posterior_mean_coef2', 
+
+                # 'network.time_embedding.1.weight', 
+                # 'network.time_embedding.1.bias', 
+                # 'network.time_embedding.3.weight', 
+                # 'network.time_embedding.3.bias', 
+                # 'network.mlp_mean.layers.0.weight', 
+                # 'network.mlp_mean.layers.0.bias', 
+                # 'network.mlp_mean.layers.1.l1.weight', 
+                # 'network.mlp_mean.layers.1.l1.bias', 
+                # 'network.mlp_mean.layers.1.l2.weight', 
+                # 'network.mlp_mean.layers.1.l2.bias', 
+                # 'network.mlp_mean.layers.2.weight', 
+                # 'network.mlp_mean.layers.2.bias', 
+                
+                # 'loss_fn.weights', 
+                # 'mask_generator._dummy_variable'
+
+
+                # # Robomimic
+                # 'network.time_embedding.1.weight', 
+                # 'network.time_embedding.1.bias', 
+                # 'network.time_embedding.3.weight', 
+                # 'network.time_embedding.3.bias', 
+                # 'network.mlp_mean.layers.0.weight', 
+                # 'network.mlp_mean.layers.0.bias', 
+                # 'network.mlp_mean.layers.1.l1.weight', 
+                # 'network.mlp_mean.layers.1.l1.bias', 
+                # 'network.mlp_mean.layers.1.l2.weight', 
+                # 'network.mlp_mean.layers.1.l2.bias', 
+                # 'network.mlp_mean.layers.2.weight', 
+                # 'network.mlp_mean.layers.2.bias'
+
+
+
+
+                # #d3il
+                # 'network.time_embedding.1.weight', 
+                # 'network.time_embedding.1.bias', 
+                # 'network.time_embedding.3.weight',
+                # 'network.time_embedding.3.bias', 
+                # 'network.mlp_mean.layers.0.weight', 
+                # 'network.mlp_mean.layers.0.bias', 
+                # 'network.mlp_mean.layers.1.l1.weight', 
+                # 'network.mlp_mean.layers.1.l1.bias', 
+                # 'network.mlp_mean.layers.1.l2.weight', 
+                # 'network.mlp_mean.layers.1.l2.bias', 
+                # 'network.mlp_mean.layers.2.weight', 
+                # 'network.mlp_mean.layers.2.bias'
+
+
+
+
+                # # furniture
+                # 'network.time_embedding.1.weight', 
+                # 'network.time_embedding.1.bias', 
+                # 'network.time_embedding.3.weight', 
+                # 'network.time_embedding.3.bias', 
+                # 'network.mlp_mean.layers.0.weight', 
+                # 'network.mlp_mean.layers.0.bias', 
+                # 'network.mlp_mean.layers.1.l1.weight', 
+                # 'network.mlp_mean.layers.1.l1.bias', 
+                # 'network.mlp_mean.layers.1.l2.weight', 
+                # 'network.mlp_mean.layers.1.l2.bias', 
+                # 'network.mlp_mean.layers.2.weight', 
+                # 'network.mlp_mean.layers.2.bias'
+
+
+                pkl_file_path = network_path.replace('.pt', '.pkl')
+
+                print("pkl_file_path = ", pkl_file_path)
+
+                import pickle
+                # load pickle file
+                with open(pkl_file_path, 'rb') as file:
+                    params_dict = pickle.load(file)
+
+
+                # 打印加载的内容
+                print("params_dict = ", params_dict)
+
+                print("before self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)")
+                self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)  # kernel
+                print("before self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])")
+                self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])     # bias
+
+                print("before self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)")
+                self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)  # kernel
+                print("before self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])")
+                self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])     # bias
+
+
+                print("before self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)")
+                self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
+                print("before self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])")
+                self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
+
+                print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)")
+                self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
+                print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])")
+                self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
+                print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)")
+                self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
+                print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])")
+                self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
+
+
+                print("before self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)")
+                self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
+                print("before self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])")
+                self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
+
+
+
 
         print("after set up models")
 

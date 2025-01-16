@@ -671,10 +671,14 @@ class AsyncVectorEnv(VectorEnv):
 
         print("async_vector_env.py: AsyncVectorEnv._assert_is_running()")
 
+        print("before self.closed")
+
         if self.closed:
             raise ClosedEnvironmentError(
                 f"Trying to operate on `{type(self).__name__}`, after a call to `close()`."
             )
+
+        print("after self.closed")
 
     def _raise_if_errors(self, successes):
 

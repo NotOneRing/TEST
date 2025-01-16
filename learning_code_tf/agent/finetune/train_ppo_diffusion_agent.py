@@ -36,11 +36,15 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
         super().__init__(cfg)
 
+        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__(): 1")
+
         # Reward horizon --- always set to act_steps for now
         self.reward_horizon = cfg.get("reward_horizon", self.act_steps)
 
         # Eta - between DDIM (=0 for eval) and DDPM (=1 for training)
         self.learn_eta = self.model.learn_eta
+
+        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__(): 2")
 
 
         if self.learn_eta:

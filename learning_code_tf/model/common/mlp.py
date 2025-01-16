@@ -419,7 +419,7 @@ class ResidualMLP(
                         use_layernorm=use_layernorm,
                         dropout=dropout,
                         l1_name="TwoLayerPreActivationResNetLinear_l1-" + str(_),
-                        l2_name="TwoLayerPreActivationResNetLinear_l2" + str(_),
+                        l2_name="TwoLayerPreActivationResNetLinear_l2-" + str(_),
                         name = "TwoLayerPreActivationResNetLinear-" + str(_)
                     )
                     for _ in range(1, num_hidden_layers, 2)

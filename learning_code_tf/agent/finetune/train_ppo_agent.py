@@ -25,7 +25,7 @@ class TrainPPOAgent(TrainAgent):
 
     def __init__(self, cfg):
 
-        print("train_ppo_agent.py: TrainPPOAgent.run()")
+        print("train_ppo_agent.py: TrainPPOAgent.__init__()")
 
         super().__init__(cfg)
 
@@ -37,6 +37,10 @@ class TrainPPOAgent(TrainAgent):
 
         # note the discount factor gamma here is applied to reward every act_steps, instead of every env step
         self.gamma = cfg.train.gamma
+
+
+        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 1")
+
 
         # Wwarm up period for critic before actor updates
         self.n_critic_warmup_itr = cfg.train.n_critic_warmup_itr
@@ -52,6 +56,12 @@ class TrainPPOAgent(TrainAgent):
             gamma=1.0,
         )
 
+
+
+        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 2")
+
+
+
         # Optimizer
         self.actor_optimizer = torch_optim_AdamW(
             # self.model.actor_ft.parameters(),
@@ -59,6 +69,12 @@ class TrainPPOAgent(TrainAgent):
             lr=self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
         )
+
+
+
+        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 3")
+
+
 
 
         self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
@@ -71,6 +87,14 @@ class TrainPPOAgent(TrainAgent):
             gamma=1.0,
         )
 
+
+
+        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 4")
+
+
+
+
+
         self.critic_optimizer = torch_optim_AdamW(
             # self.model.critic.parameters(),
             self.model.critic.trainable_variables,
@@ -78,6 +102,15 @@ class TrainPPOAgent(TrainAgent):
             lr = self.critic_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
+
+
+
+
+
+        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 5")
+
+
+
 
         # Generalized advantage estimation
         self.gae_lambda: float = cfg.train.get("gae_lambda", 0.95)
@@ -106,6 +139,8 @@ class TrainPPOAgent(TrainAgent):
         self.use_bc_loss: bool = cfg.train.get("use_bc_loss", False)
         self.bc_loss_coeff: float = cfg.train.get("bc_loss_coeff", 0)
 
+
+        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 6")
 
 
 

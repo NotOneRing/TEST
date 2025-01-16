@@ -116,6 +116,7 @@ def main(cfg: OmegaConf):
     # For for-tuning: download checkpoint if needed
     if "base_policy_path" in cfg and not os.path.exists(cfg.base_policy_path):
         download_url = get_checkpoint_download_url(cfg)
+        print("download_url = ", download_url)
         if download_url is None:
             raise ValueError(
                 f"Unknown checkpoint path. Did you specify the correct path to the policy you trained?"

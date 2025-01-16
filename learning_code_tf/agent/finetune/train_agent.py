@@ -74,6 +74,10 @@ class TrainAgent:
                 [self.seed + i for i in range(cfg.env.n_envs)]
             )  # otherwise parallel envs might have the same initial states!
             # isaacgym environments do not need seeding
+
+
+        print("train_agent.py: TrainAgent.__init__(): 1")
+
         self.n_envs = cfg.env.n_envs
         self.n_cond_step = cfg.cond_steps
         self.obs_dim = cfg.obs_dim
@@ -83,17 +87,31 @@ class TrainAgent:
         self.max_episode_steps = cfg.env.max_episode_steps
         self.reset_at_iteration = cfg.env.get("reset_at_iteration", True)
         self.save_full_observations = cfg.env.get("save_full_observations", False)
+
+        print("train_agent.py: TrainAgent.__init__(): 2")
+
         self.furniture_sparse_reward = (
             cfg.env.specific.get("sparse_reward", False)
             if "specific" in cfg.env
             else False
         )  # furniture specific, for best reward calculation
 
+        print("train_agent.py: TrainAgent.__init__(): 3")
+
         # Batch size for gradient update
         self.batch_size: int = cfg.train.batch_size
 
+
+        print("train_agent.py: TrainAgent.__init__(): 4")
+
+
+        print("cfg.model = ", cfg.model)
+
         # Build model and load checkpoint
         self.model = hydra.utils.instantiate(cfg.model)
+
+
+        print("train_agent.py: TrainAgent.__init__(): 5")
 
         # Training params
         self.itr = 0
@@ -101,12 +119,18 @@ class TrainAgent:
         self.val_freq = cfg.train.val_freq
         self.force_train = cfg.train.get("force_train", False)
         self.n_steps = cfg.train.n_steps
+
+        print("train_agent.py: TrainAgent.__init__(): 6")
+
         self.best_reward_threshold_for_success = (
             len(self.venv.pairs_to_assemble)
             if env_type == "furniture"
             else cfg.env.best_reward_threshold_for_success
         )
         self.max_grad_norm = cfg.train.get("max_grad_norm", None)
+
+
+        print("train_agent.py: TrainAgent.__init__(): 7")
 
         # Logging, rendering, checkpoints
         self.logdir = cfg.logdir
@@ -121,15 +145,29 @@ class TrainAgent:
         self.render_freq = cfg.train.render.freq
         self.n_render = cfg.train.render.num
         self.render_video = cfg.env.get("save_video", False)
+
+        print("train_agent.py: TrainAgent.__init__(): 8")
+
         assert self.n_render <= self.n_envs, "n_render must be <= n_envs"
+
+        print("train_agent.py: TrainAgent.__init__(): 9")
+
         assert not (
             self.n_render <= 0 and self.render_video
         ), "Need to set n_render > 0 if saving video"
+        
+        print("train_agent.py: TrainAgent.__init__(): 10")
+        
         self.traj_plotter = (
             hydra.utils.instantiate(cfg.train.plotter)
             if "plotter" in cfg.train
             else None
         )
+
+        print("train_agent.py: TrainAgent.__init__(): 11")
+
+
+        
 
     def run(self):
         print("train_agent.py: TrainAgent.run()")

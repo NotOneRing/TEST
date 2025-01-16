@@ -298,6 +298,14 @@ class TrainDiffusionAgent(PreTrainAgent):
                         training_flag, 
                         item_actions_copy, cond_copy)
 
+                    print("item_actions_copy.shape = ", item_actions_copy.shape)
+                    print("cond_copy.shape = ", cond_copy.shape)
+
+
+
+
+
+
                     print("loss_train_ema.numpy() = ", loss_train_ema.numpy())
 
                     # print("1self.model.get_weights() = ", self.model.get_weights())
