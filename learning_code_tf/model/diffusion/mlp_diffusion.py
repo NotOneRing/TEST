@@ -752,14 +752,19 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         x = torch_cat([x, time_emb, state], dim=-1)
 
+        print("self.mlp_mean = ", self.mlp_mean)
+
         # mlp head
         out = self.mlp_mean(x)
 
 
-        # print("DiffusionMLP call out = ", out)
+        print("DiffusionMLP call out.shape = ", out.shape)
 
+        result = torch_tensor_view(out, B, Ta, Da)
 
-        return torch_tensor_view(out, B, Ta, Da)
+        print("DiffusionMLP call result.shape = ", result.shape)
+
+        return result
 
 
 

@@ -645,6 +645,10 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         if hasattr(self, "norm2"):
             x = self.norm2(x)
         x = self.l2(self.act(x))
+
+        print("mlp.py: TwoLayerPreActivationResNetLinear.forward() finished", flush = True)
+
+
         return x + x_input
 
 

@@ -24,6 +24,11 @@ from util.torch_to_tf import torch_quantile
 
 from util.torch_to_tf import torch_no_grad
 
+from util.torch_to_tf import torch_clamp, torch_exp, torch_mean, torch_max, torch_tensor_float, torch_abs, torch_tensor, torch_std, torch_tensor_view
+
+
+
+
 
 log = logging.getLogger(__name__)
 from model.diffusion.diffusion_vpg import VPGDiffusion
@@ -137,19 +142,19 @@ class PPODiffusion(VPGDiffusion):
             get_ent=True,
         )
 
-        entropy_loss = -tf.reduce_mean(eta)
-        newlogprobs = tf.clip_by_value(newlogprobs, clip_value_min=-5, clip_value_max=2)
-        oldlogprobs = tf.clip_by_value(oldlogprobs, clip_value_min=-5, clip_value_max=2)
+        entropy_loss = -torch_mean(eta)
+        newlogprobs = torch_clamp(newlogprobs, -5, 2)
+        oldlogprobs = torch_clamp(oldlogprobs, -5, 2)
 
         # only backpropagate through the earlier steps (e.g., ones actually executed in the environment)
         newlogprobs = newlogprobs[:, :reward_horizon, :]
         oldlogprobs = oldlogprobs[:, :reward_horizon, :]
 
         # Get the logprobs - batch over B and denoising steps
-        newlogprobs = tf.reduce_mean(newlogprobs, axis=(-1, -2))
-        oldlogprobs = tf.reduce_mean(oldlogprobs, axis=(-1, -2))
-        newlogprobs = tf.reshape(newlogprobs, [-1])
-        oldlogprobs = tf.reshape(oldlogprobs, [-1])
+        newlogprobs = torch_mean(newlogprobs, dim=(-1, -2))
+        oldlogprobs = torch_mean(oldlogprobs, dim=(-1, -2))
+        newlogprobs = torch_tensor_view(newlogprobs, [-1])
+        oldlogprobs = torch_tensor_view(oldlogprobs, [-1])
 
 
         bc_loss = 0
@@ -173,25 +178,26 @@ class PPODiffusion(VPGDiffusion):
                 use_base_policy=False,
             )
 
-            bc_logprobs = tf.clip_by_value(bc_logprobs, clip_value_min=-5, clip_value_max=2)
-            bc_logprobs = tf.reduce_mean(bc_logprobs, axis=(-1, -2))
-            bc_logprobs = tf.reshape(bc_logprobs, [-1])
-            bc_loss = -tf.reduce_mean(bc_logprobs)
+
+            bc_logprobs = torch_clamp(bc_logprobs, clip_value_min=-5, clip_value_max=2)
+            bc_logprobs = torch_mean(bc_logprobs, axis=(-1, -2))
+            bc_logprobs = torch_tensor_view(bc_logprobs, [-1])
+            bc_loss = -torch_mean(bc_logprobs)
 
 
         # normalize advantages
         if self.norm_adv:
-            advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-8)
+            advantages = (advantages - torch_mean(advantages)) / (torch_std(advantages) + 1e-8)
 
         # Clip advantages by 5th and 95th percentile
         advantage_min = torch_quantile(advantages, self.clip_advantage_lower_quantile)
         advantage_max = torch_quantile(advantages, self.clip_advantage_upper_quantile)
 
-        advantages = tf.clip_by_value(advantages, advantage_min, advantage_max)
+        advantages = torch_clamp(advantages, advantage_min, advantage_max)
 
 
         # denoising discount
-        discount = tf.convert_to_tensor(
+        discount = torch_tensor(
             [
                 self.gamma_denoising ** (self.ft_denoising_steps - i - 1)
                 for i in denoising_inds
@@ -202,15 +208,15 @@ class PPODiffusion(VPGDiffusion):
 
         # get ratio
         logratio = newlogprobs - oldlogprobs
-        ratio = tf.exp(logratio)
+        ratio = torch_exp(logratio)
 
         # exponentially interpolate between the base and the current clipping value over denoising steps and repeat
-        t = tf.cast(denoising_inds, tf.float32) / (self.ft_denoising_steps - 1)
+        t = torch_tensor_float(denoising_inds) / (self.ft_denoising_steps - 1)
 
         if self.ft_denoising_steps > 1:
             clip_ploss_coef = self.clip_ploss_coef_base + (
                 self.clip_ploss_coef - self.clip_ploss_coef_base
-            ) * (tf.math.exp(self.clip_ploss_coef_rate * t) - 1) / (
+            ) * (torch_exp(self.clip_ploss_coef_rate * t) - 1) / (
                 math.exp(self.clip_ploss_coef_rate) - 1
             )
         else:
@@ -221,30 +227,31 @@ class PPODiffusion(VPGDiffusion):
         # approx_kl: better alternative to old_approx_kl measured by (logratio.exp() - 1) - logratio, which corresponds to the k3 estimator in approximating KL http://joschu.net/blog/kl-approx.html
         # old_approx_kl = (-logratio).mean()
 
+
         with torch_no_grad() as tape:
-            approx_kl = tf.reduce_mean((ratio - 1) - logratio)
-            clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > clip_ploss_coef, tf.float32))
+            approx_kl = torch_mean((ratio - 1) - logratio)
+            clipfrac = torch_mean( torch_tensor_float( torch_abs(ratio - 1.0) > clip_ploss_coef ) )
 
         # Policy loss with clipping
         pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * tf.clip_by_value(ratio, 1 - clip_ploss_coef, 1 + clip_ploss_coef)
-        pg_loss = tf.reduce_mean(tf.maximum(pg_loss1, pg_loss2))
+        pg_loss2 = -advantages * torch_clamp(ratio, 1 - clip_ploss_coef, 1 + clip_ploss_coef)
+        pg_loss = torch_mean( torch_max(pg_loss1, pg_loss2) )
 
 
         # Value loss optionally with clipping
         newvalues = self.critic(obs)
-        newvalues = tf.reshape(newvalues, [-1])
+        newvalues = torch_tensor_view(newvalues, [-1])
 
         if self.clip_vloss_coef is not None:
-            v_loss_unclipped = tf.square(newvalues - returns)
-            v_clipped = oldvalues + tf.clip_by_value(
+            v_loss_unclipped = (newvalues - returns) ** 2
+            v_clipped = oldvalues + torch_clamp(
                 newvalues - oldvalues, -self.clip_vloss_coef, self.clip_vloss_coef
             )
-            v_loss_clipped = tf.square(v_clipped - returns)
-            v_loss = 0.5 * tf.reduce_mean(tf.maximum(v_loss_unclipped, v_loss_clipped))
+            v_loss_clipped = (v_clipped - returns) ** 2
+            v_loss = 0.5 * torch_mean( torch_max(v_loss_unclipped, v_loss_clipped))
 
         else:
-            v_loss = 0.5 * tf.reduce_mean(tf.square(newvalues - returns))
+            v_loss = 0.5 * torch_mean( (newvalues - returns) ** 2 )
 
 
         return (
@@ -253,9 +260,9 @@ class PPODiffusion(VPGDiffusion):
             v_loss,
             clipfrac,
             approx_kl.numpy(),
-            tf.reduce_mean(ratio).numpy(),
+            torch_mean(ratio).numpy(),
             bc_loss,
-            tf.reduce_mean(eta).numpy(),
+            torch_mean(eta).numpy(),
         )
 
 

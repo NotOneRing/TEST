@@ -1,3 +1,7 @@
 DEBUG = True
 
 # DEBUG = False
+
+TEST_LOAD_PRETRAIN = True
+
+# TEST_LOAD_PRETRAIN = False

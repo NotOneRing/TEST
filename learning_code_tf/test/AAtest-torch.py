@@ -26,12 +26,37 @@ print(f"Tensor on device: {tensor_cpu.device}\n{tensor_cpu}")
 
 
 
+a = torch.tensor([0], dtype=torch.int64)
+
+b = torch.linspace(0, 20, 20).reshape(2, 2, 5)
+
+print("a = ", a)
+
+print("b = ", b)
+
+print("b[a] = ", b[a])
+
+print("b[a, ...] = ", b[a, ...])
+
+
+# c = torch.gather(b, 0, a)
+
+
+# print("c = ", c)
 
 
 
+c = torch.linspace(0, 20, 20).reshape(2, 2, 5)
+
+print("c[0]", c[0])
+
+print("c[0].shape", c[0].shape)
 
 
 
+print("c[a]", c[a])
+
+print("c[a].shape", c[a].shape)
 
 
 

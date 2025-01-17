@@ -69,7 +69,25 @@ class DiffusionModel(tf.keras.Model):
         ddim_steps=None,
         **kwargs,
     ):
-        super(DiffusionModel, self).__init__()
+
+
+        if DEBUG:
+            print("DiffusionModel: __init__() DEBUG = True")
+
+            print("DEBUG is True")
+            self.loss_ori_t = None
+            self.p_losses_noise = None
+            self.call_noise = None
+            self.call_noise = None
+            self.call_x = None
+            self.q_sample_noise = None
+        else:
+            print("DEBUG is False")
+
+
+
+        # super(DiffusionModel, self).__init__()
+        super().__init__()
         print("diffusion.py: DiffusionModel.__init__()")
 
         # print("self.loss = ", self.loss)
@@ -108,202 +126,6 @@ class DiffusionModel(tf.keras.Model):
         # self.network.batch_size = 
 
         self.network_path = network_path
-
-        if self.network_path is not None:
-            print("self.network_path is not None")
-            # checkpoint = tf.train.Checkpoint(network=self.network)
-            # checkpoint.restore(network_path)
-
-            loadpath = network_path
-
-            print("loadpath = ", loadpath)
-
-            # # self.model.load_weights(loadpath)
-            # # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
-
-            # from keras.utils import get_custom_objects
-            # from model.diffusion.mlp_diffusion import DiffusionMLP
-            # # Register your custom class with Keras
-            # get_custom_objects().update({
-            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            #     'DiffusionMLP': DiffusionMLP,
-            #     # 'VPGDiffusion': VPGDiffusion,
-            #     # 'PPODiffusion': PPODiffusion
-            # })
-
-
-            # self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
-            # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
-
-
-            from keras.utils import get_custom_objects
-
-
-            from model.diffusion.mlp_diffusion import DiffusionMLP
-            from model.common.mlp import MLP, ResidualMLP
-            from model.diffusion.modules import SinusoidalPosEmb
-            from model.common.modules import SpatialEmb, RandomShiftsAug
-            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
-
-
-            # Register your custom class with Keras
-            get_custom_objects().update({
-                'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-                'DiffusionMLP': DiffusionMLP,
-                # 'VPGDiffusion': VPGDiffusion,
-                'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
-                'MLP': MLP,                            # 自定义的 MLP 层
-                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-                'nn_Linear': nn_Linear,
-                'nn_LayerNorm': nn_LayerNorm,
-                'nn_Dropout': nn_Dropout,
-                'nn_ReLU': nn_ReLU,
-                'nn_Mish': nn_Mish,
-                'SpatialEmb': SpatialEmb,
-                'RandomShiftsAug': RandomShiftsAug,
-                # 'Normal': Normal,
-                # 'Layer': Layer,
-                # 'Sample': Sample,
-                # 'PPODiffusion': PPODiffusion
-            })
-
-            
-
-
-            if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
-                print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
-                self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
-                self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
-            else:
-
-
-                print(f"Loaded policy from {network_path}")
-            
-                # # hopper
-                # 'betas', 
-                # 'alphas_cumprod', 
-                # 'alphas_cumprod_prev', 
-                # 'sqrt_alphas_cumprod', 
-                # 'sqrt_one_minus_alphas_cumprod', 
-                # 'log_one_minus_alphas_cumprod', 
-                # 'sqrt_recip_alphas_cumprod', 
-                # 'sqrt_recipm1_alphas_cumprod', 
-                # 'posterior_variance', 
-                # 'posterior_log_variance_clipped', 
-                # 'posterior_mean_coef1', 
-                # 'posterior_mean_coef2', 
-
-                # 'network.time_embedding.1.weight', 
-                # 'network.time_embedding.1.bias', 
-                # 'network.time_embedding.3.weight', 
-                # 'network.time_embedding.3.bias', 
-                # 'network.mlp_mean.layers.0.weight', 
-                # 'network.mlp_mean.layers.0.bias', 
-                # 'network.mlp_mean.layers.1.l1.weight', 
-                # 'network.mlp_mean.layers.1.l1.bias', 
-                # 'network.mlp_mean.layers.1.l2.weight', 
-                # 'network.mlp_mean.layers.1.l2.bias', 
-                # 'network.mlp_mean.layers.2.weight', 
-                # 'network.mlp_mean.layers.2.bias', 
-                
-                # 'loss_fn.weights', 
-                # 'mask_generator._dummy_variable'
-
-
-                # # Robomimic
-                # 'network.time_embedding.1.weight', 
-                # 'network.time_embedding.1.bias', 
-                # 'network.time_embedding.3.weight', 
-                # 'network.time_embedding.3.bias', 
-                # 'network.mlp_mean.layers.0.weight', 
-                # 'network.mlp_mean.layers.0.bias', 
-                # 'network.mlp_mean.layers.1.l1.weight', 
-                # 'network.mlp_mean.layers.1.l1.bias', 
-                # 'network.mlp_mean.layers.1.l2.weight', 
-                # 'network.mlp_mean.layers.1.l2.bias', 
-                # 'network.mlp_mean.layers.2.weight', 
-                # 'network.mlp_mean.layers.2.bias'
-
-
-
-
-                # #d3il
-                # 'network.time_embedding.1.weight', 
-                # 'network.time_embedding.1.bias', 
-                # 'network.time_embedding.3.weight',
-                # 'network.time_embedding.3.bias', 
-                # 'network.mlp_mean.layers.0.weight', 
-                # 'network.mlp_mean.layers.0.bias', 
-                # 'network.mlp_mean.layers.1.l1.weight', 
-                # 'network.mlp_mean.layers.1.l1.bias', 
-                # 'network.mlp_mean.layers.1.l2.weight', 
-                # 'network.mlp_mean.layers.1.l2.bias', 
-                # 'network.mlp_mean.layers.2.weight', 
-                # 'network.mlp_mean.layers.2.bias'
-
-
-
-
-                # # furniture
-                # 'network.time_embedding.1.weight', 
-                # 'network.time_embedding.1.bias', 
-                # 'network.time_embedding.3.weight', 
-                # 'network.time_embedding.3.bias', 
-                # 'network.mlp_mean.layers.0.weight', 
-                # 'network.mlp_mean.layers.0.bias', 
-                # 'network.mlp_mean.layers.1.l1.weight', 
-                # 'network.mlp_mean.layers.1.l1.bias', 
-                # 'network.mlp_mean.layers.1.l2.weight', 
-                # 'network.mlp_mean.layers.1.l2.bias', 
-                # 'network.mlp_mean.layers.2.weight', 
-                # 'network.mlp_mean.layers.2.bias'
-
-
-                pkl_file_path = network_path.replace('.pt', '.pkl')
-
-                print("pkl_file_path = ", pkl_file_path)
-
-                import pickle
-                # load pickle file
-                with open(pkl_file_path, 'rb') as file:
-                    params_dict = pickle.load(file)
-
-
-                # 打印加载的内容
-                print("params_dict = ", params_dict)
-
-                print("before self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)")
-                self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)  # kernel
-                print("before self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])")
-                self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])     # bias
-
-                print("before self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)")
-                self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)  # kernel
-                print("before self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])")
-                self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])     # bias
-
-
-                print("before self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)")
-                self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
-                print("before self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])")
-                self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
-
-                print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)")
-                self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
-                print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])")
-                self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
-                print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)")
-                self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
-                print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])")
-                self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
-
-
-                print("before self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)")
-                self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
-                print("before self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])")
-                self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
-
 
 
 
@@ -462,18 +284,255 @@ class DiffusionModel(tf.keras.Model):
             self.ddim_sigmas = torch_flip(self.ddim_sigmas, [0])
 
 
-            if DEBUG:
-                print("DiffusionModel: __init__() DEBUG = True")
 
-                print("DEBUG is True")
-                self.loss_ori_t = None
-                self.p_losses_noise = None
-                self.call_noise = None
-                self.call_noise = None
-                self.call_x = None
-                self.q_sample_noise = None
+        if self.network_path is not None:
+            print("self.network_path is not None")
+            # checkpoint = tf.train.Checkpoint(network=self.network)
+            # checkpoint.restore(network_path)
+
+            loadpath = network_path
+
+            print("loadpath = ", loadpath)
+
+            # # self.model.load_weights(loadpath)
+            # # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
+
+            # from keras.utils import get_custom_objects
+            # from model.diffusion.mlp_diffusion import DiffusionMLP
+            # # Register your custom class with Keras
+            # get_custom_objects().update({
+            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            #     'DiffusionMLP': DiffusionMLP,
+            #     # 'VPGDiffusion': VPGDiffusion,
+            #     # 'PPODiffusion': PPODiffusion
+            # })
+
+
+            # self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
+            # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
+
+
+
+            if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
+                print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
             else:
-                print("DEBUG is False")
+                loadpath = network_path.replace('.pt', '.keras')
+
+            from model.diffusion.mlp_diffusion import DiffusionMLP
+            from model.diffusion.diffusion import DiffusionModel
+            from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+            from model.diffusion.modules import SinusoidalPosEmb
+            from model.common.modules import SpatialEmb, RandomShiftsAug
+            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+
+            from tensorflow.keras.utils import get_custom_objects
+
+            cur_dict = {
+                'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+                'DiffusionMLP': DiffusionMLP,
+                # 'VPGDiffusion': VPGDiffusion,
+                'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+                'MLP': MLP,                            # 自定义的 MLP 层
+                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+                "nn_Identity": nn_Identity,
+                'nn_Linear': nn_Linear,
+                'nn_LayerNorm': nn_LayerNorm,
+                'nn_Dropout': nn_Dropout,
+                'nn_ReLU': nn_ReLU,
+                'nn_Mish': nn_Mish,
+                'SpatialEmb': SpatialEmb,
+                'RandomShiftsAug': RandomShiftsAug,
+                "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+            }
+            # Register your custom class with Keras
+            get_custom_objects().update(cur_dict)
+
+
+
+
+
+            self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+
+            # self.model = self.model2
+
+
+            self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+
+
+
+
+                # print(f"Loaded policy from {network_path}")
+            
+
+                # # hopper
+                # 'betas', 
+                # 'alphas_cumprod', 
+                # 'alphas_cumprod_prev', 
+                # 'sqrt_alphas_cumprod', 
+                # 'sqrt_one_minus_alphas_cumprod', 
+                # 'log_one_minus_alphas_cumprod', 
+                # 'sqrt_recip_alphas_cumprod', 
+                # 'sqrt_recipm1_alphas_cumprod', 
+                # 'posterior_variance', 
+                # 'posterior_log_variance_clipped', 
+                # 'posterior_mean_coef1', 
+                # 'posterior_mean_coef2', 
+
+                # 'network.time_embedding.1.weight', 
+                # 'network.time_embedding.1.bias', 
+                # 'network.time_embedding.3.weight', 
+                # 'network.time_embedding.3.bias', 
+                # 'network.mlp_mean.layers.0.weight', 
+                # 'network.mlp_mean.layers.0.bias', 
+                # 'network.mlp_mean.layers.1.l1.weight', 
+                # 'network.mlp_mean.layers.1.l1.bias', 
+                # 'network.mlp_mean.layers.1.l2.weight', 
+                # 'network.mlp_mean.layers.1.l2.bias', 
+                # 'network.mlp_mean.layers.2.weight', 
+                # 'network.mlp_mean.layers.2.bias', 
+                
+                # 'loss_fn.weights', 
+                # 'mask_generator._dummy_variable'
+
+
+                # # Robomimic
+                # 'network.time_embedding.1.weight', 
+                # 'network.time_embedding.1.bias', 
+                # 'network.time_embedding.3.weight', 
+                # 'network.time_embedding.3.bias', 
+                # 'network.mlp_mean.layers.0.weight', 
+                # 'network.mlp_mean.layers.0.bias', 
+                # 'network.mlp_mean.layers.1.l1.weight', 
+                # 'network.mlp_mean.layers.1.l1.bias', 
+                # 'network.mlp_mean.layers.1.l2.weight', 
+                # 'network.mlp_mean.layers.1.l2.bias', 
+                # 'network.mlp_mean.layers.2.weight', 
+                # 'network.mlp_mean.layers.2.bias'
+
+
+
+
+                # #d3il
+                # 'network.time_embedding.1.weight', 
+                # 'network.time_embedding.1.bias', 
+                # 'network.time_embedding.3.weight',
+                # 'network.time_embedding.3.bias', 
+                # 'network.mlp_mean.layers.0.weight', 
+                # 'network.mlp_mean.layers.0.bias', 
+                # 'network.mlp_mean.layers.1.l1.weight', 
+                # 'network.mlp_mean.layers.1.l1.bias', 
+                # 'network.mlp_mean.layers.1.l2.weight', 
+                # 'network.mlp_mean.layers.1.l2.bias', 
+                # 'network.mlp_mean.layers.2.weight', 
+                # 'network.mlp_mean.layers.2.bias'
+
+
+
+
+                # # furniture
+                # 'network.time_embedding.1.weight', 
+                # 'network.time_embedding.1.bias', 
+                # 'network.time_embedding.3.weight', 
+                # 'network.time_embedding.3.bias', 
+                # 'network.mlp_mean.layers.0.weight', 
+                # 'network.mlp_mean.layers.0.bias', 
+                # 'network.mlp_mean.layers.1.l1.weight', 
+                # 'network.mlp_mean.layers.1.l1.bias', 
+                # 'network.mlp_mean.layers.1.l2.weight', 
+                # 'network.mlp_mean.layers.1.l2.bias', 
+                # 'network.mlp_mean.layers.2.weight', 
+                # 'network.mlp_mean.layers.2.bias'
+
+
+
+                # # hopper_medium
+                # # item_actions_copy.shape =  
+                # shape1 = (128, 4, 3)
+                # # cond_copy['state'].shape =  
+                # shape2 = (128, 1, 11)
+
+
+                # #can 
+                # # item_actions_copy.shape =  
+                # shape1 = (256, 4, 7)
+                # # cond_copy['state'].shape =  
+                # shape2 = (256, 1, 23)
+
+
+                # #avoid_m1
+                # # item_actions_copy.shape =  
+                # shape1 = (16, 4, 2)
+                # # cond_copy['state'].shape =  
+                # shape2 = (16, 1, 4)
+
+
+                # #one_leg_low
+                # # item_actions_copy.shape =  
+                # shape1 = (256, 8, 10)
+                # # cond_copy['state'].shape =  
+                # shape2 = (256, 1, 58)
+
+
+                # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
+                # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
+                # build_dict = {'state': param2}
+
+
+                # # _ = self.loss_ori(param1, build_dict)
+                # _ = DiffusionModel.loss_ori(self, training=False, x_start = param1, cond=build_dict)
+
+
+
+
+    def load_pickle(self, network_path):
+        pkl_file_path = network_path.replace('.pt', '.pkl')
+
+        print("pkl_file_path = ", pkl_file_path)
+
+        import pickle
+        # load pickle file
+        with open(pkl_file_path, 'rb') as file:
+            params_dict = pickle.load(file)
+
+
+
+        # 打印加载的内容
+        print("params_dict = ", params_dict)
+
+        print("before self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)")
+        self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)  # kernel
+        print("before self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])")
+        self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])     # bias
+
+        print("before self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)")
+        self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)  # kernel
+        print("before self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])")
+        self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])     # bias
+
+
+        print("before self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)")
+        self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
+        print("before self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])")
+        self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
+
+        print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)")
+        self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
+        print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])")
+        self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
+        print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)")
+        self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
+        print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])")
+        self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
+
+
+        print("before self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)")
+        self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
+        print("before self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])")
+        self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
+
+
+
 
 
     def loss_ori(self
@@ -680,12 +739,20 @@ class DiffusionModel(tf.keras.Model):
             x_recon = noise
 
     
+        print("DiffusionModel: p_mean_var(): x_recon = ", x_recon)
+
+        if isinstance(x_recon, tf.Tensor):
+            x_recon_variable = tf.Variable(x_recon)
+        else:
+            x_recon_variable = x_recon
 
         if self.denoised_clip_value is not None:
-            torch_tensor_clamp_(x_recon, -self.denoised_clip_value, self.denoised_clip_value)
+            torch_tensor_clamp_(x_recon_variable, -self.denoised_clip_value, self.denoised_clip_value)
             if self.use_ddim:
                 # re-calculate noise based on clamped x_recon - default to false in HF, but let's use it here
-                noise = (x - alpha ** (0.5) * x_recon) / sqrt_one_minus_alpha
+                noise = (x - alpha ** (0.5) * x_recon_variable) / sqrt_one_minus_alpha
+
+        x_recon = x_recon_variable
 
         # Clip epsilon for numerical stability in policy gradient - not sure if this is helpful yet, but the value can be huge sometimes. This has no effect if DDPM is used
         if self.use_ddim and self.eps_clip_value is not None:

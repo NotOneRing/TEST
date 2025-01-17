@@ -121,6 +121,6 @@ def test_where():
     assert np.allclose(torch_result3[0].numpy(), tf_result3[0].numpy())
 
 
-
+test_where()
 
 

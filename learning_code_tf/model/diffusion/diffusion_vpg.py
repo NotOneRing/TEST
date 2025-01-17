@@ -26,7 +26,11 @@ import numpy as np
 
 from util.torch_to_tf import torch_flatten, torch_arange, Normal
 
-from util.torch_to_tf import torch_no_grad, torch_where
+from util.torch_to_tf import torch_no_grad, torch_where, torch_ones_like, torch_randn
+
+from util.torch_to_tf import torch_tensor_requires_grad_, torch_tensor_clamp_, torch_zeros, torch_unsqueeze
+
+from util.torch_to_tf import torch_log, torch_zeros_like, torch_randn_like, torch_clamp, torch_stack, torch_tensor_repeat, torch_exp, torch_clip, torch_sum, torch_reshape, torch_mean, torch_squeeze
 
 
 class VPGDiffusion(DiffusionModel):
@@ -80,7 +84,9 @@ class VPGDiffusion(DiffusionModel):
             self.eta = eta
             if not learn_eta:
                 for param in self.eta.trainable_variables:
-                    param._trainable = False
+                    # param._trainable = False
+                    torch_tensor_requires_grad_(param, False)
+                    
 
                 logging.info("Turned off gradients for eta")
 
@@ -88,13 +94,17 @@ class VPGDiffusion(DiffusionModel):
         # Re-name network to actor
         self.actor = self.network
 
-        # Make a copy of the original model
-        self.actor_ft = copy.deepcopy(self.actor)
+        # # Make a copy of the original model
+        # self.actor_ft = copy.deepcopy(self.actor)
+        self.actor_ft = tf.keras.models.clone_model(self.actor)
+
+
         logging.info("Cloned model for fine-tuning")
 
         # Turn off gradients for original model
         for var in self.actor.trainable_variables:
-            var._trainable = False
+            # var._trainable = False
+            torch_tensor_requires_grad_(var, False)
             
         logging.info("Turned off gradients of the pretrained network")
         
@@ -113,54 +123,55 @@ class VPGDiffusion(DiffusionModel):
 
             # latest_checkpoint = tf.train.latest_checkpoint(network_path)
 
-            # if "ema" not in checkpoint:  # load trained RL model
+            print("self.network_path is not None")
+
+            if 0:
+            # "ema" not in checkpoint:  # load trained RL model
             #     # self.load_state_dict(checkpoint["model"], strict=False)
 
             #     checkpoint.restore(latest_checkpoint)
 
             #     logging.info("Loaded critic from %s", network_path)
 
-            print("self.network_path is not None")
+                loadpath = network_path
 
-            loadpath = network_path
+                print("loadpath = ", loadpath)
 
-            print("loadpath = ", loadpath)
-
-            # self.model.load_weights(loadpath)
-            # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
+                # self.model.load_weights(loadpath)
+                # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
 
 
 
-            from model.diffusion.mlp_diffusion import DiffusionMLP
-            from model.common.mlp import MLP, ResidualMLP
-            from model.diffusion.modules import SinusoidalPosEmb
-            from model.common.modules import SpatialEmb, RandomShiftsAug
-            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+                from model.diffusion.mlp_diffusion import DiffusionMLP
+                from model.common.mlp import MLP, ResidualMLP
+                from model.diffusion.modules import SinusoidalPosEmb
+                from model.common.modules import SpatialEmb, RandomShiftsAug
+                from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
 
-            from tensorflow.keras.utils import get_custom_objects
+                from tensorflow.keras.utils import get_custom_objects
 
-            # Register your custom class with Keras
-            get_custom_objects().update({
-                'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-                'DiffusionMLP': DiffusionMLP,
-                'VPGDiffusion': VPGDiffusion,
-                'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
-                'MLP': MLP,                            # 自定义的 MLP 层
-                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-                'nn_Linear': nn_Linear,
-                'nn_LayerNorm': nn_LayerNorm,
-                'nn_Dropout': nn_Dropout,
-                'nn_ReLU': nn_ReLU,
-                'nn_Mish': nn_Mish,
-                'SpatialEmb': SpatialEmb,
-                'RandomShiftsAug': RandomShiftsAug,
-             })
+                # Register your custom class with Keras
+                get_custom_objects().update({
+                    'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+                    'DiffusionMLP': DiffusionMLP,
+                    'VPGDiffusion': VPGDiffusion,
+                    'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+                    'MLP': MLP,                            # 自定义的 MLP 层
+                    'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+                    'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+                    'nn_Linear': nn_Linear,
+                    'nn_LayerNorm': nn_LayerNorm,
+                    'nn_Dropout': nn_Dropout,
+                    'nn_ReLU': nn_ReLU,
+                    'nn_Mish': nn_Mish,
+                    'SpatialEmb': SpatialEmb,
+                    'RandomShiftsAug': RandomShiftsAug,
+                })
 
 
-            self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
-            # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
-            self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"), custom_objects=get_custom_objects())
+                self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
+                # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
+                # self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"), custom_objects=get_custom_objects())
 
 
 
@@ -222,10 +233,13 @@ class VPGDiffusion(DiffusionModel):
 
             # update actor
             self.actor = self.actor_ft
-            self.actor_ft = copy.deepcopy(self.actor)
-            
+
+            # self.actor_ft = copy.deepcopy(self.actor)
+            self.actor_ft = tf.keras.models.clone_model(self.actor)
+
             for param in self.actor.trainable_variables:
-                param._trainable = False
+                # param._trainable = False
+                torch_tensor_requires_grad_(param, False)
             
             logging.info(
                 f"Finished annealing fine-tuning denoising steps to {self.ft_denoising_steps}"
@@ -253,7 +267,13 @@ class VPGDiffusion(DiffusionModel):
 
         print("diffusion_vpg.py: VPGDiffusion.p_mean_var()")
 
-        noise = self.actor(x, t, cond=cond)
+
+        print("self.actor = ", self.actor)
+
+        # noise = self.actor(x, t, cond=cond)
+        noise = self.actor([x, t, cond['state']])
+
+
         if self.use_ddim:
             # ft_indices = torch.where(
             #     index >= (self.ddim_steps - self.ft_denoising_steps)
@@ -261,28 +281,119 @@ class VPGDiffusion(DiffusionModel):
             # ft_indices = torch_where(index >= (self.ddim_steps - self.ft_denoising_steps))[0]
             ft_indices = torch_where(index >= (self.ddim_steps - self.ft_denoising_steps))
             # [0]
-            print("ft_indices = ", ft_indices)
+            print("ft_indices = 1: ", ft_indices)
             ft_indices = ft_indices[0]
-            print("ft_indices = ", ft_indices)
+            # .numpy()
+            print("ft_indices = 2: ", ft_indices)
+            print("type(ft_indices) = ", type(ft_indices))
         else:
-            print("t = ", t)
-            print("self.ft_denoising_steps = ", self.ft_denoising_steps)
-            print("t < self.ft_denoising_steps = ", t < self.ft_denoising_steps)
+            # print("t = ", t)
+            # print("self.ft_denoising_steps = ", self.ft_denoising_steps)
+            # print("t < self.ft_denoising_steps = ", t < self.ft_denoising_steps)
             # ft_indices = torch.where(t < self.ft_denoising_steps)[0]
             ft_indices = torch_where(t < self.ft_denoising_steps)
             # [0]
-            print("ft_indices = ", ft_indices)
+            print("ft_indices = 3: ", ft_indices)
             ft_indices = ft_indices[0]
-            print("ft_indices = ", ft_indices)
+            # .numpy()
+            print("ft_indices = 4: ", ft_indices)
+            print("type(ft_indices) = ", type(ft_indices))
 
         # Use base policy to query expert model, e.g. for imitation loss
         actor = self.actor if use_base_policy else self.actor_ft
 
         # overwrite noise for fine-tuning steps
-        if len(ft_indices) > 0:
-            cond_ft = {key: cond[key][ft_indices] for key in cond}
-            noise_ft = actor(x[ft_indices], t[ft_indices], cond=cond_ft)
-            noise[ft_indices] = noise_ft
+        if len(ft_indices) > 0:            
+            print("len(ft_indices) = ", len(ft_indices) )
+            # # print("cond = ", cond)
+            # print("ft_indices = 5: ", ft_indices)
+            # if isinstance(ft_indices, np.ndarray) and ft_indices.size == 1:
+            #     ft_indices = ft_indices.item()
+            # # else:
+            # #     raise ValueError("Array does not contain exactly one element.")
+
+            # # print("ft_indices = ", ft_indices)
+
+            # cond_ft = {}
+            # if isinstance(ft_indices, int) and ft_indices == 0: 
+            #     print("branch 1")
+            #     for key in cond:
+            #         if cond[key].shape[0] == 1:
+            #             cond_ft[key] = cond[key]
+            #         else:
+            #             cond_ft[key] = cond[key][ft_indices, ...]
+            # else:
+            #     print("branch 2")
+            #     for key in cond:
+            #         cond_ft[key] = cond[key][ft_indices, ...]
+
+
+
+            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() cond_ft['state'].shape = ", cond_ft['state'].shape, flush = True)
+
+            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() x[ft_indices].shape = ", x[ft_indices].shape, flush = True)
+
+            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() t[ft_indices].shape = ", t[ft_indices].shape, flush = True)
+
+
+            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() x.shape = ", x.shape, flush = True)
+
+            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() t.shape = ", t.shape, flush = True)
+
+
+
+
+            # # print("x = ", x)
+            # # print("t = ", t)
+            # # print("type(t) = ", type(t))
+
+            # if isinstance(ft_indices, int) and ft_indices == 0 and x.shape[0] == 1: 
+            #     cur_x = x
+            # else:
+            #     cur_x = x[ft_indices, ...]
+            
+            # if isinstance(ft_indices, int) and ft_indices == 0 and t.shape[0] == 1: 
+            #     cur_t = t
+            # else:
+            #     cur_t = t[ft_indices, ...]
+
+            # # print("cur_x = ", cur_x)
+
+            
+            # # print("cur_t = ", cur_t)
+
+            # # print("type(cur_t) = ", type(cur_t))
+
+            # # noise_ft = actor(cur_x, cur_t, cond=cond_ft)
+
+            
+
+            cond_ft = {key: tf.gather( cond[key], ft_indices, axis=0 ) for key in cond}
+
+            cur_x = tf.gather(x, ft_indices, axis=0)
+            cur_t = tf.gather(t, ft_indices, axis=0)
+
+
+
+            noise_ft = actor([cur_x, cur_t, cond_ft['state']])
+
+            # else:
+            #     # print("len(ft_indices) != 1")
+            #     raise RuntimeError("len(ft_indices) != 1")
+
+            # print("noise = ", noise)
+            # print("ft_indices = ", ft_indices)
+            # print("noise_ft = ", noise_ft)
+
+            # print("noise.shape = ", noise.shape)
+            # print("noise_ft.shape = ", noise_ft.shape)
+
+            # if isinstance(ft_indices, int) and ft_indices == 0 and noise.shape[0] == 1: 
+            #     noise = noise_ft
+            # else:
+            #     noise[ft_indices, ...] = noise_ft
+
+            noise = tf.gather(noise_ft, ft_indices, axis=0)
 
         # Predict x_0
         if self.predict_epsilon:
@@ -295,7 +406,7 @@ class VPGDiffusion(DiffusionModel):
                 sqrt_one_minus_alpha = extract(
                     self.ddim_sqrt_one_minus_alphas, index, x.shape
                 )
-                x_recon = (x - sqrt_one_minus_alpha * noise) / (tf.sqrt(alpha))
+                x_recon = (x - sqrt_one_minus_alpha * noise) / ( alpha ** 0.5)
             else:
                 """
                 x₀ = √ 1\α̅ₜ xₜ - √ 1\α̅ₜ-1 ε
@@ -306,17 +417,33 @@ class VPGDiffusion(DiffusionModel):
                 )
         else:  # directly predicting x₀
             x_recon = noise
+
+
+        print("VPGDiffusion: p_mean_var(): x_recon = ", x_recon)
+
+
+        if isinstance(x_recon, tf.Tensor):
+            x_recon_variable = tf.Variable(x_recon)
+        else:
+            x_recon_variable = x_recon
+
+
         if self.denoised_clip_value is not None:
-            x_recon = tf.clip_by_value(x_recon, -self.denoised_clip_value, self.denoised_clip_value)
+            torch_tensor_clamp_(x_recon_variable, -self.denoised_clip_value, self.denoised_clip_value)
+            # tf.clip_by_value(x_recon, -self.denoised_clip_value, self.denoised_clip_value)
 
 
             if self.use_ddim:
                 # re-calculate noise based on clamped x_recon - default to false in HF, but let's use it here
-                noise = (x - tf.sqrt(alpha) * x_recon) / sqrt_one_minus_alpha
+                noise = (x - alpha ** 0.5 * x_recon_variable) / sqrt_one_minus_alpha
+
+
+        x_recon = x_recon_variable
+
 
         # Clip epsilon for numerical stability in policy gradient - not sure if this is helpful yet, but the value can be huge sometimes. This has no effect if DDPM is used
         if self.use_ddim and self.eps_clip_value is not None:
-            noise = tf.clip_by_value(noise, -self.eps_clip_value, self.eps_clip_value)
+            torch_tensor_clamp_(noise, -self.eps_clip_value, self.eps_clip_value)
 
         # Get mu
         if self.use_ddim:
@@ -324,20 +451,29 @@ class VPGDiffusion(DiffusionModel):
             μ = √ αₜ₋₁ x₀ + √(1-αₜ₋₁ - σₜ²) ε
             """
             if deterministic:    
-                etas = tf.zeros((x.shape[0], 1, 1), dtype=x.dtype)
+                etas = torch_zeros((x.shape[0], 1, 1), dtype=x.dtype)
             else:
-                etas = tf.expand_dims(self.eta(cond), axis=1)
+                etas = torch_unsqueeze(self.eta(cond), 1)
 
             sigma = (
-                etas * tf.sqrt( (1 - alpha_prev) / (1 - alpha) * (1 - alpha / alpha_prev) )
+                etas * (1 - alpha_prev) / (1 - alpha) * (1 - alpha / alpha_prev) ** 0.5
             )
-            sigma = tf.clip_by_value(sigma, 1e-10, tf.float32.max)
+            torch_tensor_clamp_(sigma, 1e-10, tf.float32.max)
 
-            dir_xt_coef = tf.sqrt(tf.clip_by_value((1.0 - alpha_prev - sigma**2), 0, tf.float32.max))
 
-            mu = (tf.sqrt(alpha_prev) * x_recon) + dir_xt_coef * noise
-            var = tf.square(sigma)
-            logvar = tf.math.log(var)
+            temp_tensor = (1.0 - alpha_prev - sigma**2)
+
+            # dir_xt_coef = tf.sqrt( torch_tensor_clamp_(temp_tensor, 0, tf.float32.max) )
+            dir_xt_coef = torch_tensor_clamp_(temp_tensor, 0, tf.float32.max) ** 0.5
+
+            # mu = (tf.sqrt(alpha_prev) * x_recon) + dir_xt_coef * noise
+            mu = (alpha_prev**0.5) * x_recon + dir_xt_coef * noise
+
+            var = sigma ** 2
+
+            logvar = torch_log(var)
+
+
         else:
             """
             μₜ = β̃ₜ √ α̅ₜ₋₁/(1-α̅ₜ)x₀ + √ αₜ (1-α̅ₜ₋₁)/(1-α̅ₜ)xₜ
@@ -347,7 +483,8 @@ class VPGDiffusion(DiffusionModel):
                 + extract(self.ddpm_mu_coef2, t, x.shape) * x
             )
             logvar = extract(self.ddpm_logvar_clipped, t, x.shape)
-            etas = tf.ones_like(mu).to(mu.device)  # always one for DDPM
+            etas = torch_ones_like(mu) # always one for DDPM
+            # .to(mu.device)  
         return mu, logvar, etas
 
 
@@ -378,7 +515,7 @@ class VPGDiffusion(DiffusionModel):
                 chain: (B, K + 1, Ta, Da)
         """
 
-        print("diffusion_vpg.py: VPGDiffusion.forward()")
+        print("diffusion_vpg.py: VPGDiffusion.call()")
 
         # device = self.betas.device
         sample_data = cond["state"] if "state" in cond else cond["rgb"]
@@ -389,12 +526,13 @@ class VPGDiffusion(DiffusionModel):
 
         # Loop
         # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
-        x = tf.random.normal([B, self.horizon_steps, self.action_dim])
+        x = torch_randn([B, self.horizon_steps, self.action_dim])
 
         if self.use_ddim:
             t_all = self.ddim_t
         else:
             t_all = list(reversed(range(self.denoising_steps)))
+        
         chain = [] if return_chain else None
         if not self.use_ddim and self.ft_denoising_steps == self.denoising_steps:
             chain.append(x)
@@ -404,6 +542,9 @@ class VPGDiffusion(DiffusionModel):
         for i, t in enumerate(t_all):
             t_b = make_timesteps(B, t)
             index_b = make_timesteps(B, i)
+
+
+
             mean, logvar, _ = self.p_mean_var(
                 x=x,
                 t=t_b,
@@ -412,31 +553,46 @@ class VPGDiffusion(DiffusionModel):
                 use_base_policy=use_base_policy,
                 deterministic=deterministic,
             )
-            std = tf.exp(0.5 * logvar)
+            std = torch_exp(0.5 * logvar)
 
             # Determine noise level
             if self.use_ddim:
                 if deterministic:
-                    std = tf.zeros_like(std)
+                    std = torch_zeros_like(std)
                 else:
-                    std = tf.clip_by_value(std, min_sampling_denoising_std, tf.float32.max)
+                    std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
             else:
                 if deterministic and t == 0:
-                    std = tf.zeros_like(std)
+                    std = torch_zeros_like(std)
                 elif deterministic:  # still keep the original noise
-                    std = tf.clip_by_value(std, 1e-3, tf.float32.max)
+                    std = torch_clip(std, 1e-3, tf.float32.max)
                 else:  # use higher minimum noise
-                    std = tf.clip_by_value(std, min_sampling_denoising_std, tf.float32.max)
+                    std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
+            
+            temp_noise = torch_randn_like(x)
+            temp_noise_variable = tf.Variable(temp_noise)
 
-            noise = tf.clip_by_value(
-                tf.random.normal(tf.shape(x)), -self.randn_clip_value, self.randn_clip_value
+            # print("temp_noise = ", temp_noise)
+            # print("temp_noise_variable = ", temp_noise_variable)
+
+            # print("self.randn_clip_value = ", self.randn_clip_value)
+
+            torch_tensor_clamp_(
+                temp_noise_variable, -self.randn_clip_value, self.randn_clip_value
             )
+
+            noise = temp_noise_variable
+
+            # print("std = ", std)
+            # print("noise = ", noise)
+
 
             x = mean + std * noise
 
             # clamp action at final step
             if self.final_action_clip_value is not None and i == len(t_all) - 1:
-                x = tf.clip_by_value(x, -self.final_action_clip_value, self.final_action_clip_value)
+                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
+
 
             if return_chain:
                 if not self.use_ddim and t <= self.ft_denoising_steps:
@@ -447,8 +603,9 @@ class VPGDiffusion(DiffusionModel):
                     chain.append(x)
 
         if return_chain:
-            chain = tf.stack(chain, dim=1)
+            chain = torch_stack(chain, dim=1)
         return Sample(x, chain)
+
 
     # ---------- RL training ----------#
 
@@ -477,19 +634,29 @@ class VPGDiffusion(DiffusionModel):
 
         print("diffusion_vpg.py: VPGDiffusion.get_logprobs()")
 
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 1")
+
+
         # Repeat cond for denoising_steps, flatten batch and time dimensions
         cond = {
             # key: cond[key]
             # .unsqueeze(1)
             # .repeat(1, self.ft_denoising_steps, *(1,) * (cond[key].ndim - 1))
             # .flatten(start_dim=0, end_dim=1)
-            key: torch_flatten( tf.tile(
-                tf.expand_dims(cond[key], axis=1),
+            key: torch_flatten(
+                torch_tensor_repeat(
+                torch_unsqueeze(cond[key], 1),
                 [1, self.ft_denoising_steps, *(1,) * (cond[key].ndim - 1)]
-            ), 0, 1)
+                )
+            , 0, 1)
             
             for key in cond
         }  # less memory usage than einops?
+
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 2")
+
+
+        print("cond = ", cond)
 
         # Repeat t for batch dim, keep it 1-dim
         if self.use_ddim:
@@ -501,9 +668,21 @@ class VPGDiffusion(DiffusionModel):
                 step=-1,
                 device=self.device,
             )
+        
+        print("t_single = ", t_single)
+
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 3")
+
+
             # 4,3,2,1,0,4,3,2,1,0,...,4,3,2,1,0
-        t_all = tf.tile(t_single, [chains.shape[0], 1])
+        t_all = torch_tensor_repeat(t_single, [chains.shape[0], 1])
         t_all = torch_flatten(t_all)
+
+        print("t_all = ", t_all)
+        
+
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 4")
+
 
         if self.use_ddim:
             indices_single = torch_arange(
@@ -512,20 +691,34 @@ class VPGDiffusion(DiffusionModel):
                 device=self.device,
             )  # only used for DDIM
 
-            indices = tf.tile(indices_single, chains.shape[0])
+            indices = torch_tensor_repeat(indices_single, chains.shape[0])
 
         else:
             indices = None
+
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 5")
+
+
+        print("indices_single = ", t_all)
+        print("indices = ", t_all)
+
 
         # Split chains
         chains_prev = chains[:, :-1]
         chains_next = chains[:, 1:]
 
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 6")
+
+
         # Flatten first two dimensions
         # chains_prev = chains_prev.reshape(-1, self.horizon_steps, self.action_dim)
         # chains_next = chains_next.reshape(-1, self.horizon_steps, self.action_dim)
-        chains_prev = tf.reshape(chains_prev, [-1, self.horizon_steps, self.action_dim])
-        chains_next = tf.reshape(chains_next, [-1, self.horizon_steps, self.action_dim])
+        chains_prev = torch_reshape(chains_prev, [-1, self.horizon_steps, self.action_dim])
+        chains_next = torch_reshape(chains_next, [-1, self.horizon_steps, self.action_dim])
+
+
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 7")
+
 
         # Forward pass with previous chains
         next_mean, logvar, eta = self.p_mean_var(
@@ -535,16 +728,29 @@ class VPGDiffusion(DiffusionModel):
             index=indices,
             use_base_policy=use_base_policy,
         )
-        std = tf.exp(0.5 * logvar)
-        std = tf.clip_by_value(std, self.min_logprob_denoising_std, tf.float32.max)
+        std = torch_exp(0.5 * logvar)
+        std = torch_clip(std, self.min_logprob_denoising_std, tf.float32.max)
+
+
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 8")
+
 
         dist = Normal(next_mean, std)
+
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 9")
+
 
         # Get logprobs with gaussian
         log_prob = dist.log_prob(chains_next)
         if get_ent:
             return log_prob, eta
+
+        print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 10")
+
+
         return log_prob
+
+
 
     def get_logprobs_subsample(
         self,
@@ -604,8 +810,8 @@ class VPGDiffusion(DiffusionModel):
             index=ddim_indices,
             use_base_policy=use_base_policy,
         )
-        std = tf.exp(0.5 * logvar)
-        std = tf.clip_by_value(std, self.min_logprob_denoising_std, tf.float32.max)
+        std = torch_exp(0.5 * logvar)
+        std = torch_clip(std, self.min_logprob_denoising_std, tf.float32.max)
 
         dist = Normal(next_mean, std)
 
@@ -641,7 +847,7 @@ class VPGDiffusion(DiffusionModel):
         # Get advantage
         # with tf.GradientTape() as tape:
         with torch_no_grad() as tape:
-            value = tf.squeeze(self.critic(cond))  # (b,)
+            value = torch_squeeze(self.critic(cond))  # (b,)
 
         # with torch.no_grad():
         #     value = self.critic(cond).squeeze()
@@ -652,25 +858,25 @@ class VPGDiffusion(DiffusionModel):
         # (n_steps x n_envs x K) x Ta x (Do+Da)
 
         # Ignore obs dimension, and then sum over action dimension
-        logprobs = tf.reduce_sum(logprobs[:, :, :self.action_dim], axis=-1)
+        logprobs = torch_sum(logprobs[:, :, :self.action_dim], dim = -1)
         # -> (n_steps x n_envs x K) x Ta
 
         # Reshape to group steps and environment
-        logprobs = tf.reshape(logprobs, (-1, self.denoising_steps, self.horizon_steps))
+        logprobs = torch_reshape(logprobs, (-1, self.denoising_steps, self.horizon_steps))
         # -> (n_steps x n_envs) x K x Ta
 
         # Sum/avg over denoising steps
-        logprobs = tf.reduce_mean(logprobs, axis=-2)  # -> (n_steps x n_envs) x Ta
+        logprobs = torch_mean(logprobs, dim=-2)  # -> (n_steps x n_envs) x Ta
 
         # Sum/avg over horizon steps
-        logprobs = tf.reduce_mean(logprobs, axis=-1)  # -> (n_steps x n_envs)
-
+        logprobs = torch_mean(logprobs, dim=-1)  # -> (n_steps x n_envs)
 
         # Get REINFORCE loss
-        loss_actor = tf.reduce_mean(-logprobs * advantage)
+        loss_actor = torch_mean(-logprobs * advantage)
 
         # Train critic to predict state value
-        pred = tf.squeeze(self.critic(cond))  # (b,)
+        pred = torch_squeeze(self.critic(cond))  # (b,)
+
         loss_critic = tf.reduce_mean(tf.square(pred - reward))
 
         return loss_actor, loss_critic, eta

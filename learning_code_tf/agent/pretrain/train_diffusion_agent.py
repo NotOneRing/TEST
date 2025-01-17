@@ -26,7 +26,7 @@ import io
 from copy import deepcopy
 
 
-from util.config import DEBUG
+from util.config import DEBUG, TEST_LOAD_PRETRAIN
 
 # DEBUG = True
 # DEBUG = False
@@ -38,6 +38,12 @@ class TrainDiffusionAgent(PreTrainAgent):
     def __init__(self, cfg):
         print("train_diffusion_agent.py: TrainDiffusionAgent.__init__()")
         super().__init__(cfg)
+
+
+        if DEBUG and TEST_LOAD_PRETRAIN:
+            self.base_policy_path = cfg.base_policy_path
+
+
         self.model.batch_size = self.batch_size
 
         # # # # Use tf's model handling
@@ -176,6 +182,20 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             print( f"Current epoch = {epoch}" )
 
+
+
+
+
+            # if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
+            #     loadpath = self.base_policy_path.replace(".pt", ".keras")
+                
+            #     self.load_load_pretrain_model(loadpath)
+            #     # print("finish load_load_pretrain_model")
+
+
+
+
+
             if DEBUG and epoch != 0 and epoch % 2 == 0:
                 self.load(epoch - 1)
 
@@ -262,6 +282,26 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
 
+
+
+            if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
+                loadpath = self.base_policy_path.replace(".pt", ".keras")
+                
+                self.load_load_pretrain_model(loadpath)
+                # print("finish load_load_pretrain_model")
+
+
+
+
+            # if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
+            #     self.model.load_pickle(self.base_policy_path)
+
+            #     savepath = self.base_policy_path.replace(".pt", ".keras")
+                
+            #     self.save_load_pretrain_model(savepath)
+            #     break
+
+
             print("train_diffusion_agent.py: run() 4")
 
             if epoch == 0:
@@ -299,7 +339,7 @@ class TrainDiffusionAgent(PreTrainAgent):
                         item_actions_copy, cond_copy)
 
                     print("item_actions_copy.shape = ", item_actions_copy.shape)
-                    print("cond_copy.shape = ", cond_copy.shape)
+                    print("cond_copy['state'].shape = ", cond_copy['state'].shape)
 
 
 

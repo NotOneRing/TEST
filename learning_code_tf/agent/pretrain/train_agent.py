@@ -385,6 +385,82 @@ class PreTrainAgent:
 
 
 
+
+    def load_load_pretrain_model(self, loadpath):
+
+        print("train_agent.py: PreTrainAgent.load_load_pretrain_model()")
+
+        print("loadpath = ", loadpath)
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            "nn_Identity": nn_Identity,
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        print("before first model load")
+        self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+
+        print("before network model load")
+        self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+
+        print("after all model loaded")
+
+
+
+
+
+
+
+
+
+    def save_load_pretrain_model(self, savepath):
+
+
+        print("train_agent.py: PreTrainAgent.save_load_pretrain_model()")
+
+       
+        print("savepath = ", savepath)
+
+        tf.keras.models.save_model(self.model, savepath)
+
+        print(f"Saved model to {savepath}")
+
+        network_savepath = savepath.replace(".keras", "_network.keras")
+
+        print("network_savepath = ", network_savepath)
+
+        tf.keras.models.save_model(self.model.network, network_savepath)
+
+        print(f"Saved model.network to {network_savepath}")
+
+
+
+
     def save_model(self, epoch):
 
 
@@ -399,7 +475,6 @@ class PreTrainAgent:
         tf.keras.models.save_model(self.model, savepath)
 
         print(f"Saved model to {savepath}")
-
 
 
         network_savepath = savepath.replace(".keras", "_network.keras")

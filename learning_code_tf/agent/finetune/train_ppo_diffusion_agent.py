@@ -27,7 +27,7 @@ from agent.finetune.train_ppo_agent import TrainPPOAgent
 from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts
 
 from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, tf_CosineAnnealingWarmupRestarts, torch_from_numpy, torch_tensor_float, \
-torch_tensor, torch_split, torch_reshape, torch_randperm, torch_unravel_index, torch_nn_utils_clip_grad_norm_and_step
+torch_tensor, torch_split, torch_reshape, torch_randperm, torch_unravel_index, torch_nn_utils_clip_grad_norm_and_step, torch_reshape
 
 
 class TrainPPODiffusionAgent(TrainPPOAgent):
@@ -159,6 +159,11 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         # .float()
                         # .to(self.device)
                     }
+
+
+
+                    print("self.model = ", self.model)
+
 
 
                     samples = self.model(
@@ -306,8 +311,15 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                             self.action_dim,
                         )
                     )
+                    
                     for obs, chains in zip(obs_ts, chains_ts):
-                        logprobs = self.model.get_logprobs(obs, chains).cpu().numpy()
+                        print("obs = ", obs)
+                        print("chains = ", chains)
+                        print("self.model = ", self.model)
+                        logprobs = self.model.get_logprobs(obs, chains)
+                        print("type(logprobs) = ", type(logprobs) )
+                        logprobs = logprobs.cpu().numpy()
+
                         logprobs_trajs = np.vstack(
                             (
                                 logprobs_trajs,
@@ -332,10 +344,11 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     lastgaelam = 0
                     for t in reversed(range(self.n_steps)):
                         if t == self.n_steps - 1:
+                            temp_critic = self.model.critic(obs_venv_ts)
+                            print("type(temp_critic) = ", type(temp_critic))
                             nextvalues = (
-                                self.model.critic(obs_venv_ts)
-                                .reshape(1, -1)
-                                .cpu()
+                                torch_reshape( temp_critic, 1, -1)
+                                # .cpu()
                                 .numpy()
                             )
                         else:
@@ -362,7 +375,9 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     )
                 }
                 chains_k = einops.rearrange(
-                    torch_tensor_float( torch_tensor(chains_trajs, device=self.device) ),
+                    torch_tensor_float( torch_tensor(chains_trajs
+                                                    #  , device=self.device
+                                                     ) ),
                     "s e t h d -> (s e) t h d",
                 )
                 returns_k = (
@@ -384,7 +399,9 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 for update_epoch in range(self.update_epochs):
                     # for each epoch, go through all data in batches
                     flag_break = False
-                    inds_k = torch_randperm(total_steps, device=self.device)
+                    inds_k = torch_randperm(total_steps
+                                            # , device=self.device
+                                            )
                     num_batch = max(1, total_steps // self.batch_size)  # skip last ones
                     for batch in range(num_batch):
                         start = batch * self.batch_size
@@ -394,7 +411,29 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                             inds_b,
                             (self.n_steps * self.n_envs, self.model.ft_denoising_steps),
                         )
-                        obs_b = {"state": obs_k["state"][batch_inds_b]}
+
+
+                        print("type(obs_k['state']) = ", type(obs_k["state"]) )
+                        print("type(batch_inds_b) = ", type(batch_inds_b) )
+                        print("type(denoising_inds_b) = ", type(denoising_inds_b) )
+
+                        print("obs_k['state'].shape = ", obs_k["state"].shape)
+                        print("batch_inds_b.shape = ", batch_inds_b.shape)
+                        print("denoising_inds_b.shape = ", denoising_inds_b.shape)
+                        print("chains_k.shape = ", chains_k.shape)
+
+                        print("obs_k['state'] = ", obs_k["state"])
+                        print("batch_inds_b = ", batch_inds_b)
+                        print("denoising_inds_b = ", denoising_inds_b)
+
+                        temp_result = tf.gather(obs_k["state"], batch_inds_b, axis=0)
+                        print("temp_result.shape = ", temp_result.shape)
+
+                        obs_b = {"state": temp_result}
+
+                        # obs_b = {"state": obs_k["state"][batch_inds_b]}
+
+
                         chains_prev_b = chains_k[batch_inds_b, denoising_inds_b]
                         chains_next_b = chains_k[batch_inds_b, denoising_inds_b + 1]
                         returns_b = returns_k[batch_inds_b]
@@ -414,7 +453,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                                 ratio,
                                 bc_loss,
                                 eta,
-                            ) = self.model.loss(
+                            ) = self.model.loss_ori(
                                 obs_b,
                                 chains_prev_b,
                                 chains_next_b,
