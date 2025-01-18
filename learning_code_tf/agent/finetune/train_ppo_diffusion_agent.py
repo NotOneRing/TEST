@@ -30,21 +30,29 @@ from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, tf_CosineAnnealin
 torch_tensor, torch_split, torch_reshape, torch_randperm, torch_unravel_index, torch_nn_utils_clip_grad_norm_and_step, torch_reshape
 
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
+
+
 class TrainPPODiffusionAgent(TrainPPOAgent):
     def __init__(self, cfg):
-        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__()")
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__()")
 
         super().__init__(cfg)
 
-        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__(): 1")
+        if OUTPUT_POSITIONS:
+            print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__(): 1")
 
         # Reward horizon --- always set to act_steps for now
         self.reward_horizon = cfg.get("reward_horizon", self.act_steps)
 
         # Eta - between DDIM (=0 for eval) and DDPM (=1 for training)
         self.learn_eta = self.model.learn_eta
-
-        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__(): 2")
+    
+        if OUTPUT_POSITIONS:
+            print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.__init__(): 2")
 
 
         if self.learn_eta:
@@ -69,7 +77,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
             )
 
     def run(self):
-        print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.run()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.run()")
 
         # Start training loop
         timer = Timer()
@@ -162,7 +171,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
 
 
-                    print("self.model = ", self.model)
+                    if OUTPUT_VARIABLES:
+                        print("self.model = ", self.model)
 
 
 
@@ -313,11 +323,14 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     )
                     
                     for obs, chains in zip(obs_ts, chains_ts):
-                        print("obs = ", obs)
-                        print("chains = ", chains)
-                        print("self.model = ", self.model)
+                        if OUTPUT_VARIABLES:
+                            print("obs = ", obs)
+                            print("chains = ", chains)
+                            print("self.model = ", self.model)
                         logprobs = self.model.get_logprobs(obs, chains)
-                        print("type(logprobs) = ", type(logprobs) )
+                        if OUTPUT_VARIABLES:
+                            print("type(logprobs) = ", type(logprobs) )
+    
                         logprobs = logprobs.cpu().numpy()
 
                         logprobs_trajs = np.vstack(
@@ -345,7 +358,9 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     for t in reversed(range(self.n_steps)):
                         if t == self.n_steps - 1:
                             temp_critic = self.model.critic(obs_venv_ts)
-                            print("type(temp_critic) = ", type(temp_critic))
+                            if OUTPUT_VARIABLES:
+                                print("type(temp_critic) = ", type(temp_critic))
+    
                             nextvalues = (
                                 torch_reshape( temp_critic, 1, -1)
                                 # .cpu()
@@ -391,7 +406,9 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     # .float()
                     # .reshape(-1)
                 )
-                logprobs_k = torch_reshape( torch_tensor_float( torch_tensor(logprobs_trajs ) ), -1)
+
+                logprobs_k = torch_tensor_float( torch_tensor(logprobs_trajs ) )
+                # , -1)
 
                 # Update policy and critic
                 total_steps = self.n_steps * self.n_envs * self.model.ft_denoising_steps
@@ -412,34 +429,61 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                             (self.n_steps * self.n_envs, self.model.ft_denoising_steps),
                         )
 
+                        if OUTPUT_VARIABLES:
+                            print("type(obs_k['state']) = ", type(obs_k["state"]) )
+                            print("type(batch_inds_b) = ", type(batch_inds_b) )
+                            print("type(denoising_inds_b) = ", type(denoising_inds_b) )
 
-                        print("type(obs_k['state']) = ", type(obs_k["state"]) )
-                        print("type(batch_inds_b) = ", type(batch_inds_b) )
-                        print("type(denoising_inds_b) = ", type(denoising_inds_b) )
+                            print("obs_k['state'].shape = ", obs_k["state"].shape)
+                            print("batch_inds_b.shape = ", batch_inds_b.shape)
+                            print("denoising_inds_b.shape = ", denoising_inds_b.shape)
+                            print("chains_k.shape = ", chains_k.shape)
 
-                        print("obs_k['state'].shape = ", obs_k["state"].shape)
-                        print("batch_inds_b.shape = ", batch_inds_b.shape)
-                        print("denoising_inds_b.shape = ", denoising_inds_b.shape)
-                        print("chains_k.shape = ", chains_k.shape)
-
-                        print("obs_k['state'] = ", obs_k["state"])
-                        print("batch_inds_b = ", batch_inds_b)
-                        print("denoising_inds_b = ", denoising_inds_b)
+                            print("obs_k['state'] = ", obs_k["state"])
+                            print("batch_inds_b = ", batch_inds_b)
+                            print("denoising_inds_b = ", denoising_inds_b)
 
                         temp_result = tf.gather(obs_k["state"], batch_inds_b, axis=0)
-                        print("temp_result.shape = ", temp_result.shape)
+                        if OUTPUT_VARIABLES:
+                            print("temp_result.shape = ", temp_result.shape)
 
                         obs_b = {"state": temp_result}
 
                         # obs_b = {"state": obs_k["state"][batch_inds_b]}
 
 
-                        chains_prev_b = chains_k[batch_inds_b, denoising_inds_b]
-                        chains_next_b = chains_k[batch_inds_b, denoising_inds_b + 1]
-                        returns_b = returns_k[batch_inds_b]
-                        values_b = values_k[batch_inds_b]
-                        advantages_b = advantages_k[batch_inds_b]
-                        logprobs_b = logprobs_k[batch_inds_b, denoising_inds_b]
+                        prev_b_indices = tf.stack([batch_inds_b, denoising_inds_b], axis=1)
+                        # chains_prev_b = chains_k[batch_inds_b, denoising_inds_b]
+                        chains_prev_b = tf.gather_nd(chains_k, prev_b_indices)
+
+                        next_b_indices = tf.stack([batch_inds_b, denoising_inds_b + 1], axis=1)
+                        # chains_next_b = chains_k[batch_inds_b, denoising_inds_b + 1]
+                        chains_next_b = tf.gather_nd(chains_k, next_b_indices)
+
+                        # returns_b = returns_k[batch_inds_b]
+                        # values_b = values_k[batch_inds_b]
+                        # advantages_b = advantages_k[batch_inds_b]
+                        returns_b = tf.gather(returns_k, batch_inds_b, axis=0)
+                        values_b = tf.gather(values_k, batch_inds_b, axis=0)
+                        advantages_b = tf.gather(advantages_k, batch_inds_b, axis=0)
+
+                        logprobs_b_indices = tf.stack([batch_inds_b, denoising_inds_b], axis=1)
+                        # logprobs_b = logprobs_k[batch_inds_b, denoising_inds_b]
+                        if OUTPUT_VARIABLES:
+                            print("logprobs_k.shape = ", logprobs_k.shape)
+                            print("logprobs_b_indices.shape = ", logprobs_b_indices.shape)
+
+                        logprobs_b = tf.gather_nd(logprobs_k, logprobs_b_indices)
+
+
+                        if OUTPUT_VARIABLES:
+                            print("logprobs_b.shape = ", logprobs_b.shape)
+
+                            
+                            print("self.model.actor_ft.trainable_variables = ")
+
+                            for var in self.model.actor_ft.trainable_variables:
+                                print(f"Variable: {var.name}, Trainable: {var.trainable}")
 
                         with tf.GradientTape(persistent=True) as tape:
 
@@ -465,19 +509,63 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                                 use_bc_loss=self.use_bc_loss,
                                 reward_horizon=self.reward_horizon,
                             )
+
                             loss = (
                                 pg_loss
                                 + entropy_loss * self.ent_coef
                                 + v_loss * self.vf_coef
                                 + bc_loss * self.bc_loss_coeff
                             )
+
+                            print("pg_loss = ", pg_loss)
+                            print("entropy_loss = ", entropy_loss)
+                            print("v_loss = ", v_loss)
+                            print("bs_loss = ", bc_loss)
+                            
+
+                            print("loss.numpy() = ", loss.numpy())
+
                             clipfracs += [clipfrac]
 
-                        tf_gradients_actor_ft = tape.gradient(loss, self.model.actor_ft.trainable_variables)
+
+                        # if OUTPUT_VARIABLES:
+                        print("self.model = ", self.model)
+                        print("self.model.actor_ft = ", self.model.actor_ft)
+                        print("self.model.critic = ", self.model.critic)
+
+
+
+
+                        watched_vars = tape.watched_variables()
+                        for var in self.model.actor_ft.trainable_variables:
+                            is_used_in_loss = any(var is watched_var for watched_var in watched_vars)
+                            print(f"Variable: {var.name}, Used in loss computation: {is_used_in_loss}")
+
+                        # for var in self.model.actor_ft.trainable_variables:
+                        #     print(f"Variable: {var.name}, Used in loss computation: {var in tape.watched_variables()}")
+
+
+
+
+
+                        tf_gradients_actor_ft = tape.gradient(loss, self.model.actor_ft.trainable_variables)                        
+                        print("tf_gradients_actor_ft = ", tf_gradients_actor_ft)
+                        zip_gradients_actor_params = zip(tf_gradients_actor_ft, self.model.actor_ft.trainable_variables)
+
                         tf_gradients_critic = tape.gradient(loss, self.model.critic.trainable_variables)
-                        tf_gradients_eta = tape.gradient(loss, self.model.eta.trainable_variables)
+                        print("tf_gradients_critic = ", tf_gradients_critic)
+                        zip_gradients_critic_params = zip(tf_gradients_critic, self.model.critic.trainable_variables)
+
+                        if self.learn_eta:
+                            print("self.model.eta = ", self.model.eta)
+
+                            tf_gradients_eta = tape.gradient(loss, self.model.eta.trainable_variables)
+                            print("tf_gradients_eta = ", tf_gradients_eta)
+                            zip_gradients_eta_params = zip(tf_gradients_eta, self.model.eta.trainable_variables)
 
 
+                        print("self.itr = ", self.itr)
+                        print("self.n_critic_warmup_itr = ", self.n_critic_warmup_itr)
 
                         # # update policy and critic
                         # self.actor_optimizer.zero_grad()
@@ -495,13 +583,17 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                                     tf_gradients_actor_ft
                                 )
                             else:
-                                self.actor_optimizer.step(tf_gradients_actor_ft)
+                                # self.actor_optimizer.step(tf_gradients_actor_ft)
+                                self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
+
 
                             if self.learn_eta and batch % self.eta_update_interval == 0:
-                                self.eta_optimizer.step(tf_gradients_eta)
+                                # self.eta_optimizer.step(tf_gradients_eta)
+                                self.eta_optimizer.apply_gradients(zip_gradients_eta_params)
 
                         
-                        self.critic_optimizer.step(tf_gradients_critic)
+                        # self.critic_optimizer.step(tf_gradients_critic)
+                        self.critic_optimizer.apply_gradients(zip_gradients_critic_params)
 
 
                         log.info(
@@ -560,9 +652,20 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
             
             diffusion_min_sampling_std = self.model.get_min_sampling_denoising_std()
 
+
+
+            # print("self.model.__dict__ = ", self.model.__dict__)
+
+            print("self.model.actor_ft = ", self.model.actor_ft)
+            print("self.model.critic = ", self.model.critic)
+
+            if self.learn_eta:
+                print("self.model.eta = ", self.model.eta)
+
+
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model()
+                self.save_model(self.learn_eta)
 
 
 
@@ -588,48 +691,54 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+
+                    print("num episode - eval = ", num_episode_finished)
+
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | eta {eta:8.4f} | t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} \
+                        | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | eta {eta:8.4f} | t:{time:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "total env step": cnt_train_step,
-                                "loss": loss,
-                                "pg loss": pg_loss,
-                                "value loss": v_loss,
-                                "bc loss": bc_loss,
-                                "eta": eta,
-                                "approx kl": approx_kl,
-                                "ratio": ratio,
-                                "clipfrac": np.mean(clipfracs),
-                                "explained variance": explained_var,
-                                "avg episode reward - train": avg_episode_reward,
-                                "num episode - train": num_episode_finished,
-                                "diffusion - min sampling std": diffusion_min_sampling_std,
-                                "actor lr": self.actor_optimizer.param_groups[0]["lr"],
-                                "critic lr": self.critic_optimizer.param_groups[0][
-                                    "lr"
-                                ],
-                            },
-                            step=self.itr,
-                            commit=True,
-                        )
+                    print("diffusion_min_sampling_std = ", diffusion_min_sampling_std)
+
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "total env step": cnt_train_step,
+                    #             "loss": loss,
+                    #             "pg loss": pg_loss,
+                    #             "value loss": v_loss,
+                    #             "bc loss": bc_loss,
+                    #             "eta": eta,
+                    #             "approx kl": approx_kl,
+                    #             "ratio": ratio,
+                    #             "clipfrac": np.mean(clipfracs),
+                    #             "explained variance": explained_var,
+                    #             "avg episode reward - train": avg_episode_reward,
+                    #             "num episode - train": num_episode_finished,
+                    #             "diffusion - min sampling std": diffusion_min_sampling_std,
+                    #             "actor lr": self.actor_optimizer.param_groups[0]["lr"],
+                    #             "critic lr": self.critic_optimizer.param_groups[0][
+                    #                 "lr"
+                    #             ],
+                    #         },
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

@@ -5,3 +5,32 @@ DEBUG = True
 TEST_LOAD_PRETRAIN = True
 
 # TEST_LOAD_PRETRAIN = False
+
+
+
+# OUTPUT_VARIABLES = True
+
+OUTPUT_VARIABLES = False
+
+
+
+
+# OUTPUT_POSITIONs = True
+
+OUTPUT_POSITIONS = False
+
+
+
+
+
+# OUTPUT_FUNCTION_HEADER = True
+
+OUTPUT_FUNCTION_HEADER = False
+
+
+
+
+
+
+
+

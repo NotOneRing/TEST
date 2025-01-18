@@ -5,6 +5,9 @@ from collections import OrderedDict
 # tf.random.set_seed(42)
 
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
+
 def torch_tensor_permute(input, *dims):
     "A wrapper for torch.Tensor.permute() function"
     if isinstance(dims[0], (tuple, list)):
@@ -217,6 +220,10 @@ def torch_min(input, dim = None, other = None):
         return tf.minimum(input, other)
 
 def torch_max(input, dim = None, other = None):
+    if isinstance(dim, (tf.Tensor, tf.Variable)):
+        temp = dim
+        dim = other
+        other = temp
     if other == None:
         # return tf.reduce_max(input, axis=dim)
         if dim == None:
@@ -260,12 +267,14 @@ def torch_where(index_tensor, input_tensor = None, replace_value = None):
         assert len(result.shape) == 2, "result reshape must be two"
         true_num = result.shape[0]
         result_dim = result.shape[1]
-        print("true_num = ", true_num)
-        print("result_dim = ", result_dim)
+        if OUTPUT_VARIABLES:
+            print("true_num = ", true_num)
+            print("result_dim = ", result_dim)
         result_list = []
         for i in range(result_dim):
             gather_result = tf.gather(result, i, axis=1)
-            print("gather_result = ", gather_result)
+            if OUTPUT_VARIABLES:
+                print("gather_result = ", gather_result)
             result_list.append(gather_result)
         result = tuple(result_list)
     return result
@@ -780,7 +789,8 @@ def torch_repeat_interleave(tensor, repeats, dim=None):
     else:
         raise ValueError("non scalar repeats is not implemented for this function")
 
-    print("repeats = ", repeats)
+    if OUTPUT_VARIABLES:
+        print("repeats = ", repeats)
 
     cur_tensor = tensor
 
@@ -1008,7 +1018,8 @@ def torch_rand(*size, dtype=tf.dtypes.float32):
     #     name=None
     # )
 
-    print("size = ", size)
+    if OUTPUT_VARIABLES:
+        print("size = ", size)
 
     if isinstance(size[0], (tuple, list)):
         final_size = [ *size[0] ]
@@ -1042,19 +1053,24 @@ def torch_vmap(func, *inputs, in_dims=0, out_dims=0):
     for tensor in inputs:
         cur_tensor = torch_tensor_clone(tensor)
         out.append(cur_tensor)
-    print("out = ", out)
+    
+    if OUTPUT_VARIABLES:
+        print("out = ", out)
 
     if in_dims != 0:
         for i, tensor in enumerate(out):
             out[i] = torch_tensor_transpose(out, 0, in_dims)
 
     out = tuple(out)
-    print("out = ", out)
+
+    if OUTPUT_VARIABLES:
+        print("out = ", out)
 
 
     outputs_tf = tf.vectorized_map(lambda out: torch_dot(out[0], out[1]), out)
     
-    print("outputs_tf = ", outputs_tf)
+    if OUTPUT_VARIABLES:
+        print("outputs_tf = ", outputs_tf)
 
     
     if out_dims != 0:
@@ -1113,7 +1129,8 @@ def torch_func_stack_module_state(models):
                     cur_tensor = torch_unsqueeze(cur_tensor, 0)
                     trainable[matched_name] = cur_tensor
             else:
-                print("var.name = ", var.name)
+                if OUTPUT_VARIABLES:
+                    print("var.name = ", var.name)
                 raise RuntimeError("Network name not recognized!")
         # print("5")
         for var in model.non_trainable_variables:
@@ -1138,7 +1155,8 @@ def torch_func_stack_module_state(models):
                     cur_tensor = torch_unsqueeze(cur_tensor, 0)
                     non_trainable[matched_name] = cur_tensor
             else:
-                print("var.name = ", var.name)
+                if OUTPUT_VARIABLES:
+                    print("var.name = ", var.name)
                 raise RuntimeError("Network name not recognized!")
 
 
@@ -1328,7 +1346,8 @@ class nn_Tanh(tf.keras.layers.Layer):
     
     @classmethod
     def from_config(cls, config):
-        print("nn_Tanh: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Tanh: from_config()")
         
         result = cls(**config)
         return result
@@ -1351,7 +1370,8 @@ class nn_Identity(tf.keras.layers.Layer):
     
     @classmethod
     def from_config(cls, config):
-        print("nn_Identity: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Identity: from_config()")
         result = cls(**config)
         return result
 
@@ -1373,7 +1393,8 @@ class nn_Softplus(tf.keras.layers.Layer):
     
     @classmethod
     def from_config(cls, config):
-        print("nn_Softplus: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Softplus: from_config()")
         result = cls(**config)
         return result
 
@@ -1400,7 +1421,8 @@ class nn_Mish(tf.keras.layers.Layer):
     
     @classmethod
     def from_config(cls, config):
-        print("nn_Mish: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Mish: from_config()")
         # relu = tf.keras.layers.deserialize(config.pop("relu"))
         result = cls(**config)
         # result.relu=relu
@@ -1431,7 +1453,8 @@ class nn_ELU(tf.keras.layers.Layer):
     
     @classmethod
     def from_config(cls, config):
-        print("nn_ELU: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_ELU: from_config()")
         elu = tf.keras.layers.deserialize(config.pop("elu"))
         result = cls(elu=elu, **config)
         return result
@@ -1467,7 +1490,8 @@ class nn_GELU(tf.keras.layers.Layer):
     
     @classmethod
     def from_config(cls, config):
-        print("nn_GELU: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_GELU: from_config()")
         result = cls(**config)
         return result
 
@@ -1506,7 +1530,8 @@ class nn_ReLU(tf.keras.layers.Layer):
     
     @classmethod
     def from_config(cls, config):
-        print("nn_ReLU: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_ReLU: from_config()")
         relu = tf.keras.layers.deserialize(config.pop("relu"))
         result = cls(**config)
         result.relu=relu
@@ -1548,7 +1573,8 @@ class nn_Dropout(tf.keras.layers.Layer):
     
     @classmethod
     def from_config(cls, config):
-        print("nn_Dropout: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Dropout: from_config()")
 
         model = tf.keras.layers.deserialize(config.pop("model"))
         result = cls(model=model, **config)
@@ -1621,8 +1647,10 @@ class nn_Linear(tf.keras.layers.Layer):
             # print("self.model.non_trainable_variables = ", self.model.non_trainable_variables)
 
         # print("nn_Linear: self.model = ", self.model)
-        print("nn_Linear: name_Dense = ", name_Dense)
-        print("nn_Linear: self.model.name = ", self.model.name)
+
+        if OUTPUT_VARIABLES:
+            print("nn_Linear: name_Dense = ", name_Dense)
+            print("nn_Linear: self.model.name = ", self.model.name)
 
     def get_config(self):
         # Get the configuration of the layer and return it as a dictionary
@@ -1636,13 +1664,16 @@ class nn_Linear(tf.keras.layers.Layer):
             "dense_layer": tf.keras.layers.serialize(self.model),
         })
         
-        print("nn_Linear.config() = ", config)
+        if OUTPUT_VARIABLES:
+            print("nn_Linear.config() = ", config)
 
         return config
     
     @classmethod
     def from_config(cls, config):
-        print("nn_Linear: from_config()")
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Linear: from_config()")
 
         model = tf.keras.layers.deserialize(config.pop("dense_layer"))
         result = cls(model = model, **config)
@@ -1822,13 +1853,15 @@ class nn_Sequential(tf.keras.layers.Layer):
             # name=name, 
             **kwargs)
 
-        print("nn_Sequential: __init__()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Sequential: __init__()")
 
-        print("len(args) = ", len(args))
-        print("args = ", args)
-        print("model_list = ", model_list)
-        print("model = ", model)
-        print("**kwargs = ", kwargs)
+        if OUTPUT_VARIABLES:
+            print("len(args) = ", len(args))
+            print("args = ", args)
+            print("model_list = ", model_list)
+            print("model = ", model)
+            print("**kwargs = ", kwargs)
 
 
         if model == None:
@@ -1838,17 +1871,21 @@ class nn_Sequential(tf.keras.layers.Layer):
                 for module in args[0]:
                     self.model_list.append(module)
             elif isinstance(args[0], (dict, OrderedDict)):
-                print("OrderedDict")
+                if OUTPUT_VARIABLES:
+                    print("OrderedDict")
                 for name, module in args[0].items():
-                    print("name = ", name)
-                    print("module = ", module)
+                    if OUTPUT_VARIABLES:
+                        print("name = ", name)
+                        print("module = ", module)
                     self.model_list.append(module)
             else:
                 for module in args:
                     self.model_list.append(module)
 
-            print("branch1")
-            print("self.model_list = ")
+            if OUTPUT_VARIABLES:
+                print("branch1")
+                print("self.model_list = ")
+
             self.model = tf.keras.Sequential(self.model_list)
         else:
             self.model = model
@@ -1901,14 +1938,18 @@ class nn_Sequential(tf.keras.layers.Layer):
             # layer_configs
         })
 
-        print("nn_Sequential: config = ", config)
+        if OUTPUT_VARIABLES:
+            print("nn_Sequential: config = ", config)
 
         return config
 
     @classmethod
     def from_config(cls, config):
-        print("nn_Sequential: from_config()")
-        print("config = ", config)
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Sequential: from_config()")
+
+        if OUTPUT_VARIABLES:
+            print("config = ", config)
         
 
         from model.diffusion.mlp_diffusion import DiffusionMLP
@@ -2051,7 +2092,8 @@ class nn_ModuleList(tf.keras.layers.Layer):
 
     def get_config(self):
 
-        print("nn_ModuleList: get_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_ModuleList: get_config()")
 
         # Get the configuration of all layers in the modules list
         config = super(nn_ModuleList, self).get_config()  # Call the parent class get_config()
@@ -2069,7 +2111,8 @@ class nn_ModuleList(tf.keras.layers.Layer):
 
     @classmethod
     def from_config(cls, config):
-        print("nn_ModuleList: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_ModuleList: from_config()")
 
         model_list = config.pop("modules")
 
@@ -2108,19 +2151,23 @@ class nn_ModuleList(tf.keras.layers.Layer):
 
         modules = []
 
-        print("type(model_list) = ", type(model_list))
-        print("model_list = ", model_list)
+        if OUTPUT_VARIABLES:
+            print("type(model_list) = ", type(model_list))
+            print("model_list = ", model_list)
 
 
 
         for model in model_list:
-            print("model = ", model)
+            if OUTPUT_VARIABLES:
+                print("model = ", model)
             name = model["name"]
-            print("name = ", name)
+            if OUTPUT_VARIABLES:
+                print("name = ", name)
             if name in cur_dict:
                 modules.append( cur_dict[name].from_config(model) )
             else:
-                print("nn_ModuleList: name = ", name)
+                if OUTPUT_VARIABLES:
+                    print("nn_ModuleList: name = ", name)
                 modules.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
 
 
@@ -2188,7 +2235,8 @@ class nn_Embedding(tf.keras.layers.Layer):
 
 
     def get_config(self):
-        print("nn_Embedding: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Embedding: from_config()")
 
         # Get the configuration of the embedding layer
         config = super(nn_Embedding, self).get_config()  # Call parent class get_config()
@@ -2211,7 +2259,8 @@ class nn_Embedding(tf.keras.layers.Layer):
 
     @classmethod
     def from_config(cls, config):
-        print("nn_Embedding: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Embedding: from_config()")
         # result = cls(**config)
         result = super(nn_Embedding, cls).from_config(config)
         return result
@@ -2321,7 +2370,8 @@ class nn_LayerNorm(tf.keras.layers.Layer):
             # 'beta': self.beta
         })
 
-        print("nn_LayerNorm.get_config() = ", config)
+        if OUTPUT_VARIABLES:
+            print("nn_LayerNorm.get_config() = ", config)
 
         return config
 
@@ -2401,7 +2451,8 @@ class nn_LayerNorm(tf.keras.layers.Layer):
 class nn_MultiheadAttention(tf.keras.layers.Layer):
     def __init__(self, num_heads, d_model, name="nn_MultiheadAttention", **kwargs):
         
-        print("called nn_MultiheadAttention __init__()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_MultiheadAttention __init__()")
 
         super(nn_MultiheadAttention, self).__init__(name=name, **kwargs)
         self.num_heads = num_heads
@@ -2486,7 +2537,8 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoderLayer", **kwargs):
 
-        print("called nn_TransformerDecoderLayer __init__()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_TransformerDecoderLayer __init__()")
 
         super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
         self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
@@ -2540,7 +2592,8 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
 class nn_TransformerDecoder(tf.keras.layers.Layer):
     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoder", **kwargs):
 
-        print("called nn_TransformerDecoder __init__()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_TransformerDecoder __init__()")
 
         super(nn_TransformerDecoder, self).__init__(name=name, **kwargs)
         self.layers = [
@@ -2564,7 +2617,8 @@ class nn_TransformerDecoder(tf.keras.layers.Layer):
 class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoderLayer", **kwargs):
 
-        print("called nn_TransformerEncoderLayer __init__()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_TransformerEncoderLayer __init__()")
 
         super(nn_TransformerEncoderLayer, self).__init__(name=name, **kwargs)
         self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
@@ -2597,7 +2651,8 @@ class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
 class nn_TransformerEncoder(tf.keras.layers.Layer):
     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoder", **kwargs):
 
-        print("called nn_TransformerEncoder __init__()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_TransformerEncoder __init__()")
 
         super(nn_TransformerEncoder, self).__init__(name=name, **kwargs)
         self.layers = [
@@ -3295,10 +3350,16 @@ class Normal:
         Returns:
             从正态分布中采样的张量
         """
-        print("1sample.shape = ", shape)
+
+        if OUTPUT_VARIABLES:
+            print("1sample.shape = ", shape)
+
         if shape == None or shape == tf.TensorShape([]):
             shape = self.loc.shape
-        print("1sample.shape = ", shape)
+
+        if OUTPUT_VARIABLES:
+            print("1sample.shape = ", shape)
+
         sampled = tf.random.normal(shape=shape, mean=self.loc, stddev=self.scale)
 
         # sampled = torch.tensor(sampled.numpy())
@@ -3507,7 +3568,10 @@ class MixtureSameFamily:
 
         # Check that batch size matches
         mdbs = self._mixture_distribution.batch_shape
-        print("self._component_distribution.batch_shape = ", self._component_distribution.batch_shape)
+
+        if OUTPUT_VARIABLES:
+            print("self._component_distribution.batch_shape = ", self._component_distribution.batch_shape)
+
         cdbs = self._component_distribution.batch_shape[:-1]
         # cdbs = self._component_distribution.batch_shape
         

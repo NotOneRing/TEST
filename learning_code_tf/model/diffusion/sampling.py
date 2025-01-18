@@ -6,15 +6,19 @@ From Diffuser https://github.com/jannerm/diffuser
 import tensorflow as tf
 import numpy as np
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
 
 def cosine_beta_schedule(timesteps, s=0.008, dtype=tf.float32):
     """
     Cosine schedule as proposed in https://openreview.net/forum?id=-NEXDKk8gZ
     """
 
-    print("timesteps = ", timesteps)
+    if OUTPUT_VARIABLES:
+        print("timesteps = ", timesteps)
 
-    print("cosine_beta_schedule() called")
+    if OUTPUT_FUNCTION_HEADER:
+        print("cosine_beta_schedule() called")
 
     steps = timesteps + 1
     x = np.linspace(0.0, steps, steps)
@@ -27,7 +31,9 @@ def cosine_beta_schedule(timesteps, s=0.008, dtype=tf.float32):
 
 
 def extract(a, t, x_shape):
-    print("sampling.py: extract()")
+    
+    if OUTPUT_FUNCTION_HEADER:
+        print("sampling.py: extract()")
 
     # b = tf.shape(t)[0]
     # b = t.get_shape().as_list()[0]
@@ -85,7 +91,9 @@ def extract(a, t, x_shape):
 
 
 def make_timesteps(batch_size, i):
-    print("sampling.py: make_timesteps()")
+    if OUTPUT_FUNCTION_HEADER:
+        print("sampling.py: make_timesteps()")
+    
     # t = tf.constant([i] * batch_size, dtype=tf.int64)
 
     from util.torch_to_tf import torch_full

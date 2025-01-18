@@ -16,6 +16,10 @@ from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout,
 from util.torch_to_tf import torch_tensor_float, torch_cat, torch_flatten, torch_tensor_view, torch_reshape
 from tensorflow.keras.saving import register_keras_serializable
 
+
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
+
 # class VisionDiffusionMLP(tf.keras.layers.Layer):
 @register_keras_serializable(package="Custom")
 class VisionDiffusionMLP(tf.keras.Model):
@@ -40,7 +44,8 @@ class VisionDiffusionMLP(tf.keras.Model):
         num_img=1,
         augment=False,
     ):
-        print("mlp_diffusion.py: VisionDiffusionMLP.__init__()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp_diffusion.py: VisionDiffusionMLP.__init__()")
 
         super(VisionDiffusionMLP, self).__init__()
 
@@ -115,7 +120,8 @@ class VisionDiffusionMLP(tf.keras.Model):
 
         x, time, cond = inputs
 
-        print("mlp_diffusion.py: VisionDiffusionMLP.call()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp_diffusion.py: VisionDiffusionMLP.call()")
 
         B, Ta, Da = x.shape
         _, T_rgb, C, H, W = cond["rgb"].shape
@@ -286,19 +292,23 @@ class DiffusionMLP(tf.keras.layers.Layer):
         name="DiffusionMLP",
         **kwargs
     ):
-        print("mlp_diffusion.py: DiffusionMLP.__init__()")
+    
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp_diffusion.py: DiffusionMLP.__init__()")
 
         # super(DiffusionMLP, self).__init__(name=name)
         # super(DiffusionMLP, self).__init__(name=name, **kwargs)
         super(DiffusionMLP, self).__init__(**kwargs)
 
-        print("before sinusiodalPosEmb()")
+        if OUTPUT_POSITIONS:
+            print("before sinusiodalPosEmb()")
 
         self.action_dim = action_dim
         self.horizon_steps = horizon_steps
         self.cond_dim = cond_dim
 
-        print("self.cond_dim = ", self.cond_dim)
+        if OUTPUT_VARIABLES:
+            print("self.cond_dim = ", self.cond_dim)
 
         # print("self.time_dim = ", time_dim)
 
@@ -306,8 +316,10 @@ class DiffusionMLP(tf.keras.layers.Layer):
         
         # self.mlp_dims = mlp_dims
         self.mlp_dims = list(mlp_dims)
-        print("self.mlp_dims = ", self.mlp_dims)
-        print( "type(self.mlp_dims) = ", type(self.mlp_dims) )
+
+        if OUTPUT_VARIABLES:
+            print("self.mlp_dims = ", self.mlp_dims)
+            print( "type(self.mlp_dims) = ", type(self.mlp_dims) )
 
         # self.cond_mlp_dims = cond_mlp_dims
         if cond_mlp_dims != None:
@@ -323,7 +335,8 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         self.output_dim = self.action_dim * self.horizon_steps
 
-        print("self.time_dim = ", self.time_dim)
+        if OUTPUT_VARIABLES:
+            print("self.time_dim = ", self.time_dim)
 
         if time_embedding == None:
             self.time_embedding = nn_Sequential([
@@ -396,34 +409,37 @@ class DiffusionMLP(tf.keras.layers.Layer):
         else:
             self.mlp_mean = mlp_mean
 
-        print("after mlp_mean")
+        if OUTPUT_POSITIONS:
+            print("after mlp_mean")
         
     def get_config(self):
 
-        print("DiffusionMLP: get_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("DiffusionMLP: get_config()")
 
         # config = {}
         config = super(DiffusionMLP, self).get_config()
 
         # 打印每个属性及其类型和值
-        print("Checking DiffusionMLP Config elements:")
-        print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
-        print(f"horizon_steps: {self.horizon_steps}, type: {type(self.horizon_steps)}")
-        print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
-        print(f"time_dim: {self.time_dim}, type: {type(self.time_dim)}")
-        
-        print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
+        if OUTPUT_VARIABLES:
+            print("Checking DiffusionMLP Config elements:")
+            print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
+            print(f"horizon_steps: {self.horizon_steps}, type: {type(self.horizon_steps)}")
+            print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
+            print(f"time_dim: {self.time_dim}, type: {type(self.time_dim)}")
+            
+            print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
 
-        # print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
-        # print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
+            # print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
+            # print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
 
-        print(f"cond_mlp_dims: {self.cond_mlp_dims}, type: {type(self.cond_mlp_dims)}")
-        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
-        print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
-        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
-        print(f"residual_style: {self.residual_style}, type: {type(self.residual_style)}")
-        print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
-        print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
+            print(f"cond_mlp_dims: {self.cond_mlp_dims}, type: {type(self.cond_mlp_dims)}")
+            print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+            print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
+            print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+            print(f"residual_style: {self.residual_style}, type: {type(self.residual_style)}")
+            print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
+            print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
         
         config.update({
             "action_dim": self.action_dim,
@@ -450,11 +466,12 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         mlp_mean_config = self.mlp_mean.get_config()
 
-        print("time_embedding_config = ", time_embedding_config)
+        if OUTPUT_VARIABLES:
+            print("time_embedding_config = ", time_embedding_config)
 
-        print("cond_mlp_config = ", cond_mlp_config)
+            print("cond_mlp_config = ", cond_mlp_config)
 
-        print("mlp_mean_config = ", mlp_mean_config)
+            print("mlp_mean_config = ", mlp_mean_config)
 
         config.update({
             "time_embedding": 
@@ -490,7 +507,8 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
     @classmethod
     def from_config(cls, config):
-        print("DiffusionMLP: from_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("DiffusionMLP: from_config()")
 
         # print("DiffusionMLP: config = ", config)
 
@@ -712,18 +730,20 @@ class DiffusionMLP(tf.keras.layers.Layer):
         # append time and cond
         time = torch_tensor_view(time, B, 1)
 
-        print("time = ", time)
+        if OUTPUT_VARIABLES:
+            print("time = ", time)
 
 
 
-        print("self.time_embedding = ", self.time_embedding)
+            print("self.time_embedding = ", self.time_embedding)
 
 
         temp_result = self.time_embedding(time)
-        
-        print("temp_result = ", temp_result)
 
-        print("temp_result.shape = ", temp_result.shape)
+        if OUTPUT_VARIABLES:       
+            print("temp_result = ", temp_result)
+
+            print("temp_result.shape = ", temp_result.shape)
 
 
         time_emb = torch_tensor_view(temp_result, B, self.time_dim)
@@ -752,17 +772,20 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         x = torch_cat([x, time_emb, state], dim=-1)
 
-        print("self.mlp_mean = ", self.mlp_mean)
+        if OUTPUT_VARIABLES:
+            print("self.mlp_mean = ", self.mlp_mean)
 
         # mlp head
         out = self.mlp_mean(x)
 
 
-        print("DiffusionMLP call out.shape = ", out.shape)
+        if OUTPUT_VARIABLES:
+            print("DiffusionMLP call out.shape = ", out.shape)
 
         result = torch_tensor_view(out, B, Ta, Da)
 
-        print("DiffusionMLP call result.shape = ", result.shape)
+        if OUTPUT_VARIABLES:
+            print("DiffusionMLP call result.shape = ", result.shape)
 
         return result
 

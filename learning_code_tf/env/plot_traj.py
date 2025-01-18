@@ -75,12 +75,18 @@ def save_avoid_traj(
             [mid_pos + 2 * offset, first_level_y + 2 * level_distance],
         ]
 
+    print("plot_traj.py: save_avoid_traj(): 1")
+
     pillar_xys = get_obj_xy_list()
     chosen_i = np.random.choice(
         range(obs_full_trajs.shape[1]),
         n_render,
         replace=False,
     )
+
+    print("plot_traj.py: save_avoid_traj(): 2")
+
+    print("chosen_i = ", chosen_i)
     fig = plt.figure()
     for i in chosen_i:
         obs_traj_env = obs_full_trajs[:max_episode_steps, i, :]
@@ -105,22 +111,43 @@ def save_avoid_traj(
                     [obs_traj_env[j - 1, 1], obs_traj_env[j, 1]],
                     color=(0.3, 0.3, 0.3),
                 )
+
+    print("plot_traj.py: save_avoid_traj(): 3")
+
     # finish line
     plt.axhline(y=0.4, color=np.array([31, 119, 180]) / 255, linestyle="-")
     for xy in pillar_xys:
         circle = plt.Circle(xy, 0.01, color=(0.0, 0.0, 0.0), fill=True)
         plt.gca().add_patch(circle)
 
+    print("plot_traj.py: save_avoid_traj(): 4")
+
     plt.xlabel("X pos")
     plt.ylabel("Y pos")
 
     plt.xlim([0.2, 0.8])
     plt.ylim([-0.3, 0.5])
+
+    print("plot_traj.py: save_avoid_traj(): 5")
+
     ax = plt.gca()
     ax.set_aspect("equal", adjustable="box")
     ax.set_facecolor("white")
-    plt.savefig(os.path.join(render_dir, f"traj-{itr}.png"))
+    
+    print("plot_traj.py: save_avoid_traj(): 6")
+
+    savepath = os.path.join(render_dir, f"traj-{itr}.png")
+    print("save plot savepath = ", savepath)
+
+    print("plot_traj.py: save_avoid_traj(): 7")
+
+    plt.savefig(savepath)
+
+    print("plot_traj.py: save_avoid_traj(): 8")
+
     plt.close(fig)
+
+    print("plot_traj.py: save_avoid_traj(): 9")
 
 
 def save_toy_traj(

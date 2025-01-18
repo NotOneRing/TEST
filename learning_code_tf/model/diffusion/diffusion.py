@@ -42,6 +42,9 @@ torch_flip, torch_randint
 from util.torch_to_tf import torch_tensor_clone
 
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
+
 # class DiffusionModel(tf.keras.layers.Layer):
 
 from tensorflow.keras.saving import register_keras_serializable
@@ -72,9 +75,10 @@ class DiffusionModel(tf.keras.Model):
 
 
         if DEBUG:
-            print("DiffusionModel: __init__() DEBUG = True")
+            if OUTPUT_POSITIONS:
+                print("DiffusionModel: __init__() DEBUG = True")
 
-            print("DEBUG is True")
+                print("DEBUG is True")
             self.loss_ori_t = None
             self.p_losses_noise = None
             self.call_noise = None
@@ -82,13 +86,16 @@ class DiffusionModel(tf.keras.Model):
             self.call_x = None
             self.q_sample_noise = None
         else:
-            print("DEBUG is False")
+            if OUTPUT_POSITIONS:
+                print("DEBUG is False")
 
 
 
         # super(DiffusionModel, self).__init__()
         super().__init__()
-        print("diffusion.py: DiffusionModel.__init__()")
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.__init__()")
 
         # print("self.loss = ", self.loss)
 
@@ -129,7 +136,8 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-        print("after set up models")
+        if OUTPUT_POSITIONS:
+            print("after set up models")
 
         """
         DDPM parameters
@@ -181,8 +189,9 @@ class DiffusionModel(tf.keras.Model):
         
         
         
-        print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
-        print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
+        if OUTPUT_VARIABLES:            
+            print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
+            print("self.sqrt_one_minus_alphas_cumprod = ", self.sqrt_one_minus_alphas_cumprod)
         
         
         
@@ -221,7 +230,8 @@ class DiffusionModel(tf.keras.Model):
 
         if use_ddim:
 
-            print("after use_ddim")
+            if OUTPUT_POSITIONS:
+                print("after use_ddim")
 
             assert predict_epsilon, "DDIM requires predicting epsilon for now."
             if ddim_discretize == "uniform":
@@ -230,12 +240,14 @@ class DiffusionModel(tf.keras.Model):
                     torch_arange(0, ddim_steps, device=self.device) * step_ratio
                 )
 
-                print("after ddim_discretize == uniform")
+                if OUTPUT_POSITIONS:
+                    print("after ddim_discretize == uniform")
 
             else:
                 raise ValueError("Unknown discretization method for DDIM.")
 
-            print("after ddim_discretize")
+            if OUTPUT_POSITIONS:
+                print("after ddim_discretize")
 
             self.ddim_alphas = (
                 torch_tensor_clone(self.alphas_cumprod[self.ddim_t])
@@ -257,7 +269,8 @@ class DiffusionModel(tf.keras.Model):
             )
 
 
-            print("after ddim_alphas_prev")
+            if OUTPUT_POSITIONS:
+                print("after ddim_alphas_prev")
 
             self.ddim_sqrt_one_minus_alphas = tf.sqrt(1.0 - self.ddim_alphas)
 
@@ -269,7 +282,8 @@ class DiffusionModel(tf.keras.Model):
                 * (1 - self.ddim_alphas / self.ddim_alphas_prev)
             ) ** 0.5
 
-            print("after ddim_sigmas")
+            if OUTPUT_POSITIONS:
+                print("after ddim_sigmas")
 
             # Flip all
             self.ddim_t = torch_flip(self.ddim_t, [0])
@@ -498,37 +512,51 @@ class DiffusionModel(tf.keras.Model):
 
 
         # 打印加载的内容
-        print("params_dict = ", params_dict)
 
-        print("before self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)")
+        if OUTPUT_VARIABLES:
+            print("params_dict = ", params_dict)
+
+        if OUTPUT_VARIABLES:
+            print("before self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)")
         self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)  # kernel
-        print("before self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])")
+        if OUTPUT_VARIABLES:
+            print("before self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])")
         self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])     # bias
 
-        print("before self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)")
+        if OUTPUT_VARIABLES:
+            print("before self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)")
         self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)  # kernel
-        print("before self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])")
+        if OUTPUT_VARIABLES:
+            print("before self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])")
         self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])     # bias
 
 
-        print("before self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)")
+        if OUTPUT_VARIABLES:
+            print("before self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)")
         self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
-        print("before self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])")
+        if OUTPUT_VARIABLES:
+            print("before self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])")
         self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
 
-        print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)")
+        if OUTPUT_VARIABLES:
+            print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)")
         self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
-        print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])")
+        if OUTPUT_VARIABLES:
+            print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])")
         self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
-        print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)")
+        if OUTPUT_VARIABLES:
+            print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)")
         self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
-        print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])")
+        if OUTPUT_VARIABLES:
+            print("before self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])")
         self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
 
 
-        print("before self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)")
+        if OUTPUT_VARIABLES:
+            print("before self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)")
         self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
-        print("before self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])")
+        if OUTPUT_VARIABLES:
+            print("before self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])")
         self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
 
 
@@ -548,7 +576,9 @@ class DiffusionModel(tf.keras.Model):
         Returns:
             loss: float
         """
-        print("diffusion.py: DiffusionModel.loss()")
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.loss()")
 
         # print("x_start = ", x_start)
         
@@ -570,7 +600,8 @@ class DiffusionModel(tf.keras.Model):
 
         # batch_size = int(batch_size)
 
-        print("batch_size = ", batch_size)
+        if OUTPUT_VARIABLES:
+            print("batch_size = ", batch_size)
 
         # # 生成 [0, self.denoising_steps) 范围的随机整数
 
@@ -595,9 +626,97 @@ class DiffusionModel(tf.keras.Model):
 
 
         # Compute loss
-        return self.p_losses(x_start, cond, t, 
-                             training
-                             )
+
+        if training:
+            return self.p_losses(x_start, cond, t,  training )
+        else:
+            return DiffusionModel.p_losses(self, x_start, cond, t, training )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def loss_ori_build(self,
+                network
+                 , training
+                 , x_start, cond):
+        """
+        Compute the loss for the given data and condition.
+
+        Args:
+            x_start: (batch_size, horizon_steps, action_dim)
+            cond: dict with keys as step and value as observation
+
+        Returns:
+            loss: float
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.loss_ori_build()")
+
+        batch_size = x_start.shape[0]
+
+        self.batch_size = batch_size
+        network.batch_size = batch_size
+
+        if OUTPUT_VARIABLES:
+            print("batch_size = ", batch_size)
+
+        # # 生成 [0, self.denoising_steps) 范围的随机整数
+
+        if DEBUG:
+            if self.loss_ori_t is None:
+                self.loss_ori_t =  tf.cast( torch_randint(
+                    low = 0, high = self.denoising_steps, size = (batch_size,)
+                ), tf.int64)
+                t = self.loss_ori_t
+            else:
+                t = self.loss_ori_t
+        else:
+            t =  tf.cast( torch_randint(
+                low = 0, high = self.denoising_steps, size = (batch_size,)
+            ), tf.int64)
+
+
+        return DiffusionModel.p_losses_build(self, network, x_start, cond, t, training )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -612,7 +731,9 @@ class DiffusionModel(tf.keras.Model):
             cond: dict with keys as step and value as observation
             t: batch of integers
         """
-        print("diffusion.py: DiffusionModel.p_losses()")
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.p_losses()")
 
         # # Forward process
 
@@ -648,8 +769,10 @@ class DiffusionModel(tf.keras.Model):
 
 
         # print("x_start.shape = ", x_start.shape)
-
+        # if training:
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        # else:
+        #     noisy = DiffusionModel.q_sample(self, x_start=x_start, t=t, noise=noise)
 
         # # print("x_noisy.shape = ", x_noisy.shape)
 
@@ -684,7 +807,8 @@ class DiffusionModel(tf.keras.Model):
         # x_recon = self.network(x_noisy, time, state, training=training_flag)
 
 
-        print("self.network = ", self.network)
+        if OUTPUT_VARIABLES:
+            print("self.network = ", self.network)
 
         # x_recon = self.network(x_noisy, t, cond = cond, training=training_flag)
         x_recon = self.network([x_noisy, t, cond["state"]]
@@ -705,14 +829,115 @@ class DiffusionModel(tf.keras.Model):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def p_losses_build(self, network, x_start, cond, t
+                 , training
+                 ):
+        """
+        If predicting epsilon: E_{t, x0, ε} [||ε - ε_θ(√α̅ₜx0 + √(1-α̅ₜ)ε, t)||²
+
+        Args:
+            x_start: (batch_size, horizon_steps, action_dim)
+            cond: dict with keys as step and value as observation
+            t: batch of integers
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.p_losses_build()")
+
+        # # Forward process
+
+        if DEBUG:
+            if self.p_losses_noise is None:
+                self.p_losses_noise = torch_randn_like(x_start)
+                noise = self.p_losses_noise
+            else:
+                noise = self.p_losses_noise
+        else:
+            noise = torch_randn_like(x_start)
+
+        
+        x_noisy = DiffusionModel.q_sample(self, x_start=x_start, t=t, noise=noise)
+
+
+        if OUTPUT_VARIABLES:
+            print("self.network = ", self.network)
+
+        x_recon = network([x_noisy, t, cond["state"]]
+                               , training=training)
+                            #    )
+
+        # summary = self.network.summary(x_noisy, t, cond["state"])
+        # summary = self.network.summary(x_noisy, t, cond)
+
+        # print("self.model.network.summary = ", summary)
+        
+        if self.predict_epsilon:
+            return tf.reduce_mean(tf.square(x_recon - noise))  # Mean squared error
+        else:
+            return tf.reduce_mean(tf.square(x_recon - x_start))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def p_mean_var(self, x, t, cond, index=None, network_override=None):
 
-        print("diffusion.py: DiffusionModel.p_mean_var()", flush = True)
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.p_mean_var()", flush = True)
 
         if network_override is not None:
             noise = network_override(x, t, cond=cond)
         else:
-            print("self.network = ", self.network)
+            if OUTPUT_VARIABLES:
+                print("self.network = ", self.network)
             noise = self.network(x, t, cond=cond)
 
         # Predict x_0
@@ -739,7 +964,8 @@ class DiffusionModel(tf.keras.Model):
             x_recon = noise
 
     
-        print("DiffusionModel: p_mean_var(): x_recon = ", x_recon)
+        if OUTPUT_VARIABLES:
+            print("DiffusionModel: p_mean_var(): x_recon = ", x_recon)
 
         if isinstance(x_recon, tf.Tensor):
             x_recon_variable = tf.Variable(x_recon)
@@ -789,7 +1015,9 @@ class DiffusionModel(tf.keras.Model):
         q(xₜ | x₀) = 𝒩(xₜ; √ α̅ₜ x₀, (1-α̅ₜ)I)
         xₜ = √ α̅ₜ xₒ + √ (1-α̅ₜ) ε
         """
-        print("diffusion.py: DiffusionModel.q_sample()")
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.q_sample()")
 
         # print("t = ", t)
 
@@ -815,7 +1043,8 @@ class DiffusionModel(tf.keras.Model):
         # if noise is None:
         #     noise = torch_randn_like(x_start)
 
-        print("DiffusionModel q_sample noise = ", noise)
+        if OUTPUT_VARIABLES:
+            print("DiffusionModel q_sample noise = ", noise)
 
 
         # print("self.sqrt_alphas_cumprod = ", self.sqrt_alphas_cumprod)
@@ -824,7 +1053,8 @@ class DiffusionModel(tf.keras.Model):
         # print("x_start.shape = ", x_start.shape)
         # print("noise.shape = ", noise.shape)
 
-        print("type(t) = ", type(t))
+        if OUTPUT_VARIABLES:
+            print("type(t) = ", type(t))
 
         # if isinstance(t, tf.keras.src.utils.tracking.TrackedDict):
 
@@ -837,9 +1067,10 @@ class DiffusionModel(tf.keras.Model):
         #     t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
 
 
-        print("DiffusionModel q_sample t = ", t)
+        if OUTPUT_VARIABLES:
+            print("DiffusionModel q_sample t = ", t)
 
-        print("DiffusionModel q_sample type(t) = ", type(t) )
+            print("DiffusionModel q_sample type(t) = ", type(t) )
 
 
 
@@ -871,16 +1102,19 @@ class DiffusionModel(tf.keras.Model):
                 trajectories: (B, Ta, Da)
         """
 
-        print("diffusion.py: DiffusionModel.forward()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.forward()")
 
         # # Initialize
         # device = self.betas.device
 
-        print("after device")
+        if OUTPUT_POSITIONS:
+            print("after device")
 
         sample_data = cond["state"] if "state" in cond else cond["rgb"]
 
-        print("after sample_data")
+        if OUTPUT_POSITIONS:
+            print("after sample_data")
 
         # B = tf.shape(sample_data)[0]
         # B = sample_data.get_shape().as_list()[0]
@@ -888,11 +1122,12 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-        print("B = ", B)
+        if OUTPUT_VARIABLES:
+            print("B = ", B)
 
-        print("self.horizon_steps = ", self.horizon_steps)
+            print("self.horizon_steps = ", self.horizon_steps)
 
-        print("self.action_dim = ", self.action_dim)
+            print("self.action_dim = ", self.action_dim)
 
         # Starting random noise
         # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
@@ -936,9 +1171,11 @@ class DiffusionModel(tf.keras.Model):
 
             # Sample noise and update `x`
             # noise = tf.random.normal(tf.shape(x))
-            print("x.shape = ", x.shape)
 
-            print("type(x.shape) = ", type(x.shape) )
+            if OUTPUT_VARIABLES:
+                print("x.shape = ", x.shape)
+
+                print("type(x.shape) = ", type(x.shape) )
 
             if DEBUG:
                 if self.call_noise is None:            
@@ -990,32 +1227,36 @@ class DiffusionModel(tf.keras.Model):
 
         # config = {}
 
-        print("get_config: diffusion.py: DiffusionModel.get_config()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("get_config: diffusion.py: DiffusionModel.get_config()")
 
-        # Debugging each attribute to make sure they are initialized correctly
-        print(f"ddim_discretize: {self.ddim_discretize}")
-        print(f"device: {self.device}")
-        print(f"horizon_steps: {self.horizon_steps}")
-        print(f"obs_dim: {self.obs_dim}")
-        print(f"action_dim: {self.action_dim}")
-        print(f"denoising_steps: {self.denoising_steps}")
-        print(f"predict_epsilon: {self.predict_epsilon}")
-        print(f"use_ddim: {self.use_ddim}")
-        print(f"ddim_steps: {self.ddim_steps}")
-        print(f"denoised_clip_value: {self.denoised_clip_value}")
-        print(f"final_action_clip_value: {self.final_action_clip_value}")
-        print(f"randn_clip_value: {self.randn_clip_value}")
-        print(f"eps_clip_value: {self.eps_clip_value}")
-        print(f"network: {self.network}")
-        print(f"network_path: {self.network_path}")
+        if OUTPUT_VARIABLES:
+            # Debugging each attribute to make sure they are initialized correctly
+            print(f"ddim_discretize: {self.ddim_discretize}")
+            print(f"device: {self.device}")
+            print(f"horizon_steps: {self.horizon_steps}")
+            print(f"obs_dim: {self.obs_dim}")
+            print(f"action_dim: {self.action_dim}")
+            print(f"denoising_steps: {self.denoising_steps}")
+            print(f"predict_epsilon: {self.predict_epsilon}")
+            print(f"use_ddim: {self.use_ddim}")
+            print(f"ddim_steps: {self.ddim_steps}")
+            print(f"denoised_clip_value: {self.denoised_clip_value}")
+            print(f"final_action_clip_value: {self.final_action_clip_value}")
+            print(f"randn_clip_value: {self.randn_clip_value}")
+            print(f"eps_clip_value: {self.eps_clip_value}")
+            print(f"network: {self.network}")
+            print(f"network_path: {self.network_path}")
 
 
         from model.diffusion.mlp_diffusion import DiffusionMLP
         if isinstance( self.network, DiffusionMLP ):
             network_repr = self.network.get_config()
-            print("network_repr = ", network_repr)
+            if OUTPUT_VARIABLES:
+                print("network_repr = ", network_repr)
         else:
-            print("type(self.network) = ", type(self.network))
+            if OUTPUT_VARIABLES:
+                print("type(self.network) = ", type(self.network))
             raise RuntimeError("not recognozed type of self.network")
 
         config.update({
@@ -1038,7 +1279,8 @@ class DiffusionModel(tf.keras.Model):
         })
 
         if DEBUG:
-            print("DiffusionModel: get_config DEBUG = True")
+            if OUTPUT_POSITIONS:
+                print("DiffusionModel: get_config DEBUG = True")
             config.update({
             "loss_ori_t": self.loss_ori_t,
             "p_losses_noise": self.p_losses_noise,
@@ -1049,7 +1291,8 @@ class DiffusionModel(tf.keras.Model):
             })
         
 
-        print("DiffusionModel.config = ", config)
+        if OUTPUT_VARIABLES:
+            print("DiffusionModel.config = ", config)
         
         return config
 
@@ -1092,10 +1335,13 @@ class DiffusionModel(tf.keras.Model):
 
         network = config.pop("network")
 
-        print("DiffusionModel from_config(): network = ", network)
+        if OUTPUT_VARIABLES:
+            print("DiffusionModel from_config(): network = ", network)
 
         name = network["name"]
-        print("name = ", name)
+    
+        if OUTPUT_VARIABLES:
+            print("name = ", name)
 
         # if name == "diffusion_mlp":
         #     name = "DiffusionMLP"
@@ -1118,7 +1364,8 @@ class DiffusionModel(tf.keras.Model):
             # if not isinstance(config.pop("loss_ori_t"), tf.Tensor):
             loss_ori_t = config.pop("loss_ori_t")
             if loss_ori_t:
-                print("Enter loss_ori_t")
+                if OUTPUT_POSITIONS:
+                    print("Enter loss_ori_t")
                 loss_ori_t = dict(loss_ori_t)  # 转换为普通字典
                 values = loss_ori_t['config']['value']
                 dtype = loss_ori_t['config']['dtype']
@@ -1130,7 +1377,8 @@ class DiffusionModel(tf.keras.Model):
 
             p_losses_noise = config.pop("p_losses_noise")
             if p_losses_noise:
-                print("Enter p_losses_noise")
+                if OUTPUT_POSITIONS:
+                    print("Enter p_losses_noise")
                 p_losses_noise = dict(p_losses_noise)  # 转换为普通字典
                 values = p_losses_noise['config']['value']
                 dtype = p_losses_noise['config']['dtype']
@@ -1142,7 +1390,8 @@ class DiffusionModel(tf.keras.Model):
 
             call_noise = config.pop("call_noise")
             if call_noise:
-                print("Enter call_noise")
+                if OUTPUT_POSITIONS:
+                    print("Enter call_noise")
                 call_noise = dict()  # 转换为普通字典
                 values = call_noise['config']['value']
                 dtype = call_noise['config']['dtype']
@@ -1154,7 +1403,8 @@ class DiffusionModel(tf.keras.Model):
 
             call_x = config.pop("call_x")
             if call_x:
-                print("Enter call_x")
+                if OUTPUT_POSITIONS:
+                    print("Enter call_x")
                 call_x = dict()  # 转换为普通字典
                 values = call_x['config']['value']
                 dtype = call_x['config']['dtype']
@@ -1166,7 +1416,8 @@ class DiffusionModel(tf.keras.Model):
 
             q_sample_noise = config.pop("q_sample_noise")
             if q_sample_noise:
-                print("Enter q_sample_noise")
+                if OUTPUT_POSITIONS:
+                    print("Enter q_sample_noise")
                 q_sample_noise = dict(q_sample_noise)  # 转换为普通字典
                 values = q_sample_noise['config']['value']
                 dtype = q_sample_noise['config']['dtype']

@@ -19,6 +19,8 @@ import tensorflow as tf
 
 
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
 
 
 class TrainPPOAgent(TrainAgent):
@@ -39,7 +41,8 @@ class TrainPPOAgent(TrainAgent):
         self.gamma = cfg.train.gamma
 
 
-        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 1")
+        if OUTPUT_POSITIONS:
+            print("train_ppo_agent.py: TrainPPOAgent.__init__(): 1")
 
 
         # Wwarm up period for critic before actor updates
@@ -58,7 +61,8 @@ class TrainPPOAgent(TrainAgent):
 
 
 
-        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 2")
+        if OUTPUT_POSITIONS:
+            print("train_ppo_agent.py: TrainPPOAgent.__init__(): 2")
 
 
 
@@ -72,7 +76,8 @@ class TrainPPOAgent(TrainAgent):
 
 
 
-        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 3")
+        if OUTPUT_POSITIONS:
+            print("train_ppo_agent.py: TrainPPOAgent.__init__(): 3")
 
 
 
@@ -89,7 +94,8 @@ class TrainPPOAgent(TrainAgent):
 
 
 
-        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 4")
+        if OUTPUT_POSITIONS:
+            print("train_ppo_agent.py: TrainPPOAgent.__init__(): 4")
 
 
 
@@ -107,7 +113,8 @@ class TrainPPOAgent(TrainAgent):
 
 
 
-        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 5")
+        if OUTPUT_POSITIONS:
+            print("train_ppo_agent.py: TrainPPOAgent.__init__(): 5")
 
 
 
@@ -140,7 +147,8 @@ class TrainPPOAgent(TrainAgent):
         self.bc_loss_coeff: float = cfg.train.get("bc_loss_coeff", 0)
 
 
-        print("train_ppo_agent.py: TrainPPOAgent.__init__(): 6")
+        if OUTPUT_POSITIONS:
+            print("train_ppo_agent.py: TrainPPOAgent.__init__(): 6")
 
 
 

@@ -27,11 +27,14 @@ from util.torch_to_tf import torch_no_grad
 from util.torch_to_tf import torch_clamp, torch_exp, torch_mean, torch_max, torch_tensor_float, torch_abs, torch_tensor, torch_std, torch_tensor_view
 
 
-
+import numpy as np
 
 
 log = logging.getLogger(__name__)
 from model.diffusion.diffusion_vpg import VPGDiffusion
+
+
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
 
 
 class PPODiffusion(VPGDiffusion):
@@ -134,6 +137,9 @@ class PPODiffusion(VPGDiffusion):
         print("diffusion_ppo.py: PPODiffusion.loss()")
 
         # Get new logprobs for denoising steps from T-1 to 0 - entropy is fixed fod diffusion
+        # print("diffusion_ppo.py: PPODiffusion.loss(): 1")
+
+
         newlogprobs, eta = self.get_logprobs_subsample(
             obs,
             chains_prev,
@@ -141,6 +147,8 @@ class PPODiffusion(VPGDiffusion):
             denoising_inds,
             get_ent=True,
         )
+
+        # print("diffusion_ppo.py: PPODiffusion.loss(): 2")
 
         entropy_loss = -torch_mean(eta)
         newlogprobs = torch_clamp(newlogprobs, -5, 2)
@@ -156,8 +164,12 @@ class PPODiffusion(VPGDiffusion):
         newlogprobs = torch_tensor_view(newlogprobs, [-1])
         oldlogprobs = torch_tensor_view(oldlogprobs, [-1])
 
+        # print("diffusion_ppo.py: PPODiffusion.loss(): 3")
 
         bc_loss = 0
+
+        print("PPODiffusion: loss_ori(): use_bc_loss = ", use_bc_loss)
+
         if use_bc_loss:
             # See Eqn. 2 of https://arxiv.org/pdf/2403.03949.pdf
             # Give a reward for maximizing probability of teacher policy's action with current policy.
@@ -170,6 +182,7 @@ class PPODiffusion(VPGDiffusion):
                 return_chain=True,
                 use_base_policy=True,
             )
+
             # Get logprobs of teacher actions under this policy
             bc_logprobs = self.get_logprobs(
                 obs,
@@ -184,6 +197,8 @@ class PPODiffusion(VPGDiffusion):
             bc_logprobs = torch_tensor_view(bc_logprobs, [-1])
             bc_loss = -torch_mean(bc_logprobs)
 
+        # print("diffusion_ppo.py: PPODiffusion.loss(): 4")
+
 
         # normalize advantages
         if self.norm_adv:
@@ -196,14 +211,38 @@ class PPODiffusion(VPGDiffusion):
         advantages = torch_clamp(advantages, advantage_min, advantage_max)
 
 
+        # print("diffusion_ppo.py: PPODiffusion.loss(): 5")
+
+
+        # print("type(self.ft_denoising_steps) = ", type(self.ft_denoising_steps))
+
         # denoising discount
+        temp_discount = []
+        for i in denoising_inds:
+            square_num = (self.ft_denoising_steps - i - 1).numpy().item()
+            # print("square_num = ", square_num)
+            temp_discount.append(self.gamma_denoising ** square_num)
+        # print("temp_discount = ", temp_discount)
+
+
         discount = torch_tensor(
-            [
-                self.gamma_denoising ** (self.ft_denoising_steps - i - 1)
-                for i in denoising_inds
-            ]
+            np.array(temp_discount)
         )
+
+        # discount = torch_tensor(
+        #     [
+        #         self.gamma_denoising ** ( (self.ft_denoising_steps - i - 1).numpy().item() )
+        #         for i in denoising_inds
+        #     ]
+        # )
+
         # .to(self.device)
+        
+        # print("advantages = ", advantages)
+        # print("discount = ", discount)
+        
+        discount = tf.cast(discount, tf.float32)
+
         advantages *= discount
 
         # get ratio
@@ -213,6 +252,8 @@ class PPODiffusion(VPGDiffusion):
         # exponentially interpolate between the base and the current clipping value over denoising steps and repeat
         t = torch_tensor_float(denoising_inds) / (self.ft_denoising_steps - 1)
 
+        # print("diffusion_ppo.py: PPODiffusion.loss(): 6")
+
         if self.ft_denoising_steps > 1:
             clip_ploss_coef = self.clip_ploss_coef_base + (
                 self.clip_ploss_coef - self.clip_ploss_coef_base
@@ -221,6 +262,8 @@ class PPODiffusion(VPGDiffusion):
             )
         else:
             clip_ploss_coef = t
+
+        # print("diffusion_ppo.py: PPODiffusion.loss(): 7")
 
         # get kl difference and whether value clipped
         # old_approx_kl: the approximate Kullback–Leibler divergence, measured by (-logratio).mean(), which corresponds to the k1 estimator in John Schulman’s blog post on approximating KL http://joschu.net/blog/kl-approx.html
@@ -232,9 +275,19 @@ class PPODiffusion(VPGDiffusion):
             approx_kl = torch_mean((ratio - 1) - logratio)
             clipfrac = torch_mean( torch_tensor_float( torch_abs(ratio - 1.0) > clip_ploss_coef ) )
 
+
+        # print("advantages = ", advantages)
+        # print("ratio = ", ratio)
+        
         # Policy loss with clipping
         pg_loss1 = -advantages * ratio
         pg_loss2 = -advantages * torch_clamp(ratio, 1 - clip_ploss_coef, 1 + clip_ploss_coef)
+
+        # print("pg_loss1 = ", pg_loss1)
+        # print("pg_loss2 = ", pg_loss2)
+        # print("pg_loss1.shape = ", pg_loss1.shape)
+        # print("pg_loss2.shape = ", pg_loss2.shape)
+        
         pg_loss = torch_mean( torch_max(pg_loss1, pg_loss2) )
 
 
@@ -252,6 +305,8 @@ class PPODiffusion(VPGDiffusion):
 
         else:
             v_loss = 0.5 * torch_mean( (newvalues - returns) ** 2 )
+
+        # print("diffusion_ppo.py: PPODiffusion.loss(): 8")
 
 
         return (

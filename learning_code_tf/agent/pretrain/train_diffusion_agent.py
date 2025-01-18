@@ -26,7 +26,9 @@ import io
 from copy import deepcopy
 
 
-from util.config import DEBUG, TEST_LOAD_PRETRAIN
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES
+
+
 
 # DEBUG = True
 # DEBUG = False

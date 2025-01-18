@@ -17,10 +17,15 @@ log = logging.getLogger(__name__)
 from env.gym_utils import make_async
 
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
+
+
 class TrainAgent:
 
     def __init__(self, cfg):
-        print("train_agent.py: TrainAgent.__init__()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.__init__()")
 
         super().__init__()
         self.cfg = cfg
@@ -41,13 +46,15 @@ class TrainAgent:
         #         config=OmegaConf.to_container(cfg, resolve=True),
         #     )
 
-        print("before cgf.env")
+        if OUTPUT_POSITIONS:
+            print("before cgf.env")
 
         # Make vectorized env
         self.env_name = cfg.env.name
         env_type = cfg.env.get("env_type", None)
 
-        print("after cgf.env")
+        if OUTPUT_POSITIONS:
+            print("after cgf.env")
 
         self.venv = make_async(
             cfg.env.name,
@@ -66,7 +73,8 @@ class TrainAgent:
             **cfg.env.specific if "specific" in cfg.env else {},
         )
 
-        print("after make_async")
+        if OUTPUT_POSITIONS:
+            print("after make_async")
 
 
         if not env_type == "furniture":
@@ -76,7 +84,8 @@ class TrainAgent:
             # isaacgym environments do not need seeding
 
 
-        print("train_agent.py: TrainAgent.__init__(): 1")
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 1")
 
         self.n_envs = cfg.env.n_envs
         self.n_cond_step = cfg.cond_steps
@@ -88,7 +97,8 @@ class TrainAgent:
         self.reset_at_iteration = cfg.env.get("reset_at_iteration", True)
         self.save_full_observations = cfg.env.get("save_full_observations", False)
 
-        print("train_agent.py: TrainAgent.__init__(): 2")
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 2")
 
         self.furniture_sparse_reward = (
             cfg.env.specific.get("sparse_reward", False)
@@ -96,22 +106,31 @@ class TrainAgent:
             else False
         )  # furniture specific, for best reward calculation
 
-        print("train_agent.py: TrainAgent.__init__(): 3")
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 3")
 
         # Batch size for gradient update
         self.batch_size: int = cfg.train.batch_size
 
 
-        print("train_agent.py: TrainAgent.__init__(): 4")
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 4")
 
 
-        print("cfg.model = ", cfg.model)
+        if OUTPUT_VARIABLES:
+            print("cfg.model = ", cfg.model)
+
+        self.env_name = cfg.env_name
+        
 
         # Build model and load checkpoint
-        self.model = hydra.utils.instantiate(cfg.model)
+        self.model = hydra.utils.instantiate(cfg.model, env_name=self.env_name)
 
 
-        print("train_agent.py: TrainAgent.__init__(): 5")
+
+
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 5")
 
         # Training params
         self.itr = 0
@@ -120,7 +139,8 @@ class TrainAgent:
         self.force_train = cfg.train.get("force_train", False)
         self.n_steps = cfg.train.n_steps
 
-        print("train_agent.py: TrainAgent.__init__(): 6")
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 6")
 
         self.best_reward_threshold_for_success = (
             len(self.venv.pairs_to_assemble)
@@ -130,7 +150,8 @@ class TrainAgent:
         self.max_grad_norm = cfg.train.get("max_grad_norm", None)
 
 
-        print("train_agent.py: TrainAgent.__init__(): 7")
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 7")
 
         # Logging, rendering, checkpoints
         self.logdir = cfg.logdir
@@ -146,25 +167,32 @@ class TrainAgent:
         self.n_render = cfg.train.render.num
         self.render_video = cfg.env.get("save_video", False)
 
-        print("train_agent.py: TrainAgent.__init__(): 8")
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 8")
 
         assert self.n_render <= self.n_envs, "n_render must be <= n_envs"
 
-        print("train_agent.py: TrainAgent.__init__(): 9")
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 9")
 
         assert not (
             self.n_render <= 0 and self.render_video
         ), "Need to set n_render > 0 if saving video"
         
-        print("train_agent.py: TrainAgent.__init__(): 10")
-        
+
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 10")
+
+
         self.traj_plotter = (
             hydra.utils.instantiate(cfg.train.plotter)
             if "plotter" in cfg.train
             else None
         )
 
-        print("train_agent.py: TrainAgent.__init__(): 11")
+
+        if OUTPUT_POSITIONS:
+            print("train_agent.py: TrainAgent.__init__(): 11")
 
 
         
@@ -174,18 +202,42 @@ class TrainAgent:
         pass
 
 
-    def save_model(self):
+    def save_model(self, learn_eta):
         """
         Saves model to disk.
         """
-        print("train_agent.py: TrainAgent.save_model()")
 
-        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.h5")
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
 
         print("finetune: train_agent.save_model: savepath = ", savepath)
-
-        self.model.save_weights(savepath)
         log.info(f"Saved model to {savepath}")
+
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        actor_ft_savepath = savepath.replace(".keras", "_actor_ft.keras")
+        print("actor_ft_savepath = ", actor_ft_savepath)
+        tf.keras.models.save_model(self.model.actor_ft, actor_ft_savepath)
+        print(f"Saved model.actor_ft to {actor_ft_savepath}")
+
+
+        critic_savepath = savepath.replace(".keras", "_critic.keras")
+        print("critic_savepath = ", critic_savepath)
+        tf.keras.models.save_model(self.model.critic, critic_savepath)
+        print(f"Saved model.critic to {critic_savepath}")
+
+        if learn_eta:
+            eta_savepath = savepath.replace(".keras", "_eta.keras")
+            print("eta_savepath = ", eta_savepath)
+            tf.keras.models.save_model(self.model.eta, eta_savepath)
+            print(f"Saved model.eta to {eta_savepath}")
+
+
 
     # def save_model(self):
     #     """
@@ -209,8 +261,48 @@ class TrainAgent:
         """
         print("train_agent.py: TrainAgent.load()")
 
-        loadpath = os.path.join(self.checkpoint_dir, f"state_{itr}.h5")
-        self.model.load_weights(loadpath)
+        loadpath = os.path.join(self.checkpoint_dir, f"state_{itr}.keras")
+
+        print("loadpath = ", loadpath)
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            "nn_Identity": nn_Identity,
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+
+        self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+
+
+        self.model.actor_ft = tf.keras.models.load_model(loadpath.replace(".keras", "_actor_ft.keras") ,  custom_objects=get_custom_objects() )
+        self.model.critic = tf.keras.models.load_model(loadpath.replace(".keras", "_critic.keras") ,  custom_objects=get_custom_objects() )
+        self.model.eta = tf.keras.models.load_model(loadpath.replace(".keras", "_eta.keras") ,  custom_objects=get_custom_objects() )
+
 
     # def load(self, itr):
     #     """

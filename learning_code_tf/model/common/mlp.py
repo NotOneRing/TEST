@@ -19,6 +19,8 @@ from util.torch_to_tf import nn_ReLU, nn_GELU, nn_Tanh, nn_ELU, nn_Mish, nn_Iden
 #     "Softplus": tf.keras.layers.Activation(tf.keras.activations.softplus),  # 使用 tf.keras.activations.softplus
 # }
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
 
 activation_dict = {
     "ReLU": nn_ReLU(),
@@ -122,8 +124,8 @@ class MLP(
         name = "MLP",
         **kwargs
     ):
-
-        print("mlp.py: MLP.__init__()", flush = True)
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp.py: MLP.__init__()", flush = True)
 
         super(MLP, self).__init__(name=name, **kwargs)
 
@@ -148,8 +150,10 @@ class MLP(
             # self.append_layers = append_layers
             num_layer = len(dim_list) - 1
 
-            print("MLP __init__(): moduleList == None 1")
-            print("num_layer = ", num_layer)
+            if OUTPUT_POSITIONS:
+                print("MLP __init__(): moduleList == None 1")
+            if OUTPUT_VARIABLES:
+                print("num_layer = ", num_layer)
             for idx in range(num_layer):
                 i_dim = dim_list[idx]
                 o_dim = dim_list[idx + 1]
@@ -179,23 +183,28 @@ class MLP(
 
                 current_config = module.get_config()
 
-                print("current_config = ", current_config)
+                if OUTPUT_VARIABLES:
+                    print("current_config = ", current_config)
 
-                for i, layer in enumerate(layers):
-                    print("layer ", i)
-                    print("layer[1] = ", layer[1])
-                    print("layer[1].get_config() = ", layer[1].get_config())
+                    for i, layer in enumerate(layers):
+                        print("layer ", i)
+                        print("layer[1] = ", layer[1])
+                        print("layer[1].get_config() = ", layer[1].get_config())
 
 
                 self.moduleList.append(module)
-            print("MLP __init__(): moduleList == None 1")
+
+            if OUTPUT_POSITIONS:
+                print("MLP __init__(): moduleList == None 1")
             
             self.moduleList = nn_Sequential(self.moduleList, name="MLP_moduleList")
 
         else:
-            print("MLP __init__(): moduleList != None 1")
+            if OUTPUT_POSITIONS:
+                print("MLP __init__(): moduleList != None 1")
             self.moduleList = moduleList
-            print("MLP __init__(): moduleList != None 1")
+            if OUTPUT_POSITIONS:
+                print("MLP __init__(): moduleList != None 1")
         if verbose:
             logging.info(self.moduleList)
 
@@ -219,7 +228,8 @@ class MLP(
             # tf.keras.layers.serialize(self.moduleList),
         })
 
-        print("MLP: config = ", config)
+        if OUTPUT_VARIABLES:
+            print("MLP: config = ", config)
 
         return config
     
@@ -260,7 +270,8 @@ class MLP(
 
         module_list_str = config.pop("moduleList")
 
-        print("module_list_str = ", module_list_str)
+        if OUTPUT_VARIABLES:
+            print("module_list_str = ", module_list_str)
 
         # moduleList = nn_ModuleList.from_config( module_list_str['config'] )
 
@@ -269,7 +280,8 @@ class MLP(
 
         result =  cls(moduleList = moduleList, **config)
 
-        print("finish MLP: from_config")
+        if OUTPUT_POSITIONS:
+            print("finish MLP: from_config")
 
         return result
 
@@ -278,7 +290,9 @@ class MLP(
             #  , append=None
              ):
         append = None
-        print("mlp.py: MLP.call()")
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp.py: MLP.call()")
 
         # for layer_ind, m in enumerate(self.moduleList):
         #     if append is not None and layer_ind in self.append_layers:
@@ -392,7 +406,8 @@ class ResidualMLP(
         self.dropout = dropout
 
 
-        print("mlp.py: ResidualMLP.__init__()", flush = True)
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp.py: ResidualMLP.__init__()", flush = True)
 
         super(ResidualMLP, self).__init__(name=name, **kwargs)
 
@@ -401,7 +416,8 @@ class ResidualMLP(
         assert num_hidden_layers % 2 == 0
         if my_layers == None:
 
-            print("num_hidden_layers = ", num_hidden_layers)
+            if OUTPUT_VARIABLES:
+                print("num_hidden_layers = ", num_hidden_layers)
 
             # self.my_layers = nn_ModuleList([nn_Linear(dim_list[0], hidden_dim, name_Dense="ResidualMLP_my_layers_1"
             #                                         #    + str(ResidualMLP.count_residualMLP)
@@ -443,17 +459,19 @@ class ResidualMLP(
     def get_config(self):
         config = super(ResidualMLP, self).get_config()  # Call the base class's get_config
 
-        # 打印每个属性及其类型和值
-        print("Checking ResidualMLP Config elements:")
+        if OUTPUT_POSITIONS:
+            # 打印每个属性及其类型和值
+            print("Checking ResidualMLP Config elements:")
 
-        print(f"dim_list: {self.dim_list}, type: {type(self.dim_list)}")
-        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
-        print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
-        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
-        print(f"use_layernorm_final: {self.use_layernorm_final}, type: {type(self.use_layernorm_final)}")
-        print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
+        if OUTPUT_VARIABLES:
+            print(f"dim_list: {self.dim_list}, type: {type(self.dim_list)}")
+            print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+            print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
+            print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+            print(f"use_layernorm_final: {self.use_layernorm_final}, type: {type(self.use_layernorm_final)}")
+            print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
 
-        print(f"ResidualMLP: name: {self.name}, type: {type(self.name)}")
+            print(f"ResidualMLP: name: {self.name}, type: {type(self.name)}")
         
 
         config.update({
@@ -515,7 +533,8 @@ class ResidualMLP(
 
         result =  cls(my_layers = my_layers, **config)
 
-        print("finish ResidualMLP: from_config")
+        if OUTPUT_POSITIONS:
+            print("finish ResidualMLP: from_config")
 
         return result
 
@@ -532,7 +551,8 @@ class ResidualMLP(
     
     def call(self, x):
 
-        print("mlp.py: ResidualMLP.call()", flush = True)
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp.py: ResidualMLP.call()", flush = True)
 
         # for _, layer in enumerate(self.my_layers):
         #     x = layer(x)
@@ -602,7 +622,8 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         self.use_layernorm = use_layernorm
         self.dropout = dropout
 
-        print("mlp.py: TwoLayerPreActivationResNetLinear.__init__()", flush = True)
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp.py: TwoLayerPreActivationResNetLinear.__init__()", flush = True)
 
         super(TwoLayerPreActivationResNetLinear, self).__init__(name=name, **kwargs)
         if l1 == None:
@@ -636,7 +657,8 @@ class TwoLayerPreActivationResNetLinear(models.Model):
 
     def call(self, x):
 
-        print("mlp.py: TwoLayerPreActivationResNetLinear.forward()", flush = True)
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp.py: TwoLayerPreActivationResNetLinear.forward()", flush = True)
 
         x_input = x
         if hasattr(self, "norm1"):
@@ -646,7 +668,8 @@ class TwoLayerPreActivationResNetLinear(models.Model):
             x = self.norm2(x)
         x = self.l2(self.act(x))
 
-        print("mlp.py: TwoLayerPreActivationResNetLinear.forward() finished", flush = True)
+        if OUTPUT_POSITIONS:
+            print("mlp.py: TwoLayerPreActivationResNetLinear.forward() finished", flush = True)
 
 
         return x + x_input
@@ -658,12 +681,14 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         config = super(TwoLayerPreActivationResNetLinear, self).get_config()  # Call the base class's get_config
 
         # 打印每个属性及其类型和值
-        print("Checking TwoLayerPreActivationResNetLinear Config elements:")
+        if OUTPUT_POSITIONS:
+            print("Checking TwoLayerPreActivationResNetLinear Config elements:")
 
-        print(f"hidden_dim: {self.hidden_dim}, type: {type(self.hidden_dim)}")
-        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
-        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
-        print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
+        if OUTPUT_VARIABLES:
+            print(f"hidden_dim: {self.hidden_dim}, type: {type(self.hidden_dim)}")
+            print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+            print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+            print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
         
 
         config.update({
