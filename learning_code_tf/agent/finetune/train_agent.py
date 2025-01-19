@@ -120,11 +120,11 @@ class TrainAgent:
         if OUTPUT_VARIABLES:
             print("cfg.model = ", cfg.model)
 
-        self.env_name = cfg.env_name
+        self.cfg_env_name = cfg.env_name
         
 
         # Build model and load checkpoint
-        self.model = hydra.utils.instantiate(cfg.model, env_name=self.env_name)
+        self.model = hydra.utils.instantiate(cfg.model, env_name=self.cfg_env_name)
 
 
 

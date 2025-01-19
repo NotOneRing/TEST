@@ -37,7 +37,7 @@ import numpy as np
 from util.torch_to_tf import torch_cumprod, torch_ones, torch_cat, torch_sqrt,\
 torch_clamp, torch_log, torch_arange, torch_tensor_clamp_, torch_zeros_like, \
 torch_clip, torch_exp, torch_randn_like, torch_randn, torch_full, torch_full_like, \
-torch_flip, torch_randint
+torch_flip, torch_randint, torch_ones_like
 
 from util.torch_to_tf import torch_tensor_clone
 
@@ -299,79 +299,79 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-        if self.network_path is not None:
-            print("self.network_path is not None")
-            # checkpoint = tf.train.Checkpoint(network=self.network)
-            # checkpoint.restore(network_path)
+        # if self.network_path is not None:
+        #     print("self.network_path is not None")
+        #     # checkpoint = tf.train.Checkpoint(network=self.network)
+        #     # checkpoint.restore(network_path)
 
-            loadpath = network_path
+        #     loadpath = network_path
 
-            print("loadpath = ", loadpath)
+        #     print("loadpath = ", loadpath)
 
-            # # self.model.load_weights(loadpath)
-            # # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
+        #     # # self.model.load_weights(loadpath)
+        #     # # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
 
-            # from keras.utils import get_custom_objects
-            # from model.diffusion.mlp_diffusion import DiffusionMLP
-            # # Register your custom class with Keras
-            # get_custom_objects().update({
-            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            #     'DiffusionMLP': DiffusionMLP,
-            #     # 'VPGDiffusion': VPGDiffusion,
-            #     # 'PPODiffusion': PPODiffusion
-            # })
-
-
-            # self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
-            # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
+        #     # from keras.utils import get_custom_objects
+        #     # from model.diffusion.mlp_diffusion import DiffusionMLP
+        #     # # Register your custom class with Keras
+        #     # get_custom_objects().update({
+        #     #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+        #     #     'DiffusionMLP': DiffusionMLP,
+        #     #     # 'VPGDiffusion': VPGDiffusion,
+        #     #     # 'PPODiffusion': PPODiffusion
+        #     # })
 
 
-
-            if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
-                print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
-            else:
-                loadpath = network_path.replace('.pt', '.keras')
-
-            from model.diffusion.mlp_diffusion import DiffusionMLP
-            from model.diffusion.diffusion import DiffusionModel
-            from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-            from model.diffusion.modules import SinusoidalPosEmb
-            from model.common.modules import SpatialEmb, RandomShiftsAug
-            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
-
-            from tensorflow.keras.utils import get_custom_objects
-
-            cur_dict = {
-                'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-                'DiffusionMLP': DiffusionMLP,
-                # 'VPGDiffusion': VPGDiffusion,
-                'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
-                'MLP': MLP,                            # 自定义的 MLP 层
-                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-                "nn_Identity": nn_Identity,
-                'nn_Linear': nn_Linear,
-                'nn_LayerNorm': nn_LayerNorm,
-                'nn_Dropout': nn_Dropout,
-                'nn_ReLU': nn_ReLU,
-                'nn_Mish': nn_Mish,
-                'SpatialEmb': SpatialEmb,
-                'RandomShiftsAug': RandomShiftsAug,
-                "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-            }
-            # Register your custom class with Keras
-            get_custom_objects().update(cur_dict)
+        #     # self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
+        #     # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
 
 
 
+        #     if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
+        #         print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
+        #     else:
+        #         loadpath = network_path.replace('.pt', '.keras')
+
+        #     from model.diffusion.mlp_diffusion import DiffusionMLP
+        #     from model.diffusion.diffusion import DiffusionModel
+        #     from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        #     from model.diffusion.modules import SinusoidalPosEmb
+        #     from model.common.modules import SpatialEmb, RandomShiftsAug
+        #     from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+
+        #     from tensorflow.keras.utils import get_custom_objects
+
+        #     cur_dict = {
+        #         'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+        #         'DiffusionMLP': DiffusionMLP,
+        #         # 'VPGDiffusion': VPGDiffusion,
+        #         'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+        #         'MLP': MLP,                            # 自定义的 MLP 层
+        #         'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+        #         'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #         "nn_Identity": nn_Identity,
+        #         'nn_Linear': nn_Linear,
+        #         'nn_LayerNorm': nn_LayerNorm,
+        #         'nn_Dropout': nn_Dropout,
+        #         'nn_ReLU': nn_ReLU,
+        #         'nn_Mish': nn_Mish,
+        #         'SpatialEmb': SpatialEmb,
+        #         'RandomShiftsAug': RandomShiftsAug,
+        #         "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+        #     }
+        #     # Register your custom class with Keras
+        #     get_custom_objects().update(cur_dict)
 
 
-            self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
-
-            # self.model = self.model2
 
 
-            self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+
+        #     self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+
+        #     # self.model = self.model2
+
+
+        #     self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
 
 
@@ -500,7 +500,7 @@ class DiffusionModel(tf.keras.Model):
 
 
     def load_pickle(self, network_path):
-        pkl_file_path = network_path.replace('.pt', '.pkl')
+        pkl_file_path = network_path.replace('.pt', '_ema.pkl')
 
         print("pkl_file_path = ", pkl_file_path)
 
@@ -607,9 +607,14 @@ class DiffusionModel(tf.keras.Model):
 
         if DEBUG:
             if self.loss_ori_t is None:
-                self.loss_ori_t =  tf.cast( torch_randint(
-                    low = 0, high = self.denoising_steps, size = (batch_size,)
-                ), tf.int64)
+                # self.loss_ori_t =  tf.cast( torch_randint(
+                #     low = 0, high = self.denoising_steps, size = (batch_size,)
+                # ), tf.int64)
+
+                self.loss_ori_t =  tf.cast( torch_ones(
+                (batch_size,)
+                ), tf.int64 )
+
                 t = self.loss_ori_t
             else:
                 t = self.loss_ori_t
@@ -683,9 +688,14 @@ class DiffusionModel(tf.keras.Model):
 
         if DEBUG:
             if self.loss_ori_t is None:
-                self.loss_ori_t =  tf.cast( torch_randint(
-                    low = 0, high = self.denoising_steps, size = (batch_size,)
+                # self.loss_ori_t =  tf.cast( torch_randint(
+                #     low = 0, high = self.denoising_steps, size = (batch_size,)
+                # ), tf.int64)
+
+                self.loss_ori_t =  tf.cast( torch_ones(
+                 (batch_size,)
                 ), tf.int64)
+
                 t = self.loss_ori_t
             else:
                 t = self.loss_ori_t
@@ -739,7 +749,9 @@ class DiffusionModel(tf.keras.Model):
 
         if DEBUG:
             if self.p_losses_noise is None:
-                self.p_losses_noise = torch_randn_like(x_start)
+                # self.p_losses_noise = torch_randn_like(x_start)
+                self.p_losses_noise = torch_ones_like(x_start)
+
                 noise = self.p_losses_noise
             else:
                 noise = self.p_losses_noise
@@ -773,8 +785,6 @@ class DiffusionModel(tf.keras.Model):
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
         # else:
         #     noisy = DiffusionModel.q_sample(self, x_start=x_start, t=t, noise=noise)
-
-        # # print("x_noisy.shape = ", x_noisy.shape)
 
 
         # # print("type(self.network) = ", type(self.network))
@@ -814,6 +824,7 @@ class DiffusionModel(tf.keras.Model):
         x_recon = self.network([x_noisy, t, cond["state"]]
                                , training=training)
                             #    )
+
 
         # summary = self.network.summary(x_noisy, t, cond["state"])
         # summary = self.network.summary(x_noisy, t, cond)
@@ -874,7 +885,9 @@ class DiffusionModel(tf.keras.Model):
 
         if DEBUG:
             if self.p_losses_noise is None:
-                self.p_losses_noise = torch_randn_like(x_start)
+                # self.p_losses_noise = torch_randn_like(x_start)
+                self.p_losses_noise = torch_ones_like(x_start)
+
                 noise = self.p_losses_noise
             else:
                 noise = self.p_losses_noise
@@ -885,12 +898,24 @@ class DiffusionModel(tf.keras.Model):
         x_noisy = DiffusionModel.q_sample(self, x_start=x_start, t=t, noise=noise)
 
 
+        # print("x_noisy.shape = ", x_noisy.shape)
+        # print("x_noisy = ", x_noisy)
+
+        # print("t.shape = ", t.shape)
+        # print("t = ", t)
+
+        # print("cond['state'].shape = ", cond["state"].shape)
+        # print("cond['state'] = ", cond["state"])
+
         if OUTPUT_VARIABLES:
             print("self.network = ", self.network)
 
         x_recon = network([x_noisy, t, cond["state"]]
                                , training=training)
                             #    )
+
+        # if OUTPUT_VARIABLES:
+        #     print("x_recon = ", x_recon)
 
         # summary = self.network.summary(x_noisy, t, cond["state"])
         # summary = self.network.summary(x_noisy, t, cond)
@@ -1030,7 +1055,9 @@ class DiffusionModel(tf.keras.Model):
         if DEBUG:
             if self.q_sample_noise is None:            
                 if noise is None:
-                    self.q_sample_noise = torch_randn_like(x_start)
+                    # self.q_sample_noise = torch_randn_like(x_start)
+                    self.q_sample_noise = torch_ones_like(x_start)
+                    
                     noise = self.q_sample_noise
             else:
                 if noise is None:
@@ -1133,7 +1160,8 @@ class DiffusionModel(tf.keras.Model):
         # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
         if DEBUG:
             if self.call_x is None:
-                self.call_x = torch_randn(B, self.horizon_steps, self.action_dim)
+                self.call_x = torch_ones(B, self.horizon_steps, self.action_dim)
+                # self.call_x = torch_randn(B, self.horizon_steps, self.action_dim)
                 x = self.call_x
             else:
                 x = self.call_x
@@ -1179,7 +1207,8 @@ class DiffusionModel(tf.keras.Model):
 
             if DEBUG:
                 if self.call_noise is None:            
-                    self.call_noise = torch_randn_like( x  )
+                    # self.call_noise = torch_randn_like( x  )
+                    self.call_noise = torch_ones_like( x  )
                     noise = self.call_noise
                 else:
                     noise = self.call_noise

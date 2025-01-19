@@ -87,6 +87,7 @@ class VisionDiffusionMLP(tf.keras.Model):
         # diffusion
         input_dim = time_dim + action_dim * horizon_steps + visual_feature_dim + cond_dim
         output_dim = action_dim * horizon_steps
+        
         self.time_embedding = nn_Sequential([
             SinusoidalPosEmb(time_dim),
             nn_Linear(time_dim, time_dim * 2, name_Dense = "VisionDiffusionMLP_time_embedding1"),
@@ -703,6 +704,11 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         x, time, cond_state = inputs
 
+
+        # print("x = ", x)
+        # print("time = ", time)
+        # print("cond_state = ", cond_state)
+
         # print("x.shape = ", x.shape)
         
         B, Ta, Da = x.shape
@@ -735,7 +741,37 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
 
 
-            print("self.time_embedding = ", self.time_embedding)
+        # print("self.time_embedding = ", self.time_embedding)
+        if OUTPUT_VARIABLES and self.time_embedding.built:
+
+            # # Time embedding layer 3
+            # print("DiffusionMLP.time_embedding[3].trainable_weights[0] (kernel):")
+            # print(self.time_embedding[3].trainable_weights[0].numpy())
+            # print("DiffusionMLP.time_embedding[3].trainable_weights[1] (bias):")
+            # print(self.time_embedding[3].trainable_weights[1].numpy())
+        
+
+
+            layer1_result = self.time_embedding[0](time)
+
+            layer2_result = self.time_embedding[1](layer1_result)
+
+            # layer3_result = self.time_embedding[2](layer2_result)
+
+            # layer4_result = self.time_embedding[3](layer3_result)
+
+            print("layer1_result = ", layer1_result)
+
+            print("DiffusionMLP.time_embedding[1].trainable_weights[0] (kernel):")
+            print(self.time_embedding[1].trainable_weights[0].numpy())
+            print("DiffusionMLP.time_embedding[1].trainable_weights[1] (bias):")
+            print(self.time_embedding[1].trainable_weights[1].numpy())
+
+            print("layer2_result = ", layer2_result)
+
+            # print("layer3_result = ", layer3_result)
+
+            # print("layer4_result = ", layer4_result)
 
 
         temp_result = self.time_embedding(time)
@@ -757,6 +793,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
                 
         # print("x = ", x)
 
+        # # if OUTPUT_VARIABLES:
         # print("time_emb = ", time_emb)
 
         # print("state = ", state)
@@ -777,6 +814,10 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         # mlp head
         out = self.mlp_mean(x)
+
+
+        # # if OUTPUT_VARIABLES:
+        # print("out = ", out)
 
 
         if OUTPUT_VARIABLES:

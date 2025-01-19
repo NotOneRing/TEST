@@ -156,6 +156,10 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
             # Collect a set of trajectories from env
             for step in range(self.n_steps):
+
+                # if DEBUG and step == 1:
+                #     return
+
                 if step % 10 == 0:
                     print(f"Processed step {step} of {self.n_steps}")
 
@@ -163,6 +167,10 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 # Select action
                 # with torch.no_grad():
                 with torch_no_grad() as tape:
+                    
+                    # 这个和torch版本一样
+                    # print("prev_obs_venv['state'] = ", prev_obs_venv["state"])
+
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
                         # .float()
@@ -171,8 +179,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
 
 
-                    if OUTPUT_VARIABLES:
-                        print("self.model = ", self.model)
+                    # if OUTPUT_VARIABLES:
+                    print("self.model = ", self.model)
 
 
 
@@ -181,6 +189,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         deterministic=eval_mode,
                         return_chain=True,
                     )
+
+                    print("samples = ", samples)
 
 
                     output_venv = (
@@ -303,7 +313,11 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         obs_ts[i]["state"] = obs_t
                     values_trajs = np.empty((0, self.n_envs))
                     for obs in obs_ts:
+                        
+                        print("type(self.model.critic) = ", type(self.model.critic))
+
                         values = self.model.critic(obs).cpu().numpy().flatten()
+                        
                         values_trajs = np.vstack(
                             (values_trajs, values.reshape(-1, self.n_envs))
                         )
@@ -323,6 +337,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     )
                     
                     for obs, chains in zip(obs_ts, chains_ts):
+                        print("obs = ", obs)
+                        print("chains = ", chains)
                         if OUTPUT_VARIABLES:
                             print("obs = ", obs)
                             print("chains = ", chains)

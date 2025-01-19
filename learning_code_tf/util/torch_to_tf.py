@@ -1360,6 +1360,7 @@ class nn_Identity(tf.keras.layers.Layer):
         super(nn_Identity, self).__init__(name = name, **kwargs)
 
     def call(self, x):
+        # print("nn_Identity: call()")
         return tf.identity(x)
 
 
@@ -1407,10 +1408,17 @@ class nn_Mish(tf.keras.layers.Layer):
         super(nn_Mish, self).__init__(name=name, **kwargs)
 
     def call(self, x):
-        return x * tf.math.tanh(tf.math.softplus(x))
+        # print("nn_Mish.call()")
+        result = tf.clip_by_value(x, float('-inf'), 20)
 
+        beta = 1
+        result = beta * result
 
+        result = tf.math.softplus(result)
 
+        return x * tf.math.tanh(result)
+
+    
     def get_config(self):
         config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
         # config.update({
@@ -1687,7 +1695,34 @@ class nn_Linear(tf.keras.layers.Layer):
         # print("self.model.bias = ", self.model.bias)
         # print("x = ", x)
 
-        return self.model(x)
+        result = self.model(x)
+
+        # print("nn_Linear.call() result = ", result)
+
+        # print("nn_Linear.call() result.shape = ", result.shape)
+
+        if OUTPUT_VARIABLES and DEBUG and self.model.built:
+            # print("nn_Linear.call() self.kernel = ", self.model.kernel)
+            # print("nn_Linear.call() self.bias = ", self.model.bias)
+        #     # print("nn_Linear.call() self.kernel = ", self.model.kernel.numpy())  # 输出 kernel 的值
+        #     # print("nn_Linear.call() self.bias = ", self.model.bias.numpy())      # 输出 bias 的值
+
+            weights = self.model.kernel
+            bias = self.model.bias
+
+        #     # print("weights.shape = ", weights.shape)
+        #     # print("bias.shape = ", bias.shape)
+        #     # print("x.shape = ", x.shape)
+
+            result1 = tf.matmul(x, weights) + bias  # 广播加法
+
+        #     # result1 = weights * x.numpy() + bias
+
+            print("nn_Linear.call() result1 = ", result1)
+
+        #     assert np.allclose(result1.numpy(), result.numpy())
+
+        return result
 
     
     # def build(self, input_shape):
@@ -1913,10 +1948,13 @@ class nn_Sequential(tf.keras.layers.Layer):
     
     def __getitem__(self, id):
         # print("getitem: len(self.model_list) = ", len(self.model_list))
-        return self.model_list[id]
+        # return self.model_list[id]
+        return self.model.layers[id]
 
     def __iter__(self):
-        return iter(self.model_list)
+        # return iter(self.model_list)\
+        print("iter: self.model.layers = ", self.model.layers)
+        return iter(self.model.layers)
 
 
 

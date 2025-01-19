@@ -295,13 +295,13 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
 
-            # if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
-            #     self.model.load_pickle(self.base_policy_path)
+            if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
+                self.model.load_pickle(self.base_policy_path)
 
-            #     savepath = self.base_policy_path.replace(".pt", ".keras")
+                savepath = self.base_policy_path.replace(".pt", ".keras")
                 
-            #     self.save_load_pretrain_model(savepath)
-            #     break
+                self.save_load_pretrain_model(savepath)
+                break
 
 
             print("train_diffusion_agent.py: run() 4")

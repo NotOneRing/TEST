@@ -30,7 +30,7 @@ from util.torch_to_tf import torch_flatten, torch_arange, Normal
 
 from util.torch_to_tf import torch_no_grad, torch_where, torch_ones_like, torch_randn
 
-from util.torch_to_tf import torch_tensor_requires_grad_, torch_tensor_clamp_, torch_zeros, torch_unsqueeze
+from util.torch_to_tf import torch_tensor_requires_grad_, torch_tensor_clamp_, torch_zeros, torch_unsqueeze, torch_ones
 
 from util.torch_to_tf import torch_log, torch_zeros_like, torch_randn_like, torch_clamp, torch_stack, torch_tensor_repeat, torch_exp, torch_clip, torch_sum, torch_reshape, torch_mean, torch_squeeze
 
@@ -67,6 +67,10 @@ class VPGDiffusion(DiffusionModel):
             network_path=network_path,
             **kwargs,
         )
+
+        self.actor_cache = actor
+        self.critic_cache = critic
+
         assert ft_denoising_steps <= self.denoising_steps
         assert ft_denoising_steps <= self.ddim_steps if self.use_ddim else True
         assert not (learn_eta and not self.use_ddim), "Cannot learn eta with DDPM."
@@ -110,12 +114,16 @@ class VPGDiffusion(DiffusionModel):
 
 
 
-
+        print("Before everything: self.actor = ", self.actor)
+        print("Before everything: self.critic = ", self.critic)
 
 
 
         # Re-name network to actor
         self.actor = self.network
+
+
+        
 
         # # Make a copy of the original model
         # self.actor_ft = copy.deepcopy(self.actor)
@@ -188,61 +196,66 @@ class VPGDiffusion(DiffusionModel):
         self.build_actor(self.actor)
         self.build_actor(self.actor_ft)
 
+        # self.debug_actor_params()
 
-        # if self.network_path is not None:
-        #     print("self.network_path is not None")
-        #     # checkpoint = tf.train.Checkpoint(network=self.network)
-        #     # checkpoint.restore(network_path)
+        if self.network_path is not None:
+            print("self.network_path is not None")
+            # checkpoint = tf.train.Checkpoint(network=self.network)
+            # checkpoint.restore(network_path)
 
-        #     loadpath = network_path
+            loadpath = network_path
 
-        #     print("loadpath = ", loadpath)
+            print("loadpath = ", loadpath)
 
-        #     if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
-        #         print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
-        #     else:
-        #         loadpath = network_path.replace('.pt', '.keras')
+            if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
+                print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
+            else:
+                loadpath = network_path.replace('.pt', '.keras')
 
-        #     from model.diffusion.mlp_diffusion import DiffusionMLP
-        #     from model.diffusion.diffusion import DiffusionModel
-        #     from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-        #     from model.diffusion.modules import SinusoidalPosEmb
-        #     from model.common.modules import SpatialEmb, RandomShiftsAug
-        #     from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+            from model.diffusion.mlp_diffusion import DiffusionMLP
+            from model.diffusion.diffusion import DiffusionModel
+            from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+            from model.diffusion.modules import SinusoidalPosEmb
+            from model.common.modules import SpatialEmb, RandomShiftsAug
+            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
 
-        #     from tensorflow.keras.utils import get_custom_objects
+            from tensorflow.keras.utils import get_custom_objects
 
-        #     cur_dict = {
-        #         'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-        #         'DiffusionMLP': DiffusionMLP,
-        #         'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
-        #         'MLP': MLP,                            # 自定义的 MLP 层
-        #         'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #         'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-        #         "nn_Identity": nn_Identity,
-        #         'nn_Linear': nn_Linear,
-        #         'nn_LayerNorm': nn_LayerNorm,
-        #         'nn_Dropout': nn_Dropout,
-        #         'nn_ReLU': nn_ReLU,
-        #         'nn_Mish': nn_Mish,
-        #         'SpatialEmb': SpatialEmb,
-        #         'RandomShiftsAug': RandomShiftsAug,
-        #         "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-        #     }
-        #     # Register your custom class with Keras
-        #     get_custom_objects().update(cur_dict)
-
-
-
+            cur_dict = {
+                'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+                'DiffusionMLP': DiffusionMLP,
+                'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+                'MLP': MLP,                            # 自定义的 MLP 层
+                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+                "nn_Identity": nn_Identity,
+                'nn_Linear': nn_Linear,
+                'nn_LayerNorm': nn_LayerNorm,
+                'nn_Dropout': nn_Dropout,
+                'nn_ReLU': nn_ReLU,
+                'nn_Mish': nn_Mish,
+                'SpatialEmb': SpatialEmb,
+                'RandomShiftsAug': RandomShiftsAug,
+                "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+            }
+            # Register your custom class with Keras
+            get_custom_objects().update(cur_dict)
 
 
-        #     self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+            self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
-        #     self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+            self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+
+
+
+
+        self.load_pickle(network_path)
+        self.build_actor(self.actor)
 
 
         self.actor_ft.set_weights(self.actor.get_weights())
 
+        self.build_actor(self.actor_ft)
 
 
         logging.info("Cloned model for fine-tuning")
@@ -330,7 +343,51 @@ class VPGDiffusion(DiffusionModel):
 
 
 
+    def debug_actor_params(self):
+        print("\nDebugging actor parameters...\n")
 
+
+        print("self.actor.time_embedding[1] = ", self.actor.time_embedding[1])
+
+
+        print("self.actor.time_embedding[1].trainable_weights = ", self.actor.time_embedding[1].trainable_weights)
+
+
+        # Time embedding layer 1
+        print("actor.time_embedding[1].trainable_weights[0] (kernel):")
+        print(self.actor.time_embedding[1].trainable_weights[0].numpy())
+        print("actor.time_embedding[1].trainable_weights[1] (bias):")
+        print(self.actor.time_embedding[1].trainable_weights[1].numpy())
+
+        # Time embedding layer 3
+        print("actor.time_embedding[3].trainable_weights[0] (kernel):")
+        print(self.actor.time_embedding[3].trainable_weights[0].numpy())
+        print("actor.time_embedding[3].trainable_weights[1] (bias):")
+        print(self.actor.time_embedding[3].trainable_weights[1].numpy())
+
+        # MLP mean layer 0
+        print("actor.mlp_mean.my_layers[0].trainable_weights[0] (kernel):")
+        print(self.actor.mlp_mean.my_layers[0].trainable_weights[0].numpy())
+        print("actor.mlp_mean.my_layers[0].trainable_weights[1] (bias):")
+        print(self.actor.mlp_mean.my_layers[0].trainable_weights[1].numpy())
+
+        # MLP mean layer 1.l1
+        print("actor.mlp_mean.my_layers[1].l1.trainable_weights[0] (kernel):")
+        print(self.actor.mlp_mean.my_layers[1].l1.trainable_weights[0].numpy())
+        print("actor.mlp_mean.my_layers[1].l1.trainable_weights[1] (bias):")
+        print(self.actor.mlp_mean.my_layers[1].l1.trainable_weights[1].numpy())
+
+        # MLP mean layer 1.l2
+        print("actor.mlp_mean.my_layers[1].l2.trainable_weights[0] (kernel):")
+        print(self.actor.mlp_mean.my_layers[1].l2.trainable_weights[0].numpy())
+        print("actor.mlp_mean.my_layers[1].l2.trainable_weights[1] (bias):")
+        print(self.actor.mlp_mean.my_layers[1].l2.trainable_weights[1].numpy())
+
+        # MLP mean layer 2
+        print("actor.mlp_mean.my_layers[2].trainable_weights[0] (kernel):")
+        print(self.actor.mlp_mean.my_layers[2].trainable_weights[0].numpy())
+        print("actor.mlp_mean.my_layers[2].trainable_weights[1] (bias):")
+        print(self.actor.mlp_mean.my_layers[2].trainable_weights[1].numpy())
 
 
     def build_actor(self, actor):
@@ -385,14 +442,20 @@ class VPGDiffusion(DiffusionModel):
             raise RuntimeError("Furniture is not implemented right now")
 
 
-        param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
-        param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
+        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
+        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
+
+        param1 = torch_ones(*shape1)
+        param2 = torch_ones(*shape2)
+
         build_dict = {'state': param2}
 
 
         
         # _ = self.loss_ori(param1, build_dict)
-        _ = self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
+        all_one_build_result = self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
+
+        print("build_actor result = ", all_one_build_result)
 
 
 
@@ -410,8 +473,8 @@ class VPGDiffusion(DiffusionModel):
         
         # Add the configuration for the VPGDiffusion-specific attributes
         config.update({
-            'actor': self.actor,  # Actor model (could be any object, make sure it's serializable)
-            'critic': self.critic,  # Critic model (could be any object, make sure it's serializable)
+            'actor': self.actor_cache,  # Actor model (could be any object, make sure it's serializable)
+            'critic': self.critic_cache,  # Critic model (could be any object, make sure it's serializable)
             'ft_denoising_steps': self.ft_denoising_steps,
             'ft_denoising_steps_d': self.ft_denoising_steps_d,
             'ft_denoising_steps_t': self.ft_denoising_steps_t,
@@ -461,6 +524,8 @@ class VPGDiffusion(DiffusionModel):
         ):
 
             print("diffusion_vpg.py: VPGDiffusion.step() : 2")
+
+            assert 0 == 1, "diffusion_vpg.py: VPGDiffusion.step(): change actor and actor_ft"
 
             self.ft_denoising_steps = max(
                 0, self.ft_denoising_steps - self.ft_denoising_steps_d
@@ -784,6 +849,10 @@ class VPGDiffusion(DiffusionModel):
         # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
         x = torch_randn([B, self.horizon_steps, self.action_dim])
 
+
+        print("x = ", x)
+
+
         if self.use_ddim:
             t_all = self.ddim_t
         else:
@@ -827,6 +896,11 @@ class VPGDiffusion(DiffusionModel):
                     std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
             
             noise = torch_randn_like(x)
+
+
+            print("noise = ", noise)
+
+
             # temp_noise_variable = tf.Variable(temp_noise)
 
             # print("temp_noise = ", temp_noise)

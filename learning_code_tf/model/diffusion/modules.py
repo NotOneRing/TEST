@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import math
 
 from util.torch_to_tf import torch_exp, torch_arange, torch_cat
 
@@ -30,16 +31,32 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
         # print("modules.py: SinusoidalPosEmb.call()")
 
 
-        half_dim = self.dim // 2
+        half_dim = int(self.dim // 2)
 
 
-        emb = np.log(10000) / (half_dim - 1)
+        emb = math.log(10000) / (half_dim - 1)
+        
+        # emb = tf.constant(math.log(10000) / (half_dim - 1), dtype=tf.float32)
 
         # print("1emb.shape = ", emb.shape)
         # print("type(emb) = ", type(emb))
-        # print("emb = ", emb)
+        # print("number emb = ", emb)
+        # print("half_dim = ", half_dim)
+        
+        first_var = torch_arange(start = 0, end = half_dim, step=1)
 
-        emb = torch_exp(torch_arange(0, half_dim) * -emb)
+        first_var = tf.cast(first_var, tf.float32)
+
+        # print("type(first_var) = ", type(first_var))
+        # print("first_var = ", first_var)
+
+        second_var = first_var * -emb
+
+        # print("second_var = ", second_var)
+
+        emb = torch_exp( second_var )
+
+        # print("SinusoidalPosEmb emb1 = ", emb)
 
         # emb = tf.convert_to_tensor(emb, dtype=tf.float32)
 
@@ -64,13 +81,15 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
         # print("type(emb) = ", type(emb))
         # print("emb = ", emb)
 
+        # print("SinusoidalPosEmb emb2 = ", emb)
+
         # print("sin(emb).shape = ", tf.sin(emb).shape)
         # print("cos(emb).shape = ", tf.cos(emb).shape)
 
         emb = torch_cat([tf.sin(emb), tf.cos(emb)], dim=-1)
 
         # print("4emb.shape = ", emb.shape)
-        # print("emb = ", emb)
+        # print("SinusoidalPosEmb emb = ", emb)
 
         return emb
 

@@ -1,6 +1,6 @@
-DEBUG = True
+# DEBUG = True
 
-# DEBUG = False
+DEBUG = False
 
 TEST_LOAD_PRETRAIN = True
 
@@ -15,7 +15,7 @@ OUTPUT_VARIABLES = False
 
 
 
-# OUTPUT_POSITIONs = True
+# OUTPUT_POSITIONS = True
 
 OUTPUT_POSITIONS = False
 

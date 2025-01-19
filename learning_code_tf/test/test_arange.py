@@ -14,6 +14,8 @@ def test_arange():
     tensor_tf2 = torch_arange(1, 10, step=2)
     print(tensor_tf2)
 
+    print("type(tensor_tf2) = ", type(tensor_tf2))
+
 
     import torch
 
