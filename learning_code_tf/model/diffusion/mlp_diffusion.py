@@ -183,60 +183,60 @@ class VisionDiffusionMLP(tf.keras.Model):
         return torch_tensor_view(out, [B, Ta, Da])
 
 
-import math
+# import math
 
 
-class KaimingUniformInitializer(tf.keras.initializers.Initializer):
-    def __init__(self, fan_in):
-        self.fan_in = fan_in
+# class KaimingUniformInitializer(tf.keras.initializers.Initializer):
+#     def __init__(self, fan_in):
+#         self.fan_in = fan_in
 
-    def __call__(self, shape, dtype=None):
-        limit = math.sqrt(3.0 / self.fan_in)  # PyTorch 的 Kaiming Uniform 范围
-        return tf.random.uniform(shape, -limit, limit, dtype=dtype)
+#     def __call__(self, shape, dtype=None):
+#         limit = math.sqrt(3.0 / self.fan_in)  # PyTorch 的 Kaiming Uniform 范围
+#         return tf.random.uniform(shape, -limit, limit, dtype=dtype)
 
-    def get_config(self):  # 必须实现以支持序列化
-        return {'fan_in': self.fan_in}
+#     def get_config(self):  # 必须实现以支持序列化
+#         return {'fan_in': self.fan_in}
 
-    @classmethod
-    def from_config(cls, config):
-        """Creates the layer from its config."""
-        return cls(**config)
+#     @classmethod
+#     def from_config(cls, config):
+#         """Creates the layer from its config."""
+#         return cls(**config)
 
 
-class CustomDense(tf.keras.layers.Layer):
-    def __init__(self, units, input_dim, **kwargs):
-        super(CustomDense, self).__init__(**kwargs)
-        self.units = units
-        self.input_dim = input_dim
-        self.kernel_initializer = KaimingUniformInitializer(fan_in=input_dim)
-        self.bias_initializer = tf.keras.initializers.Zeros()
+# class CustomDense(tf.keras.layers.Layer):
+#     def __init__(self, units, input_dim, **kwargs):
+#         super(CustomDense, self).__init__(**kwargs)
+#         self.units = units
+#         self.input_dim = input_dim
+#         self.kernel_initializer = KaimingUniformInitializer(fan_in=input_dim)
+#         self.bias_initializer = tf.keras.initializers.Zeros()
 
-    def build(self, input_shape):
-        self.kernel = self.add_weight(
-            shape=(self.input_dim, self.units),
-            initializer=self.kernel_initializer,
-            name='kernel',
-        )
-        self.bias = self.add_weight(
-            shape=(self.units,),
-            initializer=self.bias_initializer,
-            name='bias',
-        )
+#     def build(self, input_shape):
+#         self.kernel = self.add_weight(
+#             shape=(self.input_dim, self.units),
+#             initializer=self.kernel_initializer,
+#             name='kernel',
+#         )
+#         self.bias = self.add_weight(
+#             shape=(self.units,),
+#             initializer=self.bias_initializer,
+#             name='bias',
+#         )
 
-    def call(self, inputs):
-        return tf.matmul(inputs, self.kernel) + self.bias
+#     def call(self, inputs):
+#         return tf.matmul(inputs, self.kernel) + self.bias
 
-    def get_config(self):
-        config = super(CustomDense, self).get_config()
-        config.update({
-            "units": self.units,
-            "input_dim": self.input_dim,
-        })
-        return config
+#     def get_config(self):
+#         config = super(CustomDense, self).get_config()
+#         config.update({
+#             "units": self.units,
+#             "input_dim": self.input_dim,
+#         })
+#         return config
 
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
+#     @classmethod
+#     def from_config(cls, config):
+#         return cls(**config)
 
 
 
@@ -742,7 +742,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
 
         # print("self.time_embedding = ", self.time_embedding)
-        if OUTPUT_VARIABLES and self.time_embedding.built:
+        # if OUTPUT_VARIABLES and self.time_embedding.built:
 
             # # Time embedding layer 3
             # print("DiffusionMLP.time_embedding[3].trainable_weights[0] (kernel):")
@@ -752,22 +752,22 @@ class DiffusionMLP(tf.keras.layers.Layer):
         
 
 
-            layer1_result = self.time_embedding[0](time)
+            # layer1_result = self.time_embedding[0](time)
 
-            layer2_result = self.time_embedding[1](layer1_result)
+            # layer2_result = self.time_embedding[1](layer1_result)
 
             # layer3_result = self.time_embedding[2](layer2_result)
 
             # layer4_result = self.time_embedding[3](layer3_result)
 
-            print("layer1_result = ", layer1_result)
+            # print("layer1_result = ", layer1_result)
 
-            print("DiffusionMLP.time_embedding[1].trainable_weights[0] (kernel):")
-            print(self.time_embedding[1].trainable_weights[0].numpy())
-            print("DiffusionMLP.time_embedding[1].trainable_weights[1] (bias):")
-            print(self.time_embedding[1].trainable_weights[1].numpy())
+            # print("DiffusionMLP.time_embedding[1].trainable_weights[0] (kernel):")
+            # print(self.time_embedding[1].trainable_weights[0].numpy())
+            # print("DiffusionMLP.time_embedding[1].trainable_weights[1] (bias):")
+            # print(self.time_embedding[1].trainable_weights[1].numpy())
 
-            print("layer2_result = ", layer2_result)
+            # print("layer2_result = ", layer2_result)
 
             # print("layer3_result = ", layer3_result)
 
@@ -794,7 +794,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
         # print("x = ", x)
 
         # # if OUTPUT_VARIABLES:
-        # print("time_emb = ", time_emb)
+        print("time_emb = ", time_emb)
 
         # print("state = ", state)
 
@@ -817,7 +817,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
 
         # # if OUTPUT_VARIABLES:
-        # print("out = ", out)
+        print("out = ", out)
 
 
         if OUTPUT_VARIABLES:

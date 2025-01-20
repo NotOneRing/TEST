@@ -606,6 +606,8 @@ def torch_randn(*size):
 
 
 def torch_randperm(n):
+    if DEBUG:
+        return tf.convert_to_tensor( np.random.permutation(n) )
     return tf.random.shuffle(tf.range(n))
 
 
@@ -1633,13 +1635,35 @@ class nn_Linear(tf.keras.layers.Layer):
         self.device = device
         # self.dtype=dtype
 
+
+
         if model == None:
+
+            import math
+            # PyTorch-style initialization for weights
+            def pytorch_weight_initializer(shape, dtype=None):
+                limit = math.sqrt(1.0 / in_features)
+                return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+
+            # PyTorch-style initialization for bias
+            def pytorch_bias_initializer(shape, dtype=None):
+                # if not bias:
+                #     return None
+                limit = math.sqrt(1.0 / in_features)
+                return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+
+
+
             self.model = tf.keras.layers.Dense(
                 out_features,
                 activation=None,
                 use_bias=True,
-                kernel_initializer='glorot_uniform',
-                bias_initializer='zeros',
+                kernel_initializer = tf.keras.initializers.Constant(
+                    pytorch_weight_initializer((in_features, out_features))),
+                # 'glorot_uniform',
+                bias_initializer = tf.keras.initializers.Constant(
+                    pytorch_bias_initializer((out_features,))),
+                    # 'zeros',
                 dtype=dtype,
                 name = name_Dense
                 # kernel_regularizer=None,
@@ -1649,10 +1673,17 @@ class nn_Linear(tf.keras.layers.Layer):
                 # bias_constraint=None,
                 # ,**kwargs
             )
+
+            
         else:
             self.model = model
             # print("self.model.trainable_variables = ", self.model.trainable_variables)
             # print("self.model.non_trainable_variables = ", self.model.non_trainable_variables)
+
+
+
+
+
 
         # print("nn_Linear: self.model = ", self.model)
 

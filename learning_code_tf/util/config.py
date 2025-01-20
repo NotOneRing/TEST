@@ -1,6 +1,6 @@
-# DEBUG = True
+DEBUG = True
 
-DEBUG = False
+# DEBUG = False
 
 TEST_LOAD_PRETRAIN = True
 

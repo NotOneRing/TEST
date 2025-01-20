@@ -45,6 +45,7 @@ from util.torch_to_tf import torch_tensor_clone
 from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
 
 
+
 # class DiffusionModel(tf.keras.layers.Layer):
 
 from tensorflow.keras.saving import register_keras_serializable
@@ -611,9 +612,10 @@ class DiffusionModel(tf.keras.Model):
                 #     low = 0, high = self.denoising_steps, size = (batch_size,)
                 # ), tf.int64)
 
-                self.loss_ori_t =  tf.cast( torch_ones(
-                (batch_size,)
-                ), tf.int64 )
+                # self.loss_ori_t =  tf.cast( torch_ones(
+                # (batch_size,)
+                # ), tf.int64 )
+                self.loss_ori_t =  tf.cast( tf.convert_to_tensor(np.random.randint( 0, self.denoising_steps, (batch_size,) ) ), tf.int64 )
 
                 t = self.loss_ori_t
             else:
@@ -692,9 +694,10 @@ class DiffusionModel(tf.keras.Model):
                 #     low = 0, high = self.denoising_steps, size = (batch_size,)
                 # ), tf.int64)
 
-                self.loss_ori_t =  tf.cast( torch_ones(
-                 (batch_size,)
-                ), tf.int64)
+                # self.loss_ori_t =  tf.cast( torch_ones(
+                #  (batch_size,)
+                # ), tf.int64)
+                self.loss_ori_t =  tf.cast( tf.convert_to_tensor(np.random.randint( 0, self.denoising_steps, (batch_size,) )), tf.int64)
 
                 t = self.loss_ori_t
             else:
@@ -750,7 +753,8 @@ class DiffusionModel(tf.keras.Model):
         if DEBUG:
             if self.p_losses_noise is None:
                 # self.p_losses_noise = torch_randn_like(x_start)
-                self.p_losses_noise = torch_ones_like(x_start)
+                # self.p_losses_noise = torch_ones_like(x_start)
+                self.p_losses_noise = tf.convert_to_tensor( np.random.randn( *(x_start.numpy().shape) ), dtype=tf.float32 )
 
                 noise = self.p_losses_noise
             else:
@@ -826,6 +830,11 @@ class DiffusionModel(tf.keras.Model):
                             #    )
 
 
+
+        # print("x_recon = ", x_recon)
+
+
+
         # summary = self.network.summary(x_noisy, t, cond["state"])
         # summary = self.network.summary(x_noisy, t, cond)
 
@@ -886,7 +895,8 @@ class DiffusionModel(tf.keras.Model):
         if DEBUG:
             if self.p_losses_noise is None:
                 # self.p_losses_noise = torch_randn_like(x_start)
-                self.p_losses_noise = torch_ones_like(x_start)
+                # self.p_losses_noise = torch_ones_like(x_start)
+                self.p_losses_noise = tf.convert_to_tensor( np.random.randn( *(x_start.numpy().shape) ), dtype=tf.float32 )
 
                 noise = self.p_losses_noise
             else:
@@ -915,7 +925,7 @@ class DiffusionModel(tf.keras.Model):
                             #    )
 
         # if OUTPUT_VARIABLES:
-        #     print("x_recon = ", x_recon)
+        # print("x_recon = ", x_recon)
 
         # summary = self.network.summary(x_noisy, t, cond["state"])
         # summary = self.network.summary(x_noisy, t, cond)
@@ -1052,20 +1062,28 @@ class DiffusionModel(tf.keras.Model):
 
         # Generate noise if not provided
 
+
         if DEBUG:
-            if self.q_sample_noise is None:            
+            if self.q_sample_noise is None: 
+                # print("DEBUG BRANCH1")   
                 if noise is None:
                     # self.q_sample_noise = torch_randn_like(x_start)
-                    self.q_sample_noise = torch_ones_like(x_start)
+                    # self.q_sample_noise = torch_ones_like(x_start)
+                    self.q_sample_noise = tf.convert_to_tensor( np.random.randn(*(x_start.numpy().shape)), dtype=tf.float32)
                     
                     noise = self.q_sample_noise
+                    # print("DEBUG None: noise.dtype = ", noise.dtype)
             else:
+                # print("DEBUG BRANCH2")         
                 if noise is None:
                     noise = self.q_sample_noise
         else:
+            # print("DEBUG BRANCH3")         
             if noise is None:
+                # print("DEBUG BRANCH4")         
                 noise = torch_randn_like(x_start)
 
+        # print("noise = ", noise)
 
         # if noise is None:
         #     noise = torch_randn_like(x_start)
@@ -1100,11 +1118,27 @@ class DiffusionModel(tf.keras.Model):
             print("DiffusionModel q_sample type(t) = ", type(t) )
 
 
+        extract1 = extract(self.sqrt_alphas_cumprod, t, x_start.shape)
+
+
+        extract2 = extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape)
+
+        # print("extract1.shape = ", extract1.shape)
+        # print("extract2.shape = ", extract2.shape)
+        # print("x_start.shape = ", x_start.shape)
+        # print("noise.shape = ", noise.shape)
+
+        # print("extract1.dtype = ", extract1.dtype)
+        # print("extract2.dtype = ", extract2.dtype)
+        # print("x_start.dtype = ", x_start.dtype)
+        # print("noise.dtype = ", noise.dtype)
+
+        print("Diffusion: q_sample(): noise = ", noise)
 
         # Compute x_t
         return (
-            extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
-            + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
+            extract1 * x_start
+            + extract2 * noise
         )
 
 
@@ -1160,7 +1194,10 @@ class DiffusionModel(tf.keras.Model):
         # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
         if DEBUG:
             if self.call_x is None:
-                self.call_x = torch_ones(B, self.horizon_steps, self.action_dim)
+                # self.call_x = torch_ones(B, self.horizon_steps, self.action_dim)
+
+                self.call_x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim) )
+
                 # self.call_x = torch_randn(B, self.horizon_steps, self.action_dim)
                 x = self.call_x
             else:
@@ -1208,7 +1245,9 @@ class DiffusionModel(tf.keras.Model):
             if DEBUG:
                 if self.call_noise is None:            
                     # self.call_noise = torch_randn_like( x  )
-                    self.call_noise = torch_ones_like( x  )
+                    # self.call_noise = torch_ones_like( x  )
+                    self.call_noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) )  )
+
                     noise = self.call_noise
                 else:
                     noise = self.call_noise

@@ -254,7 +254,6 @@ class VPGDiffusion(DiffusionModel):
 
 
         self.actor_ft.set_weights(self.actor.get_weights())
-
         self.build_actor(self.actor_ft)
 
 
@@ -455,7 +454,7 @@ class VPGDiffusion(DiffusionModel):
         # _ = self.loss_ori(param1, build_dict)
         all_one_build_result = self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
 
-        print("build_actor result = ", all_one_build_result)
+        print("all_one_build_result = ", all_one_build_result)
 
 
 
@@ -550,6 +549,9 @@ class VPGDiffusion(DiffusionModel):
             )
 
 
+
+
+
     def get_min_sampling_denoising_std(self):
 
         print("diffusion_vpg.py: VPGDiffusion.get_min_sampling_denoising_std()")
@@ -558,6 +560,11 @@ class VPGDiffusion(DiffusionModel):
             return self.min_sampling_denoising_std
         else:
             return self.min_sampling_denoising_std()
+
+
+
+
+
 
     # override
     def p_mean_var(
@@ -847,10 +854,14 @@ class VPGDiffusion(DiffusionModel):
 
         # Loop
         # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
-        x = torch_randn([B, self.horizon_steps, self.action_dim])
 
+        if DEBUG:
+            x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32 )
+        else:
+            x = torch_randn([B, self.horizon_steps, self.action_dim])
 
-        print("x = ", x)
+        print("VPGDiffusion: call(): x = ", x)
+
 
 
         if self.use_ddim:
@@ -895,10 +906,14 @@ class VPGDiffusion(DiffusionModel):
                 else:  # use higher minimum noise
                     std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
             
-            noise = torch_randn_like(x)
+
+            if DEBUG:
+                noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) ), dtype=tf.float32 )
+            else:
+                noise = torch_randn_like(x)
 
 
-            print("noise = ", noise)
+            print("VPGDiffusion: call(): noise = ", noise)
 
 
             # temp_noise_variable = tf.Variable(temp_noise)

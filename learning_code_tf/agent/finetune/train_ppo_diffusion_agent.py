@@ -88,7 +88,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
         done_venv = np.zeros((1, self.n_envs))
 
         
-        while self.itr < self.n_train_itr:
+        while self.itr < self.n_train_itr * 10:
             # Prepare video paths for each envs --- only applies for the first set of episodes if allowing reset within iteration and each iteration has multiple episodes from one env
             options_venv = [{} for _ in range(self.n_envs)]
             if self.itr % self.render_freq == 0 and self.render_video:
@@ -154,6 +154,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
 
 
+
             # Collect a set of trajectories from env
             for step in range(self.n_steps):
 
@@ -180,7 +181,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
 
                     # if OUTPUT_VARIABLES:
-                    print("self.model = ", self.model)
+                    # print("self.model = ", self.model)
 
 
 
@@ -190,16 +191,22 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         return_chain=True,
                     )
 
-                    print("samples = ", samples)
+                    
+                    # print("samples = ", samples)
 
+                    # print("type(samples.trajectories) = ", type(samples.trajectories) )
+
+                    # print("type(samples.chains) = ", type(samples.chains) )
 
                     output_venv = (
-                        samples.trajectories.cpu().numpy()
+                        # samples.trajectories.cpu().numpy()
+                        samples.trajectories.numpy()
                     )  # n_env x horizon x act
 
 
                     chains_venv = (
-                        samples.chains.cpu().numpy()
+                        # samples.chains.cpu().numpy()
+                        samples.chains.numpy()
                     )  # n_env x denoising x horizon x act
 
 
@@ -316,7 +323,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         
                         print("type(self.model.critic) = ", type(self.model.critic))
 
-                        values = self.model.critic(obs).cpu().numpy().flatten()
+                        # values = self.model.critic(obs).cpu().numpy().flatten()
+                        values = self.model.critic(obs).numpy().flatten()
                         
                         values_trajs = np.vstack(
                             (values_trajs, values.reshape(-1, self.n_envs))
@@ -337,17 +345,20 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     )
                     
                     for obs, chains in zip(obs_ts, chains_ts):
-                        print("obs = ", obs)
-                        print("chains = ", chains)
+                        # print("obs = ", obs)
+                        # print("chains = ", chains)
                         if OUTPUT_VARIABLES:
                             print("obs = ", obs)
                             print("chains = ", chains)
                             print("self.model = ", self.model)
+                        
                         logprobs = self.model.get_logprobs(obs, chains)
+
                         if OUTPUT_VARIABLES:
                             print("type(logprobs) = ", type(logprobs) )
     
-                        logprobs = logprobs.cpu().numpy()
+                        # logprobs = logprobs.cpu().numpy()
+                        logprobs = logprobs.numpy()
 
                         logprobs_trajs = np.vstack(
                             (
@@ -432,9 +443,13 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 for update_epoch in range(self.update_epochs):
                     # for each epoch, go through all data in batches
                     flag_break = False
+
                     inds_k = torch_randperm(total_steps
                                             # , device=self.device
                                             )
+
+                    print("inds_k = ", inds_k)
+                    
                     num_batch = max(1, total_steps // self.batch_size)  # skip last ones
                     for batch in range(num_batch):
                         start = batch * self.batch_size
@@ -501,6 +516,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                             for var in self.model.actor_ft.trainable_variables:
                                 print(f"Variable: {var.name}, Trainable: {var.trainable}")
 
+
+
                         with tf.GradientTape(persistent=True) as tape:
 
                             # get loss
@@ -533,29 +550,29 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                                 + bc_loss * self.bc_loss_coeff
                             )
 
+
                             print("pg_loss = ", pg_loss)
                             print("entropy_loss = ", entropy_loss)
                             print("v_loss = ", v_loss)
-                            print("bs_loss = ", bc_loss)
-                            
-
+                            print("bc_loss = ", bc_loss)
                             print("loss.numpy() = ", loss.numpy())
+
 
                             clipfracs += [clipfrac]
 
 
-                        # if OUTPUT_VARIABLES:
-                        print("self.model = ", self.model)
-                        print("self.model.actor_ft = ", self.model.actor_ft)
-                        print("self.model.critic = ", self.model.critic)
+                        if OUTPUT_VARIABLES:
+                            print("self.model = ", self.model)
+                            print("self.model.actor_ft = ", self.model.actor_ft)
+                            print("self.model.critic = ", self.model.critic)
 
 
 
 
-                        watched_vars = tape.watched_variables()
-                        for var in self.model.actor_ft.trainable_variables:
-                            is_used_in_loss = any(var is watched_var for watched_var in watched_vars)
-                            print(f"Variable: {var.name}, Used in loss computation: {is_used_in_loss}")
+                            watched_vars = tape.watched_variables()
+                            for var in self.model.actor_ft.trainable_variables:
+                                is_used_in_loss = any(var is watched_var for watched_var in watched_vars)
+                                print(f"Variable: {var.name}, Used in loss computation: {is_used_in_loss}")
 
                         # for var in self.model.actor_ft.trainable_variables:
                         #     print(f"Variable: {var.name}, Used in loss computation: {var in tape.watched_variables()}")
@@ -565,23 +582,30 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
 
                         tf_gradients_actor_ft = tape.gradient(loss, self.model.actor_ft.trainable_variables)                        
-                        print("tf_gradients_actor_ft = ", tf_gradients_actor_ft)
+                        if OUTPUT_VARIABLES:
+                            print("tf_gradients_actor_ft = ", tf_gradients_actor_ft)
                         zip_gradients_actor_params = zip(tf_gradients_actor_ft, self.model.actor_ft.trainable_variables)
 
                         tf_gradients_critic = tape.gradient(loss, self.model.critic.trainable_variables)
-                        print("tf_gradients_critic = ", tf_gradients_critic)
+                        if OUTPUT_VARIABLES:
+                            print("tf_gradients_critic = ", tf_gradients_critic)
                         zip_gradients_critic_params = zip(tf_gradients_critic, self.model.critic.trainable_variables)
 
                         if self.learn_eta:
-                            print("self.model.eta = ", self.model.eta)
+                            if OUTPUT_VARIABLES:
+                                print("self.model.eta = ", self.model.eta)
 
                             tf_gradients_eta = tape.gradient(loss, self.model.eta.trainable_variables)
-                            print("tf_gradients_eta = ", tf_gradients_eta)
+        
+                            if OUTPUT_VARIABLES:
+                                print("tf_gradients_eta = ", tf_gradients_eta)
+
                             zip_gradients_eta_params = zip(tf_gradients_eta, self.model.eta.trainable_variables)
 
 
-                        print("self.itr = ", self.itr)
-                        print("self.n_critic_warmup_itr = ", self.n_critic_warmup_itr)
+                        if OUTPUT_VARIABLES:
+                            print("self.itr = ", self.itr)
+                            print("self.n_critic_warmup_itr = ", self.n_critic_warmup_itr)
 
                         # # update policy and critic
                         # self.actor_optimizer.zero_grad()
@@ -624,7 +648,15 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         break
 
                 # Explained variation of future rewards using value function
-                y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
+
+                # print("type(values_k) = ", type(values_k))
+                # print("type(returns_k) = ", type(returns_k))
+
+                # type(values_k) =  <class 'tensorflow.python.framework.ops.EagerTensor'>
+                # type(returns_k) =  <class 'tensorflow.python.framework.ops.EagerTensor'>
+                # y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
+                y_pred, y_true = values_k.numpy(), returns_k.numpy()
+
                 var_y = np.var(y_true)
                 explained_var = (
                     np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y

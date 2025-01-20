@@ -26,23 +26,24 @@ import numpy as np
 
 from util.torch_to_tf import Normal
 
-def log_normal_pdf(x, mean, std):
-    """
-    计算正态分布的对数概率密度函数
+# def log_normal_pdf(x, mean, std):
+#     """
+#     计算正态分布的对数概率密度函数
 
-    Args:
-        x: 需要计算概率密度的点
-        mean: 正态分布的均值
-        std: 正态分布的标准差
+#     Args:
+#         x: 需要计算概率密度的点
+#         mean: 正态分布的均值
+#         std: 正态分布的标准差
 
-    Returns:
-        对数概率密度
-    """
-    # 计算PDF的对数
-    log_pdf = -tf.math.log(std * tf.math.sqrt(2 * tf.constant(np.pi))) - 0.5 * ((x - mean) ** 2) / (std ** 2)
-    return log_pdf
+#     Returns:
+#         对数概率密度
+#     """
+#     # 计算PDF的对数
+#     log_pdf = -tf.math.log(std * tf.math.sqrt(2 * tf.constant(np.pi))) - 0.5 * ((x - mean) ** 2) / (std ** 2)
+#     return log_pdf
 
-# 测试
+# # 测试
+
 mu = tf.convert_to_tensor(mean.numpy(), dtype=np.float32)  # 均值
 sigma = tf.convert_to_tensor(std.numpy(), dtype=np.float32)  # 标准差
 
