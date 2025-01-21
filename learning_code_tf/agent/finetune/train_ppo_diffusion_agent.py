@@ -101,6 +101,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
             
             
+            print("eval_mode = ", eval_mode)
             
             
             
@@ -192,7 +193,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     )
 
                     
-                    # print("samples = ", samples)
+                    print("samples = ", samples)
 
                     # print("type(samples.trajectories) = ", type(samples.trajectories) )
 
@@ -213,6 +214,10 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 action_venv = output_venv[:, : self.act_steps]
 
 
+                print("TranPPODiffusinAgent: type(action_venv) = ", type(action_venv))
+                print("TranPPODiffusinAgent: action_venv = ", action_venv)
+
+
                 # Apply multi-step action
                 (
                     obs_venv,
@@ -221,6 +226,15 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     truncated_venv,
                     info_venv,
                 ) = self.venv.step(action_venv)
+
+
+
+                print("obs_venv = ", obs_venv)
+                print("reward_venv = ", reward_venv)
+                print("terminated_venv = ", terminated_venv)
+                print("truncated_venv = ", truncated_venv)
+                print("info_venv = ", info_venv)
+
 
 
                 done_venv = terminated_venv | truncated_venv

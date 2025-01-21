@@ -14,3 +14,4 @@ n = 10
 c = np.random.permutation(n)
 
 print("c = ", c)
+

@@ -22,3 +22,4 @@ D3IL data: first download the raw data from [D3IL](https://github.com/ALRhub/d3i
 python script/dataset/process_d3il_dataset.py --load_path=<avoid_data_path> --env_type=avoid   # save all data
 python script/dataset/filter_d3il_avoid_data.py --load_path=<avoid_data_path> --desired_modes ... --required_modes ...  # filter modes
 ```
+

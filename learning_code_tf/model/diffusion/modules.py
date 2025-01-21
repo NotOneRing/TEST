@@ -4,7 +4,11 @@ import math
 
 from util.torch_to_tf import torch_exp, torch_arange, torch_cat
 
+from util.torch_to_tf import nn_Identity, nn_Mish, nn_ReLU, nn_Sequential
+
 from tensorflow.keras.saving import register_keras_serializable
+
+
 
 @register_keras_serializable(package="Custom")
 class SinusoidalPosEmb(tf.keras.layers.Layer):
@@ -168,11 +172,28 @@ class Conv1dBlock(tf.keras.layers.Layer):
 
         # Mish activation function implementation in TensorFlow
         if activation_type == "Mish":
-            self.activation = tf.keras.layers.Lambda(lambda x: x * tf.tanh(tf.nn.softplus(x)))
+            act = nn_Mish()
         elif activation_type == "ReLU":
-            self.activation = tf.keras.layers.ReLU()
+            act = nn_ReLU()
         else:
             raise ValueError("Unknown activation type for Conv1dBlock")
+
+
+        self.block = nn_Sequential(
+            nn_Conv1d(
+                inp_channels, out_channels, kernel_size, padding=kernel_size // 2
+            ),
+            # 使用 unsqueeze 增加一个维度
+            (lambda x: x.unsqueeze(2)) if n_groups is not None else nn_Identity(),
+            (
+                nn_GroupNorm(n_groups, out_channels, eps=eps)
+                if n_groups is not None
+                else nn_Identity()
+            ),
+            # 使用 squeeze 移除增加的维度
+            (lambda x: x.squeeze(2)) if n_groups is not None else nn_Identity(),
+            act,
+        )
 
         self.conv = tf.keras.layers.Conv1D(
             out_channels, kernel_size, padding="same"
@@ -181,6 +202,20 @@ class Conv1dBlock(tf.keras.layers.Layer):
         self.group_norm = None
         if n_groups is not None:
             self.group_norm = tf.keras.layers.GroupNormalization(groups=n_groups, epsilon=eps)
+
+
+
+    def call(self, x):
+
+        print("modules.py: Conv1dBlock.call()")
+
+        x = self.conv(x)
+        if self.group_norm is not None:
+            x = self.group_norm(x)
+        x = self.activation(x)
+        return x
+
+
 
 
     # 自己实现的
@@ -201,18 +236,5 @@ class Conv1dBlock(tf.keras.layers.Layer):
     def from_config(cls, config):
         """Creates the layer from its config."""
         return cls(**config)
-
-
-
-    def call(self, x):
-
-        print("modules.py: Conv1dBlock.call()")
-
-        x = self.conv(x)
-        if self.group_norm is not None:
-            x = self.group_norm(x)
-        x = self.activation(x)
-        return x
-
 
 

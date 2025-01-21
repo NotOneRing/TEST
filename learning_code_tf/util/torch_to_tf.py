@@ -1640,17 +1640,25 @@ class nn_Linear(tf.keras.layers.Layer):
         if model == None:
 
             import math
-            # PyTorch-style initialization for weights
+            # # PyTorch-style initialization for weights
+            # def pytorch_weight_initializer(shape, dtype=None):
+            #     limit = math.sqrt(1.0 / in_features)
+            #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+
+            # # PyTorch-style initialization for bias
+            # def pytorch_bias_initializer(shape, dtype=None):
+            #     # if not bias:
+            #     #     return None
+            #     limit = math.sqrt(1.0 / in_features)
+            #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+
             def pytorch_weight_initializer(shape, dtype=None):
                 limit = math.sqrt(1.0 / in_features)
-                return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+                return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
-            # PyTorch-style initialization for bias
             def pytorch_bias_initializer(shape, dtype=None):
-                # if not bias:
-                #     return None
                 limit = math.sqrt(1.0 / in_features)
-                return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+                return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
 
 
@@ -2603,6 +2611,221 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
 
 
+
+
+
+
+@register_keras_serializable(package="Custom")
+class nn_Conv1d(tf.keras.layers.Layer):
+    """
+    A wrapper for PyTorch's nn.Conv1d in TensorFlow.
+    Args:
+        in_channels (int): Number of channels in the input.
+        out_channels (int): Number of channels produced by the convolution.
+        kernel_size (int): Size of the convolving kernel.
+        stride (int): Stride of the convolution. Default: 1.
+        padding (int): Padding added to both sides of the input. Default: 0.
+        dilation (int): Spacing between kernel elements. Default: 1.
+        groups (int): Number of blocked connections from input to output. Default: 1.
+        bias (bool): If True, adds a learnable bias to the output. Default: True.
+    """
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, name="nn_Conv1d", **kwargs):
+        super(nn_Conv1d, self).__init__(name=name, **kwargs)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+        self.groups = groups
+        self.bias = bias
+
+        # Ensure in_channels is divisible by groups
+        if self.in_channels % self.groups != 0:
+            raise ValueError("in_channels must be divisible by groups")
+
+        # Define the convolution layer
+        self.conv1d = tf.keras.layers.Conv1D(
+            filters=self.out_channels,
+            kernel_size=self.kernel_size,
+            strides=self.stride,
+            padding='valid',  # We handle padding manually
+            dilation_rate=self.dilation,
+            groups=self.groups,
+            use_bias=self.bias,
+            kernel_initializer="glorot_uniform",
+            bias_initializer="zeros"
+        )
+
+    def get_config(self):
+        """
+        Returns the configuration of the Conv1d layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_Conv1d, self).get_config()
+        config.update({
+            'in_channels': self.in_channels,
+            'out_channels': self.out_channels,
+            'kernel_size': self.kernel_size,
+            'stride': self.stride,
+            'padding': self.padding,
+            'dilation': self.dilation,
+            'groups': self.groups,
+            'bias': self.bias,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+        return cls(**config)
+
+    def build(self, input_shape):
+        """
+        Build the layer and initialize the weights.
+        """
+        super(nn_Conv1d, self).build(input_shape)
+
+    def call(self, x):
+        """
+        Forward pass for Conv1d.
+
+        Args:
+            x (tf.Tensor): Input tensor to convolve.
+
+        Returns:
+            tf.Tensor: The convolved tensor.
+        """
+        # Apply padding manually
+        if self.padding > 0:
+            x = tf.pad(x, [[0, 0], [self.padding, self.padding], [0, 0]])
+
+        # Apply the convolution
+        return self.conv1d(x)
+
+
+
+
+
+
+
+
+@register_keras_serializable(package="Custom")
+class nn_GroupNorm(tf.keras.layers.Layer):
+    """
+    A wrapper for PyTorch's nn.GroupNorm in TensorFlow.
+    Args:
+        num_groups (int): Number of groups to divide the channels into.
+        num_channels (int): Number of channels in the input tensor.
+        eps (float): A small value to add to the denominator for numerical stability.
+        affine (bool): If True, learnable scaling (gamma) and offset (beta) parameters are applied.
+    """
+    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, name="nn_GroupNorm", **kwargs):
+        super(nn_GroupNorm, self).__init__(name=name, **kwargs)
+        self.num_groups = num_groups
+        self.num_channels = num_channels
+        self.eps = eps
+        self.affine = affine
+
+        # Ensure num_channels is divisible by num_groups
+        if self.num_channels % self.num_groups != 0:
+            raise ValueError("num_channels must be divisible by num_groups")
+
+        # Define trainable parameters gamma (scale) and beta (offset) if affine is True
+        if self.affine:
+            self.gamma = self.add_weight(
+                name="gamma",
+                shape=(self.num_channels,),
+                initializer="ones",
+                trainable=True
+            )
+            self.beta = self.add_weight(
+                name="beta",
+                shape=(self.num_channels,),
+                initializer="zeros",
+                trainable=True
+            )
+        else:
+            self.gamma = None
+            self.beta = None
+
+    def get_config(self):
+        """
+        Returns the configuration of the GroupNorm layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_GroupNorm, self).get_config()
+        config.update({
+            'num_groups': self.num_groups,
+            'num_channels': self.num_channels,
+            'eps': self.eps,
+            'affine': self.affine,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+        return cls(**config)
+
+    def call(self, x):
+        """
+        Forward pass for GroupNorm.
+
+        Args:
+            x (tf.Tensor): Input tensor to normalize.
+
+        Returns:
+            tf.Tensor: The normalized tensor.
+        """
+        # Reshape the input tensor to group the channels
+        batch_size, height, width, channels = tf.unstack(tf.shape(x))
+        group_size = channels // self.num_groups
+        x = tf.reshape(x, [batch_size, height, width, self.num_groups, group_size])
+
+        # Compute mean and variance for each group
+        mean, variance = tf.nn.moments(x, axes=[1, 2, 4], keepdims=True)
+
+        # Normalize the input
+        normalized_x = (x - mean) / tf.sqrt(variance + self.eps)
+
+        # Reshape back to the original shape
+        normalized_x = tf.reshape(normalized_x, [batch_size, height, width, channels])
+
+        # Apply scaling (gamma) and offset (beta) if affine is True
+        if self.affine:
+            normalized_x = self.gamma * normalized_x + self.beta
+
+        return normalized_x
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoderLayer", **kwargs):
 
@@ -2658,6 +2881,15 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
         return tgt
 
 
+
+
+
+
+
+
+
+
+
 class nn_TransformerDecoder(tf.keras.layers.Layer):
     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoder", **kwargs):
 
@@ -2675,6 +2907,16 @@ class nn_TransformerDecoder(tf.keras.layers.Layer):
         for layer in self.layers:
             tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
         return self.norm(tgt)
+
+
+
+
+
+
+
+
+
+
 
 
 
