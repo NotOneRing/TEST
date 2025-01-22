@@ -2,6 +2,10 @@ DEBUG = True
 
 # DEBUG = False
 
+
+
+
+
 TEST_LOAD_PRETRAIN = True
 
 # TEST_LOAD_PRETRAIN = False
@@ -28,6 +32,12 @@ OUTPUT_POSITIONS = False
 OUTPUT_FUNCTION_HEADER = False
 
 
+
+
+NP_RANDOM = True
+
+
+# NP_RANDOM = False
 
 
 

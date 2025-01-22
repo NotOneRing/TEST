@@ -218,11 +218,28 @@ class PreTrainAgent:
 
         print("cfg = ", cfg)
 
-        print("cfg.model = ", cfg.model)
+        # print("cfg.model = ", cfg.model)
 
         # Build model
         # self.model = self.instantiate_model(cfg.model)
-        self.model = hydra.utils.instantiate(cfg.model)
+
+        print("type(cfg) = ", type(cfg))
+        self.cfg_env_name = cfg.get("env_name", None)
+        # cfg.env_name
+
+
+        if self.cfg_env_name is None:
+            # print("if self.env_name is None")
+            # print("")
+            self.cfg_env_name = cfg.env
+        
+
+        print("self.cfg_env_name = ", self.cfg_env_name)
+        print("type(self.cfg_env_name) = ", type(self.cfg_env_name))
+        print("cfg.model = ", cfg.model)
+
+        self.model = hydra.utils.instantiate(cfg.model, env_name=self.cfg_env_name)
+
 
         if DEBUG:
             print("train_agent.py: __init__() DEBUG == True")
@@ -678,6 +695,172 @@ class PreTrainAgent:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def save_model_test(self, epoch):
+        print("train_agent.py: PreTrainAgent.save_model()")
+
+        savepath = os.path.join("/ssddata/qtguo/GENERAL_DATA/save_load_test_path/", f"state_{epoch}.keras")
+       
+        print("savepath = ", savepath)
+
+        # self.model.save(savepath)
+
+        tf.keras.models.save_model(self.model, savepath)
+
+        print(f"Saved model to {savepath}")
+
+
+        network_savepath = savepath.replace(".keras", "_network.keras")
+
+        print("network_savepath = ", network_savepath)
+
+        tf.keras.models.save_model(self.model.network, network_savepath)
+
+        print(f"Saved model.network to {network_savepath}")
+
+
+        ema_savepath = savepath.replace(".keras", "_ema.keras")
+
+        print("ema_savepath = ", ema_savepath)
+
+        tf.keras.models.save_model(self.ema_model, ema_savepath)
+
+        print(f"Saved ema_model to {ema_savepath}")
+
+
+        ema_network_savepath = savepath.replace(".keras", "_ema_network.keras")
+
+        print("ema_network_savepath = ", ema_network_savepath)
+
+        tf.keras.models.save_model(self.ema_model.network, ema_network_savepath)
+
+        print(f"Saved ema_model.network to {ema_network_savepath}")
+
+
+
+
+
+    def load_model_test(self, epoch):
+        print("train_agent.py: PreTrainAgent.load()")
+        loadpath = os.path.join("/ssddata/qtguo/GENERAL_DATA/save_load_test_path/", f"state_{epoch}.keras")
+
+        print("loadpath = ", loadpath)
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            "nn_Identity": nn_Identity,
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+
+
+
+
+        self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+
+        self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+
+
+
+
+
+        self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"),  custom_objects=get_custom_objects() )
+
+        self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras") ,  custom_objects=get_custom_objects() )
 
 
 

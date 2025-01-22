@@ -186,6 +186,10 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
 
+            # if epoch == 0:
+            #     self.load_model_test(10)
+            #     self.model.output_weights()
+            
 
 
             # if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
@@ -286,11 +290,19 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
 
-            if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
-                loadpath = self.base_policy_path.replace(".pt", ".keras")
+            # if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
+            #     loadpath = self.base_policy_path.replace(".pt", ".keras")
                 
-                self.load_load_pretrain_model(loadpath)
-                # print("finish load_load_pretrain_model")
+            #     self.load_load_pretrain_model(loadpath)
+                
+            #     self.model.output_weights()
+            #     break
+            #     # print("finish load_load_pretrain_model")
+
+
+
+
+
 
 
 
@@ -298,10 +310,32 @@ class TrainDiffusionAgent(PreTrainAgent):
             if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
                 self.model.load_pickle(self.base_policy_path)
 
+                self.model.output_weights()
+
                 savepath = self.base_policy_path.replace(".pt", ".keras")
-                
+
+                self.model.build_actor(self.model.network, cur_actions.shape, cond['state'].shape)
+
                 self.save_load_pretrain_model(savepath)
                 break
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
             print("train_diffusion_agent.py: run() 4")
@@ -597,6 +631,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             loss_train_epoch.append(loss_train.numpy())
 
+            print("loss_epoch = ", epoch)
             print("loss_train.numpy() = ", loss_train.numpy())
 
             # Update ema
@@ -607,7 +642,19 @@ class TrainDiffusionAgent(PreTrainAgent):
             print("train_diffusion_agent.py: run() 9")
 
 
-            loss_train = np.mean(loss_train_epoch)
+
+            # if epoch % 10 == 0:
+            #     self.save_model_test(10)
+            #     self.model.output_weights()
+
+
+            # if epoch == 11:
+            #     return
+
+
+
+
+            average_loss_train = np.mean(loss_train_epoch)
 
 
             print("train_diffusion_agent.py: run() 10")
@@ -621,12 +668,13 @@ class TrainDiffusionAgent(PreTrainAgent):
             if epoch % increment_epochs == 0:
                 self.epoch += 1
 
+
             print("train_diffusion_agent.py: run() 11")
 
             # Log loss
             if epoch % self.log_freq == 0:
                 log.info(
-                    f"{epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
+                    f"{epoch}: average train loss {average_loss_train:8.4f} | t:{timer():8.4f}"
                 )
 
             print("train_diffusion_agent.py: run() 12")

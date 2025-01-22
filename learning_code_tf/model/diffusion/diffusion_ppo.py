@@ -102,8 +102,35 @@ class PPODiffusion(VPGDiffusion):
 
     @classmethod
     def from_config(cls, config):
-        """Creates the layer from its config."""
-        return cls(**config)
+        gamma_denoising = config.pop("gamma_denoising", None)
+        clip_ploss_coef = config.pop("clip_ploss_coef", None)
+        clip_ploss_coef_base = config.pop("clip_ploss_coef_base", None)
+        clip_ploss_coef_rate = config.pop("clip_ploss_coef_rate", None)
+        clip_vloss_coef = config.pop("clip_vloss_coef", None)
+        clip_advantage_lower_quantile = config.pop("clip_advantage_lower_quantile", None)
+        clip_advantage_upper_quantile = config.pop("clip_advantage_upper_quantile", None)
+        norm_adv = config.pop("norm_adv", None)
+
+        parent_instance = super().from_config(config)
+
+
+        print("parent_instance = ", parent_instance)
+
+
+        return cls(gamma_denoising=gamma_denoising, 
+                   clip_ploss_coef=clip_ploss_coef,
+                   clip_ploss_coef_base=clip_ploss_coef_base,
+                   clip_ploss_coef_rate=clip_ploss_coef_rate,
+                   clip_vloss_coef=clip_vloss_coef,
+                   clip_advantage_lower_quantile=clip_advantage_lower_quantile,
+                   clip_advantage_upper_quantile=clip_advantage_upper_quantile,
+                   norm_adv=norm_adv,
+                   **parent_instance.get_config())
+
+
+
+
+
 
 
     def loss_ori(

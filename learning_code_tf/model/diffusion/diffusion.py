@@ -42,7 +42,7 @@ torch_flip, torch_randint, torch_ones_like
 from util.torch_to_tf import torch_tensor_clone
 
 
-from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER, NP_RANDOM
 
 
 
@@ -91,6 +91,11 @@ class DiffusionModel(tf.keras.Model):
                 print("DEBUG is False")
 
 
+        self.env_name = kwargs.get("env_name", None)
+
+
+        print("self.env_name = ", self.env_name)
+        
 
         # super(DiffusionModel, self).__init__()
         super().__init__()
@@ -126,6 +131,11 @@ class DiffusionModel(tf.keras.Model):
         self.eps_clip_value = eps_clip_value
 
         # print("before set up models")
+
+
+        print("network = ", network)
+        print("type(network) = ", type(network))
+
 
         # Set up models
         if not hasattr(self, "network"):
@@ -299,6 +309,8 @@ class DiffusionModel(tf.keras.Model):
             self.ddim_sigmas = torch_flip(self.ddim_sigmas, [0])
 
 
+        self.build_actor(self.network)
+
 
         if self.network_path is not None:
             print("self.network_path is not None")
@@ -367,13 +379,15 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-            self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+            self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
             # self.model = self.model2
 
+            self.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
-            self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
+
+            self.output_weights(self.network)
 
 
 
@@ -559,6 +573,90 @@ class DiffusionModel(tf.keras.Model):
         if OUTPUT_VARIABLES:
             print("before self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])")
         self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def output_weights(self, actor = None):
+
+        if actor == None:
+            self.actor = self.network
+        else:
+            self.actor = actor
+        # print("\nDebugging actor parameters...\n")
+        # print("self.actor.time_embedding[1] = ", self.actor.time_embedding[1])
+        # print("self.actor.time_embedding[1].trainable_weights = ", self.actor.time_embedding[1].trainable_weights)
+
+
+        # Time embedding layer 1
+        print("actor.time_embedding[1].trainable_weights[0] (kernel):")
+        print(self.actor.time_embedding[1].trainable_weights[0].numpy())
+        print("actor.time_embedding[1].trainable_weights[1] (bias):")
+        print(self.actor.time_embedding[1].trainable_weights[1].numpy())
+
+        # Time embedding layer 3
+        print("actor.time_embedding[3].trainable_weights[0] (kernel):")
+        print(self.actor.time_embedding[3].trainable_weights[0].numpy())
+        print("actor.time_embedding[3].trainable_weights[1] (bias):")
+        print(self.actor.time_embedding[3].trainable_weights[1].numpy())
+
+        # MLP mean layer 0
+        print("actor.mlp_mean.my_layers[0].trainable_weights[0] (kernel):")
+        print(self.actor.mlp_mean.my_layers[0].trainable_weights[0].numpy())
+        print("actor.mlp_mean.my_layers[0].trainable_weights[1] (bias):")
+        print(self.actor.mlp_mean.my_layers[0].trainable_weights[1].numpy())
+
+        # MLP mean layer 1.l1
+        print("actor.mlp_mean.my_layers[1].l1.trainable_weights[0] (kernel):")
+        print(self.actor.mlp_mean.my_layers[1].l1.trainable_weights[0].numpy())
+        print("actor.mlp_mean.my_layers[1].l1.trainable_weights[1] (bias):")
+        print(self.actor.mlp_mean.my_layers[1].l1.trainable_weights[1].numpy())
+
+        # MLP mean layer 1.l2
+        print("actor.mlp_mean.my_layers[1].l2.trainable_weights[0] (kernel):")
+        print(self.actor.mlp_mean.my_layers[1].l2.trainable_weights[0].numpy())
+        print("actor.mlp_mean.my_layers[1].l2.trainable_weights[1] (bias):")
+        print(self.actor.mlp_mean.my_layers[1].l2.trainable_weights[1].numpy())
+
+        # MLP mean layer 2
+        print("actor.mlp_mean.my_layers[2].trainable_weights[0] (kernel):")
+        print(self.actor.mlp_mean.my_layers[2].trainable_weights[0].numpy())
+        print("actor.mlp_mean.my_layers[2].trainable_weights[1] (bias):")
+        print(self.actor.mlp_mean.my_layers[2].trainable_weights[1].numpy())
+
+
+
+
+
 
 
 
@@ -1274,6 +1372,78 @@ class DiffusionModel(tf.keras.Model):
 
 
 
+    def build_actor(self, actor, shape1=None, shape2=None):
+
+        print("build_actor: self.env_name = ", self.env_name)
+
+        if shape1 != None and shape2 != None:
+            pass
+        # Gym - hopper/walker2d/halfcheetah
+        elif self.env_name == "hopper-medium-v2":
+            # hopper_medium
+            # item_actions_copy.shape =  
+            shape1 = (128, 4, 3)
+            # cond_copy['state'].shape =  
+            shape2 = (128, 1, 11)
+        elif self.env_name == "walker2d-medium-v2":
+            pass
+        elif self.env_name == "halfcheetah-medium-v2":
+            pass
+        # Robomimic - lift/can/square/transport
+        elif self.env_name == "lift":
+            pass
+
+        elif self.env_name == "can":
+            #can 
+            # item_actions_copy.shape =  
+            shape1 = (256, 4, 7)
+            # cond_copy['state'].shape =  
+            shape2 = (256, 1, 23)
+
+        elif self.env_name == "square":
+            pass
+
+        elif self.env_name == "transport":
+            pass
+
+        # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
+        elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
+            #avoid_m1
+            # item_actions_copy.shape =  
+            shape1 = (16, 4, 2)
+            # cond_copy['state'].shape =  
+            shape2 = (16, 1, 4)
+        # Furniture-Bench - one_leg/lamp/round_table_low/med
+        elif self.env_name == "square":
+            pass
+
+        elif self.env_name == "transport":
+            pass
+        
+        else:
+            # #one_leg_low
+            # # item_actions_copy.shape =  
+            # shape1 = (256, 8, 10)
+            # # cond_copy['state'].shape =  
+            # shape2 = (256, 1, 58)
+            raise RuntimeError("Furniture is not implemented right now")
+
+
+        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
+        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
+
+        param1 = torch_ones(*shape1)
+        param2 = torch_ones(*shape2)
+
+        build_dict = {'state': param2}
+
+
+        
+        # _ = self.loss_ori(param1, build_dict)
+        all_one_build_result = self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
+
+        print("all_one_build_result = ", all_one_build_result)
+
 
 
 
@@ -1348,6 +1518,17 @@ class DiffusionModel(tf.keras.Model):
             "ddim_steps": self.ddim_steps,
 
         })
+
+
+
+        if hasattr(self, "env_name"):
+            print("get_config(): self.env_name = ", self.env_name)
+            config.update({
+            "env_name": self.env_name,
+            })
+        else:
+            print("get_config(): self.env_name = ", None)
+        
 
         if DEBUG:
             if OUTPUT_POSITIONS:
@@ -1430,6 +1611,18 @@ class DiffusionModel(tf.keras.Model):
 
 
         result = cls(network=network, **config)
+
+
+
+        env_name = config.pop("env_name")
+        if env_name:
+            if OUTPUT_POSITIONS:
+                print("Enter env_name")
+            result.env_name = env_name
+        else:
+            result.env_name = None
+
+
         if DEBUG:
 
             # if not isinstance(config.pop("loss_ori_t"), tf.Tensor):
@@ -1496,7 +1689,6 @@ class DiffusionModel(tf.keras.Model):
                 result.q_sample_noise = q_sample_noise
             else:
                 result.q_sample_noise = None
-
 
         
         return result

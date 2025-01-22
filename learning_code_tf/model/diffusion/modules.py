@@ -4,7 +4,7 @@ import math
 
 from util.torch_to_tf import torch_exp, torch_arange, torch_cat
 
-from util.torch_to_tf import nn_Identity, nn_Mish, nn_ReLU, nn_Sequential
+from util.torch_to_tf import nn_Identity, nn_Mish, nn_ReLU, nn_Sequential, nn_GroupNorm, nn_Conv1d
 
 from tensorflow.keras.saving import register_keras_serializable
 
@@ -105,7 +105,7 @@ class Downsample1d(tf.keras.layers.Layer):
         print("modules.py: Downsample1d.__init__()")
 
         super(Downsample1d, self).__init__()
-        self.conv = tf.keras.layers.Conv1D(dim, 3, strides=2, padding="same")
+        self.conv = nn_Conv1d(dim, dim, 3, 2, 1)
 
     def call(self, x):
 
@@ -151,6 +151,9 @@ class Upsample1d(tf.keras.layers.Layer):
         return cls(**config)
     
 
+
+
+
 class Conv1dBlock(tf.keras.layers.Layer):
     """
     Conv1d --> GroupNorm --> Mish
@@ -195,25 +198,13 @@ class Conv1dBlock(tf.keras.layers.Layer):
             act,
         )
 
-        self.conv = tf.keras.layers.Conv1D(
-            out_channels, kernel_size, padding="same"
-        )
-
-        self.group_norm = None
-        if n_groups is not None:
-            self.group_norm = tf.keras.layers.GroupNormalization(groups=n_groups, epsilon=eps)
-
 
 
     def call(self, x):
 
         print("modules.py: Conv1dBlock.call()")
 
-        x = self.conv(x)
-        if self.group_norm is not None:
-            x = self.group_norm(x)
-        x = self.activation(x)
-        return x
+        return self.block(x)
 
 
 

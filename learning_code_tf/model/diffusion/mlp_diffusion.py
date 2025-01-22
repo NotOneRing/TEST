@@ -785,13 +785,15 @@ class DiffusionMLP(tf.keras.layers.Layer):
         time_emb = torch_tensor_view(temp_result, B, self.time_dim)
 
 
-        # for layer in self.time_embedding:
-        #     if isinstance(layer, nn_Linear):
-        #         print("Linear weights:", layer.trainable_weights[0])
-        #         print("Linear bias:", layer.trainable_weights[1])
+        for layer in self.time_embedding:
+            if isinstance(layer, nn_Linear):
+                print("Linear weights:", layer.trainable_weights[0])
+                print("Linear bias:", layer.trainable_weights[1])
                 
                 
         # print("x = ", x)
+
+        print("type(time_emb) = ", type(time_emb))
 
         # # if OUTPUT_VARIABLES:
         print("time_emb = ", time_emb)

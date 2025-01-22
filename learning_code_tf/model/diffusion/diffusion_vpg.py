@@ -108,7 +108,6 @@ class VPGDiffusion(DiffusionModel):
 
 
 
-        self.env_name = kwargs.get("env_name", None)  # 默认为 None
         print(f"Environment name: {self.env_name}")
         
 
@@ -121,6 +120,9 @@ class VPGDiffusion(DiffusionModel):
 
         # Re-name network to actor
         self.actor = self.network
+
+
+
 
 
         
@@ -193,63 +195,14 @@ class VPGDiffusion(DiffusionModel):
         # _ = self.loss_ori_build(self.actor, training=False, x_start = param1, cond=build_dict)
         # _ = self.loss_ori_build(self.actor_ft, training=False, x_start = param1, cond=build_dict)
 
-        self.build_actor(self.actor)
         self.build_actor(self.actor_ft)
 
-        # self.debug_actor_params()
-
-        # if self.network_path is not None:
-        #     print("self.network_path is not None")
-        #     # checkpoint = tf.train.Checkpoint(network=self.network)
-        #     # checkpoint.restore(network_path)
-
-        #     loadpath = network_path
-
-        #     print("loadpath = ", loadpath)
-
-        #     if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
-        #         print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
-        #     else:
-        #         loadpath = network_path.replace('.pt', '.keras')
-
-        #     from model.diffusion.mlp_diffusion import DiffusionMLP
-        #     from model.diffusion.diffusion import DiffusionModel
-        #     from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-        #     from model.diffusion.modules import SinusoidalPosEmb
-        #     from model.common.modules import SpatialEmb, RandomShiftsAug
-        #     from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
-
-        #     from tensorflow.keras.utils import get_custom_objects
-
-        #     cur_dict = {
-        #         'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-        #         'DiffusionMLP': DiffusionMLP,
-        #         'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
-        #         'MLP': MLP,                            # 自定义的 MLP 层
-        #         'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #         'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-        #         "nn_Identity": nn_Identity,
-        #         'nn_Linear': nn_Linear,
-        #         'nn_LayerNorm': nn_LayerNorm,
-        #         'nn_Dropout': nn_Dropout,
-        #         'nn_ReLU': nn_ReLU,
-        #         'nn_Mish': nn_Mish,
-        #         'SpatialEmb': SpatialEmb,
-        #         'RandomShiftsAug': RandomShiftsAug,
-        #         "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-        #     }
-        #     # Register your custom class with Keras
-        #     get_custom_objects().update(cur_dict)
 
 
-        #     self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
-
-        #     self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+        self.output_weights(self.actor)
 
 
-
-
-        self.load_pickle(network_path)
+        # self.load_pickle(network_path)
         self.build_actor(self.actor)
 
 
@@ -343,118 +296,7 @@ class VPGDiffusion(DiffusionModel):
 
 
     def debug_actor_params(self):
-        print("\nDebugging actor parameters...\n")
-
-
-        print("self.actor.time_embedding[1] = ", self.actor.time_embedding[1])
-
-
-        print("self.actor.time_embedding[1].trainable_weights = ", self.actor.time_embedding[1].trainable_weights)
-
-
-        # Time embedding layer 1
-        print("actor.time_embedding[1].trainable_weights[0] (kernel):")
-        print(self.actor.time_embedding[1].trainable_weights[0].numpy())
-        print("actor.time_embedding[1].trainable_weights[1] (bias):")
-        print(self.actor.time_embedding[1].trainable_weights[1].numpy())
-
-        # Time embedding layer 3
-        print("actor.time_embedding[3].trainable_weights[0] (kernel):")
-        print(self.actor.time_embedding[3].trainable_weights[0].numpy())
-        print("actor.time_embedding[3].trainable_weights[1] (bias):")
-        print(self.actor.time_embedding[3].trainable_weights[1].numpy())
-
-        # MLP mean layer 0
-        print("actor.mlp_mean.my_layers[0].trainable_weights[0] (kernel):")
-        print(self.actor.mlp_mean.my_layers[0].trainable_weights[0].numpy())
-        print("actor.mlp_mean.my_layers[0].trainable_weights[1] (bias):")
-        print(self.actor.mlp_mean.my_layers[0].trainable_weights[1].numpy())
-
-        # MLP mean layer 1.l1
-        print("actor.mlp_mean.my_layers[1].l1.trainable_weights[0] (kernel):")
-        print(self.actor.mlp_mean.my_layers[1].l1.trainable_weights[0].numpy())
-        print("actor.mlp_mean.my_layers[1].l1.trainable_weights[1] (bias):")
-        print(self.actor.mlp_mean.my_layers[1].l1.trainable_weights[1].numpy())
-
-        # MLP mean layer 1.l2
-        print("actor.mlp_mean.my_layers[1].l2.trainable_weights[0] (kernel):")
-        print(self.actor.mlp_mean.my_layers[1].l2.trainable_weights[0].numpy())
-        print("actor.mlp_mean.my_layers[1].l2.trainable_weights[1] (bias):")
-        print(self.actor.mlp_mean.my_layers[1].l2.trainable_weights[1].numpy())
-
-        # MLP mean layer 2
-        print("actor.mlp_mean.my_layers[2].trainable_weights[0] (kernel):")
-        print(self.actor.mlp_mean.my_layers[2].trainable_weights[0].numpy())
-        print("actor.mlp_mean.my_layers[2].trainable_weights[1] (bias):")
-        print(self.actor.mlp_mean.my_layers[2].trainable_weights[1].numpy())
-
-
-    def build_actor(self, actor):
-        # Gym - hopper/walker2d/halfcheetah
-        if self.env_name == "hopper-medium-v2":
-            # hopper_medium
-            # item_actions_copy.shape =  
-            shape1 = (128, 4, 3)
-            # cond_copy['state'].shape =  
-            shape2 = (128, 1, 11)
-        elif self.env_name == "walker2d-medium-v2":
-            pass
-        elif self.env_name == "halfcheetah-medium-v2":
-            pass
-        # Robomimic - lift/can/square/transport
-        elif self.env_name == "lift":
-            pass
-
-        elif self.env_name == "can":
-            #can 
-            # item_actions_copy.shape =  
-            shape1 = (256, 4, 7)
-            # cond_copy['state'].shape =  
-            shape2 = (256, 1, 23)
-
-        elif self.env_name == "square":
-            pass
-
-        elif self.env_name == "transport":
-            pass
-
-        # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
-        elif self.env_name == "avoiding-m5":
-            #avoid_m1
-            # item_actions_copy.shape =  
-            shape1 = (16, 4, 2)
-            # cond_copy['state'].shape =  
-            shape2 = (16, 1, 4)
-        # Furniture-Bench - one_leg/lamp/round_table_low/med
-        elif self.env_name == "square":
-            pass
-
-        elif self.env_name == "transport":
-            pass
-        
-        else:
-            # #one_leg_low
-            # # item_actions_copy.shape =  
-            # shape1 = (256, 8, 10)
-            # # cond_copy['state'].shape =  
-            # shape2 = (256, 1, 58)
-            raise RuntimeError("Furniture is not implemented right now")
-
-
-        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
-        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
-
-        param1 = torch_ones(*shape1)
-        param2 = torch_ones(*shape2)
-
-        build_dict = {'state': param2}
-
-
-        
-        # _ = self.loss_ori(param1, build_dict)
-        all_one_build_result = self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
-
-        print("all_one_build_result = ", all_one_build_result)
+        self.output_weights(self.actor)
 
 
 
@@ -481,13 +323,44 @@ class VPGDiffusion(DiffusionModel):
             'min_logprob_denoising_std': self.min_logprob_denoising_std,
             'eta': self.eta if hasattr(self, 'eta') else None,
             'learn_eta': self.learn_eta,
-            'kwargs': {}  # You can include any additional arguments passed via kwargs
+            # 'kwargs': {}  # You can include any additional arguments passed via kwargs
         })
         
         return config
     
+    
+    @classmethod
+    def from_config(cls, config):
+        actor = config.pop("actor", None)
+        critic = config.pop("critic", None)
+        ft_denoising_steps = config.pop("ft_denoising_steps", None)
+        ft_denoising_steps_d = config.pop("ft_denoising_steps_d", None)
+        ft_denoising_steps_t = config.pop("ft_denoising_steps_t", None)
+        min_sampling_denoising_std = config.pop("min_sampling_denoising_std", None)
+        min_logprob_denoising_std = config.pop("min_logprob_denoising_std", None)
+        eta = config.pop("eta", None)
+        learn_eta = config.pop("learn_eta", None)
+        # kwargs = config.pop("kwargs", None)
+
+        parent_instance = super().from_config(config)
 
 
+        print("parent_instance = ", parent_instance)
+
+
+        return cls(actor=actor, 
+                   critic=critic,
+                   ft_denoising_steps=ft_denoising_steps,
+                   ft_denoising_steps_d=ft_denoising_steps_d,
+                   ft_denoising_steps_t=ft_denoising_steps_t,
+                   min_sampling_denoising_std=min_sampling_denoising_std,
+                   min_logprob_denoising_std=min_logprob_denoising_std,
+                   eta=eta,
+                   learn_eta=learn_eta,
+                   **parent_instance.get_config())
+
+
+    
 
 
 
