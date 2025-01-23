@@ -215,6 +215,8 @@ class TrainAgent:
 
         savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
 
+        print("save_model savepath = ", savepath)
+
         print("finetune: train_agent.save_model: savepath = ", savepath)
         log.info(f"Saved model to {savepath}")
 

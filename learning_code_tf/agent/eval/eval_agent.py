@@ -27,8 +27,7 @@ class EvalAgent:
         self.seed = cfg.get("seed", 42)
         random.seed(self.seed)
         np.random.seed(self.seed)
-        # torch.manual_seed(self.seed)
-        tf.manual_seed(self.seed)
+        tf.random.set_seed(self.seed)
 
 
         print("cfg = ", cfg)
@@ -36,6 +35,10 @@ class EvalAgent:
 
         # Make vectorized env
         self.env_name = cfg.env.name
+
+        print("self.env_name = ", self.env_name)
+
+
         env_type = cfg.env.get("env_type", None)
         self.venv = make_async(
             cfg.env.name,
@@ -66,6 +69,7 @@ class EvalAgent:
         self.horizon_steps = cfg.horizon_steps
         self.max_episode_steps = cfg.env.max_episode_steps
         self.reset_at_iteration = cfg.env.get("reset_at_iteration", True)
+        self.save_full_observations = cfg.env.get("save_full_observations", False)
         self.furniture_sparse_reward = (
             cfg.env.specific.get("sparse_reward", False)
             if "specific" in cfg.env
@@ -73,7 +77,7 @@ class EvalAgent:
         )  # furniture specific, for best reward calculation
 
         # Build model and load checkpoint
-        self.model = hydra.utils.instantiate(cfg.model)
+        self.model = hydra.utils.instantiate(cfg.model, env_name=self.env_name)
 
         # Eval params
         self.n_steps = cfg.n_steps
@@ -94,6 +98,11 @@ class EvalAgent:
         assert not (
             self.n_render <= 0 and self.render_video
         ), "Need to set n_render > 0 if saving video"
+        self.traj_plotter = (
+            hydra.utils.instantiate(cfg.plotter)
+            if "plotter" in cfg else None
+        )
+
 
     def run(self):
         print("eval_agent.py: EvalAgent.run()")
@@ -130,3 +139,22 @@ class EvalAgent:
         if verbose:
             logging.info(f"<-- Reset environment {env_ind} with task {task}")
         return obs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

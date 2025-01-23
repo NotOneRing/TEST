@@ -309,36 +309,13 @@ class DiffusionModel(tf.keras.Model):
             self.ddim_sigmas = torch_flip(self.ddim_sigmas, [0])
 
 
-        self.build_actor(self.network)
 
 
         if self.network_path is not None:
             print("self.network_path is not None")
-            # checkpoint = tf.train.Checkpoint(network=self.network)
-            # checkpoint.restore(network_path)
-
             loadpath = network_path
 
             print("loadpath = ", loadpath)
-
-            # # self.model.load_weights(loadpath)
-            # # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
-
-            # from keras.utils import get_custom_objects
-            # from model.diffusion.mlp_diffusion import DiffusionMLP
-            # # Register your custom class with Keras
-            # get_custom_objects().update({
-            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            #     'DiffusionMLP': DiffusionMLP,
-            #     # 'VPGDiffusion': VPGDiffusion,
-            #     # 'PPODiffusion': PPODiffusion
-            # })
-
-
-            # self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
-            # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
-
-
 
             if loadpath.endswith(".h5") or loadpath.endswith(".keras"):
                 print('loadpath.endswith(".h5") or loadpath.endswith(".keras")')
@@ -377,18 +354,22 @@ class DiffusionModel(tf.keras.Model):
 
 
 
+            # self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
-
-            self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
-
-            # self.model = self.model2
-
-            self.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
-
+            self.network = tf.keras.models.load_model( loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
 
             self.output_weights(self.network)
 
+            self.build_actor(self.network)
+
+
+            print("DiffusionModel: self.network = ", self.network )
+
+
+            # self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+
+            # self.network = tf.keras.models.load_model( loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
 
                 # print(f"Loaded policy from {network_path}")
@@ -1061,17 +1042,22 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-    def p_mean_var(self, x, t, cond, index=None, network_override=None):
+    # def p_mean_var(self, x, t, cond, index=None, network_override=None):
+    def p_mean_var(self, x, t, cond_state, index=None, network_override=None):
 
         if OUTPUT_FUNCTION_HEADER:
             print("diffusion.py: DiffusionModel.p_mean_var()", flush = True)
 
         if network_override is not None:
-            noise = network_override(x, t, cond=cond)
+            # noise = network_override(x, t, cond=cond)
+            # noise = network_override([x, t, cond['state']])
+            noise = network_override([x, t, cond_state])
         else:
             if OUTPUT_VARIABLES:
                 print("self.network = ", self.network)
-            noise = self.network(x, t, cond=cond)
+            # noise = self.network(x, t, cond=cond)
+            # noise = self.network([x, t, cond['state']])
+            noise = self.network([x, t, cond_state])
 
         # Predict x_0
         if self.predict_epsilon:
@@ -1089,8 +1075,17 @@ class DiffusionModel(tf.keras.Model):
                 """
                 x₀ = √ 1\α̅ₜ xₜ - √ 1\α̅ₜ-1 ε
                 """
+                print("self.sqrt_recip_alphas_cumprod = ", self.sqrt_recip_alphas_cumprod)
+                print("t = ", t)
+                print("x.shape = ", x.shape)
+                extract_result1 = extract(self.sqrt_recip_alphas_cumprod, t, x.shape)
+                print("extract_result1 = ", extract_result1)
+
+                print("x.dtype = ", x.dtype)
+                print("extract_result1.dtype = ", extract_result1.dtype)
+
                 x_recon = (
-                    extract(self.sqrt_recip_alphas_cumprod, t, x.shape) * x
+                    extract_result1 * x
                     - extract(self.sqrt_recipm1_alphas_cumprod, t, x.shape) * noise
                 )
         else:  # directly predicting x₀
@@ -1249,8 +1244,11 @@ class DiffusionModel(tf.keras.Model):
 
     # def forward(self, cond, deterministic=True):
     @tf.function
-    def call(self, cond
+    def call(self, 
+            #  cond
+             cond_state,
             #  , deterministic=True
+            training=True
              ):
         """
         Forward pass for sampling actions. Used in evaluating pre-trained/fine-tuned policy. Not modifying diffusion clipping.
@@ -1264,6 +1262,11 @@ class DiffusionModel(tf.keras.Model):
                 trajectories: (B, Ta, Da)
         """
 
+        # print("type(cond) = ", type(cond))
+        print("type(cond_state) = ", type(cond_state))
+
+        # print("cond = ", cond)
+
         if OUTPUT_FUNCTION_HEADER:
             print("diffusion.py: DiffusionModel.forward()")
 
@@ -1273,15 +1276,16 @@ class DiffusionModel(tf.keras.Model):
         if OUTPUT_POSITIONS:
             print("after device")
 
-        sample_data = cond["state"] if "state" in cond else cond["rgb"]
+        # sample_data = cond["state"] if "state" in cond else cond["rgb"]
+        sample_data = cond_state
 
         if OUTPUT_POSITIONS:
             print("after sample_data")
 
         # B = tf.shape(sample_data)[0]
         # B = sample_data.get_shape().as_list()[0]
-        B = sample_data.shape[0]
-
+        # B = sample_data.shape[0]
+        B = tf.shape(sample_data)[0] 
 
 
         if OUTPUT_VARIABLES:
@@ -1297,20 +1301,26 @@ class DiffusionModel(tf.keras.Model):
             if self.call_x is None:
                 # self.call_x = torch_ones(B, self.horizon_steps, self.action_dim)
 
-                self.call_x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim) )
+                self.call_x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32)
 
                 # self.call_x = torch_randn(B, self.horizon_steps, self.action_dim)
                 x = self.call_x
+
+                print("x from DEBUG branch")
             else:
                 x = self.call_x
         else:
             x = torch_randn(B, self.horizon_steps, self.action_dim)
+
+        print("x = ", x)
 
         # Define timesteps
         if self.use_ddim:
             t_all = self.ddim_t
         else:
             t_all = list(reversed(range(self.denoising_steps)))
+
+        print("t_all = ", t_all)
 
         # Main loop
         for i, t in enumerate(t_all):
@@ -1321,7 +1331,8 @@ class DiffusionModel(tf.keras.Model):
             mean, logvar = self.p_mean_var(
                 x=x,
                 t=t_b,
-                cond=cond,
+                # cond=cond,
+                cond_state=cond_state,
                 index=index_b,
             )
             std = torch_exp(0.5 * logvar)
@@ -1347,7 +1358,8 @@ class DiffusionModel(tf.keras.Model):
                 if self.call_noise is None:            
                     # self.call_noise = torch_randn_like( x  )
                     # self.call_noise = torch_ones_like( x  )
-                    self.call_noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) )  )
+                    # self.call_noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) ) , dtype=tf.float32 )
+                    self.call_noise = tf.Variable( np.random.randn( *(x.numpy().shape) ) , dtype=tf.float32 )
 
                     noise = self.call_noise
                 else:
@@ -1361,7 +1373,7 @@ class DiffusionModel(tf.keras.Model):
             # Clamp action at the final step
             if self.final_action_clip_value is not None and i == len(t_all) - 1:
                 x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
-
+        
         # Return the result as a namedtuple
         return Sample(x, None)
 

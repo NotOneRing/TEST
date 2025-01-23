@@ -115,6 +115,7 @@ class VPGDiffusion(DiffusionModel):
 
         print("Before everything: self.actor = ", self.actor)
         print("Before everything: self.critic = ", self.critic)
+        print("Before everything: self.network = ", self.network)
 
 
 
@@ -122,8 +123,13 @@ class VPGDiffusion(DiffusionModel):
         self.actor = self.network
 
 
+        self.output_weights(self.network)
 
 
+        self.build_actor(self.actor)
+        
+
+        self.output_weights(self.actor)
 
         
 
@@ -197,20 +203,23 @@ class VPGDiffusion(DiffusionModel):
 
         self.build_actor(self.actor_ft)
 
+        self.actor_ft.set_weights(self.actor.get_weights())
 
+        self.build_actor(self.actor_ft)
 
-        self.output_weights(self.actor)
+        self.output_weights(self.actor_ft)
 
 
         # self.load_pickle(network_path)
-        self.build_actor(self.actor)
 
 
-        self.actor_ft.set_weights(self.actor.get_weights())
-        self.build_actor(self.actor_ft)
 
 
         logging.info("Cloned model for fine-tuning")
+
+        logging.info(
+            f"Before turning off Number of finetuned parameters in self: {sum([tf.size(v) for v in self.trainable_variables])}"
+        )
 
         logging.info(
             f"Before turning off Number of finetuned parameters in actor: {sum([tf.size(v) for v in self.actor.trainable_variables])}"
@@ -824,6 +833,9 @@ class VPGDiffusion(DiffusionModel):
         if return_chain:
             chain = torch_stack(chain, dim=1)
         return Sample(x, chain)
+
+
+
 
 
     # ---------- RL training ----------#

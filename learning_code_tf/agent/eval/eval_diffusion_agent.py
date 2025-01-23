@@ -53,6 +53,12 @@ class EvalDiffusionAgent(EvalAgent):
         firsts_trajs[0] = 1
         reward_trajs = np.zeros((self.n_steps, self.n_envs))
 
+        if self.save_full_observations:  # state-only
+            obs_full_trajs = np.empty((0, self.n_envs, self.obs_dim))
+            obs_full_trajs = np.vstack(
+                (obs_full_trajs, prev_obs_venv["state"][:, -1][None])
+            )
+
         # Collect a set of trajectories from env
         for step in range(self.n_steps):
             if step % 10 == 0:
@@ -65,13 +71,33 @@ class EvalDiffusionAgent(EvalAgent):
                     # "state": torch.from_numpy(prev_obs_venv["state"])
                     # .float()
                     # .to(self.device)
-                "state": tf.convert_to_tensor(prev_obs_venv["state"], dtype=tf.float32)
+                "state": tf.Variable(prev_obs_venv["state"], dtype=tf.float32)
                 }
-                samples = self.model(cond=cond, deterministic=True)
+
+                print("type(prev_obs_venv['state']) = ", type(prev_obs_venv["state"]))
+
+                print("before self.model")
+
+                print("self.model = ", self.model)
+
+
+                print("type(cond['state']) = ", type(cond["state"]))
+
+                # samples = self.model(cond=cond
+                #                     #  , deterministic=True
+                #                     )
+
+                samples = self.model( cond_state = cond['state'], training=False)
+                
+                print("samples = ", samples)
+
+
                 output_venv = (
                     # samples.trajectories.cpu().numpy()
                     samples.trajectories.numpy()
                 )  # n_env x horizon x act
+
+
 
             action_venv = output_venv[:, : self.act_steps]
 
@@ -79,11 +105,27 @@ class EvalDiffusionAgent(EvalAgent):
             obs_venv, reward_venv, terminated_venv, truncated_venv, info_venv = (
                 self.venv.step(action_venv)
             )
+
             reward_trajs[step] = reward_venv
             firsts_trajs[step + 1] = terminated_venv | truncated_venv
 
+            if self.save_full_observations:  # state-only
+                obs_full_venv = np.array(
+                    [info["full_obs"]["state"] for info in info_venv]
+                )  # n_envs x act_steps x obs_dim
+                obs_full_trajs = np.vstack(
+                    (obs_full_trajs, obs_full_venv.transpose(1, 0, 2))
+                )
+
             # update for next step
             prev_obs_venv = obs_venv
+
+            if step == 0:
+                break
+
+
+
+
 
         # Summarize episode reward --- this needs to be handled differently depending on whether the environment is reset after each iteration. Only count episodes that finish within the iteration.
         episodes_start_end = []
@@ -127,6 +169,18 @@ class EvalDiffusionAgent(EvalAgent):
             success_rate = 0
             log.info("[WARNING] No episode completed within the iteration!")
 
+
+        # Plot state trajectories (only in D3IL)
+        if self.traj_plotter is not None:
+            self.traj_plotter(
+                obs_full_trajs=obs_full_trajs,
+                n_render=self.n_render,
+                max_episode_steps=self.max_episode_steps,
+                render_dir=self.render_dir,
+                itr=0,
+            )
+
+
         # Log loss and save metrics
         time = timer()
         log.info(
@@ -140,3 +194,10 @@ class EvalDiffusionAgent(EvalAgent):
             eval_best_reward=avg_best_reward,
             time=time,
         )
+
+
+
+
+
+
+

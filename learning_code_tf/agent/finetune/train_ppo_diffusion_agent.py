@@ -76,6 +76,11 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 weight_decay=cfg.train.eta_weight_decay,
             )
 
+
+
+
+
+
     def run(self):
         if OUTPUT_FUNCTION_HEADER:
             print("train_ppo_diffusion_agent.py: TrainPPODiffusionAgent.run()")
@@ -88,7 +93,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
         done_venv = np.zeros((1, self.n_envs))
 
         
-        while self.itr < self.n_train_itr * 10:
+        while self.itr < self.n_train_itr:
             # Prepare video paths for each envs --- only applies for the first set of episodes if allowing reset within iteration and each iteration has multiple episodes from one env
             options_venv = [{} for _ in range(self.n_envs)]
             if self.itr % self.render_freq == 0 and self.render_video:
