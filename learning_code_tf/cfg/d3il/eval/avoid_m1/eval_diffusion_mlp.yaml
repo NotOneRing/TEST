@@ -23,6 +23,7 @@ act_steps: 4
 
 n_steps: 25
 render_num: 40
+# render_num: 1
 
 plotter:
   _target_: env.plot_traj.TrajPlotter
@@ -31,6 +32,7 @@ plotter:
 
 env:
   n_envs: 40
+  # n_envs: 1
   name: ${env_name}
   max_episode_steps: 100
   reset_at_iteration: True

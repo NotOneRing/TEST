@@ -55,6 +55,20 @@ class TrainAgent:
 
         if OUTPUT_POSITIONS:
             print("after cgf.env")
+        
+        print("make_async parameters: cfg.env.name = ", cfg.env.name)
+        print("make_async parameters: env_type = ", env_type)
+        print("make_async parameters: cfg.env.n_envs = ", cfg.env.n_envs)
+        print("make_async parameters: cfg.env.max_episode_steps = ", cfg.env.max_episode_steps)
+        print("make_async parameters: wrappers = ", cfg.env.get("wrappers", None))
+        print("make_async parameters: robomimic_env_cfg_path = ", cfg.get("robomimic_env_cfg_path", None))
+        print("make_async parameters: shape_meta = ", cfg.get("shape_meta", None))
+        print("make_async parameters: use_image_obs = ", cfg.env.get("use_image_obs", False))
+        print("make_async parameters: render = ", cfg.env.get("render", False))
+        print("make_async parameters: render_offscreen = ", cfg.env.get("save_video", False))
+        print("make_async parameters: obs_dim = ", cfg.obs_dim)
+        print("make_async parameters: action_dim = ", cfg.action_dim)
+
 
         self.venv = make_async(
             cfg.env.name,

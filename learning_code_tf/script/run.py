@@ -87,6 +87,10 @@ sys.stderr = open(sys.stderr.fileno(), mode="w", buffering=1)
 def main(cfg: OmegaConf):
 
     print("run.py: main()")
+    
+
+    # print("run.py: main(): cfg = ", cfg)
+
 
     # resolve immediately so all the ${now:} resolvers will use the same time.
     OmegaConf.resolve(cfg)

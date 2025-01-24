@@ -1257,12 +1257,15 @@ def torch_nn_init_normal_(variable, mean=0.0, std=1.0):
     if not isinstance(variable, tf.Variable):
         raise ValueError("Input variable must be a tf.Variable.")
 
-    # Draw values from a normal distribution
-    normal_values = np.random.normal(loc=mean, scale=std, size=variable.shape)
+    # # Draw values from a normal distribution
+    # normal_values = np.random.normal(loc=mean, scale=std, size=variable.shape)
 
-    # Assign the values to the TensorFlow variable
-    variable.assign(normal_values.astype(np.float32))
+    # # Assign the values to the TensorFlow variable
+    # variable.assign(normal_values.astype(np.float32))
 
+    initializer = tf.keras.initializers.RandomNormal(mean=mean, stddev=std)
+    initial_value = initializer(shape=variable.shape, dtype=variable.dtype)
+    variable.assign(initial_value)
 
 
 
@@ -1316,14 +1319,21 @@ def torch_nn_init_xavier_normal_(tensor, gain):
 
     std = gain * tf.sqrt( 2 / (fan_in + fan_out) )
 
-    normal_values = np.random.normal(loc=0, scale=std, size=tensor.shape)
+    # normal_values = np.random.normal(loc=0, scale=std, size=tensor.shape)
 
-    # Assign ones to the variable
-    tensor.assign(normal_values.astype(np.float32))
+    # # Assign ones to the variable
+    # tensor.assign(normal_values.astype(np.float32))
 
-    pass
+    # 使用 TensorFlow 随机数生成
+    normal_values = tf.random.normal(
+        shape=tensor.shape,
+        mean=0.0,
+        stddev=std,
+        dtype=tensor.dtype  # 自动匹配变量数据类型 (e.g. float32)
+    )
 
-
+    # 直接赋值 TensorFlow 张量
+    tensor.assign(normal_values)
 
 
 

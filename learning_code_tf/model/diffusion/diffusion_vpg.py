@@ -35,7 +35,7 @@ from util.torch_to_tf import torch_tensor_requires_grad_, torch_tensor_clamp_, t
 from util.torch_to_tf import torch_log, torch_zeros_like, torch_randn_like, torch_clamp, torch_stack, torch_tensor_repeat, torch_exp, torch_clip, torch_sum, torch_reshape, torch_mean, torch_squeeze
 
 
-from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER, NP_RANDOM
 
 
 
@@ -737,7 +737,7 @@ class VPGDiffusion(DiffusionModel):
         # Loop
         # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
 
-        if DEBUG:
+        if DEBUG or NP_RANDOM:
             x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32 )
         else:
             x = torch_randn([B, self.horizon_steps, self.action_dim])
@@ -789,7 +789,7 @@ class VPGDiffusion(DiffusionModel):
                     std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
             
 
-            if DEBUG:
+            if DEBUG or NP_RANDOM:
                 noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) ), dtype=tf.float32 )
             else:
                 noise = torch_randn_like(x)

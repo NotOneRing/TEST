@@ -702,23 +702,28 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
             # Update lr, min_sampling_std
             if self.itr >= self.n_critic_warmup_itr:
-                self.actor_lr_scheduler.step()
+                actor_lr = self.actor_lr_scheduler.step()
                 if self.learn_eta:
-                    self.eta_lr_scheduler.step()
+                    eta_lr = self.eta_lr_scheduler.step()
             
+                    print("eta_lr = ", eta_lr)
 
-            self.critic_lr_scheduler.step()
 
+                print("actor_lr = ", actor_lr)
+
+
+
+
+
+            critic_lr = self.critic_lr_scheduler.step()
+
+            print("critic_lr = ", critic_lr)
 
 
 
 
 
             self.model.step()
-            
-            
-            
-            
             
             
             

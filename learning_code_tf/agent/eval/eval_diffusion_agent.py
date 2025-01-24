@@ -39,6 +39,8 @@ class EvalDiffusionAgent(EvalAgent):
         # Reset env before iteration starts
         # self.model.eval()
 
+        training = False
+
         print("self.n_envs = ", self.n_envs)
 
         print("self.n_render = ", self.n_render)
@@ -58,6 +60,10 @@ class EvalDiffusionAgent(EvalAgent):
             obs_full_trajs = np.vstack(
                 (obs_full_trajs, prev_obs_venv["state"][:, -1][None])
             )
+
+
+        np.random.seed(42)
+
 
         # Collect a set of trajectories from env
         for step in range(self.n_steps):
@@ -86,6 +92,7 @@ class EvalDiffusionAgent(EvalAgent):
                 # samples = self.model(cond=cond
                 #                     #  , deterministic=True
                 #                     )
+                # print("cond['state'] = ", cond['state'])
 
                 samples = self.model( cond_state = cond['state'], training=False)
                 
@@ -120,8 +127,8 @@ class EvalDiffusionAgent(EvalAgent):
             # update for next step
             prev_obs_venv = obs_venv
 
-            if step == 0:
-                break
+            # if step == 0:
+            #     break
 
 
 

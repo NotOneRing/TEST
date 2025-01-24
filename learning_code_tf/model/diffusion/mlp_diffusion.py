@@ -724,10 +724,14 @@ class DiffusionMLP(tf.keras.layers.Layer):
         # flatten chunk
         x = torch_tensor_view(x, B, -1)
 
+        print("Diffusion_MLP: call(): x1 = ", x)
+
         # flatten history
 
         # state = torch_tensor_view( cond["state"], B, -1 )
         state = torch_tensor_view( cond_state, B, -1 )
+
+        print("Diffusion_MLP: call(): state = ", state)
 
         # obs encoder
         if hasattr(self, "cond_mlp") and self.cond_mlp:
@@ -785,10 +789,10 @@ class DiffusionMLP(tf.keras.layers.Layer):
         time_emb = torch_tensor_view(temp_result, B, self.time_dim)
 
 
-        for layer in self.time_embedding:
-            if isinstance(layer, nn_Linear):
-                print("Linear weights:", layer.trainable_weights[0])
-                print("Linear bias:", layer.trainable_weights[1])
+        # for layer in self.time_embedding:
+        #     if isinstance(layer, nn_Linear):
+        #         print("Linear weights:", layer.trainable_weights[0])
+        #         print("Linear bias:", layer.trainable_weights[1])
                 
                 
         # print("x = ", x)
@@ -796,7 +800,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
         print("type(time_emb) = ", type(time_emb))
 
         # # if OUTPUT_VARIABLES:
-        print("time_emb = ", time_emb)
+        print("Diffusion_MLP: call(): time_emb = ", time_emb)
 
         # print("state = ", state)
 
@@ -810,6 +814,8 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
 
         x = torch_cat([x, time_emb, state], dim=-1)
+
+        print("Diffusion_MLP: call(): x2 = ", x)
 
         if OUTPUT_VARIABLES:
             print("self.mlp_mean = ", self.mlp_mean)

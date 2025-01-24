@@ -9,7 +9,7 @@ Annotated DDIM/DDPM: https://nn.labml.ai/diffusion/stable_diffusion/sampler/ddpm
 """
 
 
-from util.config import DEBUG
+from util.config import DEBUG, NP_RANDOM
 # DEBUG = True
 # DEBUG = False
 
@@ -685,8 +685,8 @@ class DiffusionModel(tf.keras.Model):
 
         # # 生成 [0, self.denoising_steps) 范围的随机整数
 
-        if DEBUG:
-            if self.loss_ori_t is None:
+        if DEBUG or NP_RANDOM:
+            if self.loss_ori_t is None or training:
                 # self.loss_ori_t =  tf.cast( torch_randint(
                 #     low = 0, high = self.denoising_steps, size = (batch_size,)
                 # ), tf.int64)
@@ -699,6 +699,9 @@ class DiffusionModel(tf.keras.Model):
                 t = self.loss_ori_t
             else:
                 t = self.loss_ori_t
+
+            # t =  tf.cast( tf.convert_to_tensor(np.random.randint( 0, self.denoising_steps, (batch_size,) ) ), tf.int64 )
+
         else:
             t =  tf.cast( torch_randint(
                 low = 0, high = self.denoising_steps, size = (batch_size,)
@@ -767,8 +770,8 @@ class DiffusionModel(tf.keras.Model):
 
         # # 生成 [0, self.denoising_steps) 范围的随机整数
 
-        if DEBUG:
-            if self.loss_ori_t is None:
+        if DEBUG or NP_RANDOM:
+            if self.loss_ori_t is None or training:
                 # self.loss_ori_t =  tf.cast( torch_randint(
                 #     low = 0, high = self.denoising_steps, size = (batch_size,)
                 # ), tf.int64)
@@ -781,6 +784,8 @@ class DiffusionModel(tf.keras.Model):
                 t = self.loss_ori_t
             else:
                 t = self.loss_ori_t
+
+            # t =  tf.cast( tf.convert_to_tensor(np.random.randint( 0, self.denoising_steps, (batch_size,) )), tf.int64)
         else:
             t =  tf.cast( torch_randint(
                 low = 0, high = self.denoising_steps, size = (batch_size,)
@@ -829,8 +834,8 @@ class DiffusionModel(tf.keras.Model):
 
         # # Forward process
 
-        if DEBUG:
-            if self.p_losses_noise is None:
+        if DEBUG or NP_RANDOM:
+            if self.p_losses_noise is None or training:
                 # self.p_losses_noise = torch_randn_like(x_start)
                 # self.p_losses_noise = torch_ones_like(x_start)
                 self.p_losses_noise = tf.convert_to_tensor( np.random.randn( *(x_start.numpy().shape) ), dtype=tf.float32 )
@@ -838,6 +843,8 @@ class DiffusionModel(tf.keras.Model):
                 noise = self.p_losses_noise
             else:
                 noise = self.p_losses_noise
+
+            # noise = tf.convert_to_tensor( np.random.randn( *(x_start.numpy().shape) ), dtype=tf.float32 )
         else:
             noise = torch_randn_like(x_start)
 
@@ -865,7 +872,7 @@ class DiffusionModel(tf.keras.Model):
 
         # print("x_start.shape = ", x_start.shape)
         # if training:
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise, training=training)
         # else:
         #     noisy = DiffusionModel.q_sample(self, x_start=x_start, t=t, noise=noise)
 
@@ -971,8 +978,8 @@ class DiffusionModel(tf.keras.Model):
 
         # # Forward process
 
-        if DEBUG:
-            if self.p_losses_noise is None:
+        if DEBUG or NP_RANDOM:
+            if self.p_losses_noise is None or training:
                 # self.p_losses_noise = torch_randn_like(x_start)
                 # self.p_losses_noise = torch_ones_like(x_start)
                 self.p_losses_noise = tf.convert_to_tensor( np.random.randn( *(x_start.numpy().shape) ), dtype=tf.float32 )
@@ -980,11 +987,13 @@ class DiffusionModel(tf.keras.Model):
                 noise = self.p_losses_noise
             else:
                 noise = self.p_losses_noise
+            # noise = tf.convert_to_tensor( np.random.randn( *(x_start.numpy().shape) ), dtype=tf.float32 )
+
         else:
             noise = torch_randn_like(x_start)
 
         
-        x_noisy = DiffusionModel.q_sample(self, x_start=x_start, t=t, noise=noise)
+        x_noisy = DiffusionModel.q_sample(self, x_start=x_start, t=t, noise=noise, training=training)
 
 
         # print("x_noisy.shape = ", x_noisy.shape)
@@ -1138,7 +1147,7 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-    def q_sample(self, x_start, t, noise=None):
+    def q_sample(self, x_start, t, noise=None, training=True):
         """
         q(xₜ | x₀) = 𝒩(xₜ; √ α̅ₜ x₀, (1-α̅ₜ)I)
         xₜ = √ α̅ₜ xₒ + √ (1-α̅ₜ) ε
@@ -1156,8 +1165,8 @@ class DiffusionModel(tf.keras.Model):
         # Generate noise if not provided
 
 
-        if DEBUG:
-            if self.q_sample_noise is None: 
+        if DEBUG or NP_RANDOM:
+            if self.q_sample_noise is None or training: 
                 # print("DEBUG BRANCH1")   
                 if noise is None:
                     # self.q_sample_noise = torch_randn_like(x_start)
@@ -1170,6 +1179,7 @@ class DiffusionModel(tf.keras.Model):
                 # print("DEBUG BRANCH2")         
                 if noise is None:
                     noise = self.q_sample_noise
+            # noise = tf.convert_to_tensor( np.random.randn(*(x_start.numpy().shape)), dtype=tf.float32)
         else:
             # print("DEBUG BRANCH3")         
             if noise is None:
@@ -1263,7 +1273,7 @@ class DiffusionModel(tf.keras.Model):
         """
 
         # print("type(cond) = ", type(cond))
-        print("type(cond_state) = ", type(cond_state))
+        # print("type(cond_state) = ", type(cond_state))
 
         # print("cond = ", cond)
 
@@ -1287,6 +1297,9 @@ class DiffusionModel(tf.keras.Model):
         # B = sample_data.shape[0]
         B = tf.shape(sample_data)[0] 
 
+        print("B = ", B)
+        print("self.horizon_steps = ", self.horizon_steps)
+        print("self.action_dim = ", self.action_dim)
 
         if OUTPUT_VARIABLES:
             print("B = ", B)
@@ -1295,10 +1308,12 @@ class DiffusionModel(tf.keras.Model):
 
             print("self.action_dim = ", self.action_dim)
 
+
         # Starting random noise
         # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
-        if DEBUG:
-            if self.call_x is None:
+
+        if DEBUG or NP_RANDOM:
+            if self.call_x is None or training:
                 # self.call_x = torch_ones(B, self.horizon_steps, self.action_dim)
 
                 self.call_x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32)
@@ -1309,10 +1324,11 @@ class DiffusionModel(tf.keras.Model):
                 print("x from DEBUG branch")
             else:
                 x = self.call_x
+            # x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32)
         else:
             x = torch_randn(B, self.horizon_steps, self.action_dim)
 
-        print("x = ", x)
+        print("Diffusion.call(): x1 = ", x)
 
         # Define timesteps
         if self.use_ddim:
@@ -1320,7 +1336,7 @@ class DiffusionModel(tf.keras.Model):
         else:
             t_all = list(reversed(range(self.denoising_steps)))
 
-        print("t_all = ", t_all)
+        print("Diffusion.call(): t_all = ", t_all)
 
         # Main loop
         for i, t in enumerate(t_all):
@@ -1354,26 +1370,35 @@ class DiffusionModel(tf.keras.Model):
 
                 print("type(x.shape) = ", type(x.shape) )
 
-            if DEBUG:
-                if self.call_noise is None:            
-                    # self.call_noise = torch_randn_like( x  )
-                    # self.call_noise = torch_ones_like( x  )
-                    # self.call_noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) ) , dtype=tf.float32 )
-                    self.call_noise = tf.Variable( np.random.randn( *(x.numpy().shape) ) , dtype=tf.float32 )
+            if DEBUG or NP_RANDOM:
+                # if self.call_noise is None or training:            
+                #     # self.call_noise = torch_randn_like( x  )
+                #     # self.call_noise = torch_ones_like( x  )
+                #     # self.call_noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) ) , dtype=tf.float32 )
+                #     self.call_noise = tf.Variable( np.random.randn( *(x.numpy().shape) ) , dtype=tf.float32 )
 
-                    noise = self.call_noise
-                else:
-                    noise = self.call_noise
+                #     noise = self.call_noise
+                # else:
+                #     noise = self.call_noise
+                noise = tf.Variable( np.random.randn( *(x.numpy().shape) ) , dtype=tf.float32 )
             else:
                 noise = torch_randn_like( x  )
+
+            print("Diffusion.call(): std = ", std)
+
+            print("Diffusion.call(): noise = ", noise)
 
             torch_tensor_clamp_(noise, -self.randn_clip_value, self.randn_clip_value)
             x = mean + std * noise
 
+            print("Diffusion.call(): x2 = ", x)
+
             # Clamp action at the final step
             if self.final_action_clip_value is not None and i == len(t_all) - 1:
                 x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
-        
+
+                print("Diffusion.call(): x3 = ", x)
+
         # Return the result as a namedtuple
         return Sample(x, None)
 
@@ -1542,17 +1567,17 @@ class DiffusionModel(tf.keras.Model):
             print("get_config(): self.env_name = ", None)
         
 
-        if DEBUG:
-            if OUTPUT_POSITIONS:
-                print("DiffusionModel: get_config DEBUG = True")
-            config.update({
-            "loss_ori_t": self.loss_ori_t,
-            "p_losses_noise": self.p_losses_noise,
-            "call_noise": self.call_noise,
-            "call_noise": self.call_noise,
-            "call_x": self.call_x,
-            "q_sample_noise": self.q_sample_noise,
-            })
+        # if DEBUG:
+        #     if OUTPUT_POSITIONS:
+        #         print("DiffusionModel: get_config DEBUG = True")
+        #     config.update({
+        #     "loss_ori_t": self.loss_ori_t,
+        #     "p_losses_noise": self.p_losses_noise,
+        #     "call_noise": self.call_noise,
+        #     "call_noise": self.call_noise,
+        #     "call_x": self.call_x,
+        #     "q_sample_noise": self.q_sample_noise,
+        #     })
         
 
         if OUTPUT_VARIABLES:
@@ -1635,72 +1660,72 @@ class DiffusionModel(tf.keras.Model):
             result.env_name = None
 
 
-        if DEBUG:
+        # if DEBUG:
 
-            # if not isinstance(config.pop("loss_ori_t"), tf.Tensor):
-            loss_ori_t = config.pop("loss_ori_t")
-            if loss_ori_t:
-                if OUTPUT_POSITIONS:
-                    print("Enter loss_ori_t")
-                loss_ori_t = dict(loss_ori_t)  # 转换为普通字典
-                values = loss_ori_t['config']['value']
-                dtype = loss_ori_t['config']['dtype']
-                loss_ori_t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
-                result.loss_ori_t = loss_ori_t
-            else:
-                result.loss_ori_t = None
-
-
-            p_losses_noise = config.pop("p_losses_noise")
-            if p_losses_noise:
-                if OUTPUT_POSITIONS:
-                    print("Enter p_losses_noise")
-                p_losses_noise = dict(p_losses_noise)  # 转换为普通字典
-                values = p_losses_noise['config']['value']
-                dtype = p_losses_noise['config']['dtype']
-                p_losses_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
-                result.p_losses_noise = p_losses_noise
-            else:
-                result.p_losses_noise = None
+        #     # if not isinstance(config.pop("loss_ori_t"), tf.Tensor):
+        #     loss_ori_t = config.pop("loss_ori_t")
+        #     if loss_ori_t:
+        #         if OUTPUT_POSITIONS:
+        #             print("Enter loss_ori_t")
+        #         loss_ori_t = dict(loss_ori_t)  # 转换为普通字典
+        #         values = loss_ori_t['config']['value']
+        #         dtype = loss_ori_t['config']['dtype']
+        #         loss_ori_t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+        #         result.loss_ori_t = loss_ori_t
+        #     else:
+        #         result.loss_ori_t = None
 
 
-            call_noise = config.pop("call_noise")
-            if call_noise:
-                if OUTPUT_POSITIONS:
-                    print("Enter call_noise")
-                call_noise = dict()  # 转换为普通字典
-                values = call_noise['config']['value']
-                dtype = call_noise['config']['dtype']
-                call_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
-                result.call_noise = call_noise
-            else:
-                result.call_noise = None
+        #     p_losses_noise = config.pop("p_losses_noise")
+        #     if p_losses_noise:
+        #         if OUTPUT_POSITIONS:
+        #             print("Enter p_losses_noise")
+        #         p_losses_noise = dict(p_losses_noise)  # 转换为普通字典
+        #         values = p_losses_noise['config']['value']
+        #         dtype = p_losses_noise['config']['dtype']
+        #         p_losses_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+        #         result.p_losses_noise = p_losses_noise
+        #     else:
+        #         result.p_losses_noise = None
 
 
-            call_x = config.pop("call_x")
-            if call_x:
-                if OUTPUT_POSITIONS:
-                    print("Enter call_x")
-                call_x = dict()  # 转换为普通字典
-                values = call_x['config']['value']
-                dtype = call_x['config']['dtype']
-                call_x = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
-                result.call_x = call_x
-            else:
-                result.call_x = None
+        #     call_noise = config.pop("call_noise")
+        #     if call_noise:
+        #         if OUTPUT_POSITIONS:
+        #             print("Enter call_noise")
+        #         call_noise = dict()  # 转换为普通字典
+        #         values = call_noise['config']['value']
+        #         dtype = call_noise['config']['dtype']
+        #         call_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+        #         result.call_noise = call_noise
+        #     else:
+        #         result.call_noise = None
 
 
-            q_sample_noise = config.pop("q_sample_noise")
-            if q_sample_noise:
-                if OUTPUT_POSITIONS:
-                    print("Enter q_sample_noise")
-                q_sample_noise = dict(q_sample_noise)  # 转换为普通字典
-                values = q_sample_noise['config']['value']
-                dtype = q_sample_noise['config']['dtype']
-                q_sample_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
-                result.q_sample_noise = q_sample_noise
-            else:
-                result.q_sample_noise = None
+        #     call_x = config.pop("call_x")
+        #     if call_x:
+        #         if OUTPUT_POSITIONS:
+        #             print("Enter call_x")
+        #         call_x = dict()  # 转换为普通字典
+        #         values = call_x['config']['value']
+        #         dtype = call_x['config']['dtype']
+        #         call_x = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+        #         result.call_x = call_x
+        #     else:
+        #         result.call_x = None
+
+
+        #     q_sample_noise = config.pop("q_sample_noise")
+        #     if q_sample_noise:
+        #         if OUTPUT_POSITIONS:
+        #             print("Enter q_sample_noise")
+        #         q_sample_noise = dict(q_sample_noise)  # 转换为普通字典
+        #         values = q_sample_noise['config']['value']
+        #         dtype = q_sample_noise['config']['dtype']
+        #         q_sample_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
+        #         result.q_sample_noise = q_sample_noise
+        #     else:
+        #         result.q_sample_noise = None
 
         
         return result
