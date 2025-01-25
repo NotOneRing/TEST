@@ -506,6 +506,17 @@ def torch_tensor_float(input):
 
 
 
+
+
+def torch_tensor_byte(input):
+    output = tf.cast(input, tf.uint8)
+    return output
+
+
+
+
+
+
 def torch_tensor_long(input):
     return tf.cast(input, tf.int64)
 
