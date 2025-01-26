@@ -512,6 +512,154 @@ class DiffusionModel(tf.keras.Model):
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)
 
+
+
+
+
+
+
+
+
+
+        #Gym: halfcheetah
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+        
+        #Gym: Hopper
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+         
+        #Gym: Walker
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+        
+
+
+
+
+
+        #Robomimic Can
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+        
+
+        #Robomimic lift
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+
+
+        # #Robomimic Square
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
+        # 'network.cond_mlp.moduleList.0.linear_1.weight'
+        # 'network.cond_mlp.moduleList.0.linear_1.bias'
+        # 'network.cond_mlp.moduleList.1.linear_1.weight'
+        # 'network.cond_mlp.moduleList.1.linear_1.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+            
+
+        #Robomimic Transport
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
         if OUTPUT_VARIABLES:
             print("before self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)")
         self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)  # kernel
@@ -527,12 +675,33 @@ class DiffusionModel(tf.keras.Model):
         self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])     # bias
 
 
+
+        # 'network.cond_mlp.moduleList.0.linear_1.weight'
+        # 'network.cond_mlp.moduleList.0.linear_1.bias'
+        # 'network.cond_mlp.moduleList.1.linear_1.weight'
+        # 'network.cond_mlp.moduleList.1.linear_1.bias'
+        if 'network.cond_mlp.moduleList.0.linear_1.weight' in params_dict:
+            self.network.cond_mlp.moduleList[0].trainable_weights[0].assign(params_dict['network.cond_mlp.moduleList.0.linear_1.weight'].T)  # kernel
+
+        if 'network.cond_mlp.moduleList.0.linear_1.bias' in params_dict:
+            self.network.cond_mlp.moduleList[0].trainable_weights[1].assign(params_dict['network.cond_mlp.moduleList.0.linear_1.bias'].T)  # kernel
+
+        if 'network.cond_mlp.moduleList.1.linear_1.weight' in params_dict:
+            self.network.cond_mlp.moduleList[1].trainable_weights[0].assign(params_dict['network.cond_mlp.moduleList.1.linear_1.weight'].T)  # kernel
+
+        if 'network.cond_mlp.moduleList.1.linear_1.bias' in params_dict:
+            self.network.cond_mlp.moduleList[1].trainable_weights[1].assign(params_dict['network.cond_mlp.moduleList.1.linear_1.bias'].T)  # kernel
+
+
+
+
         if OUTPUT_VARIABLES:
             print("before self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)")
         self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
         if OUTPUT_VARIABLES:
             print("before self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])")
         self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
+
 
         if OUTPUT_VARIABLES:
             print("before self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)")
@@ -555,6 +724,123 @@ class DiffusionModel(tf.keras.Model):
             print("before self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])")
         self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
 
+
+
+
+
+
+
+        if 'network.mlp_mean.layers.1.norm1.weight' in params_dict:
+            self.network.mlp_mean.my_layers[1].norm1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.norm1.weight'].T)  # kernel
+
+        if 'network.mlp_mean.layers.1.norm1.bias' in params_dict:
+            self.network.mlp_mean.my_layers[1].norm1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.norm1.bias'].T)  # kernel
+
+
+        if 'network.mlp_mean.layers.1.norm2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[1].norm2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.norm2.weight'].T)  # kernel
+
+        if 'network.mlp_mean.layers.1.norm2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[1].norm2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.norm2.bias'].T)  # kernel
+
+
+
+
+
+        if 'network.mlp_mean.layers.2.l1.weight' in params_dict:
+            self.network.mlp_mean.my_layers[2].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.l1.weight'])     # weight
+
+        if 'network.mlp_mean.layers.2.l1.bias' in params_dict:
+            self.network.mlp_mean.my_layers[2].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.l1.bias'])     # bias
+
+        if 'network.mlp_mean.layers.2.l2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[2].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.l2.weight'])     # weight
+
+        if 'network.mlp_mean.layers.2.l2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[2].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.l2.bias'])     # bias
+
+        if 'network.mlp_mean.layers.2.norm1.weight' in params_dict:
+            self.network.mlp_mean.my_layers[2].norm1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.norm1.weight'])     # weight
+
+        if 'network.mlp_mean.layers.2.norm1.bias' in params_dict:
+            self.network.mlp_mean.my_layers[2].norm1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.norm1.bias'])     # bias
+
+        if 'network.mlp_mean.layers.2.norm2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[2].norm2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.norm2.weight'])     # weight
+
+        if 'network.mlp_mean.layers.2.norm2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[2].norm2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.norm2.bias'])     # bias
+
+
+
+
+
+
+
+        # 'network.mlp_mean.layers.3.l1.weight'
+        # 'network.mlp_mean.layers.3.l1.bias'
+        # 'network.mlp_mean.layers.3.l2.weight'
+        # 'network.mlp_mean.layers.3.l2.bias'
+        # 'network.mlp_mean.layers.3.norm1.weight'
+        # 'network.mlp_mean.layers.3.norm1.bias'
+        # 'network.mlp_mean.layers.3.norm2.weight'
+        # 'network.mlp_mean.layers.3.norm2.bias'
+        if 'network.mlp_mean.layers.3.l1.weight' in params_dict:
+            self.network.mlp_mean.my_layers[3].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.l1.weight'])     # weight
+
+        if 'network.mlp_mean.layers.3.l1.bias' in params_dict:
+            self.network.mlp_mean.my_layers[3].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.3.l1.bias'])     # bias
+
+        if 'network.mlp_mean.layers.3.l2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[3].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.l2.weight'])     # weight
+
+        if 'network.mlp_mean.layers.3.l2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[3].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.3.l2.bias'])     # bias
+
+        if 'network.mlp_mean.layers.3.norm1.weight' in params_dict:
+            self.network.mlp_mean.my_layers[3].norm1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.norm1.weight'])     # weight
+
+        if 'network.mlp_mean.layers.3.norm1.bias' in params_dict:
+            self.network.mlp_mean.my_layers[3].norm1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.3.norm1.bias'])     # bias
+
+        if 'network.mlp_mean.layers.3.norm2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[3].norm2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.norm2.weight'])     # weight
+
+        if 'network.mlp_mean.layers.3.norm2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[3].norm2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.3.norm2.bias'])     # bias
+
+
+
+
+        # 'network.mlp_mean.layers.4.weight'
+        # 'network.mlp_mean.layers.4.bias'
+        if 'network.mlp_mean.layers.4.weight' in params_dict:
+            self.network.mlp_mean.my_layers[4].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.4.weight'].T)  # kernel
+
+        if 'network.mlp_mean.layers.4.bias' in params_dict:
+            self.network.mlp_mean.my_layers[4].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.4.bias'])     # bias
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     
 
 
 
@@ -610,6 +896,32 @@ class DiffusionModel(tf.keras.Model):
         print("actor.time_embedding[3].trainable_weights[1] (bias):")
         print(self.actor.time_embedding[3].trainable_weights[1].numpy())
 
+
+
+        # 'network.cond_mlp.moduleList.0.linear_1.weight'
+        # 'network.cond_mlp.moduleList.0.linear_1.bias'
+        # 'network.cond_mlp.moduleList.1.linear_1.weight'
+        # 'network.cond_mlp.moduleList.1.linear_1.bias'
+
+        if self.actor.cond_mlp:
+            # if 'network.cond_mlp.moduleList.0.linear_1.weight' in params_dict:
+            self.actor.cond_mlp.moduleList[0].trainable_weights[0].numpy()
+
+            # if 'network.cond_mlp.moduleList.0.linear_1.bias' in params_dict:
+            self.network.cond_mlp.moduleList[0].trainable_weights[1].numpy()
+                
+            # if 'network.cond_mlp.moduleList.1.linear_1.weight' in params_dict:
+            self.network.cond_mlp.moduleList[1].trainable_weights[0].numpy()
+                
+            # if 'network.cond_mlp.moduleList.1.linear_1.bias' in params_dict:
+            self.network.cond_mlp.moduleList[1].trainable_weights[1].numpy()
+
+
+
+
+
+
+
         # MLP mean layer 0
         print("actor.mlp_mean.my_layers[0].trainable_weights[0] (kernel):")
         print(self.actor.mlp_mean.my_layers[0].trainable_weights[0].numpy())
@@ -635,6 +947,8 @@ class DiffusionModel(tf.keras.Model):
         print(self.actor.mlp_mean.my_layers[2].trainable_weights[1].numpy())
 
 
+
+            
 
 
 
@@ -1422,13 +1736,25 @@ class DiffusionModel(tf.keras.Model):
             shape1 = (128, 4, 3)
             # cond_copy['state'].shape =  
             shape2 = (128, 1, 11)
+        elif self.env_name == "kitchen-complete-v0":
+            shape1 = (128, 4, 9)
+            shape2 = (128, 1, 60)
+        elif self.env_name == "kitchen-mixed-v0":
+            shape1 = (256, 4, 9)
+            shape2 = (256, 1, 60)
+        elif self.env_name == "kitchen-partial-v0":
+            shape1 = (128, 4, 9)
+            shape2 = (128, 1, 60)
         elif self.env_name == "walker2d-medium-v2":
-            pass
+            shape1 = (128, 4, 6)
+            shape2 = (128, 1, 17)
         elif self.env_name == "halfcheetah-medium-v2":
-            pass
+            shape1 = (128, 4, 6)
+            shape2 = (128, 1, 17)
         # Robomimic - lift/can/square/transport
         elif self.env_name == "lift":
-            pass
+            shape1 = (256, 4, 7)
+            shape2 = (256, 1, 19)
 
         elif self.env_name == "can":
             #can 
@@ -1438,10 +1764,12 @@ class DiffusionModel(tf.keras.Model):
             shape2 = (256, 1, 23)
 
         elif self.env_name == "square":
-            pass
+            shape1 = (256, 4, 7)
+            shape2 = (256, 1, 23)
 
         elif self.env_name == "transport":
-            pass
+            shape1 = (256, 8, 14)
+            shape2 = (256, 1, 59)
 
         # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
         elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
@@ -1450,12 +1778,26 @@ class DiffusionModel(tf.keras.Model):
             shape1 = (16, 4, 2)
             # cond_copy['state'].shape =  
             shape2 = (16, 1, 4)
-        # Furniture-Bench - one_leg/lamp/round_table_low/med
-        elif self.env_name == "square":
-            pass
 
-        elif self.env_name == "transport":
-            pass
+        # Furniture-Bench - one_leg/lamp/round_table_low/med
+        elif self.env_name == "lamp_low_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 44)
+        elif self.env_name == "lamp_med_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 44)
+        elif self.env_name == "one_leg_low_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 58)
+        elif self.env_name == "one_leg_med_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 58)
+        elif self.env_name == "round_table_low_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 44)
+        elif self.env_name == "round_table_med_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 44)
         
         else:
             # #one_leg_low
@@ -1468,6 +1810,14 @@ class DiffusionModel(tf.keras.Model):
 
         # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
         # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
+
+
+        print("type(shape1) = ", type(shape1))
+        print("type(shape2) = ", type(shape2))
+
+        print("shape1 = ", shape1)
+        print("shape2 = ", shape2)
+
 
         param1 = torch_ones(*shape1)
         param2 = torch_ones(*shape2)

@@ -42,8 +42,10 @@ class TrainDiffusionAgent(PreTrainAgent):
         super().__init__(cfg)
 
 
+        print("type(cfg)", type(cfg))
+
         if DEBUG and TEST_LOAD_PRETRAIN:
-            self.base_policy_path = cfg.base_policy_path
+            self.base_policy_path = cfg.get("base_policy_path", None)
 
 
         self.model.batch_size = self.batch_size
@@ -244,6 +246,13 @@ class TrainDiffusionAgent(PreTrainAgent):
                 cond_copy = deepcopy(cond)
 
 
+            print("self.cfg_env_name = ", self.cfg_env_name)
+            print("cur_actions.shape = ", cur_actions.shape)
+            print("cond['state'].shape = ", cond['state'].shape)
+            return
+
+
+
 
             print("train_diffusion_agent.py: run() 2")
 
@@ -305,9 +314,9 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
 
-
-
             if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
+                
+
                 self.model.load_pickle(self.base_policy_path)
 
                 self.model.output_weights()

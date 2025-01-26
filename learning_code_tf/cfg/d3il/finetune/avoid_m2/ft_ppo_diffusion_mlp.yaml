@@ -7,7 +7,9 @@ _target_: agent.finetune.train_ppo_diffusion_agent.TrainPPODiffusionAgent
 
 name: ${env_name}_m2_ft_diffusion_mlp_ta${horizon_steps}_td${denoising_steps}_tdf${ft_denoising_steps}
 logdir: ${oc.env:DPPO_LOG_DIR}/d3il-finetune/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
+
 base_policy_path: ${oc.env:DPPO_LOG_DIR}/d3il-pretrain/m2/avoid_d57_r12_pre_diffusion_mlp_ta4_td20/2024-07-07_13-12-09/checkpoint/state_15000.pt
+
 normalization_path: ${oc.env:DPPO_DATA_DIR}/d3il/avoid_m2/normalization.npz
 
 seed: 42

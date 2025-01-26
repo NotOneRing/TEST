@@ -3088,34 +3088,38 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
             print("called nn_TransformerDecoderLayer __init__()")
 
         super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
-        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.ffn = tf.keras.Sequential([
-            tf.keras.layers.Dense(dim_feedforward, activation=activation),
+        # self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        # self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+
+        self.self_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.cross_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+
+
+        self.ffn = nn_Sequential([
+        # tf.keras.Sequential([
+            # tf.keras.layers.Dense(dim_feedforward, activation=activation),
+            nn_Linear(dim_feedforward, activation=activation),
             tf.keras.layers.Dropout(dropout),
-            tf.keras.layers.Dense(d_model),
+            # tf.keras.layers.Dense(d_model),
+            nn_Linear(d_model),
         ])
-        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = tf.keras.layers.Dropout(dropout)
-        self.dropout2 = tf.keras.layers.Dropout(dropout)
-        self.dropout3 = tf.keras.layers.Dropout(dropout)
 
-        # self.self_attn = nn_MultiHeadAttention(num_heads=nhead, d_model=d_model)
-        # self.cross_attn = nn_MultiHeadAttention(num_heads=nhead, d_model=d_model)
-
-        # self.ffn = nn_Sequential([
-        #     nn_Linear(dim_feedforward, activation=activation),
-        #     tf.keras.layers.Dropout(dropout),
-        #     tf.keras.layers.Dense(d_model),
-        # ])
-        # self.norm1 = nn_LayerNorm(epsilon=1e-6)
+        
+        # self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
         # self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
         # self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+
+        self.norm1 = nn_LayerNorm(epsilon=1e-6)
+        self.norm2 = nn_LayerNorm(epsilon=1e-6)
+        self.norm3 = nn_LayerNorm(epsilon=1e-6)
+
         # self.dropout1 = tf.keras.layers.Dropout(dropout)
         # self.dropout2 = tf.keras.layers.Dropout(dropout)
         # self.dropout3 = tf.keras.layers.Dropout(dropout)
+
+        self.dropout1 = nn_Dropout(dropout)
+        self.dropout2 = nn_Dropout(dropout)
+        self.dropout3 = nn_Dropout(dropout)
 
     def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
         # Self-attention on target
@@ -3134,15 +3138,6 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
         tgt = self.norm3(tgt)
 
         return tgt
-
-
-
-
-
-
-
-
-
 
 
 class nn_TransformerDecoder(tf.keras.layers.Layer):
