@@ -15,6 +15,9 @@ from agent.eval.eval_agent import EvalAgent
 
 from util.torch_to_tf import torch_no_grad
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
+
 class EvalDiffusionAgent(EvalAgent):
 
     def __init__(self, cfg):
@@ -41,13 +44,14 @@ class EvalDiffusionAgent(EvalAgent):
 
         training = False
 
-        print("self.n_envs = ", self.n_envs)
+        if OUTPUT_VARIABLES:
+            print("self.n_envs = ", self.n_envs)
 
-        print("self.n_render = ", self.n_render)
+            print("self.n_render = ", self.n_render)
 
-        print("self.n_steps = ", self.n_steps)
+            print("self.n_steps = ", self.n_steps)
 
-        print("self.act_steps = ", self.act_steps)
+            print("self.act_steps = ", self.act_steps)
 
 
         firsts_trajs = np.zeros((self.n_steps + 1, self.n_envs))
@@ -80,14 +84,15 @@ class EvalDiffusionAgent(EvalAgent):
                 "state": tf.Variable(prev_obs_venv["state"], dtype=tf.float32)
                 }
 
-                print("type(prev_obs_venv['state']) = ", type(prev_obs_venv["state"]))
+                if OUTPUT_VARIABLES:
+                    print("type(prev_obs_venv['state']) = ", type(prev_obs_venv["state"]))
 
-                print("before self.model")
+                    print("before self.model")
 
-                print("self.model = ", self.model)
+                    print("self.model = ", self.model)
 
 
-                print("type(cond['state']) = ", type(cond["state"]))
+                    print("type(cond['state']) = ", type(cond["state"]))
 
                 # samples = self.model(cond=cond
                 #                     #  , deterministic=True
@@ -96,7 +101,8 @@ class EvalDiffusionAgent(EvalAgent):
 
                 samples = self.model( cond_state = cond['state'], training=False)
                 
-                print("samples = ", samples)
+                if OUTPUT_VARIABLES:
+                    print("samples = ", samples)
 
 
                 output_venv = (

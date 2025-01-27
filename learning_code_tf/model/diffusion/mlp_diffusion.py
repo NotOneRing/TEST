@@ -699,7 +699,9 @@ class DiffusionMLP(tf.keras.layers.Layer):
             state: (B, To, Do)
         """
 
-        print("mlp_diffusion.py: DiffusionMLP.call()", flush = True)
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("mlp_diffusion.py: DiffusionMLP.call()", flush = True)
 
 
         x, time, cond_state = inputs
@@ -724,14 +726,17 @@ class DiffusionMLP(tf.keras.layers.Layer):
         # flatten chunk
         x = torch_tensor_view(x, B, -1)
 
-        print("Diffusion_MLP: call(): x1 = ", x)
+        if OUTPUT_VARIABLES:
+
+            print("Diffusion_MLP: call(): x1 = ", x)
 
         # flatten history
 
         # state = torch_tensor_view( cond["state"], B, -1 )
         state = torch_tensor_view( cond_state, B, -1 )
 
-        print("Diffusion_MLP: call(): state = ", state)
+        if OUTPUT_VARIABLES:
+            print("Diffusion_MLP: call(): state = ", state)
 
         # obs encoder
         if hasattr(self, "cond_mlp") and self.cond_mlp:
@@ -797,10 +802,11 @@ class DiffusionMLP(tf.keras.layers.Layer):
                 
         # print("x = ", x)
 
-        print("type(time_emb) = ", type(time_emb))
+        if OUTPUT_VARIABLES:
+            print("type(time_emb) = ", type(time_emb))
 
-        # # if OUTPUT_VARIABLES:
-        print("Diffusion_MLP: call(): time_emb = ", time_emb)
+        if OUTPUT_VARIABLES:
+            print("Diffusion_MLP: call(): time_emb = ", time_emb)
 
         # print("state = ", state)
 
@@ -815,7 +821,8 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         x = torch_cat([x, time_emb, state], dim=-1)
 
-        print("Diffusion_MLP: call(): x2 = ", x)
+        if OUTPUT_VARIABLES:
+            print("Diffusion_MLP: call(): x2 = ", x)
 
         if OUTPUT_VARIABLES:
             print("self.mlp_mean = ", self.mlp_mean)
@@ -824,8 +831,8 @@ class DiffusionMLP(tf.keras.layers.Layer):
         out = self.mlp_mean(x)
 
 
-        # # if OUTPUT_VARIABLES:
-        print("out = ", out)
+        if OUTPUT_VARIABLES:
+            print("out = ", out)
 
 
         if OUTPUT_VARIABLES:

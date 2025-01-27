@@ -56,18 +56,19 @@ class TrainAgent:
         if OUTPUT_POSITIONS:
             print("after cgf.env")
         
-        print("make_async parameters: cfg.env.name = ", cfg.env.name)
-        print("make_async parameters: env_type = ", env_type)
-        print("make_async parameters: cfg.env.n_envs = ", cfg.env.n_envs)
-        print("make_async parameters: cfg.env.max_episode_steps = ", cfg.env.max_episode_steps)
-        print("make_async parameters: wrappers = ", cfg.env.get("wrappers", None))
-        print("make_async parameters: robomimic_env_cfg_path = ", cfg.get("robomimic_env_cfg_path", None))
-        print("make_async parameters: shape_meta = ", cfg.get("shape_meta", None))
-        print("make_async parameters: use_image_obs = ", cfg.env.get("use_image_obs", False))
-        print("make_async parameters: render = ", cfg.env.get("render", False))
-        print("make_async parameters: render_offscreen = ", cfg.env.get("save_video", False))
-        print("make_async parameters: obs_dim = ", cfg.obs_dim)
-        print("make_async parameters: action_dim = ", cfg.action_dim)
+        if OUTPUT_VARIABLES:
+            print("make_async parameters: cfg.env.name = ", cfg.env.name)
+            print("make_async parameters: env_type = ", env_type)
+            print("make_async parameters: cfg.env.n_envs = ", cfg.env.n_envs)
+            print("make_async parameters: cfg.env.max_episode_steps = ", cfg.env.max_episode_steps)
+            print("make_async parameters: wrappers = ", cfg.env.get("wrappers", None))
+            print("make_async parameters: robomimic_env_cfg_path = ", cfg.get("robomimic_env_cfg_path", None))
+            print("make_async parameters: shape_meta = ", cfg.get("shape_meta", None))
+            print("make_async parameters: use_image_obs = ", cfg.env.get("use_image_obs", False))
+            print("make_async parameters: render = ", cfg.env.get("render", False))
+            print("make_async parameters: render_offscreen = ", cfg.env.get("save_video", False))
+            print("make_async parameters: obs_dim = ", cfg.obs_dim)
+            print("make_async parameters: action_dim = ", cfg.action_dim)
 
 
         self.venv = make_async(
@@ -137,7 +138,8 @@ class TrainAgent:
         self.cfg_env_name = cfg.env_name
 
 
-        print("self.cfg_env_name = ", self.cfg_env_name)        
+        if OUTPUT_VARIABLES:
+            print("self.cfg_env_name = ", self.cfg_env_name)        
 
         # Build model and load checkpoint
         self.model = hydra.utils.instantiate(cfg.model, env_name=self.cfg_env_name)
@@ -278,11 +280,14 @@ class TrainAgent:
         """
         Loads model from disk.
         """
-        print("train_agent.py: TrainAgent.load()")
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.load()")
 
         loadpath = os.path.join(self.checkpoint_dir, f"state_{itr}.keras")
 
-        print("loadpath = ", loadpath)
+        if OUTPUT_VARIABLES:
+            print("loadpath = ", loadpath)
 
         from model.diffusion.mlp_diffusion import DiffusionMLP
         from model.diffusion.diffusion import DiffusionModel
@@ -337,8 +342,9 @@ class TrainAgent:
     #     self.model.load_state_dict(data["model"])
 
     def reset_env_all(self, verbose=False, options_venv=None, **kwargs):
-
-        print("train_agent.py: TrainAgent.reset_env_all()")
+        
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.reset_env_all()")
 
         if options_venv is None:
             options_venv = [
@@ -360,7 +366,8 @@ class TrainAgent:
 
     def reset_env(self, env_ind, verbose=False):
 
-        print("train_agent.py: TrainAgent.reset_env()")
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.reset_env()")
 
         task = {}
         obs = self.venv.reset_one_arg(env_ind=env_ind, options=task)

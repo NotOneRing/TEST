@@ -14,6 +14,8 @@ import random
 log = logging.getLogger(__name__)
 from env.gym_utils import make_async
 
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+
 
 class EvalAgent:
 
@@ -36,21 +38,23 @@ class EvalAgent:
         # Make vectorized env
         self.env_name = cfg.env.name
 
-        print("self.env_name = ", self.env_name)
+        if OUTPUT_VARIABLES:
+            print("self.env_name = ", self.env_name)
 
 
-        print("make_async parameters: cfg.env.name = ", cfg.env.name)
-        print("make_async parameters: env_type = ", cfg.env.get("env_type", None))
-        print("make_async parameters: cfg.env.n_envs = ", cfg.env.n_envs)
-        print("make_async parameters: cfg.env.max_episode_steps = ", cfg.env.max_episode_steps)
-        print("make_async parameters: wrappers = ", cfg.env.get("wrappers", None))
-        print("make_async parameters: robomimic_env_cfg_path = ", cfg.get("robomimic_env_cfg_path", None))
-        print("make_async parameters: shape_meta = ", cfg.get("shape_meta", None))
-        print("make_async parameters: use_image_obs = ", cfg.env.get("use_image_obs", False))
-        print("make_async parameters: render = ", cfg.env.get("render", False))
-        print("make_async parameters: render_offscreen = ", cfg.env.get("save_video", False))
-        print("make_async parameters: obs_dim = ", cfg.obs_dim)
-        print("make_async parameters: action_dim = ", cfg.action_dim)
+        if OUTPUT_VARIABLES:
+            print("make_async parameters: cfg.env.name = ", cfg.env.name)
+            print("make_async parameters: env_type = ", cfg.env.get("env_type", None))
+            print("make_async parameters: cfg.env.n_envs = ", cfg.env.n_envs)
+            print("make_async parameters: cfg.env.max_episode_steps = ", cfg.env.max_episode_steps)
+            print("make_async parameters: wrappers = ", cfg.env.get("wrappers", None))
+            print("make_async parameters: robomimic_env_cfg_path = ", cfg.get("robomimic_env_cfg_path", None))
+            print("make_async parameters: shape_meta = ", cfg.get("shape_meta", None))
+            print("make_async parameters: use_image_obs = ", cfg.env.get("use_image_obs", False))
+            print("make_async parameters: render = ", cfg.env.get("render", False))
+            print("make_async parameters: render_offscreen = ", cfg.env.get("save_video", False))
+            print("make_async parameters: obs_dim = ", cfg.obs_dim)
+            print("make_async parameters: action_dim = ", cfg.action_dim)
 
 
         env_type = cfg.env.get("env_type", None)
@@ -90,7 +94,8 @@ class EvalAgent:
             else False
         )  # furniture specific, for best reward calculation
 
-        print("cfg.model = ", cfg.model)
+        if OUTPUT_VARIABLES:
+            print("cfg.model = ", cfg.model)
 
         # Build model and load checkpoint
         self.model = hydra.utils.instantiate(cfg.model, env_name=self.env_name)

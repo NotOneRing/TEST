@@ -359,7 +359,8 @@ class DiffusionModel(tf.keras.Model):
             self.network = tf.keras.models.load_model( loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
 
-            self.output_weights(self.network)
+            if OUTPUT_VARIABLES:
+                self.output_weights(self.network)
 
             self.build_actor(self.network)
 
@@ -905,16 +906,20 @@ class DiffusionModel(tf.keras.Model):
 
         if self.actor.cond_mlp:
             # if 'network.cond_mlp.moduleList.0.linear_1.weight' in params_dict:
-            self.actor.cond_mlp.moduleList[0].trainable_weights[0].numpy()
+            print("self.actor.cond_mlp.moduleList[0].trainable_weights[0].numpy() = ")
+            print(self.actor.cond_mlp.moduleList[0].trainable_weights[0].numpy())
 
             # if 'network.cond_mlp.moduleList.0.linear_1.bias' in params_dict:
-            self.network.cond_mlp.moduleList[0].trainable_weights[1].numpy()
+            print("self.network.cond_mlp.moduleList[0].trainable_weights[1].numpy() = ")
+            print(self.network.cond_mlp.moduleList[0].trainable_weights[1].numpy())
                 
             # if 'network.cond_mlp.moduleList.1.linear_1.weight' in params_dict:
-            self.network.cond_mlp.moduleList[1].trainable_weights[0].numpy()
+            print("self.network.cond_mlp.moduleList[1].trainable_weights[0].numpy() = ")
+            print(self.network.cond_mlp.moduleList[1].trainable_weights[0].numpy())
                 
             # if 'network.cond_mlp.moduleList.1.linear_1.bias' in params_dict:
-            self.network.cond_mlp.moduleList[1].trainable_weights[1].numpy()
+            print("self.network.cond_mlp.moduleList[1].trainable_weights[1].numpy() = ")
+            print(self.network.cond_mlp.moduleList[1].trainable_weights[1].numpy())
 
 
 
@@ -1398,14 +1403,19 @@ class DiffusionModel(tf.keras.Model):
                 """
                 x₀ = √ 1\α̅ₜ xₜ - √ 1\α̅ₜ-1 ε
                 """
-                print("self.sqrt_recip_alphas_cumprod = ", self.sqrt_recip_alphas_cumprod)
-                print("t = ", t)
-                print("x.shape = ", x.shape)
-                extract_result1 = extract(self.sqrt_recip_alphas_cumprod, t, x.shape)
-                print("extract_result1 = ", extract_result1)
 
-                print("x.dtype = ", x.dtype)
-                print("extract_result1.dtype = ", extract_result1.dtype)
+                if OUTPUT_VARIABLES:
+                    print("self.sqrt_recip_alphas_cumprod = ", self.sqrt_recip_alphas_cumprod)
+                    print("t = ", t)
+                    print("x.shape = ", x.shape)
+
+                extract_result1 = extract(self.sqrt_recip_alphas_cumprod, t, x.shape)
+
+                if OUTPUT_VARIABLES:
+                    print("extract_result1 = ", extract_result1)
+
+                    print("x.dtype = ", x.dtype)
+                    print("extract_result1.dtype = ", extract_result1.dtype)
 
                 x_recon = (
                     extract_result1 * x
@@ -1501,7 +1511,8 @@ class DiffusionModel(tf.keras.Model):
                 noise = torch_randn_like(x_start)
 
 
-        print("Diffusion: q_sample(): noise = ", noise)
+        if OUTPUT_VARIABLES:
+            print("Diffusion: q_sample(): noise = ", noise)
 
 
         # print("noise = ", noise)
@@ -1611,9 +1622,10 @@ class DiffusionModel(tf.keras.Model):
         # B = sample_data.shape[0]
         B = tf.shape(sample_data)[0] 
 
-        print("B = ", B)
-        print("self.horizon_steps = ", self.horizon_steps)
-        print("self.action_dim = ", self.action_dim)
+        if OUTPUT_VARIABLES:
+            print("B = ", B)
+            print("self.horizon_steps = ", self.horizon_steps)
+            print("self.action_dim = ", self.action_dim)
 
         if OUTPUT_VARIABLES:
             print("B = ", B)
@@ -1635,14 +1647,16 @@ class DiffusionModel(tf.keras.Model):
                 # self.call_x = torch_randn(B, self.horizon_steps, self.action_dim)
                 x = self.call_x
 
-                print("x from DEBUG branch")
+                if OUTPUT_VARIABLES:
+                    print("x from DEBUG branch")
             else:
                 x = self.call_x
             # x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32)
         else:
             x = torch_randn(B, self.horizon_steps, self.action_dim)
 
-        print("Diffusion.call(): x1 = ", x)
+        if OUTPUT_VARIABLES:
+            print("Diffusion.call(): x1 = ", x)
 
         # Define timesteps
         if self.use_ddim:
@@ -1650,7 +1664,8 @@ class DiffusionModel(tf.keras.Model):
         else:
             t_all = list(reversed(range(self.denoising_steps)))
 
-        print("Diffusion.call(): t_all = ", t_all)
+        if OUTPUT_VARIABLES:
+            print("Diffusion.call(): t_all = ", t_all)
 
         # Main loop
         for i, t in enumerate(t_all):
@@ -1698,20 +1713,23 @@ class DiffusionModel(tf.keras.Model):
             else:
                 noise = torch_randn_like( x  )
 
-            print("Diffusion.call(): std = ", std)
+            if OUTPUT_VARIABLES:
+                print("Diffusion.call(): std = ", std)
 
-            print("Diffusion.call(): noise = ", noise)
+                print("Diffusion.call(): noise = ", noise)
 
             torch_tensor_clamp_(noise, -self.randn_clip_value, self.randn_clip_value)
             x = mean + std * noise
 
-            print("Diffusion.call(): x2 = ", x)
+            if OUTPUT_VARIABLES:
+                print("Diffusion.call(): x2 = ", x)
 
             # Clamp action at the final step
             if self.final_action_clip_value is not None and i == len(t_all) - 1:
                 x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
 
-                print("Diffusion.call(): x3 = ", x)
+                if OUTPUT_VARIABLES:
+                    print("Diffusion.call(): x3 = ", x)
 
         # Return the result as a namedtuple
         return Sample(x, None)
@@ -1805,18 +1823,19 @@ class DiffusionModel(tf.keras.Model):
             # shape1 = (256, 8, 10)
             # # cond_copy['state'].shape =  
             # shape2 = (256, 1, 58)
-            raise RuntimeError("Furniture is not implemented right now")
+            raise RuntimeError("The build shape is not implemented for current dataset")
 
 
         # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
         # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
 
 
-        print("type(shape1) = ", type(shape1))
-        print("type(shape2) = ", type(shape2))
+        if OUTPUT_VARIABLES:
+            print("type(shape1) = ", type(shape1))
+            print("type(shape2) = ", type(shape2))
 
-        print("shape1 = ", shape1)
-        print("shape2 = ", shape2)
+            print("shape1 = ", shape1)
+            print("shape2 = ", shape2)
 
 
         param1 = torch_ones(*shape1)

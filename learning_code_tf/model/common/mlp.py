@@ -722,8 +722,8 @@ class TwoLayerPreActivationResNetLinear(models.Model):
             })
 
 
-
-        print("TwoLayerPreActivationResNetLinear config = ", config)
+        if OUTPUT_VARIABLES:
+            print("TwoLayerPreActivationResNetLinear config = ", config)
         
         return config
     

@@ -216,14 +216,14 @@ class PreTrainAgent:
         np.random.seed(self.seed)
         tf.random.set_seed(self.seed)
 
-        print("cfg = ", cfg)
+        # print("cfg = ", cfg)
 
         # print("cfg.model = ", cfg.model)
 
         # Build model
         # self.model = self.instantiate_model(cfg.model)
 
-        print("type(cfg) = ", type(cfg))
+        # print("type(cfg) = ", type(cfg))
         self.cfg_env_name = cfg.get("env_name", None)
         # cfg.env_name
 
@@ -234,9 +234,9 @@ class PreTrainAgent:
             self.cfg_env_name = cfg.env
         
 
-        print("self.cfg_env_name = ", self.cfg_env_name)
-        print("type(self.cfg_env_name) = ", type(self.cfg_env_name))
-        print("cfg.model = ", cfg.model)
+        # print("self.cfg_env_name = ", self.cfg_env_name)
+        # print("type(self.cfg_env_name) = ", type(self.cfg_env_name))
+        # print("cfg.model = ", cfg.model)
 
         self.model = hydra.utils.instantiate(cfg.model, env_name=self.cfg_env_name)
 
@@ -251,12 +251,12 @@ class PreTrainAgent:
             self.model.q_sample_noise = None
 
 
-        print("self.model = ", self.model)
-        print("Model attributes:", dir(self.model))  # 查看模型的所有属性
+        # print("self.model = ", self.model)
+        # print("Model attributes:", dir(self.model))  # 查看模型的所有属性
 
         # print("0self.model.loss() = ", self.model.loss())
 
-        print("after instantiate_model")
+        # print("after instantiate_model")
 
         self.ema = EMA(cfg.ema)
 

@@ -93,7 +93,8 @@ class VPGDiffusion(DiffusionModel):
         # Learnable eta
         self.learn_eta = learn_eta
 
-        print("VPGDiffusion: __init__(): eta = ", eta)
+        if OUTPUT_VARIABLES:
+            print("VPGDiffusion: __init__(): eta = ", eta)
         
         if eta is not None:
             self.eta = eta
@@ -108,14 +109,15 @@ class VPGDiffusion(DiffusionModel):
 
 
 
-        print(f"Environment name: {self.env_name}")
-        
+        if OUTPUT_VARIABLES:
+            print(f"Environment name: {self.env_name}")
+            
 
 
 
-        print("Before everything: self.actor = ", self.actor)
-        print("Before everything: self.critic = ", self.critic)
-        print("Before everything: self.network = ", self.network)
+            print("Before everything: self.actor = ", self.actor)
+            print("Before everything: self.critic = ", self.critic)
+            print("Before everything: self.network = ", self.network)
 
 
 
@@ -123,13 +125,15 @@ class VPGDiffusion(DiffusionModel):
         self.actor = self.network
 
 
-        self.output_weights(self.network)
+        if OUTPUT_VARIABLES:
+            self.output_weights(self.network)
 
 
         self.build_actor(self.actor)
         
 
-        self.output_weights(self.actor)
+        if OUTPUT_VARIABLES:
+            self.output_weights(self.actor)
 
         
 
@@ -207,7 +211,8 @@ class VPGDiffusion(DiffusionModel):
 
         self.build_actor(self.actor_ft)
 
-        self.output_weights(self.actor_ft)
+        if OUTPUT_VARIABLES:
+            self.output_weights(self.actor_ft)
 
 
         # self.load_pickle(network_path)
@@ -690,9 +695,10 @@ class VPGDiffusion(DiffusionModel):
             etas = torch_ones_like(mu) # always one for DDPM
             # .to(mu.device)  
 
-        print("VPGDiffusion: p_mean_var(): mu.shape = ", mu.shape)
-        print("VPGDiffusion: p_mean_var(): logvar.shape = ", logvar.shape)
-        print("VPGDiffusion: p_mean_var(): etas.shape = ", etas.shape)
+        if OUTPUT_VARIABLES:
+            print("VPGDiffusion: p_mean_var(): mu.shape = ", mu.shape)
+            print("VPGDiffusion: p_mean_var(): logvar.shape = ", logvar.shape)
+            print("VPGDiffusion: p_mean_var(): etas.shape = ", etas.shape)
 
         # mu is related to actor_ft
         return mu, logvar, etas
@@ -742,7 +748,8 @@ class VPGDiffusion(DiffusionModel):
         else:
             x = torch_randn([B, self.horizon_steps, self.action_dim])
 
-        print("VPGDiffusion: call(): x = ", x)
+        if OUTPUT_VARIABLES:
+            print("VPGDiffusion: call(): x = ", x)
 
 
 
@@ -762,7 +769,8 @@ class VPGDiffusion(DiffusionModel):
             index_b = make_timesteps(B, i)
 
 
-            print("VPGDiffusion: call(): before p_mean_var()")
+            if OUTPUT_VARIABLES:
+                print("VPGDiffusion: call(): before p_mean_var()")
             mean, logvar, _ = self.p_mean_var(
                 x=x,
                 t=t_b,
@@ -795,7 +803,8 @@ class VPGDiffusion(DiffusionModel):
                 noise = torch_randn_like(x)
 
 
-            print("VPGDiffusion: call(): noise = ", noise)
+            if OUTPUT_VARIABLES:
+                print("VPGDiffusion: call(): noise = ", noise)
 
 
             # temp_noise_variable = tf.Variable(temp_noise)
@@ -890,7 +899,8 @@ class VPGDiffusion(DiffusionModel):
             print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 2")
 
 
-        print("cond = ", cond)
+        if OUTPUT_VARIABLES:
+            print("cond = ", cond)
 
         # Repeat t for batch dim, keep it 1-dim
         if self.use_ddim:
@@ -904,7 +914,8 @@ class VPGDiffusion(DiffusionModel):
             )
         
 
-        print("t_single = ", t_single)
+        if OUTPUT_VARIABLES:
+            print("t_single = ", t_single)
 
         if OUTPUT_POSITIONS:
             print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 3")
@@ -914,7 +925,8 @@ class VPGDiffusion(DiffusionModel):
         t_all = torch_tensor_repeat(t_single, [chains.shape[0], 1])
         t_all = torch_flatten(t_all)
 
-        print("t_all = ", t_all)
+        if OUTPUT_VARIABLES:
+            print("t_all = ", t_all)
         
 
         if OUTPUT_POSITIONS:
@@ -937,8 +949,9 @@ class VPGDiffusion(DiffusionModel):
             print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 5")
 
 
-        print("indices_single = ", t_all)
-        print("indices = ", t_all)
+        if OUTPUT_VARIABLES:
+            print("indices_single = ", t_all)
+            print("indices = ", t_all)
 
 
         # Split chains
@@ -960,7 +973,8 @@ class VPGDiffusion(DiffusionModel):
             print("diffusion_vpg.py: VPGDiffusion.get_logprobs(): 7")
 
 
-        print("VPGDiffusion: get_logprobs(): p_mean_var()")
+        if OUTPUT_VARIABLES:
+            print("VPGDiffusion: get_logprobs(): p_mean_var()")
         # Forward pass with previous chains
         next_mean, logvar, eta = self.p_mean_var(
             chains_prev,
@@ -1065,7 +1079,8 @@ class VPGDiffusion(DiffusionModel):
 
         # Forward pass with previous chains
 
-        print("VPGDiffusion: get_logprobs_subsample() before p_mean_var()")
+        if OUTPUT_POSITIONS:
+            print("VPGDiffusion: get_logprobs_subsample() before p_mean_var()")
 
         next_mean, logvar, eta = self.p_mean_var(
             chains_prev,
@@ -1117,7 +1132,8 @@ class VPGDiffusion(DiffusionModel):
         with torch_no_grad() as tape:
             value = torch_squeeze(self.critic(cond))  # (b,)
 
-        print("diffusion_vpg.py: VPGDiffusion.loss() value = ", value)
+        if OUTPUT_VARIABLES:
+            print("diffusion_vpg.py: VPGDiffusion.loss() value = ", value)
 
 
         # with torch.no_grad():

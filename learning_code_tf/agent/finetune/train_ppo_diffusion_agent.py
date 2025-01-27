@@ -218,9 +218,10 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
                 action_venv = output_venv[:, : self.act_steps]
 
+                if OUTPUT_VARIABLES:
 
-                print("TranPPODiffusinAgent: type(action_venv) = ", type(action_venv))
-                print("TranPPODiffusinAgent: action_venv = ", action_venv)
+                    print("TranPPODiffusinAgent: type(action_venv) = ", type(action_venv))
+                    print("TranPPODiffusinAgent: action_venv = ", action_venv)
 
 
                 # Apply multi-step action
@@ -234,11 +235,12 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
 
 
-                print("obs_venv = ", obs_venv)
-                print("reward_venv = ", reward_venv)
-                print("terminated_venv = ", terminated_venv)
-                print("truncated_venv = ", truncated_venv)
-                print("info_venv = ", info_venv)
+                if OUTPUT_VARIABLES:
+                    print("obs_venv = ", obs_venv)
+                    print("reward_venv = ", reward_venv)
+                    print("terminated_venv = ", terminated_venv)
+                    print("truncated_venv = ", truncated_venv)
+                    print("info_venv = ", info_venv)
 
 
 
@@ -575,11 +577,12 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                             )
 
 
-                            print("pg_loss = ", pg_loss)
-                            print("entropy_loss = ", entropy_loss)
-                            print("v_loss = ", v_loss)
-                            print("bc_loss = ", bc_loss)
-                            print("loss.numpy() = ", loss.numpy())
+                            if OUTPUT_VARIABLES:
+                                print("pg_loss = ", pg_loss)
+                                print("entropy_loss = ", entropy_loss)
+                                print("v_loss = ", v_loss)
+                                print("bc_loss = ", bc_loss)
+                                print("loss.numpy() = ", loss.numpy())
 
 
                             clipfracs += [clipfrac]
@@ -706,10 +709,12 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 if self.learn_eta:
                     eta_lr = self.eta_lr_scheduler.step()
             
-                    print("eta_lr = ", eta_lr)
+                    if OUTPUT_VARIABLES:
+                        print("eta_lr = ", eta_lr)
 
 
-                print("actor_lr = ", actor_lr)
+                if OUTPUT_VARIABLES:
+                    print("actor_lr = ", actor_lr)
 
 
 
@@ -717,7 +722,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
             critic_lr = self.critic_lr_scheduler.step()
 
-            print("critic_lr = ", critic_lr)
+            if OUTPUT_VARIABLES:
+                print("critic_lr = ", critic_lr)
 
 
 
@@ -733,11 +739,13 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
             # print("self.model.__dict__ = ", self.model.__dict__)
 
-            print("self.model.actor_ft = ", self.model.actor_ft)
-            print("self.model.critic = ", self.model.critic)
+            if OUTPUT_VARIABLES:
+                print("self.model.actor_ft = ", self.model.actor_ft)
+                print("self.model.critic = ", self.model.critic)
 
             if self.learn_eta:
-                print("self.model.eta = ", self.model.eta)
+                if OUTPUT_VARIABLES:
+                    print("self.model.eta = ", self.model.eta)
 
 
             # Save model
