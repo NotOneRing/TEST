@@ -125,11 +125,18 @@ class TrainIBRLAgent(TrainAgent):
             states = states_and_next["state"]
             next_states = states_and_next["next_state"]
             
-            obs_buffer.extend(states.cpu().numpy())
-            next_obs_buffer.extend(next_states.cpu().numpy())
-            action_buffer.extend(actions.cpu().numpy())
-            reward_buffer.extend(rewards.cpu().numpy().flatten())
-            terminated_buffer.extend(terminated.cpu().numpy().flatten())
+            # obs_buffer.extend(states.cpu().numpy())
+            # next_obs_buffer.extend(next_states.cpu().numpy())
+            # action_buffer.extend(actions.cpu().numpy())
+            # reward_buffer.extend(rewards.cpu().numpy().flatten())
+            # terminated_buffer.extend(terminated.cpu().numpy().flatten())
+
+            obs_buffer.extend(states.numpy())
+            next_obs_buffer.extend(next_states.numpy())
+            action_buffer.extend(actions.numpy())
+            reward_buffer.extend(rewards.numpy().flatten())
+            terminated_buffer.extend(terminated.numpy().flatten())
+
 
         # Start training loop
         timer = Timer()
@@ -164,7 +171,12 @@ class TrainIBRLAgent(TrainAgent):
 
 
 
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
+
+            if eval_mode:
+                training=False 
+            else:
+                training=True
 
 
 
@@ -197,9 +209,9 @@ class TrainIBRLAgent(TrainAgent):
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
-                        )
-                        .cpu()
-                        .numpy()
+                        ).numpy()
+                        # .cpu()
+                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
 

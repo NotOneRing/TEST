@@ -132,7 +132,9 @@ class TrainDIPODiffusionAgent(TrainAgent):
 
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
+            
             self.model.eval() if eval_mode else self.model.train()
+
             last_itr_eval = eval_mode
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) right after eval mode
@@ -156,15 +158,15 @@ class TrainDIPODiffusionAgent(TrainAgent):
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
                         # .float()
-                        .to(self.device)
+                        # .to(self.device)
                     }
                     samples = (
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
-                        )
-                        .cpu()
-                        .numpy()
+                        ).numpy()
+                        # .cpu()
+                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
 
@@ -340,9 +342,9 @@ class TrainDIPODiffusionAgent(TrainAgent):
                         guided_action = torch_reshape( actions_flat,
                             len(actions_flat), self.horizon_steps, self.action_dim
                         )
-                        guided_action_np = torch_tensor_detach( guided_action
+                        guided_action_np = torch_tensor_detach( guided_action.numpy()
                                                             #    .detach()
-                                                               .cpu().numpy()
+                                                            #    .cpu().numpy()
                                                                )
 
                         # Add back to buffer
