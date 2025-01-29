@@ -14,23 +14,41 @@ def test_mse_loss():
     input = torch.tensor([0.5, 1.0, 1.5])
     target = torch.tensor([1.0, 1.0, 1.0])
 
-    # 计算 MSE 损失
-    loss = F.mse_loss(input, target, reduction='mean')
-    print(loss)  # 输出均方误差损失
+    
+    loss1 = F.mse_loss(input, target, reduction='mean')
+    print(loss1)    
+    print( type(loss1) )  
 
-    print( type(loss) )  
+    loss2 = F.mse_loss(input, target, reduction='sum')
+    print(loss2)    
+    print( type(loss2) )  
 
-    # 示例数据
+    loss3 = F.mse_loss(input, target, reduction='none')
+    print(loss3)    
+    print( type(loss3) )  
+
+
+
     input = tf.constant([0.5, 1.0, 1.5])
     target = tf.constant([1.0, 1.0, 1.0])
 
-    # 计算 MSE 损失
-    loss_tf = torch_mse_loss(input, target, reduction='mean')
-    print(loss_tf)  # 输出均方误差损失
 
-    print( type(loss_tf) )
+    loss_tf1 = torch_mse_loss(input, target, reduction='mean')
+    print(loss_tf1)
+    print( type(loss_tf1) )
 
-    assert np.allclose(loss_tf.numpy(), loss.numpy())
+    loss_tf2 = torch_mse_loss(input, target, reduction='sum')
+    print(loss_tf2)
+    print( type(loss_tf2) )
+
+    loss_tf3 = torch_mse_loss(input, target, reduction='none')
+    print(loss_tf3)
+    print( type(loss_tf3) )
+
+
+    assert np.allclose(loss_tf1.numpy(), loss1.numpy())
+    assert np.allclose(loss_tf2.numpy(), loss2.numpy())
+    assert np.allclose(loss_tf3.numpy(), loss3.numpy())
 
 
 

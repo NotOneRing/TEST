@@ -464,8 +464,13 @@ def torch_logsumexp(input, dim, keepdim=False, dtype=None):
 
 
 def torch_mse_loss(input, target, reduction='mean'):
-    mse = tf.reduce_mean(tf.square(input - target))
-    return mse
+    first_result = tf.square(input - target)
+    if reduction == "none":
+        return first_result
+    elif reduction == "mean":
+        return tf.reduce_mean(first_result)
+    elif reduction == "sum":
+        return tf.reduce_sum(first_result)
 
 
 

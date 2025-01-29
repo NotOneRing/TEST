@@ -56,7 +56,7 @@ Figure 6.
 
 
 Figure 7.
-    Demonstration the effectiveness of Pretraining
+    Demonstration of the effectiveness of Pretraining
         1. pretraining M1, M2, M3 of DPPO
 
         2. Demonstration that all baselines are implemented correctly:

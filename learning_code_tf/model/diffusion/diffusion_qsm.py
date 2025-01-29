@@ -15,7 +15,11 @@ log = logging.getLogger(__name__)
 
 from model.diffusion.diffusion_rwr import RWRDiffusion
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_randn_like, torch_randint,\
+torch_tensor_long, torch_sum, torch_mse_loss, torch_mean, torch_stack, torch_min,\
+torch_tensor_view
+
+
 
 class QSMDiffusion(RWRDiffusion):
 
@@ -46,38 +50,40 @@ class QSMDiffusion(RWRDiffusion):
 
         x_start = actions
 
-        batch_size = tf.shape(x_start)[0]
+        B = tf.shape(x_start)[0]
 
         # Forward process
-        noise = tf.random.normal(tf.shape(x_start))
-        t = tf.random.uniform(
-            [batch_size], minval=0, maxval=self.denoising_steps, dtype=tf.int32
-        )  # Random time step
+        noise = torch_randn_like(x_start)
+        t = torch_tensor_long(torch_randint(
+            0, self.denoising_steps, (B,)) )  # sample random denoising time index
 
         # get current value for noisy actions as the code does --- the algorthm block in the paper is wrong, it says using a_t, the final denoised action
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
         # Compute Q values for noisy actions
-        with tf.GradientTape() as tape1, tf.GradientTape() as tape2:
-            tape1.watch(x_noisy)
-            tape2.watch(x_noisy)
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(x_noisy)
+            # tape.watch(x_noisy)
             current_q1, current_q2 = self.critic_q([obs, x_noisy], training=True)
+            q1_sum = torch_sum(current_q1)
+            q2_sum = torch_sum(current_q2)
+
 
         # Compute gradients dQ/da
-        gradient_q1 = tape1.gradient(current_q1, x_noisy)
-        gradient_q2 = tape2.gradient(current_q2, x_noisy)
-        gradient_q = tf.reduce_mean(tf.stack([gradient_q1, gradient_q2]), axis=0)
+        gradient_q1 = tape.gradient(q1_sum, x_noisy)
+        gradient_q2 = tape.gradient(q2_sum, x_noisy)
+        gradient_q = torch_mean(torch_stack((gradient_q1, gradient_q2), dim=0), dim=0)
         # # Compute dQ/da|a=noise_actions
         # gradient_q1 = torch.autograd.grad(current_q1.sum(), x_noisy)[0]
         # gradient_q2 = torch.autograd.grad(current_q2.sum(), x_noisy)[0]
         # gradient_q = torch.stack((gradient_q1, gradient_q2), 0).mean(0).detach()
 
         # Predict noise from noisy actions
-        x_recon = self.actor([x_noisy, t, obs], training=True)
+        x_recon = self.network([x_noisy, t, obs], training=True)
 
         # Loss with mask - align predicted noise with critic gradient of noisy actions
         # Note: the gradient of mu wrt. epsilon has a negative sign
-        loss = tf.reduce_mean(tf.square(-x_recon - q_grad_coeff * gradient_q))
+        loss = torch_mse_loss(-x_recon, q_grad_coeff * gradient_q)
         return loss
 
     def loss_critic(self, obs, next_obs, actions, rewards, terminated, gamma):
@@ -93,22 +99,22 @@ class QSMDiffusion(RWRDiffusion):
         with torch_no_grad() as tape:
             next_q1, next_q2 = self.target_q([next_obs, next_actions], training=False)
 
-        next_q = tf.minimum(next_q1, next_q2)
+        next_q = torch_min(next_q1, next_q2)
 
         # terminal state mask
         mask = 1 - terminated
 
         # flatten
-        rewards = tf.reshape(rewards, [-1] )
-        next_q = tf.reshape(next_q, [-1])
-        mask = tf.reshape(mask, [-1])
+        rewards = torch_tensor_view(rewards, [-1] )
+        next_q = torch_tensor_view(next_q, [-1])
+        mask = torch_tensor_view(mask, [-1])
 
         # target value
         discounted_q = rewards + gamma * next_q * mask
 
         # Update critic
-        loss_critic = tf.reduce_mean(tf.square(current_q1 - discounted_q)) + tf.reduce_mean(
-            tf.square(current_q2 - discounted_q)
+        loss_critic = torch_mean( (current_q1 - discounted_q) ** 2 ) + torch_mean(
+            (current_q2 - discounted_q) ** 2
         )
 
         return loss_critic
