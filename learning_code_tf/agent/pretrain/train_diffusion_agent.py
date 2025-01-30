@@ -246,10 +246,10 @@ class TrainDiffusionAgent(PreTrainAgent):
                 cond_copy = deepcopy(cond)
 
 
-            print("self.cfg_env_name = ", self.cfg_env_name)
-            print("cur_actions.shape = ", cur_actions.shape)
-            print("cond['state'].shape = ", cond['state'].shape)
-            return
+            # print("self.cfg_env_name = ", self.cfg_env_name)
+            # print("cur_actions.shape = ", cur_actions.shape)
+            # print("cond['state'].shape = ", cond['state'].shape)
+            # return
 
 
 

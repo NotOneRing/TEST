@@ -75,7 +75,9 @@ class DiffusionModel(tf.keras.Model):
     ):
 
 
-        if DEBUG:
+
+
+        if DEBUG or NP_RANDOM:
             if OUTPUT_POSITIONS:
                 print("DiffusionModel: __init__() DEBUG = True")
 
@@ -89,6 +91,8 @@ class DiffusionModel(tf.keras.Model):
         else:
             if OUTPUT_POSITIONS:
                 print("DEBUG is False")
+
+
 
 
         self.env_name = kwargs.get("env_name", None)

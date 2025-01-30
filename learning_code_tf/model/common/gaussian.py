@@ -12,7 +12,9 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from util.torch_to_tf import Normal
+from util.torch_to_tf import Normal, torch_ones_like, torch_clamp, torch_mean, torch_tensor_view,\
+torch_log, torch_tanh, torch_sum
+
 
 
 class GaussianModel(tf.keras.Model):
@@ -67,10 +69,11 @@ class GaussianModel(tf.keras.Model):
 
         B = len(true_action)
         dist = self.forward_train(cond, deterministic=False)
-        true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
+        # true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
+        true_action = torch_tensor_view(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         log_prob = dist.log_prob(true_action)
-        entropy = tf.reduce_mean(dist.entropy())
-        loss = -tf.reduce_mean(log_prob) - entropy * ent_coef
+        entropy = torch_mean(dist.entropy())
+        loss = -torch_mean(log_prob) - entropy * ent_coef
         return loss, {"entropy": entropy}
 
 
@@ -93,7 +96,7 @@ class GaussianModel(tf.keras.Model):
             means, scales = self.network(cond)
         if deterministic:
             # low-noise for all Gaussian dists
-            scales = tf.ones_like(means) * 1e-4
+            scales = torch_ones_like(means) * 1e-4
 
         # dist = tfp.distributions.Normal(loc=means, scale=scales)
         dist = Normal(means, scales)
@@ -120,13 +123,14 @@ class GaussianModel(tf.keras.Model):
         )
 
         if reparameterize:
-            sampled_action = dist.sample()  # reparameterized sample
+            assert "reparameterize is not implemented right now"
+            # sampled_action = dist.rsample()  # reparameterized sample
         else:
             sampled_action = dist.sample()  # standard sample
 
 
         # Clipping the sampled action (similar to PyTorch clamp_)
-        sampled_action = tf.clip_by_value(sampled_action, dist.loc - self.randn_clip_value * dist.scale,
+        sampled_action = torch_clamp(sampled_action, dist.loc - self.randn_clip_value * dist.scale,
                                           dist.loc + self.randn_clip_value * dist.scale)
 
         if get_logprob:
@@ -134,14 +138,14 @@ class GaussianModel(tf.keras.Model):
 
             # For SAC/RLPD, squash mean after sampling here instead of right after model output as in PPO
             if self.tanh_output:
-                sampled_action = tf.tanh(sampled_action)
-                log_prob -= tf.log(1 - tf.square(sampled_action) + 1e-6)
+                sampled_action = torch_tanh(sampled_action)
+                log_prob -= torch_log(1 - tf.square(sampled_action) + 1e-6)
 
-            return tf.reshape(sampled_action, [B, T, -1]), tf.reduce_sum(log_prob, axis=1)
+            return torch_tensor_view(sampled_action, [B, T, -1]), torch_sum(log_prob, axis=1)
         else:
             if self.tanh_output:
-                sampled_action = tf.tanh(sampled_action)
-            return tf.reshape(sampled_action, (B, T, -1))
+                sampled_action = torch_tanh(sampled_action)
+            return torch_tensor_view(sampled_action, (B, T, -1))
 
             
 

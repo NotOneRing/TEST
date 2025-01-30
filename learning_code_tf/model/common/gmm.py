@@ -10,7 +10,8 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from util.torch_to_tf import Normal, Categorical, Independent, MixtureSameFamily
+from util.torch_to_tf import Normal, Categorical, Independent, MixtureSameFamily, \
+torch_tensor_view, torch_mean, torch_mean, torch_sum, torch_softmax, torch_ones_like,\
 
 
 
@@ -56,9 +57,9 @@ class GMMModel(tf.keras.Model):
             cond,
             deterministic=False,
         )
-        true_action = tf.reshape(true_action, [B, -1])
+        true_action = torch_tensor_view(true_action, [B, -1])
         loss = -dist.log_prob(true_action)  # [B]
-        loss = tf.reduce_mean(loss)
+        loss = torch_mean(loss)
         return loss, {"entropy": entropy}
 
 
@@ -77,7 +78,7 @@ class GMMModel(tf.keras.Model):
         means, scales, logits = self.network(cond)
         if deterministic:
             # low-noise for all Gaussian dists
-            scales = tf.ones_like(means) * 1e-4
+            scales = torch_ones_like(means) * 1e-4
 
         # mixture components - make sure that `batch_shape` for the distribution is equal to (batch_size, num_modes) since MixtureSameFamily expects this shape
         # Each mode has mean vector of dim T*D
@@ -91,11 +92,11 @@ class GMMModel(tf.keras.Model):
 
 
 
-        approx_entropy = tf.reduce_mean(
-            tf.reduce_sum(tf.nn.softmax(logits, axis=-1) * component_entropy, axis=-1)
+        approx_entropy = torch_mean(
+            torch_sum(torch_softmax(logits, dim=-1) * component_entropy, dim=-1)
         )
         
-        std = tf.reduce_mean(tf.reduce_sum(tf.nn.softmax(logits, axis=-1) * tf.reduce_mean(scales, axis=-1), axis=-1))
+        std = torch_mean(torch_sum(torch_softmax(logits, dim=-1) * torch_mean(scales, dim=-1), dim=-1))
 
         # Unnormalized logits to categorical distribution for mixing the modes
         mixture_distribution = Categorical(logits=logits)
@@ -124,7 +125,7 @@ class GMMModel(tf.keras.Model):
 
         sampled_action = dist.sample()
 
-        sampled_action = tf.reshape(sampled_action, [B, T, -1])
+        sampled_action = torch_tensor_view(sampled_action, [B, T, -1])
         return sampled_action
     
 
