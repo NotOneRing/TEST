@@ -13,6 +13,12 @@ from model.common.mlp import MLP, ResidualMLP
 from model.common.modules import SpatialEmb, RandomShiftsAug
 
 
+from util.torch_to_tf import nn_Linear, nn_Sequential, nn_LayerNorm,\
+nn_Dropout, nn_ReLU, nn_Parameter, torch_log, torch_tensor, torch_tensor_view,\
+torch_reshape, torch_flatten, torch_tensor_float, torch_cat, torch_tensor_repeat,\
+
+
+
 class Gaussian_VisionMLP(tf.keras.Model):
     """With ViT backbone"""
 
@@ -71,12 +77,11 @@ class Gaussian_VisionMLP(tf.keras.Model):
             visual_feature_dim = spatial_emb * num_img
         else:
 
-            #输入维度是self.backbone.repr_dim
-            self.compress = tf.keras.Sequential([
-                tf.keras.layers.Dense(visual_feature_dim),
-                tf.keras.layers.LayerNormalization(),
-                tf.keras.layers.Dropout(dropout),
-                tf.keras.layers.ReLU(),
+            self.compress = nn_Sequential([
+                nn_Linear(self.backbone.repr_dim, visual_feature_dim),
+                nn_LayerNorm(visual_feature_dim),
+                nn_Dropout(dropout),
+                nn_ReLU(),
             ])
 
         # head
@@ -102,17 +107,17 @@ class Gaussian_VisionMLP(tf.keras.Model):
                 use_layernorm=use_layernorm,
             )
         elif learn_fixed_std:  # initialize to fixed_std
-            self.logvar = tf.Variable(
-                tf.math.log(np.array([fixed_std**2] * action_dim, dtype=np.float32)),
-                trainable=True,
+            self.logvar = nn_Parameter(
+                torch_log(torch_tensor([fixed_std**2 for _ in range(action_dim)])),
+                requires_grad=True,
             )
 
 
-        self.logvar_min = tf.constant(
-            tf.math.log(std_min**2), dtype=tf.float32, name="logvar_min"
+        self.logvar_min = nn_Parameter(
+            torch_log(torch_tensor(std_min**2)), requires_grad=False
         )
-        self.logvar_max = tf.constant(
-            tf.math.log(std_max**2), dtype=tf.float32, name="logvar_max"
+        self.logvar_max = nn_Parameter(
+            torch_log(torch_tensor(std_max**2)), requires_grad=False
         )
 
 
@@ -130,20 +135,20 @@ class Gaussian_VisionMLP(tf.keras.Model):
         _, T_rgb, C, H, W = cond["rgb"].shape
 
         # flatten history
-        state = tf.reshape(cond["state"], (B, -1))
+        state = torch_tensor_view(cond["state"], (B, -1))
 
         # Take recent images --- sometimes we want to use fewer img_cond_steps than cond_steps (e.g., 1 image but 3 prio)
         rgb = cond["rgb"][:, -self.img_cond_steps :]
 
         # concatenate images in cond by channels
         if self.num_img > 1:
-            rgb = tf.reshape(rgb, (B, T_rgb, self.num_img, 3, H, W))
+            rgb = torch_reshape(rgb, (B, T_rgb, self.num_img, 3, H, W))
             rgb = einops.rearrange(rgb, "b t n c h w -> b n (t c) h w")
         else:
             rgb = einops.rearrange(rgb, "b t c h w -> b (t c) h w")
 
         # convert rgb to float32 for augmentation
-        rgb = tf.cast(rgb, tf.float32)
+        rgb = torch_tensor_float(rgb)
 
         # get vit output - pass in two images separately
         if self.num_img > 1:  # TODO: properly handle multiple images
@@ -156,7 +161,7 @@ class Gaussian_VisionMLP(tf.keras.Model):
             feat2 = self.backbone(rgb2)
             feat1 = self.compress1(feat1, state)
             feat2 = self.compress2(feat2, state)
-            feat = tf.concat([feat1, feat2], axis=-1)
+            feat = torch_cat([feat1, feat2], dim=-1)
         else:  # single image
             if self.augment:
                 rgb = self.aug(rgb)  # uint8 -> float32
@@ -166,30 +171,30 @@ class Gaussian_VisionMLP(tf.keras.Model):
             if isinstance(self.compress, SpatialEmb):
                 feat = self.compress(feat, state)  # Assuming the `SpatialEmb` class has a compatible `__call__` method
             else:
-                feat = tf.reshape(feat, [B, -1])  # Flatten the feature map (assuming B is batch size)
+                feat = torch_flatten(feat, [1, -1])  # Flatten the feature map (assuming B is batch size)
                 feat = self.compress(feat)  # Apply the MLP or other operations
         
 
         # MLP forward pass
-        x_encoded = tf.concat([feat, state], axis=-1)
+        x_encoded = torch_cat([feat, state], dim=-1)
         out_mean = self.mlp_mean(x_encoded)
-        out_mean = tf.tanh(out_mean)
-        out_mean = tf.reshape(out_mean, (B, self.horizon_steps * self.action_dim))
+        out_mean = torch_tanh(out_mean)
+        out_mean = torch_tensor_view(out_mean, (B, self.horizon_steps * self.action_dim))
         # tanh squashing in [-1, 1]
 
         # Handling scale (std)
         if self.learn_fixed_std:
-            out_logvar = tf.clip_by_value(self.logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
-            out_scale = tf.reshape(out_scale, (1, self.action_dim))
-            out_scale = tf.tile(out_scale, [B, self.horizon_steps])
+            out_logvar = torch_clamp(self.logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
+            out_scale = torch_tensor_view(out_scale, (1, self.action_dim))
+            out_scale = torch_tensor_repeat(out_scale, [B, self.horizon_steps])
         elif self.use_fixed_std:
-            out_scale = tf.ones_like(out_mean) * self.fixed_std
+            out_scale = torch_ones_like(out_mean) * self.fixed_std
         else:
             out_logvar = self.mlp_logvar(x_encoded)
-            out_logvar = tf.reshape(out_logvar, (B, self.horizon_steps * self.action_dim))
-            out_logvar = tf.clip_by_value(out_logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
+            out_logvar = torch_tensor_view(out_logvar, (B, self.horizon_steps * self.action_dim))
+            out_logvar = torch_clamp(out_logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
 
         return out_mean, out_scale
 
@@ -256,16 +261,16 @@ class Gaussian_MLP(tf.keras.Model):
 
             if learn_fixed_std:
                 # initialize to fixed_std
-                self.logvar = tf.Variable(
-                    tf.math.log(np.array([fixed_std**2] * action_dim, dtype=np.float32)),
-                    trainable=True,
+                self.logvar = nn_Parameter(
+                    torch_log(torch_tensor([fixed_std**2 for _ in range(action_dim)])),
+                    requires_grad=True,
                 )
                         
-        self.logvar_min = tf.constant(
-            tf.math.log(std_min**2), dtype=tf.float32, name="logvar_min"
+        self.logvar_min = nn_Parameter(
+            torch_log(torch_tensor(std_min**2)), requires_grad=False
         )
-        self.logvar_max = tf.constant(
-            tf.math.log(std_max**2), dtype=tf.float32, name="logvar_max"
+        self.logvar_max = nn_Parameter(
+            torch_log(torch_tensor(std_max**2)), requires_grad=False
         )
 
         self.use_fixed_std = fixed_std is not None
@@ -281,7 +286,7 @@ class Gaussian_MLP(tf.keras.Model):
         B = cond["state"].shape[0]
 
         # flatten history
-        state = tf.reshape(cond["state"], [B, -1])
+        state = torch_tensor_view(cond["state"], (B, -1) )
 
         # mlp
         if hasattr(self, "mlp_base"):
@@ -291,26 +296,26 @@ class Gaussian_MLP(tf.keras.Model):
         # Mean prediction
         out_mean = self.mlp_mean(state)
         if self.tanh_output:
-            out_mean = tf.tanh(out_mean)
+            out_mean = torch_tanh(out_mean)
 
-        out_mean = tf.reshape(out_mean, [B, self.horizon_steps * self.action_dim])
+        out_mean = torch_tensor_view(out_mean, [B, self.horizon_steps * self.action_dim])
 
         # Standard deviation prediction
         if self.learn_fixed_std:
-            out_logvar = tf.clip_by_value(self.logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
-            out_scale = tf.reshape(out_scale, [1, self.action_dim])
-            out_scale = tf.tile(out_scale, [B, self.horizon_steps])
+            out_logvar = torch_clamp(self.logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
+            out_scale = torch_tensor_view(out_scale, [1, self.action_dim])
+            out_scale = torch_tensor_repeat(out_scale, [B, self.horizon_steps])
         elif self.use_fixed_std:
-            out_scale = tf.ones_like(out_mean) * self.fixed_std
+            out_scale = torch_ones_like(out_mean) * self.fixed_std
         else:
             out_logvar = self.mlp_logvar(state)
-            out_logvar = tf.reshape(out_logvar, [B, self.horizon_steps * self.action_dim])
-            out_logvar = tf.tanh(out_logvar)
+            out_logvar = torch_tensor_view(out_logvar, [B, self.horizon_steps * self.action_dim])
+            out_logvar = torch_tanh(out_logvar)
 
             # Scale to range [logvar_min, logvar_max]
             out_logvar = self.logvar_min + 0.5 * (self.logvar_max - self.logvar_min) * (out_logvar + 1)
-            out_scale = tf.exp(0.5 * out_logvar)
+            out_scale = torch_exp(0.5 * out_logvar)
 
         return out_mean, out_scale
 

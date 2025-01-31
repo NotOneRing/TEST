@@ -156,9 +156,9 @@ class TrainQSMDiffusionAgent(TrainAgent):
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
-                        )
-                        .cpu()
-                        .numpy()
+                        ).numpy()
+                        # .cpu()
+                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
 
@@ -258,18 +258,19 @@ class TrainQSMDiffusionAgent(TrainAgent):
 
                 for _ in range(num_batch):
                     inds = np.random.choice(len(obs_trajs), self.batch_size)
-                    obs_b = torch_from_numpy(obs_trajs[inds]).float().to(self.device)
+                    obs_b = torch_tensor_float(torch_from_numpy(obs_trajs[inds]))
+                    # .to(self.device)
                     next_obs_b = (
-                        torch_from_numpy(next_obs_trajs[inds]).float().to(self.device)
+                        torch_tensor_float(torch_from_numpy(next_obs_trajs[inds]))
                     )
                     actions_b = (
-                        torch_from_numpy(action_trajs[inds]).float().to(self.device)
+                        torch_tensor_float(torch_from_numpy(action_trajs[inds]))
                     )
                     rewards_b = (
-                        torch_from_numpy(reward_trajs[inds]).float().to(self.device)
+                        torch_tensor_float(torch_from_numpy(reward_trajs[inds]))
                     )
                     terminated_b = (
-                        torch_from_numpy(terminated_trajs[inds]).float().to(self.device)
+                        torch_tensor_float(torch_from_numpy(terminated_trajs[inds]))
                     )
 
 

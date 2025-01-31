@@ -750,7 +750,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model(self.learn_eta)
+                self.save_model_dppo(self.learn_eta)
 
 
 

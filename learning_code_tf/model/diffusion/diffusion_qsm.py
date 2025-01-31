@@ -35,7 +35,8 @@ class QSMDiffusion(RWRDiffusion):
         super().__init__(network=actor, **kwargs)
         self.critic_q = critic
 
-
+        print("type(critic) = ", critic)
+        print("critic = ", critic)
         # target critic
         self.target_q = copy.deepcopy(critic)
 

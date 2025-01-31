@@ -13,6 +13,10 @@ from tensorflow.keras import layers, Model
 
 import math
 
+from util.torch_to_tf import nn_GELU, torch_flatten, nn_Conv2d, nn_GroupNorm, \
+nn_Linear, nn_LayerNorm, nn_Dropout, torch_rand, torch_zeros, nn_Sequential, \
+nn_Parameter, nn_ReLU
+
 
 @dataclass
 class VitEncoderConfig:
@@ -21,7 +25,7 @@ class VitEncoderConfig:
     embed_dim: int = 128
     num_heads: int = 4
     # act_layer = nn.GELU
-    act_layer=tf.keras.layers.GELU,
+    act_layer= nn_GELU,
     stride: int = -1
     embed_style: str = "embed2"
     embed_norm: int = 0
@@ -66,8 +70,8 @@ class VitEncoder(tf.keras.layers.Layer):
         obs = obs / 255.0 - 0.5
         feats = self.vit(obs)
         if flatten:
-            assert len(feats.shape) == 3, f"Expected feats to be 3D, but got {len(feats.shape)}D"
-            feats = tf.reshape(feats, [feats.shape[0], -1])
+            # assert len(feats.shape) == 3, f"Expected feats to be 3D, but got {len(feats.shape)}D"
+            feats = torch_flatten(feats, 1, 2)
 
         return feats
 
@@ -81,7 +85,9 @@ class PatchEmbed1(tf.keras.layers.Layer):
         super().__init__()
         # self.conv = nn.Conv2d(num_channel, embed_dim, kernel_size=8, stride=8)
         # 输入维度是num_channel
-        self.conv = layers.Conv2D(embed_dim, kernel_size=8, strides=8, padding="valid")
+        # self.conv = layers.Conv2D(embed_dim, kernel_size=8, strides=8, padding="valid")
+
+        self.conv = nn_Conv2d(num_channel, embed_dim, kernel_size=8, stride=8)
 
         self.num_patch = math.ceil(img_h / 8) * math.ceil(img_w / 8)
         self.patch_dim = embed_dim
@@ -105,10 +111,10 @@ class PatchEmbed2(tf.keras.layers.Layer):
 
         #输入是num_channel
         layers = [
-            layers.Conv2D(embed_dim, kernel_size=8, strides=4, padding="valid"),
-            layers.LayerNormalization() if use_norm else layers.Lambda(lambda x: x),
-            layers.ReLU(),
-            layers.Conv2D(embed_dim, kernel_size=3, strides=2, padding="valid"),
+            nn_Conv2D(num_channel, embed_dim, kernel_size=8, strides=4),
+            nn_GroupNorm() if use_norm else layers.Lambda(lambda x: x),
+            nn_ReLU(),
+            nn_Conv2D(embed_dim, embed_dim, kernel_size=3, strides=2),
         ]
 
         self.embed = tf.keras.Sequential(layers)
@@ -139,8 +145,8 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
         self.num_head = num_head
         #输入维度是embed_dim
-        self.qkv_proj = layers.Dense(3 * embed_dim)
-        self.out_proj = layers.Dense(embed_dim)
+        self.qkv_proj = nn_Linear(3 * embed_dim)
+        self.out_proj = nn_Linear(embed_dim)
 
     def call(self, x, attn_mask):
         """
@@ -183,6 +189,8 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         # Apply output projection
         return self.out_proj(attn_output)
 
+
+
 class TransformerLayer(tf.keras.layers.Layer):
     def __init__(self, embed_dim, num_head, dropout):
 
@@ -190,16 +198,24 @@ class TransformerLayer(tf.keras.layers.Layer):
 
         super().__init__()
 
-        #输入是embed_dim维度的
-        self.layer_norm1 = layers.LayerNormalization()
+        # #输入是embed_dim维度的
+        # self.layer_norm1 = layers.LayerNormalization()
+        # self.mha = MultiHeadAttention(embed_dim, num_head)
+        # #输入是embed_dim维度的
+        # self.layer_norm2 = layers.LayerNormalization()
+        # #输入是embed_dim维度的
+        # self.linear1 = layers.Dense(4 * embed_dim)
+        # self.linear2 = layers.Dense(embed_dim)
+        # self.dropout = layers.Dropout(dropout)
+
+        self.layer_norm1 = nn_LayerNorm(embed_dim)
         self.mha = MultiHeadAttention(embed_dim, num_head)
-        #输入是embed_dim维度的
-        self.layer_norm2 = layers.LayerNormalization()
-        #输入是embed_dim维度的
-        self.linear1 = layers.Dense(4 * embed_dim)
-        self.linear2 = layers.Dense(embed_dim)
-        self.dropout = layers.Dropout(dropout)
-        
+
+        self.layer_norm2 = nn_LayerNorm(embed_dim)
+        self.linear1 = nn_Linear(embed_dim, 4 * embed_dim)
+        self.linear2 = nn_Linear(4 * embed_dim, embed_dim)
+        self.dropout = nn_Dropout(dropout)
+
     def call(self, x, attn_mask=None):
 
         print("vit.py: TransformerLayer.call()")
@@ -252,16 +268,30 @@ class MinVit(tf.keras.Model):
             assert False
 
 
-        self.pos_embed = tf.Variable(tf.random.truncated_normal([1, self.patch_embed.num_patch, embed_dim], stddev=0.02))
+        # self.pos_embed = tf.Variable(tf.random.truncated_normal([1, self.patch_embed.num_patch, embed_dim], stddev=0.02))
 
 
-        layers = [TransformerLayer(embed_dim, num_head, dropout=0) for _ in range(depth)]
-        self.net = tf.keras.Sequential(*layers)
+        # layers = [TransformerLayer(embed_dim, num_head, dropout=0) for _ in range(depth)]
+        # self.net = tf.keras.Sequential(*layers)
 
-        #输入维度是embed_dim
-        self.norm = layers.LayerNormalization()
+        # #输入维度是embed_dim
+        # self.norm = layers.LayerNormalization()
 
+        # self.num_patches = self.patch_embed.num_patch
+
+        self.pos_embed = nn_Parameter(
+            torch_zeros(1, self.patch_embed.num_patch, embed_dim)
+        )
+        layers = [
+            TransformerLayer(embed_dim, num_head, dropout=0) for _ in range(depth)
+        ]
+
+        self.net = nn_Sequential(*layers)
+        self.norm = nn_LayerNorm(embed_dim)
         self.num_patches = self.patch_embed.num_patch
+
+        # weight init
+        trunc_normal_(self.pos_embed, std=0.02)
 
         named_apply(init_weights_vit_timm, self)
 
@@ -312,6 +342,7 @@ def named_apply(fn, module, name="", depth_first=True, include_root=False):
             depth_first=depth_first,
             include_root=True,
         )
+
     if depth_first and include_root:
         fn(module, name=name)
     return module
@@ -323,38 +354,40 @@ def test_patch_embed():
 
     # 测试第一个 PatchEmbed 类
     print("embed 1")
-    embed = PatchEmbed1(128, flatten=True) 
-    x = tf.random.uniform([10, 96, 96, 3])  # 输入数据形状为 NHWC
+    embed = PatchEmbed1(128) 
+    # x = tf.random.uniform([10, 96, 96, 3])  # 输入数据形状为 NHWC
+    x = torch_rand(10, 3, 96, 96)
     y = embed(x)
     print("Output shape for embed 1:", y.shape)
 
     # 测试第二个 PatchEmbed 类
     print("embed 2")
-    embed = PatchEmbed2(128, flatten=True)  # 对应第二种设置
-    x = tf.random.uniform([10, 96, 96, 3])  # 输入数据形状为 NHWC
+    embed = PatchEmbed2(128)  # 对应第二种设置
+    # x = tf.random.uniform([10, 96, 96, 3])  # 输入数据形状为 NHWC
+    x = torch_rand(10, 3, 96, 96)
     y = embed(x)
     print("Output shape for embed 2:", y.shape)
 
 
-# 测试 PatchEmbed
-def test_patch_embed():
-    print("Testing PatchEmbed...")
-    embed = PatchEmbed1(128)
-    x = tf.random.uniform([10, 96, 96, 3])  # NHWC format
-    y = embed(x)
-    print("Output shape:", y.shape)
+
 
 
 
 
 def test_transformer_layer():
     print("Testing TransformerLayer...")
-    x = tf.random.uniform([10, 96, 96, 3])
+    # x = tf.random.uniform([10, 96, 96, 3])
     embed = PatchEmbed1(128)
+    x = torch_rand(10, 3, 96, 96)
+
     y = embed(x)
+
     print("Embed output shape:", y.shape)
+
     transformer = TransformerLayer(128, 4, False)
+
     z = transformer(y)
+
     print("Transformer output shape:", z.shape)
 
 
@@ -365,7 +398,8 @@ if __name__ == "__main__":
 
     print("vit.py: main()")
 
-    obs_shape = [128, 128, 6]  # NHWC
+    # obs_shape = [128, 128, 6]  # NHWC
+    obs_shape = [6, 128, 128]  # NHWC
 
     enc = VitEncoder(
         obs_shape,
@@ -376,7 +410,9 @@ if __name__ == "__main__":
     )
 
     print(enc)
-    x = tf.random.uniform([1, *obs_shape]) * 255
+    # x = tf.random.uniform([1, *obs_shape]) * 255
+    x = torch_rand([1, *obs_shape]) * 255
+
     print("output size:", enc(x, flatten=False).shape)
     print("repr dim:", enc.repr_dim, ", real dim:", enc(x, flatten=True).shape)
 

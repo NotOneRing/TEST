@@ -86,8 +86,18 @@ class CriticObsAct(tf.keras.Model):
         use_layernorm=False,
         residual_tyle=False,
         double_q=True,
+        Q1 = None,
+        Q2 = None,
         **kwargs,
     ):
+        self.cond_dim = cond_dim
+        self.mlp_dims = mlp_dims
+        self.action_dim = action_dim
+        self.action_steps = action_steps
+        self.activation_type=activation_type
+        self.use_layernorm=use_layernorm
+        self.residual_tyle=residual_tyle
+        self.double_q=double_q
 
         print("critic.py: CriticObsAct.__init__()")
 
@@ -111,6 +121,90 @@ class CriticObsAct(tf.keras.Model):
                 out_activation_type="Identity",
                 use_layernorm=use_layernorm,
             )
+
+
+    def get_config(self):
+        # print("CriticObsAct: get_config()")
+        config = super(CriticObsAct, self).get_config()
+
+
+        print(f"cond_dims: {self.cond_dims}, type: {type(self.cond_dims)}")
+        print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
+        print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
+        print(f"action_steps: {self.action_steps}, type: {type(self.action_steps)}")
+        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+        print(f"residual_tyle: {self.residual_tyle}, type: {type(self.residual_tyle)}")
+        print(f"double_q: {self.double_q}, type: {type(self.double_q)}")
+
+
+        config.update({
+            "cond_dim" : self.cond_dim,
+            "mlp_dims" : self.mlp_dims,
+            "action_dim" : self.action_dim,
+            "action_steps" : self.action_steps,
+            "activation_type" : self.activation_type,
+            "use_layernorm" : self.use_layernorm,
+            "residual_tyle" : self.residual_tyle,
+            "double_q" : self.double_q
+        })
+    
+    
+        config.update({
+            "Q1": 
+            tf.keras.layers.serialize(self.Q1),
+            "Q2": 
+            tf.keras.layers.serialize(self.Q2),
+        })
+
+        return config
+
+
+
+    @classmethod
+    def from_config(cls, config):
+        print("DiffusionMLP: from_config()")
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        # time_embedding = nn_Sequential.from_config( config.pop("time_embedding") )
+        Q1 = tf.keras.layers.deserialize(config.pop("Q1") ,  custom_objects=get_custom_objects() )
+
+        Q2 = tf.keras.layers.deserialize(config.pop("Q2") ,  custom_objects=get_custom_objects() )
+
+
+        result = cls(Q1 = Q1, Q2 = Q2, **config)
+        return result
+
+
+
+
 
     def call(self, cond: dict, action):
         """
@@ -141,6 +235,20 @@ class CriticObsAct(tf.keras.Model):
             return torch_squeeze(q1, 1), torch_squeeze(q2, 1)
         else:
             return torch_squeeze(q1, 1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

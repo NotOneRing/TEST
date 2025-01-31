@@ -402,38 +402,45 @@ class TrainDIPODiffusionAgent(TrainAgent):
                 time = timer()
                 run_results[-1]["time"] = time
                 if eval_mode:
+                    # log.info(
+                    #     f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                    # )
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
+                    # log.info(
+                    #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss - critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                    # )
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss - critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss - critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb_log = {
-                            "total env step": cnt_train_step,
-                            "loss - critic": loss_critic,
-                            "avg episode reward - train": avg_episode_reward,
-                            "num episode - train": num_episode_finished,
-                        }
-                        # if type(loss_actor) == torch.Tensor:
-                        if isinstance(loss_actor, tf.tensor):
-                            wandb_log["loss - actor"] = loss_actor
-                        wandb.log(wandb_log, step=self.itr, commit=True)
+
+                    # if self.use_wandb:
+                    #     wandb_log = {
+                    #         "total env step": cnt_train_step,
+                    #         "loss - critic": loss_critic,
+                    #         "avg episode reward - train": avg_episode_reward,
+                    #         "num episode - train": num_episode_finished,
+                    #     }
+                    #     # if type(loss_actor) == torch.Tensor:
+                    #     if isinstance(loss_actor, tf.tensor):
+                    #         wandb_log["loss - actor"] = loss_actor
+                    #     wandb.log(wandb_log, step=self.itr, commit=True)
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

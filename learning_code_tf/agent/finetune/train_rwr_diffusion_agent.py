@@ -10,8 +10,6 @@ import pickle
 import numpy as np
 
 
-import torch
-
 
 import logging
 import wandb
@@ -22,9 +20,9 @@ from agent.finetune.train_agent import TrainAgent
 # from util.scheduler import CosineAnnealingWarmupRestarts
 
 
-from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_tensor, torch_nn_utils_clip_grad_norm_and_step, torch_exp
+from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_tensor, torch_nn_utils_clip_grad_norm_and_step, torch_exp, torch_clamp
 
-from util.torch_to_tf import torch_no_grad, tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW, torch_std, torch_reshape, torch_tensor_clamp_
+from util.torch_to_tf import torch_no_grad, tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW, torch_std, torch_reshape
 
 import tensorflow as tf
 
@@ -68,6 +66,7 @@ class TrainRWRDiffusionAgent(TrainAgent):
 
     def run(self):
         print("train_rwr_diffusion_agent.py: TrainRWRDiffusionAgent.run()")
+        print("self.model = ", self.model)
 
         # Start training loop
         timer = Timer()
@@ -86,7 +85,11 @@ class TrainRWRDiffusionAgent(TrainAgent):
 
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
-            self.model.eval() if eval_mode else self.model.train()
+            
+            # self.model.eval() if eval_mode else self.model.train()
+
+
+
             last_itr_eval = eval_mode
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) right after eval mode
@@ -131,9 +134,9 @@ class TrainRWRDiffusionAgent(TrainAgent):
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
-                        )
-                        .cpu()
-                        .numpy()
+                        ).numpy()
+                        # .cpu()
+                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
                 samples_trajs[step] = samples
@@ -243,7 +246,7 @@ class TrainRWRDiffusionAgent(TrainAgent):
                 # Normalize reward
                 returns_trajs_split = (
                     returns_trajs_split - np.mean(returns_trajs_split)
-                ) / ( torch_std( returns_trajs_split ) + 1e-3)
+                ) / ( returns_trajs_split.std() + 1e-3 )
                 rewards_k = (
                     torch_reshape( torch_tensor_float( torch_tensor(returns_trajs_split) ), -1)
                     # .float()
@@ -252,7 +255,7 @@ class TrainRWRDiffusionAgent(TrainAgent):
                 )
 
                 rewards_k_scaled = torch_exp(self.beta * rewards_k)
-                torch_tensor_clamp_(rewards_k_scaled, max=self.max_reward_weight)
+                rewards_k_scaled = torch_clamp(rewards_k_scaled, max=self.max_reward_weight)
 
 
                 # Update policy and critic
@@ -266,14 +269,21 @@ class TrainRWRDiffusionAgent(TrainAgent):
                         start = batch * self.batch_size
                         end = start + self.batch_size
                         inds_b = inds_k[start:end]  # b for batch
-                        obs_b = {"state": obs_k["state"][inds_b]}
-                        samples_b = samples_k[inds_b]
-                        rewards_b = rewards_k_scaled[inds_b]
+                        
+                        # obs_b = {"state": obs_k["state"][inds_b]}
+                        temp_result = tf.gather(obs_k["state"], inds_b, axis=0)
+                        obs_b = {"state": temp_result}
+
+                        # samples_b = samples_k[inds_b]
+                        samples_b = tf.gather(samples_k, inds_b, axis=0)
+
+                        # rewards_b = rewards_k_scaled[inds_b]
+                        rewards_b = tf.gather(rewards_k_scaled, inds_b, axis=0)
 
 
                         with tf.GradientTape() as tape:
                             # Update policy with collected trajectories
-                            loss = self.model.loss(
+                            loss = self.model.loss_ori(
                                 samples_b,
                                 obs_b,
                                 rewards_b,
@@ -298,7 +308,8 @@ class TrainRWRDiffusionAgent(TrainAgent):
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model()
+                # self.save_model()
+                self.save_model_rwr()
 
             # Log loss and save metrics
             run_results.append(
@@ -312,37 +323,38 @@ class TrainRWRDiffusionAgent(TrainAgent):
                 run_results[-1]["time"] = time
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "total env step": cnt_train_step,
-                                "loss": loss,
-                                "avg episode reward - train": avg_episode_reward,
-                                "num episode - train": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=True,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "total env step": cnt_train_step,
+                    #             "loss": loss,
+                    #             "avg episode reward - train": avg_episode_reward,
+                    #             "num episode - train": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

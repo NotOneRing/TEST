@@ -26,8 +26,9 @@ from util.torch_to_tf import nn_TransformerDecoder, nn_TransformerDecoderLayer, 
 nn_MultiheadAttention, nn_LayerNorm, nn_Linear, nn_Dropout, nn_Parameter, nn_ModuleList, nn_Sequential, nn_Embedding
 
 
-from util.torch_to_tf import torch_nn_init_normal_, torch_nn_init_ones_, torch_nn_init_zeros_
-
+from util.torch_to_tf import torch_nn_init_normal_, torch_nn_init_ones_, torch_nn_init_zeros_,\
+torch_log, torch_tensor, torch_tanh, torch_tensor_repeat, torch_clamp, torch_exp,\
+torch_reshape, torch_ones_like, torch_tensor_permute
 
 
 # class Gaussian_Transformer(nn.Module):
@@ -60,17 +61,26 @@ class Gaussian_Transformer(tf.keras.Model):
             output_dim *= 2  # mean and logvar
             logger.info("Using learned std")
         elif learn_fixed_std:  # learn logvar
-            self.logvar = tf.Variable(
-                initial_value=np.log(fixed_std ** 2) * np.ones(action_dim, dtype=np.float32),
-                trainable=True,
+            self.logvar = nn_Parameter(
+                # initial_value=np.log(fixed_std ** 2) * np.ones(action_dim, dtype=np.float32),
+                # trainable=True,
+                torch_log(torch_tensor([fixed_std**2 for _ in range(action_dim)])),
+                requires_grad=True,
             )
             logger.info(f"Using fixed std {fixed_std} with learning")
         else:
             logger.info(f"Using fixed std {fixed_std} without learning")
 
 
-        self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
-        self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
+        # self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
+        # self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
+
+        self.logvar_min = nn_Parameter(
+            torch_log(torch_tensor(std_min**2)), requires_grad=False
+        )
+        self.logvar_max = nn_Parameter(
+            torch_log(torch_tensor(std_max**2)), requires_grad=False
+        )
 
 
         self.learn_fixed_std = learn_fixed_std
@@ -97,32 +107,32 @@ class Gaussian_Transformer(tf.keras.Model):
         B = cond["state"].shape[0]
 
         # flatten history
-        state = tf.reshape(cond["state"], (B, -1))
+        state = torch_tensor_view(cond["state"], (B, -1))
 
         # input to transformer
-        state = tf.expand_dims(state, axis=1)  # (B,1,cond_dim)
+        state = torch_unsqueeze(state, dim=1)  # (B,1,cond_dim)
         out, _ = self.transformer(state)  # (B,horizon,output_dim)
 
         # # use the first half of the output as mean
-        assert self.num_modes == 1, "self.num_modes != 1, the code is not congruent with the PyTorch Version!"
-        out_mean = tf.tanh(out[:, :, : self.action_dim])
-        out_mean = tf.reshape(out_mean, (B, self.horizon_steps * self.action_dim))
+        # assert self.num_modes == 1, "self.num_modes != 1, the code is not congruent with the PyTorch Version!"
+        out_mean = torch_tanh(out[:, :, : self.action_dim])
+        out_mean = torch_tensor_view(out_mean, (B, self.horizon_steps * self.action_dim))
 
 
 
         if self.learn_fixed_std:
-            out_logvar = tf.clip_by_value(self.logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
-            out_scale = tf.reshape(out_scale, (1, self.action_dim))
-            out_scale = tf.tile(out_scale, [B, self.horizon_steps])  
+            out_logvar = torch_clamp(self.logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
+            out_scale = torch_tensor_view(out_scale, (1, self.action_dim))
+            out_scale = torch_tensor_repeat(out_scale, [B, self.horizon_steps])  
 
         elif self.fixed_std is not None:
-            out_scale = tf.ones_like(out_mean) * self.fixed_std
+            out_scale = torch_ones_like(out_mean) * self.fixed_std
         else:
             out_logvar = out[:, :, self.action_dim:]
-            out_logvar = tf.reshape(out_logvar, (B, self.horizon_steps * self.action_dim))
-            out_logvar = tf.clip_by_value(out_logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
+            out_logvar = torch_reshape(out_logvar, (B, self.horizon_steps * self.action_dim))
+            out_logvar = torch_clamp(out_logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
 
         return out_mean, out_scale
 
@@ -161,16 +171,31 @@ class GMM_Transformer(tf.keras.Model):
         elif (
             learn_fixed_std
         ):  # initialize to fixed_std, separate for each action and mode, but same along horizon
-            self.logvar = tf.Variable(
-                initial_value=np.log(fixed_std ** 2) * np.ones(num_modes * action_dim, dtype=np.float32),
-                trainable=True,
+            # self.logvar = tf.Variable(
+            #     initial_value=np.log(fixed_std ** 2) * np.ones(num_modes * action_dim, dtype=np.float32),
+            #     trainable=True,
+            # )
+            self.logvar = nn_Parameter(
+                torch_log(
+                    torch_tensor(
+                        [fixed_std**2 for _ in range(num_modes * action_dim)]
+                    )
+                ),
+                requires_grad=True,
             )
             logger.info(f"Using fixed std {fixed_std} with learning")
         else:
             logger.info(f"Using fixed std {fixed_std} without learning")
 
-        self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
-        self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
+        # self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
+        # self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
+        self.logvar_min = nn_Parameter(
+            torch_log(torch_tensor(std_min**2)), requires_grad=False
+        )
+        self.logvar_max = nn_Parameter(
+            torch_log(torch_tensor(std_max**2)), requires_grad=False
+        )
+
         self.fixed_std = fixed_std
         self.learn_fixed_std = learn_fixed_std
 
@@ -188,7 +213,7 @@ class GMM_Transformer(tf.keras.Model):
         )
 
         #输入维度horizon_steps * transformer_embed_dim
-        self.modes_head = layers.Dense(num_modes)
+        self.modes_head = nn_Linear(horizon_steps * transformer_embed_dim, num_modes)
 
     def call(self, cond):
 
@@ -209,39 +234,39 @@ class GMM_Transformer(tf.keras.Model):
         )  # (B,horizon,output_dim), (B,horizon,emb_dim)
 
         # use the first half of the output as mean
-        out_mean = tf.tanh(out[:, :, :self.num_modes * self.action_dim])
+        out_mean = torch_tanh(out[:, :, :self.num_modes * self.action_dim])
 
-        out_mean = tf.reshape(out_mean, (B, self.horizon_steps, self.num_modes, self.action_dim))
+        out_mean = torch_reshape(out_mean, (B, self.horizon_steps, self.num_modes, self.action_dim))
 
-        out_mean = tf.transpose(out_mean, (0, 2, 1, 3))  # flip horizons and modes
+        out_mean = torch_tensor_permute(out_mean, (0, 2, 1, 3))  # flip horizons and modes
 
-        out_mean = tf.reshape(out_mean, (B, self.num_modes, self.horizon_steps * self.action_dim))
+        out_mean = torch_reshape(out_mean, (B, self.num_modes, self.horizon_steps * self.action_dim))
 
         if self.learn_fixed_std:
-            out_logvar = tf.clip_by_value(self.logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
-            out_scale = tf.reshape(out_scale, (1, self.num_modes, self.action_dim))
-            out_scale = tf.tile(out_scale, [B, 1, self.horizon_steps])
+            out_logvar = torch_clamp(self.logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
+            out_scale = torch_tensor_view(out_scale, (1, self.num_modes, self.action_dim))
+            out_scale = torch_tensor_repeat(out_scale, [B, 1, self.horizon_steps])
 
         elif self.fixed_std is not None:
-            out_scale = tf.ones_like(out_mean) * self.fixed_std
+            out_scale = torch_ones_like(out_mean) * self.fixed_std
         else:
             out_logvar = out[
                 :, :, self.num_modes * self.action_dim : -self.num_modes
             ]
-            out_logvar = out_logvar.reshape(
+            out_logvar = torch_reshape(out_logvar, 
                 B, self.horizon_steps, self.num_modes, self.action_dim
             )
 
-            out_logvar = tf.transpose(out_logvar, (0, 2, 1, 3))  # flip horizons and modes
+            out_logvar = torch_tensor_permute(out_logvar, (0, 2, 1, 3))  # flip horizons and modes
 
-            out_logvar = tf.reshape(out_logvar, (B, self.num_modes, self.horizon_steps * self.action_dim))
+            out_logvar = torch_reshape(out_logvar, (B, self.num_modes, self.horizon_steps * self.action_dim))
 
-            out_logvar = tf.clip_by_value(out_logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
+            out_logvar = torch_clamp(out_logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
 
         # use last horizon step as the mode weights - as it depends on the entire context
-        out_weights = self.modes_head(tf.reshape(out_prehead, (B, -1)))
+        out_weights = self.modes_head(torch_tensor_view(out_prehead, (B, -1)))
 
         return out_mean, out_scale, out_weights
 
@@ -287,30 +312,52 @@ class Transformer(tf.keras.Model):
 
         # encoder for observations
         #输入维度cond_dim
-        self.cond_obs_emb = layers.Dense(n_emb)
-        self.cond_pos_emb = tf.Variable(tf.zeros([1, T_cond, n_emb]))
+        self.cond_obs_emb = nn_Linear(cond_dim, n_emb)
+        self.cond_pos_emb = nn_Parameter(torch_zeros([1, T_cond, n_emb]))
 
         self.model_layers.append(self.cond_obs_emb)
         self.model_layers.append(self.cond_pos_emb)
 
+        # if n_cond_layers > 0:
+        #     self.encoder = nn_TransformerEncoder(
+        #         n_layers=n_cond_layers,
+        #         d_model=n_emb,
+        #         nhead=n_head,
+        #         dim_feedforward=4 * n_emb,
+        #         dropout=p_drop_attn,
+        #         activation=activation,
+        #     )
+
+
+        # else:
+        #     # 输入n_emb
+        #     self.encoder = tf.keras.Sequential([
+        #         tf.keras.layers.Dense(4 * n_emb),
+        #         nn_Mish(),
+        #         tf.keras.layers.Dense(n_emb),
+        #     ])
+
         if n_cond_layers > 0:
-            self.encoder = nn_TransformerEncoder(
-                n_layers=n_cond_layers,
+            encoder_layer = nn_TransformerEncoderLayer(
                 d_model=n_emb,
                 nhead=n_head,
                 dim_feedforward=4 * n_emb,
                 dropout=p_drop_attn,
                 activation=activation,
+                batch_first=True,
+                norm_first=True,
+            )
+            self.encoder = nn_TransformerEncoder(
+                encoder_layer=encoder_layer,
+                num_layers=n_cond_layers,
+            )
+        else:
+            self.encoder = nn_Sequential(
+                nn_Linear(n_emb, 4 * n_emb),
+                nn_Mish(),
+                nn_Linear(4 * n_emb, n_emb),
             )
 
-
-        else:
-            # 输入n_emb
-            self.encoder = tf.keras.Sequential([
-                tf.keras.layers.Dense(4 * n_emb),
-                nn_Mish(),
-                tf.keras.layers.Dense(n_emb),
-            ])
 
         self.model_layers.append(self.encoder)
 

@@ -866,8 +866,9 @@ def torch_std(input, dim=None, *, correction=1, keepdim=False, out=None):
         count = tf.shape(input)[dim] if dim is not None else tf.size(input)
         count = tf.cast(count, tf.float32)
         variance *= count / (count - correction)
-
-    return tf.sqrt(variance)
+    result = tf.sqrt(variance)
+    result = tf.cast(result, tf.float32)
+    return result
 
 
 

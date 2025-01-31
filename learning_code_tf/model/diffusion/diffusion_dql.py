@@ -145,7 +145,8 @@ class DQLDiffusion(DiffusionModel):
             mean, logvar = self.p_mean_var(
                 x=x,
                 t=t_b,
-                cond=cond,
+                # cond=cond,
+                cond_state=cond['state'],
             )
             std = torch_exp(0.5 * logvar)
 
@@ -192,7 +193,8 @@ class DQLDiffusion(DiffusionModel):
             mean, logvar = self.p_mean_var(
                 x=x,
                 t=t_b,
-                cond=cond,
+                # cond=cond,
+                cond_state=cond['state'],
             )
             std = torch_exp(0.5 * logvar)
 

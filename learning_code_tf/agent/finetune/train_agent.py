@@ -221,7 +221,7 @@ class TrainAgent:
         pass
 
 
-    def save_model(self, learn_eta):
+    def save_model_dppo(self, learn_eta=False):
         """
         Saves model to disk.
         """
@@ -257,6 +257,35 @@ class TrainAgent:
             print("eta_savepath = ", eta_savepath)
             tf.keras.models.save_model(self.model.eta, eta_savepath)
             print(f"Saved model.eta to {eta_savepath}")
+
+
+
+
+
+    def save_model_rwr(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        network_savepath = savepath.replace(".keras", "_network.keras")
+        print("network_savepath = ", network_savepath)
+        print(f"Saved model to {network_savepath}")
+
+
+
 
 
 

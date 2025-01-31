@@ -199,9 +199,9 @@ class TrainRLPDAgent(TrainAgent):
                             self.model(
                                 cond=cond,
                                 deterministic=eval_mode,
-                            )
-                            .cpu()
-                            .numpy()
+                            ).numpy()
+                            # .cpu()
+                            # .numpy()
                         )  # n_env x horizon x act
                     action_venv = samples[:, : self.act_steps]
 
@@ -392,7 +392,8 @@ class TrainRLPDAgent(TrainAgent):
                 with tf.GradientTape() as tape:
                     loss_alpha = self.model.loss_temperature(
                         {"state": obs_b},
-                        self.log_alpha.exp(),  # with grad
+                        # self.log_alpha.exp(),  # with grad
+                        torch_exp( self.log_alpha ),  # with grad
                         self.target_entropy,
                     )
                 tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])

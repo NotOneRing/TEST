@@ -458,21 +458,21 @@ class DiffusionMLP(tf.keras.layers.Layer):
             # "time_dim": self.time_dim,
         })
 
-        time_embedding_config = self.time_embedding.get_config()
+        # time_embedding_config = self.time_embedding.get_config()
 
-        if self.cond_mlp:
-            cond_mlp_config = self.cond_mlp.get_config()
-        else:
-            cond_mlp_config = None            
+        # if self.cond_mlp:
+        #     cond_mlp_config = self.cond_mlp.get_config()
+        # else:
+        #     cond_mlp_config = None            
 
-        mlp_mean_config = self.mlp_mean.get_config()
+        # mlp_mean_config = self.mlp_mean.get_config()
 
-        if OUTPUT_VARIABLES:
-            print("time_embedding_config = ", time_embedding_config)
+        # if OUTPUT_VARIABLES:
+        #     print("time_embedding_config = ", time_embedding_config)
 
-            print("cond_mlp_config = ", cond_mlp_config)
+        #     print("cond_mlp_config = ", cond_mlp_config)
 
-            print("mlp_mean_config = ", mlp_mean_config)
+        #     print("mlp_mean_config = ", mlp_mean_config)
 
         config.update({
             "time_embedding": 

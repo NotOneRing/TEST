@@ -7,6 +7,7 @@ import tensorflow as tf
 
 from model.common.mlp import MLP, ResidualMLP
 
+from util.torch_to_tf import nn_Parameter, torch_log, torch_tensor
 
 class GMM_MLP(tf.keras.Model):
 
@@ -56,21 +57,35 @@ class GMM_MLP(tf.keras.Model):
             learn_fixed_std
         ):  # initialize to fixed_std, separate for each action and mode            
             # Learnable fixed_std
-            self.logvar = self.add_weight(
-                shape=(action_dim * num_modes,),
-                initializer=tf.constant_initializer(
-                    tf.math.log([fixed_std**2] * (action_dim * num_modes))
+            # self.logvar = self.add_weight(
+            #     shape=(action_dim * num_modes,),
+            #     initializer=tf.constant_initializer(
+            #         tf.math.log([fixed_std**2] * (action_dim * num_modes))
+            #     ),
+            #     trainable=True,
+            #     name="logvar",
+            # )
+            self.logvar = nn_Parameter(
+                torch_log(
+                    torch_tensor(
+                        [fixed_std**2 for _ in range(action_dim * num_modes)]
+                    )
                 ),
-                trainable=True,
-                name="logvar",
+                requires_grad=True,
             )
 
 
-        self.logvar_min = tf.constant(
-            tf.math.log(std_min**2), dtype=tf.float32, name="logvar_min"
+        # self.logvar_min = tf.constant(
+        #     tf.math.log(std_min**2), dtype=tf.float32, name="logvar_min"
+        # )
+        # self.logvar_max = tf.constant(
+        #     tf.math.log(std_max**2), dtype=tf.float32, name="logvar_max"
+        # )
+        self.logvar_min = nn_Parameter(
+            torch_log(torch_tensor(std_min**2)), requires_grad=False
         )
-        self.logvar_max = tf.constant(
-            tf.math.log(std_max**2), dtype=tf.float32, name="logvar_max"
+        self.logvar_max = nn_Parameter(
+            torch_log(torch_tensor(std_max**2)), requires_grad=False
         )
 
 
@@ -92,42 +107,53 @@ class GMM_MLP(tf.keras.Model):
         print("mlp_gmm.py: GMM_MLP.call()")
 
         B = len(cond["state"])
-        device = cond["state"].device
+        # device = cond["state"].device
 
         # flatten history
-        state = tf.reshape(cond["state"], [B, -1])
+        state = torch_tensor_view(cond["state"], [B, -1])
 
         # mlp
         out_mean = self.mlp_mean(state)
 
-        out_mean = tf.tanh(out_mean)
-        out_mean = tf.reshape(
+        out_mean = torch_tanh(out_mean)
+        out_mean = torch_tensor_view(
             out_mean, [B, self.num_modes, self.horizon_steps * self.action_dim]
         ) # tanh squashing in [-1, 1]
 
 
         if self.learn_fixed_std:
-            out_logvar = tf.clip_by_value(self.logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
-            out_scale = tf.reshape(
+            out_logvar = torch_clamp(self.logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
+            out_scale = torch_tensor_view(
                 out_scale, [1, self.num_modes, self.action_dim]
             )
-            out_scale = tf.tile(out_scale, [B, 1, self.horizon_steps])
+            out_scale = torch_tensor_repeat(out_scale, [B, 1, self.horizon_steps])
 
         elif self.use_fixed_std:
-            out_scale = tf.ones_like(out_mean) * self.fixed_std
+            out_scale = torch_ones_like(out_mean) * self.fixed_std
         else:
-            out_logvar = tf.reshape(
-                out_logvar, [B, self.num_modes, self.horizon_steps * self.action_dim]
+
+            out_logvar = self.mlp_logvar(state)
+            out_logvar = torch_tensor_view( out_logvar,
+                B, self.num_modes, self.horizon_steps * self.action_dim
             )
-            out_logvar = tf.clip_by_value(out_logvar, self.logvar_min, self.logvar_max)
-            out_scale = tf.exp(0.5 * out_logvar)
+
+            out_logvar = torch_clamp(out_logvar, self.logvar_min, self.logvar_max)
+            out_scale = torch_exp(0.5 * out_logvar)
 
         out_weights = self.mlp_weights(state)
 
-        out_weights = tf.reshape(out_weights, [B, self.num_modes])
+        out_weights = torch_tensor_view(out_weights, [B, self.num_modes])
 
         return out_mean, out_scale, out_weights
+
+
+
+
+
+
+
+
 
 
 
