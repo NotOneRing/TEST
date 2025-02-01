@@ -14,15 +14,17 @@ log = logging.getLogger(__name__)
 
 from model.diffusion.diffusion_rwr import RWRDiffusion
 
-from util.torch_to_tf import torch_gather, torch_no_grad
+from util.torch_to_tf import torch_gather, torch_no_grad, torch_where, torch_min, torch_reshape,\
+torch_mean, torch_tensor_view, torch_randn_like, torch_mse_loss, torch_tensor_repeat, torch_argmax, \
+torch_sum, torch_multinomial
 
 
 def expectile_loss(diff, expectile=0.8):
 
     print("diffusion_idql.py: expectile_loss()")
 
-    # weight = torch.where(diff > 0, expectile, (1 - expectile))
-    weight = tf.where(diff > 0, expectile, (1 - expectile))
+    weight = torch_where(diff > 0, expectile, (1 - expectile))
+    # weight = tf.where(diff > 0, expectile, (1 - expectile))
 
     return weight * (diff**2)
 
@@ -40,9 +42,9 @@ class IDQLDiffusion(RWRDiffusion):
         print("diffusion_idql.py: IDQLDiffusion.__init__()")
 
         super().__init__(network=actor, **kwargs)
-        self.critic_q = critic_q.to(self.device)
+        self.critic_q = critic_q
         self.target_q = copy.deepcopy(critic_q)
-        self.critic_v = critic_v.to(self.device)
+        self.critic_v = critic_v
 
         # assign actor
         self.actor = self.network
@@ -56,12 +58,12 @@ class IDQLDiffusion(RWRDiffusion):
         # get current Q-function, stop gradient
         with torch_no_grad() as tape:
             current_q1, current_q2 = self.target_q(obs, actions)
-        q = tf.minimum(current_q1, current_q2)
+        q = torch_min(current_q1, current_q2)
 
         # get the current V-function
         v = self.critic_v(obs)
         
-        v = tf.reshape(v, [-1])
+        v = torch_reshape(v, [-1])
 
         # compute advantage
         adv = q - v
@@ -74,7 +76,7 @@ class IDQLDiffusion(RWRDiffusion):
         adv = self.compute_advantages(obs, actions)
 
         # get the value loss
-        v_loss = expectile_loss(adv).mean()
+        v_loss = torch_mean( expectile_loss(adv) )
         return v_loss
 
     def loss_critic_q(self, obs, next_obs, actions, rewards, terminated, gamma):
@@ -92,15 +94,15 @@ class IDQLDiffusion(RWRDiffusion):
         mask = 1 - terminated
 
         # flatten
-        rewards = tf.reshape(rewards, [-1])
-        next_v = tf.reshape(next_v, [-1])
-        mask = tf.reshape(mask, [-1])
+        rewards = torch_tensor_view(rewards, [-1])
+        next_v = torch_tensor_view(next_v, [-1])
+        mask = torch_tensor_view(mask, [-1])
 
         # target value
         discounted_q = rewards + gamma * next_v * mask
 
         # Update critic
-        q_loss = tf.reduce_mean(tf.square(current_q1 - discounted_q)) + tf.reduce_mean(tf.square(current_q2 - discounted_q))
+        q_loss = torch_mean( (current_q1 - discounted_q) ** 2 ) + torch_mean( (current_q2 - discounted_q) ** 2 )
         return q_loss
 
 
@@ -124,7 +126,7 @@ class IDQLDiffusion(RWRDiffusion):
         print("diffusion_idql.py: IDQLDiffusion.p_losses()")
 
         # Forward process
-        noise = tf.random.normal(shape=tf.shape(x_start))
+        noise = torch_randn_like(x_start)
 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
@@ -133,9 +135,9 @@ class IDQLDiffusion(RWRDiffusion):
 
         # Loss with mask           
         if self.predict_epsilon:
-            loss = tf.reduce_mean(tf.square(x_recon - noise))
+            loss = torch_mse_loss(x_recon - noise)
         else:
-            loss = tf.reduce_mean(tf.square(x_recon - x_start))
+            loss = torch_mse_loss(x_recon - x_start)
 
         return loss
 
@@ -161,11 +163,16 @@ class IDQLDiffusion(RWRDiffusion):
         B, T, D = cond["state"].shape
         S = num_sample
 
-        cond_repeat = cond["state"][None].repeat(num_sample, *cond_shape_repeat_dims)
+        # cond_repeat = cond["state"][None].repeat(num_sample, *cond_shape_repeat_dims)
 
-        cond_repeat = tf.tile(cond["state"][None], [num_sample] + [1] * len(cond["state"].shape))
+        # cond_repeat = tf.tile(cond["state"][None], [num_sample] + [1] * len(cond["state"].shape))
 
-        cond_repeat = tf.reshape(cond_repeat, [-1, T, D])  # [B*S, T, D]
+        # cond_repeat = tf.reshape(cond_repeat, [-1, T, D])  # [B*S, T, D]
+
+        cond_repeat = torch_tensor_repeat( cond["state"][None], num_sample, *cond_shape_repeat_dims)
+
+        cond_repeat = torch_tensor_view(cond_repeat, -1, T, D)
+
 
         # for eval, use less noisy samples --- there is still DDPM noise, but final action uses small min_sampling_std
         samples = super(IDQLDiffusion, self).call(
@@ -178,19 +185,19 @@ class IDQLDiffusion(RWRDiffusion):
         # get current Q-function
         current_q1, current_q2 = self.target_q({"state": cond_repeat}, samples)
 
-        q = tf.minimum(current_q1, current_q2)
-        q = tf.reshape(q, [S, B])
+        q = torch_min(current_q1, current_q2)
+        q = torch_tensor_view(q, [S, B])
 
 
         # Use argmax
         if deterministic or (not use_expectile_exploration):
             # gather the best sample -- filter out suboptimal Q during inference
-            best_indices = tf.argmax(q, axis=0)
-            samples_expanded = tf.reshape(samples, [S, B, H, A])
+            best_indices = torch_argmax(q, 0)
+            samples_expanded = torch_tensor_view(samples, [S, B, H, A])
 
             # dummy dimension @ dim 0 for batched indexing
             sample_indices = best_indices[None, :, None, None]  # [1, B, 1, 1]
-            sample_indices = tf.tile(sample_indices, [S, 1, H, A])
+            sample_indices = torch_tensor_repeat(sample_indices, S, 1, H, A)
 
             samples_best = torch_gather(samples_expanded, 0, sample_indices)
 
@@ -199,27 +206,31 @@ class IDQLDiffusion(RWRDiffusion):
             # get the current value function for probabilistic exploration
             current_v = self.critic_v({"state": cond_repeat})
 
-            v = tf.reshape(current_v, [S, B])
+            v = torch_tensor_view(current_v, [S, B])
 
             adv = q - v
 
             # Compute weights for sampling
-            samples_expanded = tf.reshape(samples, [S, B, H, A])
+            samples_expanded = torch_tensor_view(samples, [S, B, H, A])
 
             # expectile exploration policy
-            tau_weights = tf.where(adv > 0, critic_hyperparam, 1 - critic_hyperparam)
-            tau_weights = tau_weights / tf.reduce_sum(tau_weights, axis=0)  # normalize
+            tau_weights = torch_where(adv > 0, critic_hyperparam, 1 - critic_hyperparam)
+            tau_weights = tau_weights / torch_sum(tau_weights, 0)  # normalize
 
             assert len( tau_weights.shape.as_list() ) >= 2, "tau_weights.shape.as_list() should be at least 2"
 
             # select a sample from DP probabilistically -- sample index per batch and compile
-            sample_indices = tf.random.categorical(tau_weights.T, 1)  # [B, 1]
-
+            # sample_indices = tf.random.categorical(tau_weights.T, 1)  # [B, 1]
+            
+            sample_indices = torch_multinomial(tf.transpose(tau_weights), 1)  # [B, 1]
+            
             # dummy dimension @ dim 0 for batched indexing
-            sample_indices = tf.expand_dims(sample_indices, 0)  # [1, B, 1]
-            sample_indices = tf.expand_dims(sample_indices, -1)  # [1, B, 1, 1]
+            # sample_indices = tf.expand_dims(sample_indices, 0)  # [1, B, 1]
+            # sample_indices = tf.expand_dims(sample_indices, -1)  # [1, B, 1, 1]
 
-            sample_indices = tf.tile(sample_indices, [S, 1, H, A])
+            # sample_indices = tf.tile(sample_indices, [S, 1, H, A])
+            sample_indices = sample_indices[None, :, None]  # [1, B, 1, 1]
+            sample_indices = torch_tensor_repeat(sample_indices, S, 1, H, A)
 
             samples_best = torch_gather(samples_expanded, 0, sample_indices)
 

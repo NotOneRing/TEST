@@ -63,7 +63,12 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
             
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
+
+            if eval_mode:
+                training=False
+            else:
+                training=True
 
             last_itr_eval = eval_mode
 
@@ -121,10 +126,10 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
                         return_chain=True,
                     )
                     output_venv = (
-                        samples.trajectories.cpu().numpy()
+                        samples.trajectories.numpy()
                     )  # n_env x horizon x act
                     chains_venv = (
-                        samples.chains.cpu().numpy()
+                        samples.chains.numpy()
                     )  # n_env x denoising x horizon x act
                 action_venv = output_venv[:, : self.act_steps]
                 samples_trajs[step] = output_venv
@@ -201,12 +206,14 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
                         obs_trajs["state"],
                         "s e ... -> (s e) ...",
                     )
+
                     obs_ts_k = torch.split(obs_k, self.logprob_batch_size, dim=0)
+
                     for i, obs_t in enumerate(obs_ts_k):
                         obs_ts[i]["state"] = obs_t
                     values_trajs = np.empty((0, self.n_envs))
                     for obs in obs_ts:
-                        values = self.model.critic(obs).cpu().numpy().flatten()
+                        values = self.model.critic(obs).numpy().flatten()
                         values_trajs = np.vstack(
                             (values_trajs, values.reshape(-1, self.n_envs))
                         )
@@ -245,7 +252,6 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
                             nextvalues = (
                                 self.model.critic(obs_venv_ts)
                                 .reshape(1, -1)
-                                .cpu()
                                 .numpy()
                             )
                         else:
@@ -299,12 +305,17 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
                         start = batch * self.batch_size
                         end = start + self.batch_size
                         inds_b = inds_k[start:end]  # b for batch
+
+
+
                         obs_b = {"state": obs_k["state"][inds_b]}
                         samples_b = samples_k[inds_b]
                         returns_b = returns_k[inds_b]
                         values_b = values_k[inds_b]
                         advantages_b = advantages_k[inds_b]
                         logprobs_b = logprobs_k[inds_b]
+
+
 
 
                         with tf.GradientTape(persistent=True) as tape:
@@ -316,7 +327,7 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
                                 approx_kl,
                                 ratio,
                                 bc_loss,
-                            ) = self.model.loss(
+                            ) = self.model.loss_ori(
                                 obs_b,
                                 samples_b,
                                 returns_b,
@@ -372,7 +383,7 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
                         break
 
                 # Explained variation of future rewards using value function
-                y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
+                y_pred, y_true = values_k.numpy(), returns_k.numpy()
                 var_y = np.var(y_true)
                 explained_var = (
                     np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -404,42 +415,43 @@ class TrainPPOExactDiffusionAgent(TrainPPODiffusionAgent):
                 run_results[-1]["time"] = time
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                        # f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} | approx kl {approx_kl:8.4f} | ratio {ratio:8.4f} | clipfrac: {np.mean(clipfracs):8.4f}, | explained variance {explained_var:8.4f} | reward {avg_episode_reward:8.4f} "
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "total env step": cnt_train_step,
-                                "loss": loss,
-                                "pg loss": pg_loss,
-                                "value loss": v_loss,
-                                "approx kl": approx_kl,
-                                "ratio": ratio,
-                                "clipfrac": np.mean(clipfracs),
-                                "explained variance": explained_var,
-                                "avg episode reward - train": avg_episode_reward,
-                            },
-                            step=self.itr,
-                            commit=True,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "total env step": cnt_train_step,
+                    #             "loss": loss,
+                    #             "pg loss": pg_loss,
+                    #             "value loss": v_loss,
+                    #             "approx kl": approx_kl,
+                    #             "ratio": ratio,
+                    #             "clipfrac": np.mean(clipfracs),
+                    #             "explained variance": explained_var,
+                    #             "avg episode reward - train": avg_episode_reward,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

@@ -23,7 +23,10 @@ groups = 1  # 确保 in_channels % groups == 0
 # 生成输入数据 (PyTorch 格式: batch_size, in_channels, length)
 input_np = np.random.randn(batch_size, in_channels, length).astype(np.float32)
 input_torch = torch.from_numpy(input_np)
-input_tf = tf.convert_to_tensor(np.transpose(input_np, (0, 2, 1)))  # 转换为 TF 格式: (batch, length, channels)
+
+# input_tf = tf.convert_to_tensor(np.transpose(input_np, (0, 2, 1)))  # 转换为 TF 格式: (batch, length, channels)
+input_tf = tf.convert_to_tensor(input_np)  # 转换为 TF 格式: (batch, length, channels)
+
 
 # 创建 PyTorch 层
 torch_conv1d = torch.nn.Conv1d(
@@ -70,7 +73,8 @@ with torch.no_grad():
 # 前向传播
 output_torch = torch_conv1d(input_torch).detach().numpy()  # (batch, out_channels, length)
 output_tf = tf_conv1d(input_tf).numpy()  # (batch, length, out_channels)
-output_tf = np.transpose(output_tf, (0, 2, 1))  # 转换为 (batch, out_channels, length)
+
+# output_tf = np.transpose(output_tf, (0, 2, 1))  # 转换为 (batch, out_channels, length)
 
 # 检查一致性
 if np.allclose(output_torch, output_tf, atol=1e-5):

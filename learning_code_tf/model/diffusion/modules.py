@@ -2,9 +2,12 @@ import tensorflow as tf
 import numpy as np
 import math
 
-from util.torch_to_tf import torch_exp, torch_arange, torch_cat
+from util.torch_to_tf import torch_exp, torch_arange, torch_cat, torch_unsqueeze, \
+    torch_squeeze
 
-from util.torch_to_tf import nn_Identity, nn_Mish, nn_ReLU, nn_Sequential, nn_GroupNorm, nn_Conv1d
+from util.torch_to_tf import nn_Identity, nn_Mish, nn_ReLU, nn_Sequential, nn_GroupNorm, nn_Conv1d, \
+nn_ConvTranspose1d
+
 
 from tensorflow.keras.saving import register_keras_serializable
 
@@ -131,7 +134,8 @@ class Upsample1d(tf.keras.layers.Layer):
         print("modules.py: Upsample1d.__init__()")
 
         super(Upsample1d, self).__init__()
-        self.conv = tf.keras.layers.Conv1DTranspose(dim, 4, strides=2, padding="same")
+        # self.conv = tf.keras.layers.Conv1DTranspose(dim, 4, strides=2, padding="same")
+        self.conv = nn_ConvTranspose1d(dim, dim, 4, 2, 1)
 
     def call(self, x):
 
@@ -186,15 +190,15 @@ class Conv1dBlock(tf.keras.layers.Layer):
             nn_Conv1d(
                 inp_channels, out_channels, kernel_size, padding=kernel_size // 2
             ),
-            # 使用 unsqueeze 增加一个维度
-            (lambda x: x.unsqueeze(2)) if n_groups is not None else nn_Identity(),
+            # (lambda x: x.unsqueeze(2)) if n_groups is not None else nn_Identity(),
+            (lambda x: torch_unsqueeze(x, 2)) if n_groups is not None else nn_Identity(),
             (
                 nn_GroupNorm(n_groups, out_channels, eps=eps)
                 if n_groups is not None
                 else nn_Identity()
             ),
-            # 使用 squeeze 移除增加的维度
-            (lambda x: x.squeeze(2)) if n_groups is not None else nn_Identity(),
+            # (lambda x: x.squeeze(2)) if n_groups is not None else nn_Identity(),
+            (lambda x: torch_squeeze(x, 2)) if n_groups is not None else nn_Identity(),
             act,
         )
 
@@ -209,7 +213,6 @@ class Conv1dBlock(tf.keras.layers.Layer):
 
 
 
-    # 自己实现的
     def get_config(self):
         config = super(Conv1dBlock, self).get_config()
         config.update({

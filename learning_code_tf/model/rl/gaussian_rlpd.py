@@ -106,7 +106,7 @@ class RLPD_Gaussian(GaussianModel):
             )
             next_q1 = self.target_networks[q1_ind](next_obs, next_actions)
             next_q2 = self.target_networks[q2_ind](next_obs, next_actions)
-            next_q = torch_min(next_q1, next_q2)
+            next_q = torch_min(next_q1, other=next_q2)
 
             # target value
             target_q = rewards + gamma * (1 - terminated) * next_q  # (B,)

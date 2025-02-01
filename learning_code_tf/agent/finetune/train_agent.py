@@ -283,8 +283,201 @@ class TrainAgent:
         network_savepath = savepath.replace(".keras", "_network.keras")
         print("network_savepath = ", network_savepath)
         print(f"Saved model to {network_savepath}")
+        tf.keras.models.save_model(self.model.network, network_savepath)
 
 
+
+
+    def save_model_qsm(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        actor_savepath = savepath.replace(".keras", "_actor.keras")
+        print("network_savepath = ", actor_savepath)
+        print(f"Saved model to {actor_savepath}")
+        tf.keras.models.save_model(self.model.actor, actor_savepath)
+
+        critic_q_savepath = savepath.replace(".keras", "_critic_q.keras")
+        print("critic_q_savepath = ", critic_q_savepath)
+        print(f"Saved model to {critic_q_savepath}")
+        tf.keras.models.save_model(self.model.critic_q, critic_q_savepath)
+
+        target_q_savepath = savepath.replace(".keras", "_target_q.keras")
+        print("target_q_savepath = ", target_q_savepath)
+        print(f"Saved model to {target_q_savepath}")
+        tf.keras.models.save_model(self.model.target_q, target_q_savepath)
+
+
+
+
+
+    def save_model_dql(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        actor_savepath = savepath.replace(".keras", "_actor.keras")
+        print("actor_savepath = ", actor_savepath)
+        print(f"Saved model to {actor_savepath}")
+        tf.keras.models.save_model(self.model.actor, actor_savepath)
+
+        critic_savepath = savepath.replace(".keras", "_critic.keras")
+        print("critic_savepath = ", critic_savepath)
+        print(f"Saved model to {critic_savepath}")
+        tf.keras.models.save_model(self.model.critic, critic_savepath)
+
+        critic_target_savepath = savepath.replace(".keras", "_critic_target.keras")
+        print("critic_target_savepath = ", critic_target_savepath)
+        print(f"Saved model to {critic_target_savepath}")
+        tf.keras.models.save_model(self.model.critic_target, critic_target_savepath)
+
+
+
+
+    def save_model_awr(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        actor_savepath = savepath.replace(".keras", "_actor.keras")
+        print("actor_savepath = ", actor_savepath)
+        print(f"Saved model to {actor_savepath}")
+        tf.keras.models.save_model(self.model.actor, actor_savepath)
+
+        critic_savepath = savepath.replace(".keras", "_critic.keras")
+        print("critic_savepath = ", critic_savepath)
+        print(f"Saved model to {critic_savepath}")
+        tf.keras.models.save_model(self.model.critic, critic_savepath)
+
+
+
+
+
+
+
+
+    def save_model_idql(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        actor_savepath = savepath.replace(".keras", "_actor.keras")
+        print("network_savepath = ", actor_savepath)
+        print(f"Saved model to {actor_savepath}")
+        tf.keras.models.save_model(self.model.actor, actor_savepath)
+
+        critic_q_savepath = savepath.replace(".keras", "_critic_q.keras")
+        print("critic_q_savepath = ", critic_q_savepath)
+        print(f"Saved model to {critic_q_savepath}")
+        tf.keras.models.save_model(self.model.critic_q, critic_q_savepath)
+
+        critic_v_savepath = savepath.replace(".keras", "_critic_v.keras")
+        print("critic_v_savepath = ", critic_v_savepath)
+        print(f"Saved model to {critic_v_savepath}")
+        tf.keras.models.save_model(self.model.critic_v, critic_v_savepath)
+
+        target_q_savepath = savepath.replace(".keras", "_target_q.keras")
+        print("target_q_savepath = ", target_q_savepath)
+        print(f"Saved model to {target_q_savepath}")
+        tf.keras.models.save_model(self.model.target_q, target_q_savepath)
+
+
+
+
+
+
+    def save_model_dipo(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        actor_savepath = savepath.replace(".keras", "_actor.keras")
+        print("network_savepath = ", actor_savepath)
+        print(f"Saved model to {actor_savepath}")
+        tf.keras.models.save_model(self.model.actor, actor_savepath)
+
+        critic_savepath = savepath.replace(".keras", "_critic.keras")
+        print("critic_savepath = ", critic_savepath)
+        print(f"Saved model to {critic_savepath}")
+        tf.keras.models.save_model(self.model.critic, critic_savepath)
+
+        critic_target_savepath = savepath.replace(".keras", "_critic_target.keras")
+        print("critic_target_savepath = ", critic_target_savepath)
+        print(f"Saved model to {critic_target_savepath}")
+        tf.keras.models.save_model(self.model.critic_target, critic_target_savepath)
+
+        actor_target_savepath = savepath.replace(".keras", "_actor_target.keras")
+        print("actor_target_savepath = ", actor_target_savepath)
+        print(f"Saved model to {actor_target_savepath}")
+        tf.keras.models.save_model(self.model.actor_target, actor_target_savepath)
 
 
 

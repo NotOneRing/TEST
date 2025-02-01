@@ -40,7 +40,6 @@ with torch.no_grad():
     torch_conv_trans.weight.fill_(1.0)  # 权重全设为 1
     torch_conv_trans.bias.fill_(0.0)    # 偏置全设为 0
 
-# 创建 TensorFlow 层（修复 groups 参数传递）
 @register_keras_serializable(package="Custom")
 class nn_ConvTranspose1d(tf.keras.layers.Layer):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, dilation=1, groups=1, bias=True, name="nn_ConvTranspose1d", **kwargs):
@@ -52,8 +51,7 @@ class nn_ConvTranspose1d(tf.keras.layers.Layer):
         self.padding = padding
         self.output_padding = output_padding
         self.dilation = dilation
-        self.groups = groups  # 确保正确传递 groups
-        self.bias = bias
+        self.groups = groups
 
         if self.in_channels % self.groups != 0:
             raise ValueError("in_channels must be divisible by groups")
@@ -63,7 +61,7 @@ class nn_ConvTranspose1d(tf.keras.layers.Layer):
             filters=self.out_channels,
             kernel_size=self.kernel_size,
             strides=self.stride,
-            padding="valid",
+            padding="valid",  # 必须使用 valid 模式，手动控制填充
             dilation_rate=self.dilation,
             use_bias=self.bias,
             kernel_initializer="zeros",
@@ -71,21 +69,50 @@ class nn_ConvTranspose1d(tf.keras.layers.Layer):
         )
 
     def build(self, input_shape):
-        self.conv_transpose.build((None, input_shape[0], input_shape[1]))
+        self.conv_transpose.build(input_shape)
         super().build(input_shape)
 
     def call(self, x):
-        x = tf.pad(x, [[0, 0], [self.padding, self.padding], [0, 0]])
-        x = self.conv_transpose(x)
-        L_in_original = tf.shape(x)[1] - 2 * self.padding
-        L_out_pytorch = (L_in_original - 1) * self.stride - 2 * self.padding + self.dilation * (self.kernel_size - 1) + self.output_padding + 1
-        L_out_tf = tf.shape(x)[1]
-        crop_right = L_out_tf - L_out_pytorch
-        x = x[:, :-crop_right, :] if crop_right > 0 else x
+        # 输入形状：(batch, length, in_channels)
+        
+        # Step 1: 应用手动填充（PyTorch的padding是两侧对称填充）
+        x_padded = tf.pad(
+            x,
+            paddings=[[0, 0], [self.padding, self.padding], [0, 0]],
+            mode="CONSTANT"
+        )
+        
+        # Step 2: 执行转置卷积
+        x_conv = self.conv_transpose(x_padded)
+        
+        # Step 3: 计算PyTorch期望的输出长度
+        L_in = tf.shape(x)[1]
+        L_out_pytorch = (
+            (L_in - 1) * self.stride 
+            - 2 * self.padding 
+            + self.dilation * (self.kernel_size - 1) 
+            + self.output_padding 
+            + 1
+        )
+        
+        # Step 4: 裁剪多余部分（处理TensorFlow自动填充的额外长度）
+        current_length = tf.shape(x_conv)[1]
+        crop_left = (current_length - L_out_pytorch) // 2
+        crop_right = current_length - L_out_pytorch - crop_left
+        x_cropped = x_conv[:, crop_left:-crop_right, :]
+        
+        # Step 5: 应用output_padding（仅在右侧填充）
         if self.output_padding > 0:
-            x = tf.pad(x, [[0, 0], [0, self.output_padding], [0, 0]])
-        return x
+            x_cropped = tf.pad(
+                x_cropped,
+                paddings=[[0, 0], [0, self.output_padding], [0, 0]],
+                mode="CONSTANT"
+            )
+        
+        return x_cropped
+    
 
+    
 # 初始化 TensorFlow 层
 tf_conv_trans = nn_ConvTranspose1d(
     in_channels=in_channels,
@@ -103,7 +130,8 @@ tf_conv_trans = nn_ConvTranspose1d(
 tf_conv_trans.build(input_shape=(length, in_channels))
 with torch.no_grad():
     # 关键修正：转置轴顺序为 (2, 0, 1)
-    torch_weight = torch_conv_trans.weight.detach().numpy().transpose(2, 0, 1)  # (3, 4, 8)
+    # torch_weight = torch_conv_trans.weight.detach().numpy().transpose(2, 0, 1)  # (3, 4, 8)
+    torch_weight = torch_conv_trans.weight.detach().numpy().transpose(2, 1, 0)  # (3, 8, 4)
     torch_bias = torch_conv_trans.bias.detach().numpy()
     tf_conv_trans.conv_transpose.kernel.assign(torch_weight)
     tf_conv_trans.conv_transpose.bias.assign(torch_bias)

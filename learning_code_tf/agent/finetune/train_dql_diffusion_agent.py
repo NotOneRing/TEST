@@ -126,7 +126,12 @@ class TrainDQLDiffusionAgent(TrainAgent):
             
             
             
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
+
+            if eval_mode:
+                training=False
+            else:
+                training=True
 
 
 
@@ -160,9 +165,9 @@ class TrainDQLDiffusionAgent(TrainAgent):
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
-                        )
-                        .cpu()
-                        .numpy()
+                        ).numpy()
+                        # .cpu()
+                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
 
@@ -259,6 +264,9 @@ class TrainDQLDiffusionAgent(TrainAgent):
 
                     with tf.GradientTape() as tape:
 
+                        print("self.model = ", self.model)
+                        print("self.model.loss_critic = ", self.model.loss_critic)
+
                         # Update critic
                         loss_critic = self.model.loss_critic(
                             {"state": obs_b},
@@ -269,9 +277,13 @@ class TrainDQLDiffusionAgent(TrainAgent):
                             self.gamma,
                         )
 
-                    tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
+                    # tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
+                    # self.critic_optimizer.step(tf_gradients)
 
-                    self.critic_optimizer.step(tf_gradients)
+                    tf_critic_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)                        
+                    zip_gradients_critic_params = zip(tf_critic_gradients, self.model.critic.trainable_variables)
+                    self.critic_optimizer.apply_gradients(zip_gradients_critic_params)
+
 
                     # Update policy with collected trajectories
 
@@ -283,8 +295,9 @@ class TrainDQLDiffusionAgent(TrainAgent):
                             self.act_steps,
                         )
                     # loss_actor.backward()
-                    tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
-
+                    # tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+                    tf_actor_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)                        
+                    zip_gradients_actor_params = zip(tf_actor_gradients, self.model.actor.trainable_variables)
 
                     if self.itr >= self.n_critic_warmup_itr:
                         if self.max_grad_norm is not None:
@@ -293,10 +306,12 @@ class TrainDQLDiffusionAgent(TrainAgent):
                                 self.model.actor.trainable_variables, 
                                 self.actor_optimizer,
                                 self.max_grad_norm,
-                                tf_gradients
+                                # tf_gradients
+                                zip_gradients_actor_params
                             )
                         else:
-                            self.actor_optimizer.step(tf_gradients)
+                            # self.actor_optimizer.step(tf_gradients)
+                            self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
 
                     # update target
                     self.model.update_target_critic(self.target_ema_rate)
@@ -307,7 +322,7 @@ class TrainDQLDiffusionAgent(TrainAgent):
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model()
+                self.save_model_dql()
 
             # Log loss and save metrics
             run_results.append(
@@ -321,38 +336,39 @@ class TrainDQLDiffusionAgent(TrainAgent):
                 run_results[-1]["time"] = time
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "total env step": cnt_train_step,
-                                "loss - actor": loss_actor,
-                                "loss - critic": loss_critic,
-                                "avg episode reward - train": avg_episode_reward,
-                                "num episode - train": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=True,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "total env step": cnt_train_step,
+                    #             "loss - actor": loss_actor,
+                    #             "loss - critic": loss_critic,
+                    #             "avg episode reward - train": avg_episode_reward,
+                    #             "num episode - train": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

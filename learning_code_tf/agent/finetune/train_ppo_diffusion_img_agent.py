@@ -72,9 +72,12 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
 
 
 
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
 
-
+            if eval_mode:
+                training=False
+            else:
+                training=True
 
 
 
@@ -129,10 +132,12 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                         return_chain=True,
                     )
                     output_venv = (
-                        samples.trajectories.cpu().numpy()
+                        # samples.trajectories.cpu().numpy()
+                        samples.trajectories.numpy()
                     )  # n_env x horizon x act
                     chains_venv = (
-                        samples.chains.cpu().numpy()
+                        # samples.chains.cpu().numpy()
+                        samples.chains.numpy()
                     )  # n_env x denoising x horizon x act
                 action_venv = output_venv[:, : self.act_steps]
 
@@ -234,9 +239,9 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                     for obs in obs_ts:
                         values = (
                             self.model.critic(obs, no_augment=True)
-                            .cpu()
                             .numpy()
                             .flatten()
+                            # .cpu()
                         )
                         values_trajs = np.vstack(
                             (values_trajs, values.reshape(-1, self.n_envs))
@@ -256,7 +261,7 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                         )
                     )
                     for obs, chains in zip(obs_ts, chains_ts):
-                        logprobs = self.model.get_logprobs(obs, chains).cpu().numpy()
+                        logprobs = self.model.get_logprobs(obs, chains).numpy()
                         logprobs_trajs = np.vstack(
                             (
                                 logprobs_trajs,
@@ -282,9 +287,7 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                     for t in reversed(range(self.n_steps)):
                         if t == self.n_steps - 1:
                             nextvalues = (
-                                self.model.critic(obs_venv_ts, no_augment=True)
-                                .reshape(1, -1)
-                                .cpu()
+                                torch_reshape( self.model.critic(obs_venv_ts, no_augment=True), 1, -1)
                                 .numpy()
                             )
                         else:
@@ -343,13 +346,35 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                             inds_b,
                             (self.n_steps * self.n_envs, self.model.ft_denoising_steps),
                         )
-                        obs_b = {k: obs_k[k][batch_inds_b] for k in obs_k}
-                        chains_prev_b = chains_k[batch_inds_b, denoising_inds_b]
-                        chains_next_b = chains_k[batch_inds_b, denoising_inds_b + 1]
-                        returns_b = returns_k[batch_inds_b]
-                        values_b = values_k[batch_inds_b]
-                        advantages_b = advantages_k[batch_inds_b]
-                        logprobs_b = logprobs_k[batch_inds_b, denoising_inds_b]
+                        # obs_b = {k: obs_k[k][batch_inds_b] for k in obs_k}
+
+                        obs_b = {k: tf.gather(obs_k[k], batch_inds_b, axis=0) for k in obs_k}
+
+                        # chains_prev_b = chains_k[batch_inds_b, denoising_inds_b]
+                        prev_b_indices = tf.stack([batch_inds_b, denoising_inds_b], axis=1)
+                        chains_prev_b = tf.gather_nd(chains_k, prev_b_indices)
+
+                        # chains_next_b = chains_k[batch_inds_b, denoising_inds_b + 1]
+                        next_b_indices = tf.stack([batch_inds_b, denoising_inds_b + 1], axis=1)
+                        chains_next_b = tf.gather_nd(chains_k, next_b_indices)
+
+                        # returns_b = returns_k[batch_inds_b]
+                        returns_b = tf.gather(returns_k, batch_inds_b, axis=0)
+
+                        # values_b = values_k[batch_inds_b]
+                        values_b = tf.gather(values_k, batch_inds_b, axis=0)
+
+                        # advantages_b = advantages_k[batch_inds_b]
+                        advantages_b = tf.gather(advantages_k, batch_inds_b, axis=0)
+
+                        # logprobs_b = logprobs_k[batch_inds_b, denoising_inds_b]
+                        logprobs_b_indices = tf.stack([batch_inds_b, denoising_inds_b], axis=1)
+                        logprobs_b = tf.gather_nd(logprobs_k, logprobs_b_indices)
+
+
+
+
+
 
                         with tf.GradientTape(persistent=True) as tape:
 
@@ -363,7 +388,7 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                                 ratio,
                                 bc_loss,
                                 eta,
-                            ) = self.model.loss(
+                            ) = self.model.loss_ori(
                                 obs_b,
                                 chains_prev_b,
                                 chains_next_b,
@@ -435,7 +460,7 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                         break
 
                 # Explained variation of future rewards using value function
-                y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
+                y_pred, y_true = values_k.numpy(), returns_k.numpy()
                 var_y = np.var(y_true)
                 explained_var = (
                     np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -475,50 +500,59 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                 run_results[-1]["time"] = time
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | eta {eta:8.4f} | t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} \
+                        | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | eta {eta:8.4f} | t:{time:8.4f} \
+                        | diffusion_min_sampling_std {diffusion_min_sampling_std:8.4f}\
+                        | num episode - train {num_episode_finished:8.4f}\
+                        | explained variance: {explained_var:8.4f}\
+                        | approx kl: {approx_kl:8.4f},\
+                        | ratio: {ratio:8.4f},\
+                        | clipfrac: {np.mean(clipfracs):8.4f},\
+                        | actor lr {self.actor_optimizer.param_groups[0]["lr"]:8.4f}, \
+                        | critic lr {self.critic_optimizer.param_groups[0]["lr"]:8.4f} "
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "total env step": cnt_train_step,
-                                "loss": loss,
-                                "pg loss": pg_loss,
-                                "value loss": v_loss,
-                                "bc loss": bc_loss,
-                                "eta": eta,
-                                "approx kl": approx_kl,
-                                "ratio": ratio,
-                                "clipfrac": np.mean(clipfracs),
-                                "explained variance": explained_var,
-                                "avg episode reward - train": avg_episode_reward,
-                                "num episode - train": num_episode_finished,
-                                "diffusion - min sampling std": diffusion_min_sampling_std,
-                                "actor lr": self.actor_optimizer.param_groups[0]["lr"],
-                                "critic lr": self.critic_optimizer.param_groups[0][
-                                    "lr"
-                                ],
-                            },
-                            step=self.itr,
-                            commit=True,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "total env step": cnt_train_step,
+                    #             "loss": loss,
+                    #             "pg loss": pg_loss,
+                    #             "value loss": v_loss,
+                    #             "bc loss": bc_loss,
+                    #             "eta": eta,
+                    #             "approx kl": approx_kl,
+                    #             "ratio": ratio,
+                    #             "clipfrac": np.mean(clipfracs),
+                    #             "explained variance": explained_var,
+                    #             "avg episode reward - train": avg_episode_reward,
+                    #             "num episode - train": num_episode_finished,
+                    #             "diffusion - min sampling std": diffusion_min_sampling_std,
+                    #             "actor lr": self.actor_optimizer.param_groups[0]["lr"],
+                    #             "critic lr": self.critic_optimizer.param_groups[0][
+                    #                 "lr"
+                    #             ],
+                    #         },
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

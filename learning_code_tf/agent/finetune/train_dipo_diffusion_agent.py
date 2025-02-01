@@ -133,7 +133,11 @@ class TrainDIPODiffusionAgent(TrainAgent):
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
             
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
+            if eval_mode:
+                training=False
+            else:
+                training=True
 
             last_itr_eval = eval_mode
 
@@ -281,9 +285,15 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             self.gamma,
                         )
 
-                    tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
-                    
-                    self.critic_optimizer.step(tf_gradients)
+                    # tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)                    
+                    # self.critic_optimizer.step(tf_gradients)
+
+
+                    tf_critic_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)                        
+                    zip_gradients_critic_params = zip(tf_critic_gradients, self.model.critic.trainable_variables)
+                    self.critic_optimizer.apply_gradients(zip_gradients_critic_params)
+
+
 
                     # Actor learning
                     loss_actor = 0.0
@@ -311,11 +321,14 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             torch_tensor_requires_grad_(actions_flat, True)
 
                             with tf.GradientTape() as tape:
-                            
+                                
+                                print("self.model = ", self.model)
+                                print("self.model.critic = ", self.model.critic)
+                                
                                 q_values_1, q_values_2 = self.model.critic(
                                     {"state": obs_b}, actions_flat
                                 )
-                                q_values = torch_min(q_values_1, q_values_2)
+                                q_values = torch_min(q_values_1, other=q_values_2)
                                 action_opt_loss = - torch_sum(q_values)
                             # .sum()
 
@@ -332,7 +345,8 @@ class TrainDIPODiffusionAgent(TrainAgent):
                                 grads = tf_gradients,
                                 norm_type=2,
                             )
-                            actions_optim.step(tf_gradients)
+                            # two into one
+                            # actions_optim.step(tf_gradients)
 
                             # actions_flat.requires_grad_(False)
                             torch_tensor_requires_grad_(actions_flat, False)
@@ -342,23 +356,29 @@ class TrainDIPODiffusionAgent(TrainAgent):
                         guided_action = torch_reshape( actions_flat,
                             len(actions_flat), self.horizon_steps, self.action_dim
                         )
-                        guided_action_np = torch_tensor_detach( guided_action.numpy()
-                                                            #    .detach()
-                                                            #    .cpu().numpy()
-                                                               )
+                        # guided_action_np = torch_tensor_detach( guided_action.numpy()
+                        #                                     #    .detach()
+                        #                                     #    .cpu().numpy()
+                        #                                        )
+                        guided_action_np = guided_action.numpy()
+                        
 
                         # Add back to buffer
                         action_array[inds] = guided_action_np
 
                         with tf.GradientTape() as tape:
                             # Update policy with collected trajectories
-                            loss_actor = self.model.loss(
+                            loss_actor = self.model.loss_ori(
+                                training,
                                 # guided_action.detach()
                                 torch_tensor_detach(guided_action),
                                 {"state": obs_b}
                             )
                         
-                        tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+                        # tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+
+                        tf_actor_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)                        
+                        zip_gradients_actor_params = zip(tf_actor_gradients, self.model.actor.trainable_variables)
 
                         # self.actor_optimizer.zero_grad()
                         # loss_actor.backward()
@@ -372,7 +392,9 @@ class TrainDIPODiffusionAgent(TrainAgent):
                                 tf_gradients
                             )
                         else:
-                            self.actor_optimizer.step(tf_gradients)
+                            # self.actor_optimizer.step(tf_gradients)
+                            self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
+
 
                     # Update target critic and actor
                     self.model.update_target_critic(self.target_ema_rate)
@@ -389,7 +411,7 @@ class TrainDIPODiffusionAgent(TrainAgent):
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model()
+                self.save_model_dipo()
 
             # Log loss and save metrics
             run_results.append(

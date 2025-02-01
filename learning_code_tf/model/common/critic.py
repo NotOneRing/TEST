@@ -91,7 +91,7 @@ class CriticObsAct(tf.keras.Model):
         **kwargs,
     ):
         self.cond_dim = cond_dim
-        self.mlp_dims = mlp_dims
+        self.mlp_dims = list(mlp_dims)
         self.action_dim = action_dim
         self.action_steps = action_steps
         self.activation_type=activation_type
@@ -128,7 +128,7 @@ class CriticObsAct(tf.keras.Model):
         config = super(CriticObsAct, self).get_config()
 
 
-        print(f"cond_dims: {self.cond_dims}, type: {type(self.cond_dims)}")
+        print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
         print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
         print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
         print(f"action_steps: {self.action_steps}, type: {type(self.action_steps)}")
@@ -136,6 +136,9 @@ class CriticObsAct(tf.keras.Model):
         print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
         print(f"residual_tyle: {self.residual_tyle}, type: {type(self.residual_tyle)}")
         print(f"double_q: {self.double_q}, type: {type(self.double_q)}")
+
+        print(f"Q1: {self.Q1}, type: {type(self.Q1)}")
+        print(f"Q2: {self.Q2}, type: {type(self.Q2)}")
 
 
         config.update({

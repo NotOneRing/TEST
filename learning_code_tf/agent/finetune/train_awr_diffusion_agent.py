@@ -173,7 +173,14 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
+
+            if eval_mode:
+                training=False
+            else:
+                training=True
+
+            
             last_itr_eval = eval_mode
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) right after eval mode
@@ -202,9 +209,9 @@ class TrainAWRDiffusionAgent(TrainAgent):
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
-                        )
-                        .cpu()
-                        .numpy()
+                        ).numpy()
+                        # .cpu()
+                        # .numpy()
                     )
                 action_venv = samples[:, : self.act_steps]
 
@@ -280,7 +287,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
                 values_trajs = np.array(
                     # self.model.critic({"state": obs_t}).detach().cpu().numpy()
-                    self.model.critic({"state": obs_t}).cpu().numpy()
+                    self.model.critic({"state": obs_t}).numpy()
                 ).reshape(-1, self.n_envs)
 
                 td_trajs = td_values(
@@ -307,13 +314,23 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     # loss_critic.backward()
                     # self.critic_optimizer.step()
 
+                    obs_result = tf.gather(obs_t, inds, axis=0)
+                    td_result = tf.gather(td_t, inds, axis=0)
+
                     with tf.GradientTape() as tape:
                         loss_critic = self.model.loss_critic(
-                            {"state": obs_t[inds]}, td_t[inds]
+                            # {"state": obs_t[inds]}, td_t[inds]
+                            {"state": obs_result}, td_result
                         )
 
-                    tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
-                    self.critic_optimizer.step(tf_gradients)
+
+                    tf_gradients_critic = tape.gradient(loss_critic, self.model.critic.trainable_variables)                        
+                    zip_gradients_critic_params = zip(tf_gradients_critic, self.model.critic.trainable_variables)
+                    self.critic_optimizer.apply_gradients(zip_gradients_critic_params)
+
+                    # tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
+                    # self.critic_optimizer.step(tf_gradients)
+
 
                 # Update policy - use a new copy of data
                 obs_trajs = np.array(deepcopy(obs_buffer))
@@ -328,7 +345,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 )
                 values_trajs = np.array(
                     # self.model.critic({"state": obs_t}).detach().cpu().numpy()
-                    self.model.critic({"state": obs_t}).cpu().numpy()
+                    self.model.critic({"state": obs_t}).numpy()
                 ).reshape(-1, self.n_envs)
 
                 td_trajs = td_values(
@@ -391,7 +408,8 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
                     with tf.GradientTape() as tape:
                         # Update policy with collected trajectories
-                        loss_actor = self.model.loss(
+                        loss_actor = self.model.loss_ori(
+                            training,
                             actions_b,
                             obs_b,
                             torch_tensor_detach( advantages_b_scaled )
@@ -399,7 +417,9 @@ class TrainAWRDiffusionAgent(TrainAgent):
                             ,
                         )
 
-                    tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+                    # tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+                    tf_gradients_actor = tape.gradient(loss_actor, self.model.actor.trainable_variables)                        
+                    zip_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
 
 
                     if self.itr >= self.n_critic_warmup_itr:
@@ -409,10 +429,11 @@ class TrainAWRDiffusionAgent(TrainAgent):
                                 self.model.actor.trainable_variables,
                                 self.actor_optimizer,
                                 self.max_grad_norm,
-                                tf_gradients
+                                tf_gradients_actor
                             )
                         else:
-                            self.actor_optimizer.step(tf_gradients)
+                            # self.actor_optimizer.step(tf_gradients)
+                            self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
 
             # Update lr
             self.actor_lr_scheduler.step()
@@ -420,7 +441,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model()
+                self.save_model_awr()
 
             # Log loss and save metrics
             run_results.append(

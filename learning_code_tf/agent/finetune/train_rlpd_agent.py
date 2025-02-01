@@ -124,7 +124,7 @@ class TrainRLPDAgent(TrainAgent):
         terminated_buffer = deque(maxlen=self.buffer_size)
 
         # load offline dataset into replay buffer
-        dataloader_offline = torch.utils.data.DataLoader(
+        dataloader_offline = torch_utils_data_DataLoader(
             self.dataset_offline,
             batch_size=len(self.dataset_offline),
             drop_last=False,
@@ -136,11 +136,18 @@ class TrainRLPDAgent(TrainAgent):
             actions, states_and_next, rewards, terminated = batch
             states = states_and_next["state"]
             next_states = states_and_next["next_state"]
-            obs_buffer_off = states.cpu().numpy()
-            next_obs_buffer_off = next_states.cpu().numpy()
-            action_buffer_off = actions.cpu().numpy()
-            reward_buffer_off = rewards.cpu().numpy().flatten()
-            terminated_buffer_off = terminated.cpu().numpy().flatten()
+            # obs_buffer_off = states.cpu().numpy()
+            # next_obs_buffer_off = next_states.cpu().numpy()
+            # action_buffer_off = actions.cpu().numpy()
+            # reward_buffer_off = rewards.cpu().numpy().flatten()
+            # terminated_buffer_off = terminated.cpu().numpy().flatten()
+            obs_buffer_off = states.numpy()
+            next_obs_buffer_off = next_states.numpy()
+            action_buffer_off = actions.numpy()
+            reward_buffer_off = rewards.numpy().flatten()
+            terminated_buffer_off = terminated.numpy().flatten()
+
+
 
         # Start training loop
         timer = Timer()
@@ -168,7 +175,12 @@ class TrainRLPDAgent(TrainAgent):
             n_steps = (
                 self.n_steps if not eval_mode else int(1e5)
             )  # large number for eval mode
-            self.model.eval() if eval_mode else self.model.train()
+
+            # self.model.eval() if eval_mode else self.model.train()
+            if eval_mode:
+                training=False
+            else:
+                training=True
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) at the beginning
             firsts_trajs = np.zeros((n_steps + 1, self.n_envs))
@@ -421,40 +433,59 @@ class TrainRLPDAgent(TrainAgent):
                 time = timer()
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} \
+                        | avg best reward {avg_best_reward:8.4f} | num episode - eval {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
+                    # log.info(
+                    #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t:{time:8.4f}"
+                    # )
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t:{time:8.4f}"
-                    )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "total env step": cnt_train_step,
-                                "loss - actor": loss_actor,
-                                "loss - critic": loss_critic,
-                                "entropy coeff": alpha,
-                                "avg episode reward - train": avg_episode_reward,
-                                "num episode - train": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=True,
-                        )
+                        f"{self.itr}: step {cnt_train_step:8d} \
+                        | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} \
+                        | entropy coeff: {alpha:8.4f} \
+                        | reward {avg_episode_reward:8.4f} \
+                        | num episode - train: {num_episode_finished:8.4f} \
+                        | t:{time:8.4f}"
+                    )       
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "total env step": cnt_train_step,
+                    #             "loss - actor": loss_actor,
+                    #             "loss - critic": loss_critic,
+                    #             "entropy coeff": alpha,
+                    #             "avg episode reward - train": avg_episode_reward,
+                    #             "num episode - train": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+
+
+
+
+
+
+
+

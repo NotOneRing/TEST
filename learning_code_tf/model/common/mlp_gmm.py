@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from model.common.mlp import MLP, ResidualMLP
 
-from util.torch_to_tf import nn_Parameter, torch_log, torch_tensor
+from util.torch_to_tf import nn_Parameter, torch_log, torch_tensor, torch_tanh, torch_tensor_view, torch_exp, torch_clamp, torch_tensor_repeat, torch_ones_like
 
 class GMM_MLP(tf.keras.Model):
 

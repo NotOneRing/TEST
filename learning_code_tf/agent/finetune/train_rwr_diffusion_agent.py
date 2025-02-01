@@ -88,7 +88,10 @@ class TrainRWRDiffusionAgent(TrainAgent):
             
             # self.model.eval() if eval_mode else self.model.train()
 
-
+            if eval_mode:
+                training=False      
+            else:
+                training=True
 
             last_itr_eval = eval_mode
 
@@ -284,12 +287,15 @@ class TrainRWRDiffusionAgent(TrainAgent):
                         with tf.GradientTape() as tape:
                             # Update policy with collected trajectories
                             loss = self.model.loss_ori(
+                                training,
                                 samples_b,
                                 obs_b,
                                 rewards_b,
                             )
 
                         tf_gradients = tape.gradient(loss, self.model.trainable_variables)
+
+                        zip_gradients_params = zip(tf_gradients, self.model.trainable_variables)
 
                         if self.max_grad_norm is not None:
                             torch_nn_utils_clip_grad_norm_and_step(
@@ -300,7 +306,9 @@ class TrainRWRDiffusionAgent(TrainAgent):
                                 tf_gradients
                             )
                         else:
-                            self.optimizer.step(tf_gradients)
+                            # self.optimizer.step(tf_gradients)
+                            self.optimizer.apply_gradients(zip_gradients_params)
+
 
 
             # Update lr
@@ -359,6 +367,17 @@ class TrainRWRDiffusionAgent(TrainAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+
+
+
+
+
+
+
+
+
 
 
 

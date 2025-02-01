@@ -11,7 +11,7 @@ import logging
 log = logging.getLogger(__name__)
 
 from util.torch_to_tf import Normal, Categorical, Independent, MixtureSameFamily, \
-torch_tensor_view, torch_mean, torch_mean, torch_sum, torch_softmax, torch_ones_like,\
+torch_tensor_view, torch_mean, torch_mean, torch_sum, torch_softmax, torch_ones_like
 
 
 

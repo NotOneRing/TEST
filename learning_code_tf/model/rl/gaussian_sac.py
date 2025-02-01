@@ -61,7 +61,7 @@ class SAC_Gaussian(GaussianModel):
                 next_obs,
                 next_actions,
             )
-            next_q = torch_min(next_q1, next_q2) - alpha * next_logprobs
+            next_q = torch_min(next_q1, other=next_q2) - alpha * next_logprobs
 
             # target value
             target_q = rewards + gamma * next_q * (1 - terminated)

@@ -55,8 +55,7 @@ class QSMDiffusion(RWRDiffusion):
 
         # Forward process
         noise = torch_randn_like(x_start)
-        t = torch_tensor_long(torch_randint(
-            0, self.denoising_steps, (B,)) )  # sample random denoising time index
+        t = torch_tensor_long( torch_randint( low=0, high=self.denoising_steps, size=(B,) ) )  # sample random denoising time index
 
         # get current value for noisy actions as the code does --- the algorthm block in the paper is wrong, it says using a_t, the final denoised action
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
@@ -65,7 +64,7 @@ class QSMDiffusion(RWRDiffusion):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(x_noisy)
             # tape.watch(x_noisy)
-            current_q1, current_q2 = self.critic_q([obs, x_noisy], training=True)
+            current_q1, current_q2 = self.critic_q(obs, x_noisy, training=True)
             q1_sum = torch_sum(current_q1)
             q2_sum = torch_sum(current_q2)
 
@@ -80,7 +79,8 @@ class QSMDiffusion(RWRDiffusion):
         # gradient_q = torch.stack((gradient_q1, gradient_q2), 0).mean(0).detach()
 
         # Predict noise from noisy actions
-        x_recon = self.network([x_noisy, t, obs], training=True)
+        # x_recon = self.network([x_noisy, t, obs], training=True)
+        x_recon = self.network([x_noisy, t, obs['state']], training=True)
 
         # Loss with mask - align predicted noise with critic gradient of noisy actions
         # Note: the gradient of mu wrt. epsilon has a negative sign
@@ -92,15 +92,16 @@ class QSMDiffusion(RWRDiffusion):
         print("diffusion_qsm.py: QSMDiffusion.loss_critic()")
 
         # get current Q-function
-        current_q1, current_q2 = self.critic_q([obs, actions], training=True)
+        # current_q1, current_q2 = self.critic_q([obs, actions], training=True)
+        current_q1, current_q2 = self.critic_q(obs, actions, training=True)
 
         # get next Q-function - with noise, same as QSM https://github.com/Alescontrela/score_matching_rl/blob/f02a21969b17e322eb229ceb2b0f5a9111b1b968/jaxrl5/agents/score_matching/score_matching_learner.py#L193
         next_actions = self.call(cond=next_obs, deterministic=False)
 
         with torch_no_grad() as tape:
-            next_q1, next_q2 = self.target_q([next_obs, next_actions], training=False)
+            next_q1, next_q2 = self.target_q(next_obs, next_actions, training=False)
 
-        next_q = torch_min(next_q1, next_q2)
+        next_q = torch_min(next_q1, other=next_q2)
 
         # terminal state mask
         mask = 1 - terminated

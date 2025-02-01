@@ -112,7 +112,7 @@ class CalQL_Gaussian(GaussianModel):
                 get_logprob=True,
             )
             next_q1, next_q2 = self.target_critic(next_obs_repeated, next_actions)
-            next_q = torch_min(next_q1, next_q2)
+            next_q = torch_min(next_q1, other=next_q2)
 
             # Reshape the next_q to match the number of samples
             # next_q = next_q.view(B, self.cql_n_actions)  # (B, n_sample)
@@ -224,7 +224,7 @@ class CalQL_Gaussian(GaussianModel):
             get_logprob=True,
         )
         q1, q2 = self.critic(obs, action)
-        actor_loss = -torch_min(q1, q2) + alpha * logprob
+        actor_loss = -torch_min(q1, other=q2) + alpha * logprob
         return torch_mean(actor_loss)
     
 

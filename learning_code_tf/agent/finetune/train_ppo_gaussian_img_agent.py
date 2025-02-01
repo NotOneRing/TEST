@@ -22,7 +22,7 @@ from agent.finetune.train_ppo_gaussian_agent import TrainPPOGaussianAgent
 from model.common.modules import RandomShiftsAug
 
 from util.torch_to_tf import torch_no_grad, torch_from_numpy, torch_tensor_float, torch_split, torch_reshape, torch_tensor, torch_randperm, \
-torch_nn_utils_clip_grad_norm_and_step
+torch_nn_utils_clip_grad_norm_and_step, torch_flatten
 
 
 
@@ -67,7 +67,8 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
             
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
+            training = False if eval_mode else traning = True
 
             last_itr_eval = eval_mode
 
@@ -116,7 +117,8 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                         cond=cond,
                         deterministic=eval_mode,
                     )
-                    output_venv = samples.cpu().numpy()
+                    # output_venv = samples.cpu().numpy()
+                    output_venv = samples.numpy()
                 action_venv = output_venv[:, : self.act_steps]
 
                 # Apply multi-step action
@@ -215,11 +217,15 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                             obs_ts[i][k] = obs_t
                     values_trajs = np.empty((0, self.n_envs))
                     for obs in obs_ts:
+
+                        temp_result = self.model.critic(obs, no_augment=True).numpy()
+                        temp_result = torch_flatten(temp_result)
+
                         values = (
-                            self.model.critic(obs, no_augment=True)
-                            .cpu()
-                            .numpy()
-                            .flatten()
+                            # self.model.critic(obs, no_augment=True)
+                            # .cpu()
+                            # .numpy()
+                            # .flatten()
                         )
                         values_trajs = np.vstack(
                             (values_trajs, values.reshape(-1, self.n_envs))
@@ -249,18 +255,24 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                         reward_trajs = reward_trajs_transpose.T
 
                     # bootstrap value with GAE if not terminal - apply reward scaling with constant if specified
+                    # obs_venv_ts = {
+                    #     key: torch_from_numpy(obs_venv[key]).float().to(self.device)
+                    #     for key in self.obs_dims
+                    # }
+
                     obs_venv_ts = {
-                        key: torch_from_numpy(obs_venv[key]).float().to(self.device)
+                        key: torch_tensor_float( torch_from_numpy(obs_venv[key]) )
                         for key in self.obs_dims
                     }
+
                     advantages_trajs = np.zeros_like(reward_trajs)
                     lastgaelam = 0
                     for t in reversed(range(self.n_steps)):
                         if t == self.n_steps - 1:
                             nextvalues = (
-                                torch_reshape( self.model.critic(obs_venv_ts, no_augment=True), 1, -1)
-                                .cpu()
-                                .numpy()
+                                torch_reshape( self.model.critic(obs_venv_ts, no_augment=True), 1, -1).numpy()
+                                # .cpu()
+                                # .numpy()
                             )
                         else:
                             nextvalues = values_trajs[t + 1]
@@ -333,7 +345,7 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                                 ratio,
                                 bc_loss,
                                 std,
-                            ) = self.model.loss(
+                            ) = self.model.loss_ori(
                                 obs_b,
                                 samples_b,
                                 returns_b,
@@ -390,7 +402,8 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                         break
 
                 # Explained variation of future rewards using value function
-                y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
+                # y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
+                y_pred, y_true = values_k.numpy(), returns_k.numpy()
                 var_y = np.var(y_true)
                 explained_var = (
                     np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -417,49 +430,63 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                 run_results[-1]["time"] = time
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
+                    # log.info(
+                    #     f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} 
+                    #     | value loss {v_loss:8.4f} | bc loss {bc_loss:8.4f} | 
+                    #     reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                    # )
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} \
+                        | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} \
+                        | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} \
+                        | t:{time:8.4f} \ 
+                        | std:{std:8.4f} | approx kl:{approx_kl:8.4f} | ratio:{ratio:8.4f}\
+                        | clipfrac:{np.mean(clipfracs):8.4f} | explained variance:{explained_var:8.4f} \
+                        | num episode - train: {num_episode_finished:8.4f} \
+                        | actor lr : {self.actor_optimizer.param_groups[0]["lr"]:8.4f}, \
+                        | critic lr : {self.critic_optimizer.param_groups[0]["lr"]:8.4f}
+                        "
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "total env step": cnt_train_step,
-                                "loss": loss,
-                                "pg loss": pg_loss,
-                                "value loss": v_loss,
-                                "bc loss": bc_loss,
-                                "std": std,
-                                "approx kl": approx_kl,
-                                "ratio": ratio,
-                                "clipfrac": np.mean(clipfracs),
-                                "explained variance": explained_var,
-                                "avg episode reward - train": avg_episode_reward,
-                                "num episode - train": num_episode_finished,
-                                "actor lr": self.actor_optimizer.param_groups[0]["lr"],
-                                "critic lr": self.critic_optimizer.param_groups[0][
-                                    "lr"
-                                ],
-                            },
-                            step=self.itr,
-                            commit=True,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "total env step": cnt_train_step,
+                    #             "loss": loss,
+                    #             "pg loss": pg_loss,
+                    #             "value loss": v_loss,
+                    #             "bc loss": bc_loss,
+                    #             "std": std,
+                    #             "approx kl": approx_kl,
+                    #             "ratio": ratio,
+                    #             "clipfrac": np.mean(clipfracs),
+                    #             "explained variance": explained_var,
+                    #             "avg episode reward - train": avg_episode_reward,
+                    #             "num episode - train": num_episode_finished,
+                    #             "actor lr": self.actor_optimizer.param_groups[0]["lr"],
+                    #             "critic lr": self.critic_optimizer.param_groups[0][
+                    #                 "lr"
+                    #             ],
+                    #         },
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

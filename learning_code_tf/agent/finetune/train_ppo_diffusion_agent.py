@@ -112,6 +112,10 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
             
             # self.model.eval() if eval_mode else self.model.train()
 
+            if eval_mode:
+                training=False
+            else:
+                training=True
 
 
             
@@ -774,10 +778,10 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 run_results[-1]["time"] = time
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval {num_episode_finished:8.4f}"
                     )
 
-                    print("num episode - eval = ", num_episode_finished)
+                    # print("num episode - eval = ", num_episode_finished)
 
                     # if self.use_wandb:
                     #     wandb.log(
@@ -796,9 +800,17 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 else:
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} \
-                        | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | eta {eta:8.4f} | t:{time:8.4f}"
+                        | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | eta {eta:8.4f} | t:{time:8.4f} \
+                        | diffusion_min_sampling_std {diffusion_min_sampling_std:8.4f}\
+                        | num episode - train {num_episode_finished:8.4f}\
+                        | explained variance: {explained_var:8.4f}\
+                        | approx kl: {approx_kl:8.4f},\
+                        | ratio: {ratio:8.4f},\
+                        | clipfrac: {np.mean(clipfracs):8.4f},\
+                        | actor lr {self.actor_optimizer.param_groups[0]["lr"]:8.4f},\
+                        | critic lr {self.critic_optimizer.param_groups[0]["lr"]:8.4f} "
                     )
-                    print("diffusion_min_sampling_std = ", diffusion_min_sampling_std)
+                    # print("diffusion_min_sampling_std = ", diffusion_min_sampling_std)
 
                     # if self.use_wandb:
                     #     wandb.log(

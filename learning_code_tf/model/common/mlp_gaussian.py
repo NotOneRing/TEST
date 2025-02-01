@@ -15,7 +15,11 @@ from model.common.modules import SpatialEmb, RandomShiftsAug
 
 from util.torch_to_tf import nn_Linear, nn_Sequential, nn_LayerNorm,\
 nn_Dropout, nn_ReLU, nn_Parameter, torch_log, torch_tensor, torch_tensor_view,\
-torch_reshape, torch_flatten, torch_tensor_float, torch_cat, torch_tensor_repeat,\
+torch_reshape, torch_flatten, torch_tensor_float, torch_cat, torch_tensor_repeat, torch_tanh, \
+torch_clamp, torch_exp, torch_ones_like
+
+
+
 
 
 

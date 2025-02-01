@@ -67,7 +67,8 @@ class DQLDiffusion(DiffusionModel):
                 deterministic=False,
             )  # forward() has no gradient, which is desired here.
             next_q1, next_q2 = self.critic_target(next_obs, next_actions)
-            next_q = torch_min(next_q1, next_q2)
+
+            next_q = torch_min(next_q1, other=next_q2)
 
             # terminal state mask
             mask = 1 - terminated
@@ -86,7 +87,7 @@ class DQLDiffusion(DiffusionModel):
         )
         return loss_critic
 
-    def loss_actor(self, obs, eta, act_steps):
+    def loss_actor(self, obs, eta, act_steps, training=True):
 
         print("diffusion_dql.py: DQLDiffusion.loss_actor()")
 
@@ -97,7 +98,7 @@ class DQLDiffusion(DiffusionModel):
             :, :act_steps
         ]  # with gradient
         q1, q2 = self.critic(obs, action_new)
-        bc_loss = self.loss(action_new, obs)
+        bc_loss = self.loss_ori(training, action_new, obs)
         if np.random.uniform() > 0.5:
             q_loss = -torch_mean(q1) / torch_tensor_detach( torch_mean(torch_abs(q2)) )
 
@@ -185,7 +186,7 @@ class DQLDiffusion(DiffusionModel):
 
         # Loop
         # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
-        x = torch_randn([B, self.horizon_steps, self.action_dim], dtype=tf.float32)
+        x = torch_randn([B, self.horizon_steps, self.action_dim] )
 
         t_all = list(reversed(range(self.denoising_steps)))
         for i, t in enumerate(t_all):

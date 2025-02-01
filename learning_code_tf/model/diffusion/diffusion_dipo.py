@@ -13,7 +13,8 @@ log = logging.getLogger(__name__)
 from model.diffusion.diffusion import DiffusionModel
 from model.diffusion.sampling import make_timesteps
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_min, torch_tensor_view, torch_mean,\
+torch_randn, torch_exp, torch_clip, torch_zeros_like, torch_clamp, torch_randn_like
 
 
 class DIPODiffusion(DiffusionModel):
@@ -32,7 +33,8 @@ class DIPODiffusion(DiffusionModel):
 
         super().__init__(network=actor, use_ddim=use_ddim, **kwargs)
         assert not self.use_ddim, "DQL does not support DDIM"
-        self.critic = critic.to(self.device)
+        self.critic = critic
+        # .to(self.device)
 
         # target critic
         self.critic_target = copy.deepcopy(self.critic)
@@ -62,22 +64,22 @@ class DIPODiffusion(DiffusionModel):
                 deterministic=False,
             )  # forward() has no gradient, which is desired here.
             next_q1, next_q2 = self.critic_target(next_obs, next_actions)
-            next_q = tf.minimum(next_q1, next_q2)
+            next_q = torch_min(next_q1, next_q2)
 
             # terminal state mask
             mask = 1 - terminated
 
             # flatten
-            rewards = tf.reshape(rewards, [-1])
-            next_q = tf.reshape(next_q, [-1])
-            mask = tf.reshape(mask, [-1])
+            rewards = torch_tensor_view(rewards, [-1])
+            next_q = torch_tensor_view(next_q, [-1])
+            mask = torch_tensor_view(mask, [-1])
 
             # target value
             target_q = rewards + gamma * next_q * mask
 
         # Update critic loss
-        loss_critic = tf.reduce_mean(tf.square(current_q1 - target_q)) + tf.reduce_mean(
-            tf.square(current_q2 - target_q)
+        loss_critic = torch_mean( (current_q1 - target_q) ** 2 ) + torch_mean(
+            (current_q2 - target_q) ** 2
         )
         return loss_critic
 
@@ -118,7 +120,8 @@ class DIPODiffusion(DiffusionModel):
         B = tf.shape(cond["state"])[0]
 
         # Loop
-        x = tf.random.normal((B, self.horizon_steps, self.action_dim))
+        # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
+        x = torch_randn((B, self.horizon_steps, self.action_dim))
 
         t_all = list(reversed(range(self.denoising_steps)))
         for i, t in enumerate(t_all):
@@ -127,27 +130,28 @@ class DIPODiffusion(DiffusionModel):
                 x=x,
                 t=t_b,
                 # cond=cond,
-                cond=cond['state'],
+                cond_state=cond['state'],
                 network_override=self.actor_target,
             )
-            std = tf.exp(0.5 * logvar)
+            std = torch_exp(0.5 * logvar)
 
             # Determine the noise level
             if deterministic and t == 0:
-                std = tf.zeros_like(std)
+                std = torch_zeros_like(std)
             elif deterministic:  # For DDPM, sample with noise
-                std = tf.clip_by_value(std, 1e-3, float('inf'))
+                std = torch_clip(std, 1e-3, float('inf'))
             else:
-                std = tf.clip_by_value(std, self.min_sampling_denoising_std, float('inf'))
+                std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
             
-            noise = tf.random.normal(x.shape)
-            noise = tf.clip_by_value(noise, -self.randn_clip_value, self.randn_clip_value)
+            # noise = tf.random.normal(x.shape)
+            noise = torch_randn_like(x)
+            noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
 
             x = mean + std * noise
 
             # clamp action at final step
             if self.final_action_clip_value is not None and i == len(t_all) - 1:
-                x = tf.clip_by_value(x, -self.final_action_clip_value, self.final_action_clip_value)
+                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
 
         return x
 

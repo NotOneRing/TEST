@@ -48,6 +48,7 @@ class RWRDiffusion(DiffusionModel):
         cond,
         rewards,
         t,
+        training,
     ):
         """reward-weighted"""
 
@@ -61,8 +62,10 @@ class RWRDiffusion(DiffusionModel):
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
         # Predict
-        x_recon = self.network(x_noisy, t, cond=cond)
-
+        # x_recon = self.network(x_noisy, t, cond=cond)
+        x_recon = self.network([x_noisy, t, cond["state"]]
+                               , training=training)
+        
         if self.predict_epsilon:
             loss = torch_mse_loss(x_recon, noise, 'none')
         else:

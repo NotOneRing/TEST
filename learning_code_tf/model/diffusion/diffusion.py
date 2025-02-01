@@ -967,8 +967,9 @@ class DiffusionModel(tf.keras.Model):
 
 
     def loss_ori(self
-                 , training
-                 , x_start, cond):
+                 , training,
+                #  , x_start, cond):
+                x, *args):
         """
         Compute the loss for the given data and condition.
 
@@ -990,7 +991,7 @@ class DiffusionModel(tf.keras.Model):
 
         # batch_size = tf.shape(x_start)[0]
         # batch_size = x_start.get_shape().as_list()[0]
-        batch_size = x_start.shape[0]
+        batch_size = x.shape[0]
 
         self.batch_size = batch_size
         self.network.batch_size = batch_size
@@ -1035,14 +1036,17 @@ class DiffusionModel(tf.keras.Model):
 
         # t = tf.fill([batch_size], 3)  # 固定为 3
 
+        args_list = [*args]
 
+        print("args_list = ", args_list)
 
         # Compute loss
 
-        if training:
-            return self.p_losses(x_start, cond, t,  training )
-        else:
-            return DiffusionModel.p_losses(self, x_start, cond, t, training )
+        # if training:
+        # return self.p_losses(x_start, cond, t,  training )
+        return self.p_losses(x, *args,  t, training)
+        # else:
+        #     return DiffusionModel.p_losses(self, x_start, cond, t, training )
 
 
 

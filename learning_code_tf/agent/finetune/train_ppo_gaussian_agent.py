@@ -414,45 +414,51 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                 run_results[-1]["time"] = time
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} | ent {-entropy_loss:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} \
+                        | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} \
+                        | ent {-entropy_loss:8.4f} | reward {avg_episode_reward:8.4f} \
+                        | t:{time:8.4f} \ 
+                        | std:{std:8.4f} | approx kl:{approx_kl:8.4f} | ratio:{ratio:8.4f}\
+                        | clipfrac:{np.mean(clipfracs):8.4f} | explained variance:{explained_var:8.4f} \
+                        | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "total env step": cnt_train_step,
-                                "loss": loss,
-                                "pg loss": pg_loss,
-                                "value loss": v_loss,
-                                "entropy": -entropy_loss,
-                                "std": std,
-                                "approx kl": approx_kl,
-                                "ratio": ratio,
-                                "clipfrac": np.mean(clipfracs),
-                                "explained variance": explained_var,
-                                "avg episode reward - train": avg_episode_reward,
-                                "num episode - train": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=True,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "total env step": cnt_train_step,
+                    #             "loss": loss,
+                    #             "pg loss": pg_loss,
+                    #             "value loss": v_loss,
+                    #             "entropy": -entropy_loss,
+                    #             "std": std,
+                    #             "approx kl": approx_kl,
+                    #             "ratio": ratio,
+                    #             "clipfrac": np.mean(clipfracs),
+                    #             "explained variance": explained_var,
+                    #             "avg episode reward - train": avg_episode_reward,
+                    #             "num episode - train": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

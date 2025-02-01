@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
-from util.torch_to_tf import torch_tensor, torch_from_numpy, torch_tensor_float
+from util.torch_to_tf import torch_tensor, torch_from_numpy, torch_tensor_float, torch_exp
 
 from util.torch_to_tf import torch_no_grad, torch_optim_Adam, torch_exp, torch_tensor_item, torch_tensor_requires_grad_
 
@@ -128,9 +128,12 @@ class TrainSACAgent(TrainAgent):
 
 
             
-            self.model.eval() if eval_mode else self.model.train()
+            # self.model.eval() if eval_mode else self.model.train()
 
-
+            if eval_mode:
+                training=False
+            else:
+                training=True
 
 
 
@@ -165,7 +168,6 @@ class TrainSACAgent(TrainAgent):
                                 cond=cond,
                                 deterministic=eval_mode,
                             )
-                            .cpu()
                             .numpy()
                         )  # n_env x horizon x act
                     action_venv = samples[:, : self.act_steps]
@@ -318,7 +320,7 @@ class TrainSACAgent(TrainAgent):
                             # Update temperature parameter
                             loss_alpha = self.model.loss_temperature(
                                 {"state": obs_b},
-                                self.log_alpha.exp(),  # with grad
+                                torch_exp( self.log_alpha ),  # with grad
                                 self.target_entropy,
                             )
 
@@ -342,39 +344,48 @@ class TrainSACAgent(TrainAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb.log(
-                            {
-                                "success rate - eval": success_rate,
-                                "avg episode reward - eval": avg_episode_reward,
-                                "avg best reward - eval": avg_best_reward,
-                                "num episode - eval": num_episode_finished,
-                            },
-                            step=self.itr,
-                            commit=False,
-                        )
+                    # if self.use_wandb:
+                    #     wandb.log(
+                    #         {
+                    #             "success rate - eval": success_rate,
+                    #             "avg episode reward - eval": avg_episode_reward,
+                    #             "avg best reward - eval": avg_best_reward,
+                    #             "num episode - eval": num_episode_finished,
+                    #         },
+                    #         step=self.itr,
+                    #         commit=False,
+                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
+                    # log.info(
+                    #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t {time:8.4f}"
+                    # )
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t {time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} \
+                        | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} \
+                        | entropy coeff: {alpha:8.4f} \
+                        | reward {avg_episode_reward:8.4f} \
+                        | num episode - train: {num_episode_finished:8.4f} \
+                        | t:{time:8.4f}"
                     )
-                    if self.use_wandb:
-                        wandb_log_dict = {
-                            "total env step": cnt_train_step,
-                            "loss - critic": loss_critic,
-                            "entropy coeff": alpha,
-                            "avg episode reward - train": avg_episode_reward,
-                            "num episode - train": num_episode_finished,
-                        }
-                        if loss_actor is not None:
-                            wandb_log_dict["loss - actor"] = loss_actor
-                        wandb.log(
-                            wandb_log_dict,
-                            step=self.itr,
-                            commit=True,
-                        )
+
+                    # if self.use_wandb:
+                    #     wandb_log_dict = {
+                    #         "total env step": cnt_train_step,
+                    #         "loss - critic": loss_critic,
+                    #         "entropy coeff": alpha,
+                    #         "avg episode reward - train": avg_episode_reward,
+                    #         "num episode - train":' num_episode_finished,
+                    #     }
+                    #     if loss_actor is not None:
+                    #         wandb_log_dict["loss - actor"] = loss_actor
+                    #     wandb.log(
+                    #         wandb_log_dict,
+                    #         step=self.itr,
+                    #         commit=True,
+                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

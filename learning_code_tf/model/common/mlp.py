@@ -129,7 +129,10 @@ class MLP(
 
         super(MLP, self).__init__(name=name, **kwargs)
 
-        self.dim_list = dim_list
+        # self.dim_list = dim_list
+
+        self.dim_list = list(dim_list)
+
         self.append_dim=append_dim
         self.append_layers=append_layers
         self.activation_type=activation_type
@@ -212,6 +215,25 @@ class MLP(
     def get_config(self):
         config = super(MLP, self).get_config()  # Call the base class's get_config
 
+
+        print("Checking MLP Config elements:")
+        print(f"dim_list: {self.dim_list}, type: {type(self.dim_list)}")
+        print(f"append_dim: {self.append_dim}, type: {type(self.append_dim)}")
+        print(f"append_layers: {self.append_layers}, type: {type(self.append_layers)}")
+        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+        
+        print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
+        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+        print(f"use_layernorm_final: {self.use_layernorm_final}, type: {type(self.use_layernorm_final)}")
+
+
+        print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
+
+        print(f"use_drop_final: {self.use_drop_final}, type: {type(self.use_drop_final)}")
+
+        print(f"verbose: {self.verbose}, type: {type(self.verbose)}")
+
+        print(f"moduleList: {self.moduleList}, type: {type(self.moduleList)}")
 
         config.update({
             "dim_list": self.dim_list,

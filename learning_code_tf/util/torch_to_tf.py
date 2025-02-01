@@ -206,6 +206,10 @@ def torch_square(input, *, out=None):
 
 
 def torch_min(input, dim = None, other = None):
+    if isinstance(dim, (tf.Tensor, tf.Variable)):
+        temp = dim
+        dim = other
+        other = temp
     if other == None:
         if dim == None:
             return tf.reduce_min(input)
@@ -588,7 +592,7 @@ def torch_meshgrid(*tensors, indexing="ij"):
 
 
 
-def torch_sum(input, dim, keepdim = False):
+def torch_sum(input, dim = None, keepdim = False):
     return tf.reduce_sum(input, axis=dim, keepdims = keepdim)
 
 
@@ -2730,12 +2734,43 @@ class nn_Conv1d(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: The convolved tensor.
         """
+
+        torch_to_tf_input = tf.transpose(x, perm = (0, 2, 1) )
         # Apply padding manually
         if self.padding > 0:
-            x = tf.pad(x, [[0, 0], [self.padding, self.padding], [0, 0]])
+            x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
 
-        # Apply the convolution
-        return self.conv1d(x)
+        result = self.conv1d(x)
+        result = tf.transpose(result, perm = (0, 2, 1) )
+
+        return result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

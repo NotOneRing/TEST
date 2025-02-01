@@ -26,7 +26,9 @@ from model.diffusion.modules import (
 from model.common.mlp import ResidualMLP
 
 
-from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish
+from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish, nn_ReLU,\
+nn_Conv1d, nn_Identity, torch_tensor_expand, torch_cat, torch_reshape\
+
 
 # class ResidualBlock1D(nn.Module):
 class ResidualBlock1D(tf.keras.layers.Layer):
@@ -53,19 +55,19 @@ class ResidualBlock1D(tf.keras.layers.Layer):
 
 
         # Convolutional Blocks
-        self.blocks = [
+        self.blocks = nn_Sequential([
             Conv1dBlock(in_channels, out_channels, kernel_size, n_groups, activation_type, groupnorm_eps),
             Conv1dBlock(out_channels, out_channels, kernel_size, n_groups, activation_type, groupnorm_eps),
-        ]
+        ])
 
 
 
 
         # Activation Function
         if activation_type == "Mish":
-            act = tf.keras.layers.Activation(self.mish)
+            act = nn_Mish
         elif activation_type == "ReLU":
-            act = tf.keras.layers.ReLU()
+            act = nn_ReLU
         else:
             raise ValueError("Unknown activation type for ResidualBlock1D")
 
@@ -73,22 +75,27 @@ class ResidualBlock1D(tf.keras.layers.Layer):
 
         # FiLM modulation https://arxiv.org/abs/1709.07871
         # predicts per-channel scale and bias
-        cond_channels = out_channels * 2 if cond_predict_scale else out_channels
+        cond_channels = out_channels
+        if cond_predict_scale:
+            cond_channels = out_channels * 2
+
+        self.cond_predict_scale = cond_predict_scale
+        self.out_channels = out_channels
 
         #input是cond_dim维度的
         if larger_encoder:
-            self.cond_encoder = tf.keras.Sequential([
-                tf.keras.layers.Dense(cond_channels),
+            self.cond_encoder = nn_Sequential([
+                nn_Linear(cond_dim, cond_channels),
                 act,
-                tf.keras.layers.Dense(cond_channels),
+                nn_Linear(cond_channels, cond_channels),
                 act,
-                tf.keras.layers.Dense(cond_channels),
+                nn_Linear(cond_channels, cond_channels),
                 Rearrange("batch t -> batch t 1"),
             ])
         else:
-            self.cond_encoder = tf.keras.Sequential([
+            self.cond_encoder = nn_Sequential([
                 act,
-                tf.keras.layers.Dense(cond_channels),
+                nn_Linear(cond_dim, cond_channels),
                 Rearrange("batch t -> batch t 1"),
             ])
 
@@ -97,15 +104,15 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         # 输入是in_channels的
         # Residual Connection
         self.residual_conv = (
-            tf.keras.layers.Conv1D(out_channels, kernel_size=1)
+            nn_Conv1d(in_channels, out_channels, 1)
             if in_channels != out_channels
-            else tf.keras.layers.Layer()
+            else nn_Identity()
         )
 
 
 
-    def mish(self, x):
-        return x * tf.math.tanh(tf.math.softplus(x))
+    # def mish(self, x):
+    #     return x * tf.math.tanh(tf.math.softplus(x))
 
 
 
@@ -124,7 +131,7 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         embed = self.cond_encoder(cond)
         if self.cond_predict_scale:
             # embed = embed.reshape(embed.shape[0], 2, self.out_channels, 1)
-            embed = tf.reshape(embed, [embed.shape[0], 2, self.out_channels, 1])
+            embed = torch_reshape(embed, [embed.shape[0], 2, self.out_channels, 1])
             scale = embed[:, 0, ...]
             bias = embed[:, 1, ...]
             out = scale * out + bias
@@ -197,9 +204,9 @@ class Unet1D(tf.keras.Model):
                 activation_type=activation_type,
                 out_activation_type="Identity",
             )
-            cond_block_dim = diffusion_step_embed_dim + cond_mlp_dims[-1]
+            cond_block_dim = dsed + cond_mlp_dims[-1]
         else:
-            cond_block_dim = diffusion_step_embed_dim + cond_dim
+            cond_block_dim = dsed + cond_dim
 
 
 
@@ -211,7 +218,7 @@ class Unet1D(tf.keras.Model):
 
 
         # Mid Modules
-        self.mid_modules = [
+        self.mid_modules = nn_Sequential([
             ResidualBlock1D(
                 mid_dim,
                 mid_dim,
@@ -234,7 +241,7 @@ class Unet1D(tf.keras.Model):
                 activation_type=activation_type,
                 groupnorm_eps=groupnorm_eps,
             ),
-        ]
+        ])
 
 
 
@@ -242,7 +249,7 @@ class Unet1D(tf.keras.Model):
         self.down_modules = []
         for ind, (dim_in, dim_out) in enumerate(in_out):
             is_last = ind >= (len(in_out) - 1)
-            self.down_modules.append([
+            self.down_modules.extend([
                 ResidualBlock1D(
                     dim_in,
                     dim_out,
@@ -264,18 +271,22 @@ class Unet1D(tf.keras.Model):
                     larger_encoder=use_large_encoder_in_block,
                     activation_type=activation_type,
                     groupnorm_eps=groupnorm_eps,
-                )
+                ),
+                Downsample1d(dim_out) if not is_last else nn_Identity(),
+
             ])
 
-            if not is_last:
-                self.down_modules[-1].append( Downsample1d(dim_out) )
+        self.down_modules = nn_Sequential(self.down_modules)
+
+            # if not is_last:
+            #     self.down_modules[-1].append( Downsample1d(dim_out) )
 
 
        # Up Modules
         self.up_modules = []
         for ind, (dim_in, dim_out) in enumerate(reversed(in_out[1:])):
             is_last = ind >= (len(in_out) - 1)
-            self.up_modules.append([
+            self.up_modules.extend([
                 ResidualBlock1D(
                     dim_out * 2,
                     dim_in,
@@ -297,14 +308,17 @@ class Unet1D(tf.keras.Model):
                     larger_encoder=use_large_encoder_in_block,
                     activation_type=activation_type,
                     groupnorm_eps=groupnorm_eps,
-                )
+                ),
+                Upsample1d(dim_in) if not is_last else nn_Identity(),
             ])
 
-            if not is_last:
-                self.up_modules[-1].append( Upsample1d(dim_in) )
+        self.up_modules = nn_Sequential(self.up_modules)
+
+            # if not is_last:
+            #     self.up_modules[-1].append( Upsample1d(dim_in) )
             
         # Final Conv
-        self.final_conv = tf.keras.Sequential([
+        self.final_conv = nn_Sequential([
             Conv1dBlock(
                 dim,
                 dim,
@@ -313,7 +327,7 @@ class Unet1D(tf.keras.Model):
                 activation_type=activation_type,
                 eps=groupnorm_eps,
             ),
-            tf.keras.layers.Conv1D(action_dim, kernel_size=1)
+            nn_Conv1d(dim, action_dim, 1)
         ])
 
 
@@ -352,13 +366,16 @@ class Unet1D(tf.keras.Model):
         if not tf.is_tensor(time):
             time = tf.convert_to_tensor([time], dtype=tf.int64)
         elif tf.is_tensor(time) and len(time.shape) == 0:
-            time = tf.expand_dims(time, axis=0)
+            # time = tf.expand_dims(time, axis=0)
+            time = time[None]
 
 
         # Broadcast to batch dimension
-        time = tf.broadcast_to(time, [tf.shape(x)[0]])
+        # time = tf.broadcast_to(time, [tf.shape(x)[0]])
+        time = torch_tensor_expand(time, x.shape[0])
+
         global_feature = self.time_mlp(time)
-        global_feature = tf.concat([global_feature, state], axis=-1)
+        global_feature = torch_cat([global_feature, state], axis=-1)
 
 
         # encode local features
@@ -377,7 +394,7 @@ class Unet1D(tf.keras.Model):
 
         for idx, (resnet, resnet2, upsample) in enumerate(self.up_modules):
 
-            x = tf.concat([x, h.pop()], axis=1)  # Concatenate along channel dimension
+            x = torch_cat([x, h.pop()], axis=1)  # Concatenate along channel dimension
 
             x = resnet(x, global_feature)
             if idx == len(self.up_modules) and len(h_local) > 0:

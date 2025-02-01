@@ -186,8 +186,7 @@ class IBRL_Gaussian(GaussianModel):
         #     dim=0
         # ).values  # unlike RLPD, IBRL uses the min Q value for actor update
 
-        current_q = torch_min( current_q, dim=0
-        ).values  # unlike RLPD, IBRL uses the min Q value for actor update
+        current_q = torch_min( current_q, dim=0 ).values  # unlike RLPD, IBRL uses the min Q value for actor update
         
         loss_actor = -torch_mean(current_q)
         return loss_actor
