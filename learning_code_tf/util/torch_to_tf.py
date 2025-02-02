@@ -1290,6 +1290,7 @@ def torch_nn_init_normal_(variable, mean=0.0, std=1.0):
 
 
 
+
 def torch_nn_init_zeros_(tensor):
     """
     Mimic torch.nn.init.zeros_ to initialize TensorFlow variables with zeros.
@@ -1358,6 +1359,79 @@ def torch_nn_init_xavier_normal_(tensor, gain):
 
 
 
+
+
+# def torch_nn_init_trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, generator=None):
+def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, max_tries=1000):
+    """
+    PyTorch: `torch.nn.init.trunc_normal_`。
+    
+    Rejection Sampling
+    """
+    if not isinstance(input_tensor, tf.Variable):
+        raise ValueError("Input variable must be a tf.Variable.")
+
+    shape = input_tensor.shape
+
+    a = (a - mean) / std  # 归一化截断边界
+    b = (b - mean) / std
+
+    tensor = tf.TensorArray(dtype=tf.float32, size=tf.reduce_prod(shape))
+    idx = 0
+    num_samples = tf.reduce_prod(shape)
+
+    while idx < num_samples:
+
+        sample = tf.random.normal((num_samples,), mean=mean, stddev=std)
+
+        mask = (sample >= a) & (sample <= b)
+        valid_samples = tf.boolean_mask(sample, mask)
+
+        num_valid = tf.shape(valid_samples)[0]
+        num_needed = num_samples - idx
+        if num_valid > num_needed:
+            valid_samples = valid_samples[:num_needed]
+
+        for i in range(tf.shape(valid_samples)[0]):
+            tensor = tensor.write(idx, valid_samples[i])
+            idx += 1
+            if idx >= num_samples:
+                break
+
+    tensor_stack = tensor.stack()
+
+    result =  tf.reshape(tensor_stack, shape)
+
+    input_tensor.assign(result)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import math
+def pytorch_weight_initializer(shape, in_features, dtype=None):
+    limit = math.sqrt(1.0 / in_features)
+    return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+
+def pytorch_bias_initializer(shape, in_features, dtype=None):
+    limit = math.sqrt(1.0 / in_features)
+    return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
 
 
@@ -1683,13 +1757,13 @@ class nn_Linear(tf.keras.layers.Layer):
             #     limit = math.sqrt(1.0 / in_features)
             #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
 
-            def pytorch_weight_initializer(shape, dtype=None):
-                limit = math.sqrt(1.0 / in_features)
-                return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+            # def pytorch_weight_initializer(shape, dtype=None):
+            #     limit = math.sqrt(1.0 / in_features)
+            #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
-            def pytorch_bias_initializer(shape, dtype=None):
-                limit = math.sqrt(1.0 / in_features)
-                return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+            # def pytorch_bias_initializer(shape, dtype=None):
+            #     limit = math.sqrt(1.0 / in_features)
+            #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
 
 
@@ -1698,10 +1772,10 @@ class nn_Linear(tf.keras.layers.Layer):
                 activation=None,
                 use_bias=True,
                 kernel_initializer = tf.keras.initializers.Constant(
-                    pytorch_weight_initializer((in_features, out_features))),
+                    pytorch_weight_initializer((in_features, out_features), in_features)),
                 # 'glorot_uniform',
                 bias_initializer = tf.keras.initializers.Constant(
-                    pytorch_bias_initializer((out_features,))),
+                    pytorch_bias_initializer((out_features,), in_features)),
                     # 'zeros',
                 dtype=dtype,
                 name = name_Dense
@@ -1859,65 +1933,6 @@ class nn_Linear(tf.keras.layers.Layer):
     #     # 如果仍然找不到，抛出异常
     #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-
-
-
-
-
-
-# class nn_LayerNorm(tf.keras.layers.Layer):
-#     """
-#     torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
-#     tf.keras.layers.LayerNormalization(
-#         axis=-1,
-#         epsilon=0.001,
-#         center=True,
-#         scale=True,
-#         rms_scaling=False,
-#         beta_initializer='zeros',
-#         gamma_initializer='ones',
-#         beta_regularizer=None,
-#         gamma_regularizer=None,
-#         beta_constraint=None,
-#         gamma_constraint=None,
-#         **kwargs
-#     )
-#     """
-#     def __init__(self, normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None):
-#         super(nn_LayerNorm, self).__init__()
-
-#         self.model = tf.keras.layers.LayerNormalization(
-#             axis=-1,
-#             epsilon=0.001,
-#             center=True,
-#             scale=True,
-#             rms_scaling=False,
-#             beta_initializer='zeros',
-#             gamma_initializer='ones',
-#             beta_regularizer=None,
-#             gamma_regularizer=None,
-#             beta_constraint=None,
-#             gamma_constraint=None
-#             # ,**kwargs
-#         )   
-
-
-#     def get_config(self):
-#         # Get the configuration of the layer and return it as a dictionary
-#         config = super(nn_LayerNorm, self).get_config()  # Call the parent layer's get_config()
-#         config.update({
-#             "normalized_shape": self.normalized_shape,
-#             "eps": self.eps,
-#             "elementwise_affine": self.elementwise_affine,
-#             "bias": self.bias,
-#             "device": self.device,
-#             "dtype": self.dtype
-#         })
-#         return config
-
-
-#     def call(self, x):
-#         return self.model(x)
 
 
 
@@ -2557,7 +2572,7 @@ class nn_LayerNorm(tf.keras.layers.Layer):
 
 
 class nn_MultiheadAttention(tf.keras.layers.Layer):
-    def __init__(self, num_heads, d_model, name="nn_MultiheadAttention", **kwargs):
+    def __init__(self, d_model, num_heads, name="nn_MultiheadAttention", **kwargs):
         
         if OUTPUT_FUNCTION_HEADER:
             print("called nn_MultiheadAttention __init__()")
@@ -2683,10 +2698,13 @@ class nn_Conv1d(tf.keras.layers.Layer):
             dilation_rate=self.dilation,
             groups=self.groups,
             use_bias=self.bias,
-            kernel_initializer="glorot_uniform",
-            bias_initializer="zeros"
+            kernel_initializer = tf.keras.initializers.Constant(
+                pytorch_weight_initializer((kernel_size, in_channels, out_channels), in_channels * kernel_size / groups )),
+            bias_initializer = tf.keras.initializers.Constant(
+                pytorch_bias_initializer((out_channels,), in_channels * kernel_size / groups ))
         )        
 
+                    
     def get_config(self):
         """
         Returns the configuration of the Conv1d layer.
@@ -2756,253 +2774,151 @@ class nn_Conv1d(tf.keras.layers.Layer):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# @register_keras_serializable(package="Custom")
-# class nn_ConvTranspose1d(tf.keras.layers.Layer):
-#     """
-#     完全对齐 PyTorch 的 ConvTranspose1d 行为，修复输出形状差异。
-#     """
-#     def __init__(
-#         self,
-#         in_channels,
-#         out_channels,
-#         kernel_size,
-#         stride=1,
-#         padding=0,
-#         output_padding=0,
-#         dilation=1,
-#         groups=1,
-#         bias=True,
-#         name="nn_ConvTranspose1d",
-#         **kwargs
-#     ):
-#         super(nn_ConvTranspose1d, self).__init__(name=name, **kwargs)
-#         self.in_channels = in_channels
-#         self.out_channels = out_channels
-#         self.kernel_size = kernel_size
-#         self.stride = stride
-#         self.padding = padding
-#         self.output_padding = output_padding
-#         self.dilation = dilation
-#         self.groups = groups
-#         self.bias = bias
-
-#         # 检查输入通道是否可被 groups 整除
-#         if self.in_channels % self.groups != 0:
-#             raise ValueError("in_channels 必须能被 groups 整除")
-
-#         # 定义 TensorFlow 的 Conv1DTranspose 层
-#         self.conv_transpose = tf.keras.layers.Conv1DTranspose(
-#             filters=self.out_channels,
-#             kernel_size=self.kernel_size,
-#             strides=self.stride,
-#             padding="valid",  # 完全手动处理填充
-#             dilation_rate=self.dilation,
-#             use_bias=self.bias,
-#             kernel_initializer="glorot_uniform",
-#             bias_initializer="zeros"
-#         )
-
-#     def get_config(self):
-#         config = super(nn_ConvTranspose1d, self).get_config()
-#         config.update({
-#             'in_channels': self.in_channels,
-#             'out_channels': self.out_channels,
-#             'kernel_size': self.kernel_size,
-#             'stride': self.stride,
-#             'padding': self.padding,
-#             'output_padding': self.output_padding,
-#             'dilation': self.dilation,
-#             'groups': self.groups,
-#             'bias': self.bias,
-#         })
-#         return config
-
-#     def build(self, input_shape):
-#         # 输入形状为 (length, in_channels)，转换为完整的 (None, length, in_channels)
-#         full_input_shape = (None, input_shape[0], input_shape[1])
-#         self.conv_transpose.build(full_input_shape)
-#         super(nn_ConvTranspose1d, self).build(input_shape)
-
-#     def call(self, x):
-#         # 1. 手动应用输入填充（PyTorch 的 padding 逻辑）
-#         # PyTorch 的 padding 是直接在输入两侧填充
-#         x = tf.pad(x, [[0, 0], [self.padding, self.padding], [0, 0]])
-
-#         # 2. 执行转置卷积
-#         x = self.conv_transpose(x)
-
-#         # 3. 手动应用 output_padding（仅在右侧添加）
-#         # PyTorch 的 output_padding 是在输出右侧添加
-#         if self.output_padding > 0:
-#             x = tf.pad(x, [[0, 0], [0, self.output_padding], [0, 0]])
-
-#         return x
-
-
-# @register_keras_serializable(package="Custom")
-# class nn_ConvTranspose1d(tf.keras.layers.Layer):
-#     """
-#     完全对齐 PyTorch 的 ConvTranspose1d，修复输出形状差异。
-#     """
-#     def __init__(
-#         self,
-#         in_channels,
-#         out_channels,
-#         kernel_size,
-#         stride=1,
-#         padding=0,
-#         output_padding=0,
-#         dilation=1,
-#         groups=1,
-#         bias=True,
-#         name="nn_ConvTranspose1d",
-#         **kwargs
-#     ):
-#         super(nn_ConvTranspose1d, self).__init__(name=name, **kwargs)
-#         self.in_channels = in_channels
-#         self.out_channels = out_channels
-#         self.kernel_size = kernel_size
-#         self.stride = stride
-#         self.padding = padding
-#         self.output_padding = output_padding
-#         self.dilation = dilation
-#         self.groups = groups
-#         self.bias = bias
-
-#         if self.in_channels % self.groups != 0:
-#             raise ValueError("in_channels 必须能被 groups 整除")
-
-#         # 定义 TensorFlow 的 Conv1DTranspose 层
-#         self.conv_transpose = tf.keras.layers.Conv1DTranspose(
-#             filters=self.out_channels,
-#             kernel_size=self.kernel_size,
-#             strides=self.stride,
-#             padding="valid",  # 完全手动控制填充
-#             dilation_rate=self.dilation,
-#             use_bias=self.bias,
-#             kernel_initializer="glorot_uniform",
-#             bias_initializer="zeros"
-#         )
-
-#     def get_config(self):
-#         config = super(nn_ConvTranspose1d, self).get_config()
-#         config.update({
-#             'in_channels': self.in_channels,
-#             'out_channels': self.out_channels,
-#             'kernel_size': self.kernel_size,
-#             'stride': self.stride,
-#             'padding': self.padding,
-#             'output_padding': self.output_padding,
-#             'dilation': self.dilation,
-#             'groups': self.groups,
-#             'bias': self.bias,
-#         })
-#         return config
-
-#     def build(self, input_shape):
-#         # 输入形状为 (length, in_channels)，转换为 (None, length, in_channels)
-#         full_input_shape = (None, input_shape[0], input_shape[1])
-#         self.conv_transpose.build(full_input_shape)
-#         super(nn_ConvTranspose1d, self).build(input_shape)
-
-#     def call(self, x):
-#         # 1. 记录原始输入长度（填充前）
-#         L_in_original = tf.shape(x)[1]
-
-#         # 2. 手动应用输入填充（PyTorch 的 padding 逻辑）
-#         x = tf.pad(x, [[0, 0], [self.padding, self.padding], [0, 0]])
-
-#         # 3. 执行转置卷积
-#         x = self.conv_transpose(x)
-
-#         # 4. 计算中间长度（不包含 output_padding）
-#         intermediate_length = (L_in_original - 1) * self.stride - 2 * self.padding + self.dilation * (self.kernel_size - 1) + 1
-
-#         # 5. 裁剪到中间长度
-#         L_out_tf = tf.shape(x)[1]
-#         crop_right = L_out_tf - intermediate_length
-#         x = x[:, :-crop_right, :] if crop_right > 0 else x
-
-#         # 6. 手动应用 output_padding（仅在右侧添加）
-#         if self.output_padding > 0:
-#             x = tf.pad(x, [[0, 0], [0, self.output_padding], [0, 0]])
-
-#         return x
-
-
-@register_keras_serializable(package="Custom")
-class nn_ConvTranspose1d(tf.keras.layers.Layer):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, dilation=1, groups=1, bias=True, name="nn_ConvTranspose1d", **kwargs):
-        super().__init__(name=name, **kwargs)
+class nn_Conv2d(tf.keras.layers.Layer):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups = 1):
+        super(nn_Conv2d, self).__init__()
+        
+        # 解析参数
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-        self.output_padding = output_padding
-        self.dilation = dilation
-        self.groups = groups
+        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
+        self.stride = stride if isinstance(stride, tuple) else (stride, stride)
         self.bias = bias
 
-        if self.in_channels % self.groups != 0:
-            raise ValueError("in_channels must be divisible by groups")
-
-        # 定义 Conv1DTranspose 层
-        self.conv_transpose = tf.keras.layers.Conv1DTranspose(
+        # TensorFlow 的 Conv2D 需要 NHWC 格式
+        self.conv2d = tf.keras.layers.Conv2D(
             filters=self.out_channels,
             kernel_size=self.kernel_size,
             strides=self.stride,
-            padding="valid",
-            dilation_rate=self.dilation,
+            padding="valid",  # PyTorch padding=0 对应 TensorFlow "valid"
             use_bias=self.bias,
-            kernel_initializer="zeros",
-            bias_initializer="zeros"
+            # kernel_initializer=tf.keras.initializers.HeUniform(),  # 采用 PyTorch Kaiming 初始化
+            # bias_initializer="zeros" if self.bias else None
+            kernel_initializer = tf.keras.initializers.Constant(
+                pytorch_weight_initializer( (self.kernel_size[0], self.kernel_size[1], in_channels // groups, out_channels),\
+                                            in_channels * self.kernel_size[0] * self.kernel_size[1] // groups )),
+            bias_initializer = tf.keras.initializers.Constant(
+                pytorch_bias_initializer((out_channels,), in_channels * self.kernel_size[0] * self.kernel_size[1] // groups ))
+        )
+
+    def call(self, x):
+        # PyTorch input (N, C, H, W) -> TensorFlow (N, H, W, C)
+        x = tf.transpose(x, [0, 2, 3, 1])
+
+        # 进行卷积
+        x = self.conv2d(x)
+
+        # Convert back to PyTorch format: (N, C, H, W)
+        x = tf.transpose(x, [0, 3, 1, 2])
+        return x
+
+
+    def get_config(self):
+        """
+        Returns the configuration of the Conv1d layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_Conv2d, self).get_config()
+
+        config.update({
+            'in_channels': self.in_channels,
+            'out_channels': self.out_channels,
+            'kernel_size': self.kernel_size,
+            'stride': self.stride,
+            'bias': self.bias,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+        return cls(**config)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class nn_ConvTranspose1d(tf.keras.layers.Layer):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, \
+                bias=True, dilation=1, padding_mode='zeros', device=None, dtype=None):
+        super(nn_ConvTranspose1d, self).__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride 
+        self.padding = padding
+        self.output_padding = output_padding
+        self.groups = groups
+        self.bias = bias
+        self.dilation = dilation
+
+
+        in_features = (out_channels * kernel_size) / groups
+
+        # kernel_initializer = tf.keras.initializers.Constant(
+        #     pytorch_weight_initializer((in_channels, out_channels // groups, kernel_size), in_features))
+        kernel_initializer = tf.keras.initializers.Constant(
+            pytorch_weight_initializer((kernel_size, out_channels // groups, in_channels), in_features))
+
+        bias_initializer = tf.keras.initializers.Constant(
+            pytorch_bias_initializer((out_channels,), in_features) )
+
+
+        self.conv1d_transpose = tf.keras.layers.Conv1DTranspose(
+            filters=self.out_channels,
+            kernel_size=self.kernel_size,
+            strides=self.stride,
+            # padding="valid",  # 手动填充
+            padding="same",  # 手动填充
+            use_bias=bias,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer
         )
 
     def build(self, input_shape):
-        self.conv_transpose.build((None, input_shape[0], input_shape[1]))
-        super().build(input_shape)
+        self.conv1d_transpose.build((None, None, self.in_channels))
+
 
     def call(self, x):
-        # 1. 应用输入填充
-        x = tf.pad(x, [[0, 0], [self.padding, self.padding], [0, 0]])
-        
-        # 2. 执行转置卷积
-        x = self.conv_transpose(x)
-        
-        # 3. 计算 PyTorch 的目标输出长度
-        L_in = tf.shape(x)[1] - 2 * self.padding  # 原始输入长度
-        L_out_pytorch = (L_in - 1) * self.stride - 2 * self.padding + self.dilation * (self.kernel_size - 1) + self.output_padding + 1
-        
-        # 4. 裁剪右侧多余部分
-        L_out_tf = tf.shape(x)[1]
-        crop_right = L_out_tf - L_out_pytorch
-        x = x[:, :-crop_right, :] if crop_right > 0 else x
-        
-        # 5. 应用 output_padding
-        if self.output_padding > 0:
-            x = tf.pad(x, [[0, 0], [0, self.output_padding], [0, 0]])
+    
+        # L_in = x.shape[2]
+        # L_out = (L_in - 1) * self.stride - 2 * self.padding + self.dilation * (self.kernel_size - 1) + self.output_padding + 1
+
+        # PyTorch (N, C, L) -> TensorFlow (N, L, C)
+        x = tf.transpose(x, [0, 2, 1])
+
+        x = self.conv1d_transpose(x)
+
+        # **转换回 PyTorch 格式 (N, C, L)**
+        x = tf.transpose(x, [0, 2, 1])
+
         return x
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3109,76 +3025,148 @@ class nn_GroupNorm(tf.keras.layers.Layer):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoderLayer", **kwargs):
-
-        if OUTPUT_FUNCTION_HEADER:
-            print("called nn_TransformerDecoderLayer __init__()")
-
-        super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
-        # self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        # self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-
-        self.self_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.cross_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-
-
-        self.ffn = nn_Sequential([
-        # tf.keras.Sequential([
-            # tf.keras.layers.Dense(dim_feedforward, activation=activation),
-            nn_Linear(dim_feedforward, activation=activation),
-            tf.keras.layers.Dropout(dropout),
-            # tf.keras.layers.Dense(d_model),
-            nn_Linear(d_model),
-        ])
-
+    def __init__(self, d_model, nhead, dim_feedforward=2048, 
+                #  dropout=0.1, 
+                 dropout = 0,
+                 activation=nn_ReLU, layer_norm_eps=1e-5, batch_first=False,
+                 norm_first=False):
+        super(nn_TransformerDecoderLayer, self).__init__()
+        self.self_attn = nn_MultiheadAttention(d_model, nhead, 
+                                            #    dropout=dropout, 
+                                            #    batch_first=batch_first
+                                               )
+        self.multihead_attn = nn_MultiheadAttention(d_model, nhead, 
+                                                    # dropout=dropout, 
+                                                    # batch_first=batch_first
+                                                    )
         
-        # self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        # self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        # self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        # 前馈网络 FFN
+        self.linear1 = nn_Linear(d_model, dim_feedforward)
+        self.linear2 = nn_Linear(dim_feedforward, d_model)
+        self.dropout = nn_Dropout(dropout)
 
-        self.norm1 = nn_LayerNorm(epsilon=1e-6)
-        self.norm2 = nn_LayerNorm(epsilon=1e-6)
-        self.norm3 = nn_LayerNorm(epsilon=1e-6)
+        # 归一化
+        self.norm1 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm2 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm3 = nn_LayerNorm(d_model, eps=layer_norm_eps)
 
-        # self.dropout1 = tf.keras.layers.Dropout(dropout)
-        # self.dropout2 = tf.keras.layers.Dropout(dropout)
-        # self.dropout3 = tf.keras.layers.Dropout(dropout)
-
+        # Dropout
         self.dropout1 = nn_Dropout(dropout)
         self.dropout2 = nn_Dropout(dropout)
         self.dropout3 = nn_Dropout(dropout)
 
-    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-        # Self-attention on target
-        tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
-        tgt = tgt + self.dropout1(tgt2, training=training)
-        tgt = self.norm1(tgt)
+        self.activation = activation
+        self.norm_first = norm_first  # 控制是否先归一化（Pre-LN vs. Post-LN）
 
-        # Cross-attention between target and memory
-        tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
-        tgt = tgt + self.dropout2(tgt2, training=training)
-        tgt = self.norm2(tgt)
+    def forward(self, tgt, memory, 
+                tgt_mask=None, memory_mask=None, 
+                tgt_key_padding_mask=None, memory_key_padding_mask=None):
+        """
+        Args:
+            tgt: 目标序列 (目标的嵌入) (batch, tgt_len, d_model)
+            memory: 编码器输出 (batch, src_len, d_model)
+            tgt_mask: 目标序列的注意力 mask
+            memory_mask: 编码器-解码器注意力 mask
+            tgt_key_padding_mask: 目标序列的 padding mask
+            memory_key_padding_mask: 编码器输出的 padding mask
+        """
 
-        # Feedforward network
-        tgt2 = self.ffn(tgt, training=training)
-        tgt = tgt + self.dropout3(tgt2, training=training)
-        tgt = self.norm3(tgt)
+        # 1. Self-Attention (Decoder)
+        if self.norm_first:
+            tgt2 = self.self_attn(self.norm1(tgt), self.norm1(tgt), self.norm1(tgt),
+                                  attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
+            tgt = tgt + self.dropout1(tgt2)
+        else:
+            tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
+            tgt = self.norm1(tgt + self.dropout1(tgt2))
+
+        # 2. Cross-Attention (Encoder-Decoder)
+        if self.norm_first:
+            tgt2 = self.multihead_attn(self.norm2(tgt), self.norm2(memory), self.norm2(memory),
+                                       attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+            tgt = tgt + self.dropout2(tgt2)
+        else:
+            tgt2 = self.multihead_attn(tgt, memory, memory, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+            tgt = self.norm2(tgt + self.dropout2(tgt2))
+
+        # 3. Feedforward Network (FFN)
+        if self.norm_first:
+            tgt2 = self.linear2(self.dropout(self.activation(self.linear1(self.norm3(tgt)))))
+            tgt = tgt + self.dropout3(tgt2)
+        else:
+            tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
+            tgt = self.norm3(tgt + self.dropout3(tgt2))
 
         return tgt
+
+
+
+
+
+
+
+
+
+
+# class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
+#     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, 
+#                  name="nn_TransformerDecoderLayer", **kwargs):
+
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("called nn_TransformerDecoderLayer __init__()")
+
+#         super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
+#         # self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+#         # self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+
+#         self.self_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+#         self.cross_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+
+
+#         self.ffn = nn_Sequential([
+#         # tf.keras.Sequential([
+#             # tf.keras.layers.Dense(dim_feedforward, activation=activation),
+#             nn_Linear(dim_feedforward, activation=activation),
+#             tf.keras.layers.Dropout(dropout),
+#             # tf.keras.layers.Dense(d_model),
+#             nn_Linear(d_model),
+#         ])
+
+        
+#         # self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+#         # self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+#         # self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+
+#         self.norm1 = nn_LayerNorm(epsilon=1e-6)
+#         self.norm2 = nn_LayerNorm(epsilon=1e-6)
+#         self.norm3 = nn_LayerNorm(epsilon=1e-6)
+
+#         # self.dropout1 = tf.keras.layers.Dropout(dropout)
+#         # self.dropout2 = tf.keras.layers.Dropout(dropout)
+#         # self.dropout3 = tf.keras.layers.Dropout(dropout)
+
+#         self.dropout1 = nn_Dropout(dropout)
+#         self.dropout2 = nn_Dropout(dropout)
+#         self.dropout3 = nn_Dropout(dropout)
+
+#     def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+#         # Self-attention on target
+#         tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
+#         tgt = tgt + self.dropout1(tgt2, training=training)
+#         tgt = self.norm1(tgt)
+
+#         # Cross-attention between target and memory
+#         tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
+#         tgt = tgt + self.dropout2(tgt2, training=training)
+#         tgt = self.norm2(tgt)
+
+#         # Feedforward network
+#         tgt2 = self.ffn(tgt, training=training)
+#         tgt = tgt + self.dropout3(tgt2, training=training)
+#         tgt = self.norm3(tgt)
+
+#         return tgt
 
 
 class nn_TransformerDecoder(tf.keras.layers.Layer):

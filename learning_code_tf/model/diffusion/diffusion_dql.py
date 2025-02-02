@@ -82,8 +82,8 @@ class DQLDiffusion(DiffusionModel):
             target_q = rewards + gamma * next_q * mask
 
         # Update critic
-        loss_critic = torch_mean(torch_square(current_q1 - target_q)) + torch_mean(
-            (current_q2 - target_q)**2
+        loss_critic = torch_mean( (current_q1 - target_q) ** 2 ) + torch_mean(
+            (current_q2 - target_q) ** 2
         )
         return loss_critic
 
@@ -91,7 +91,7 @@ class DQLDiffusion(DiffusionModel):
 
         print("diffusion_dql.py: DQLDiffusion.loss_actor()")
 
-        action_new = self.call(
+        action_new = self.forward_train(
             cond=obs,
             deterministic=False,
         )[
@@ -170,7 +170,7 @@ class DQLDiffusion(DiffusionModel):
 
         return x
 
-    def call(
+    def forward_train(
         self,
         cond,
         deterministic=False,

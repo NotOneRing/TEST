@@ -15,7 +15,7 @@ import math
 
 from util.torch_to_tf import nn_GELU, torch_flatten, nn_Conv2d, nn_GroupNorm, \
 nn_Linear, nn_LayerNorm, nn_Dropout, torch_rand, torch_zeros, nn_Sequential, \
-nn_Parameter, nn_ReLU
+nn_Parameter, nn_ReLU, torch_nn_init_trunc_normal_
 
 
 @dataclass
@@ -111,10 +111,10 @@ class PatchEmbed2(tf.keras.layers.Layer):
 
         #输入是num_channel
         layers = [
-            nn_Conv2D(num_channel, embed_dim, kernel_size=8, strides=4),
+            nn_Conv2d(num_channel, embed_dim, kernel_size=8, strides=4),
             nn_GroupNorm() if use_norm else layers.Lambda(lambda x: x),
             nn_ReLU(),
-            nn_Conv2D(embed_dim, embed_dim, kernel_size=3, strides=2),
+            nn_Conv2d(embed_dim, embed_dim, kernel_size=3, strides=2),
         ]
 
         self.embed = tf.keras.Sequential(layers)
@@ -291,7 +291,7 @@ class MinVit(tf.keras.Model):
         self.num_patches = self.patch_embed.num_patch
 
         # weight init
-        trunc_normal_(self.pos_embed, std=0.02)
+        torch_nn_init_trunc_normal_(self.pos_embed, std=0.02)
 
         named_apply(init_weights_vit_timm, self)
 

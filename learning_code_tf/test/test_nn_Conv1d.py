@@ -59,7 +59,9 @@ tf_conv1d.build(input_shape=input_shape)
 # 复制权重
 with torch.no_grad():
     # 调整权重形状
-    torch_weight = torch_conv1d.weight.numpy().transpose(2, 1, 0)  # (kernel_size, in_channels, out_channels)
+    torch_weight = torch_conv1d.weight.numpy().transpose(2, 1, 0)  
+    # pytorch is (out_channels, in_channels, kernel_size)
+    # tensorflow is (kernel_size, in_channels, out_channels)
     torch_bias = torch_conv1d.bias.numpy()
     
     # 检查 TF 层的权重是否已初始化
@@ -72,7 +74,8 @@ with torch.no_grad():
 
 # 前向传播
 output_torch = torch_conv1d(input_torch).detach().numpy()  # (batch, out_channels, length)
-output_tf = tf_conv1d(input_tf).numpy()  # (batch, length, out_channels)
+output_tf = tf_conv1d(input_tf).numpy()  
+# (batch, length, out_channels)
 
 # output_tf = np.transpose(output_tf, (0, 2, 1))  # 转换为 (batch, out_channels, length)
 

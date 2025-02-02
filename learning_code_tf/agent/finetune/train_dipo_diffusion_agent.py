@@ -26,7 +26,7 @@ from agent.finetune.train_agent import TrainAgent
 import tensorflow as tf
 
 from util.torch_to_tf import torch_from_numpy, torch_min, \
-    torch_tensor_float, torch_reshape, torch_nn_utils_clip_grad_norm_and_step, torch_tensor_clamp_,\
+    torch_tensor_float, torch_reshape, torch_nn_utils_clip_grad_norm_and_step, torch_clamp,\
     torch_tensor_requires_grad_, torch_sum, torch_tensor_detach, \
     torch_no_grad, torch_nn_utils_clip_grad_norm_and_step
 
@@ -303,14 +303,23 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             torch_tensor_float( torch_from_numpy(obs_array[inds]) )
                             # .to(self.device)
                         )
-                        actions_b = (
+                        # actions_b = (
+                        #     torch_tensor_float( torch_from_numpy(action_array[inds]) )
+                        #     # .to(self.device)
+                        # )
+
+                        # # get Q-perturbed actions by optimizing
+                        # actions_flat = torch_reshape( actions_b, len(actions_b), -1)
+                        
+                        actions_b = tf.Variable(
                             torch_tensor_float( torch_from_numpy(action_array[inds]) )
                             # .to(self.device)
                         )
 
                         # get Q-perturbed actions by optimizing
                         actions_flat = torch_reshape( actions_b, len(actions_b), -1)
-                        
+
+
                         actions_optim = torch_optim_Adam(
                             [actions_flat], lr=self.action_lr, eps=1e-5
                         )
@@ -318,7 +327,7 @@ class TrainDIPODiffusionAgent(TrainAgent):
                         for _ in range(self.action_gradient_steps):
                             
                             # actions_flat.requires_grad_(True)
-                            torch_tensor_requires_grad_(actions_flat, True)
+                            actions_flat = torch_tensor_requires_grad_(actions_flat, True)
 
                             with tf.GradientTape() as tape:
                                 
@@ -338,6 +347,17 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             # action_opt_loss.backward(torch_ones_like(action_opt_loss))
 
 
+
+                            print("q_values = ", q_values)
+                            print("q_values.shape = ", q_values.shape)
+                            print("action_opt_loss = ", action_opt_loss)
+                            print("action_opt_loss.shape = ", action_opt_loss.shape)
+                            print("actions_flat = ", actions_flat)
+                            print("actions_flat.shape = ", actions_flat.shape)
+                            print("tf_gradients = ", tf_gradients)
+
+
+
                             torch_nn_utils_clip_grad_norm_and_step(
                                 [actions_flat],
                                 actions_optim,
@@ -351,7 +371,7 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             # actions_flat.requires_grad_(False)
                             torch_tensor_requires_grad_(actions_flat, False)
                             
-                            torch_tensor_clamp_(actions_flat, -1.0, 1.0)
+                            actions_flat = torch_clamp(actions_flat, -1.0, 1.0)
 
                         guided_action = torch_reshape( actions_flat,
                             len(actions_flat), self.horizon_steps, self.action_dim
@@ -389,7 +409,8 @@ class TrainDIPODiffusionAgent(TrainAgent):
                                 self.model.actor.trainable_variables,
                                 self.actor_optimizer,
                                 self.max_grad_norm,
-                                tf_gradients
+                                # tf_gradients
+                                tf_actor_gradients
                             )
                         else:
                             # self.actor_optimizer.step(tf_gradients)

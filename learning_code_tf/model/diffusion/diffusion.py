@@ -1040,6 +1040,8 @@ class DiffusionModel(tf.keras.Model):
 
         print("args_list = ", args_list)
 
+        
+
         # Compute loss
 
         # if training:

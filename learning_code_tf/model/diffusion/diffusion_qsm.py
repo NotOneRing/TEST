@@ -17,7 +17,7 @@ from model.diffusion.diffusion_rwr import RWRDiffusion
 
 from util.torch_to_tf import torch_no_grad, torch_randn_like, torch_randint,\
 torch_tensor_long, torch_sum, torch_mse_loss, torch_mean, torch_stack, torch_min,\
-torch_tensor_view
+torch_tensor_view, torch_tensor_detach
 
 
 
@@ -72,7 +72,7 @@ class QSMDiffusion(RWRDiffusion):
         # Compute gradients dQ/da
         gradient_q1 = tape.gradient(q1_sum, x_noisy)
         gradient_q2 = tape.gradient(q2_sum, x_noisy)
-        gradient_q = torch_mean(torch_stack((gradient_q1, gradient_q2), dim=0), dim=0)
+        gradient_q = torch_tensor_detach( torch_mean(torch_stack((gradient_q1, gradient_q2), dim=0), dim=0) )
         # # Compute dQ/da|a=noise_actions
         # gradient_q1 = torch.autograd.grad(current_q1.sum(), x_noisy)[0]
         # gradient_q2 = torch.autograd.grad(current_q2.sum(), x_noisy)[0]

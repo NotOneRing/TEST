@@ -119,7 +119,7 @@ class IDQLDiffusion(RWRDiffusion):
         self,
         x_start,
         cond,
-        t,
+        t, training = True
     ):
         """not reward-weighted, same as diffusion.py"""
 
@@ -131,13 +131,16 @@ class IDQLDiffusion(RWRDiffusion):
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
         # Predict
-        x_recon = self.network(x_noisy, t, cond=cond)
+        # x_recon = self.network(x_noisy, t, cond=cond)
+        print("self.network = ", self.network)
+
+        x_recon = self.network( [x_noisy, t, cond['state']], training=training)
 
         # Loss with mask           
         if self.predict_epsilon:
-            loss = torch_mse_loss(x_recon - noise)
+            loss = torch_mse_loss(x_recon, noise)
         else:
-            loss = torch_mse_loss(x_recon - x_start)
+            loss = torch_mse_loss(x_recon, x_start)
 
         return loss
 
