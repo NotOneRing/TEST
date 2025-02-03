@@ -519,13 +519,6 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-
-
-
-
-
-
-
         #Gym: halfcheetah
         # 'network.time_embedding.1.weight'
         # 'network.time_embedding.1.bias'
@@ -568,10 +561,6 @@ class DiffusionModel(tf.keras.Model):
         # 'network.mlp_mean.layers.2.weight'
         # 'network.mlp_mean.layers.2.bias'
         
-
-
-
-
 
         #Robomimic Can
         # 'network.time_embedding.1.weight'
@@ -642,25 +631,6 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         # 'network.time_embedding.1.weight'
         # 'network.time_embedding.1.bias'
         # 'network.time_embedding.3.weight'
@@ -689,13 +659,13 @@ class DiffusionModel(tf.keras.Model):
             self.network.cond_mlp.moduleList[0].trainable_weights[0].assign(params_dict['network.cond_mlp.moduleList.0.linear_1.weight'].T)  # kernel
 
         if 'network.cond_mlp.moduleList.0.linear_1.bias' in params_dict:
-            self.network.cond_mlp.moduleList[0].trainable_weights[1].assign(params_dict['network.cond_mlp.moduleList.0.linear_1.bias'].T)  # kernel
+            self.network.cond_mlp.moduleList[0].trainable_weights[1].assign(params_dict['network.cond_mlp.moduleList.0.linear_1.bias'])  # kernel
 
         if 'network.cond_mlp.moduleList.1.linear_1.weight' in params_dict:
             self.network.cond_mlp.moduleList[1].trainable_weights[0].assign(params_dict['network.cond_mlp.moduleList.1.linear_1.weight'].T)  # kernel
 
         if 'network.cond_mlp.moduleList.1.linear_1.bias' in params_dict:
-            self.network.cond_mlp.moduleList[1].trainable_weights[1].assign(params_dict['network.cond_mlp.moduleList.1.linear_1.bias'].T)  # kernel
+            self.network.cond_mlp.moduleList[1].trainable_weights[1].assign(params_dict['network.cond_mlp.moduleList.1.linear_1.bias'])  # kernel
 
 
 
@@ -739,39 +709,39 @@ class DiffusionModel(tf.keras.Model):
             self.network.mlp_mean.my_layers[1].norm1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.norm1.weight'].T)  # kernel
 
         if 'network.mlp_mean.layers.1.norm1.bias' in params_dict:
-            self.network.mlp_mean.my_layers[1].norm1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.norm1.bias'].T)  # kernel
+            self.network.mlp_mean.my_layers[1].norm1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.norm1.bias'])  # kernel
 
 
         if 'network.mlp_mean.layers.1.norm2.weight' in params_dict:
             self.network.mlp_mean.my_layers[1].norm2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.norm2.weight'].T)  # kernel
 
         if 'network.mlp_mean.layers.1.norm2.bias' in params_dict:
-            self.network.mlp_mean.my_layers[1].norm2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.norm2.bias'].T)  # kernel
+            self.network.mlp_mean.my_layers[1].norm2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.norm2.bias'])  # kernel
 
 
 
 
 
         if 'network.mlp_mean.layers.2.l1.weight' in params_dict:
-            self.network.mlp_mean.my_layers[2].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.l1.weight'])     # weight
+            self.network.mlp_mean.my_layers[2].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.l1.weight'].T)     # weight
 
         if 'network.mlp_mean.layers.2.l1.bias' in params_dict:
             self.network.mlp_mean.my_layers[2].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.l1.bias'])     # bias
 
         if 'network.mlp_mean.layers.2.l2.weight' in params_dict:
-            self.network.mlp_mean.my_layers[2].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.l2.weight'])     # weight
+            self.network.mlp_mean.my_layers[2].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.l2.weight'].T)     # weight
 
         if 'network.mlp_mean.layers.2.l2.bias' in params_dict:
             self.network.mlp_mean.my_layers[2].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.l2.bias'])     # bias
 
         if 'network.mlp_mean.layers.2.norm1.weight' in params_dict:
-            self.network.mlp_mean.my_layers[2].norm1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.norm1.weight'])     # weight
+            self.network.mlp_mean.my_layers[2].norm1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.norm1.weight'].T)     # weight
 
         if 'network.mlp_mean.layers.2.norm1.bias' in params_dict:
             self.network.mlp_mean.my_layers[2].norm1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.norm1.bias'])     # bias
 
         if 'network.mlp_mean.layers.2.norm2.weight' in params_dict:
-            self.network.mlp_mean.my_layers[2].norm2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.norm2.weight'])     # weight
+            self.network.mlp_mean.my_layers[2].norm2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.norm2.weight'].T)     # weight
 
         if 'network.mlp_mean.layers.2.norm2.bias' in params_dict:
             self.network.mlp_mean.my_layers[2].norm2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.norm2.bias'])     # bias
@@ -791,25 +761,25 @@ class DiffusionModel(tf.keras.Model):
         # 'network.mlp_mean.layers.3.norm2.weight'
         # 'network.mlp_mean.layers.3.norm2.bias'
         if 'network.mlp_mean.layers.3.l1.weight' in params_dict:
-            self.network.mlp_mean.my_layers[3].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.l1.weight'])     # weight
+            self.network.mlp_mean.my_layers[3].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.l1.weight'].T)     # weight
 
         if 'network.mlp_mean.layers.3.l1.bias' in params_dict:
             self.network.mlp_mean.my_layers[3].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.3.l1.bias'])     # bias
 
         if 'network.mlp_mean.layers.3.l2.weight' in params_dict:
-            self.network.mlp_mean.my_layers[3].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.l2.weight'])     # weight
+            self.network.mlp_mean.my_layers[3].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.l2.weight'].T)     # weight
 
         if 'network.mlp_mean.layers.3.l2.bias' in params_dict:
             self.network.mlp_mean.my_layers[3].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.3.l2.bias'])     # bias
 
         if 'network.mlp_mean.layers.3.norm1.weight' in params_dict:
-            self.network.mlp_mean.my_layers[3].norm1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.norm1.weight'])     # weight
+            self.network.mlp_mean.my_layers[3].norm1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.norm1.weight'].T)     # weight
 
         if 'network.mlp_mean.layers.3.norm1.bias' in params_dict:
             self.network.mlp_mean.my_layers[3].norm1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.3.norm1.bias'])     # bias
 
         if 'network.mlp_mean.layers.3.norm2.weight' in params_dict:
-            self.network.mlp_mean.my_layers[3].norm2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.norm2.weight'])     # weight
+            self.network.mlp_mean.my_layers[3].norm2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.3.norm2.weight'].T)     # weight
 
         if 'network.mlp_mean.layers.3.norm2.bias' in params_dict:
             self.network.mlp_mean.my_layers[3].norm2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.3.norm2.bias'])     # bias
@@ -834,6 +804,324 @@ class DiffusionModel(tf.keras.Model):
 
 
 
+    def load_pickle_diffusion_unet(self, network_path):
+        pkl_file_path = network_path.replace('.pt', '_ema.pkl')
+
+        print("pkl_file_path = ", pkl_file_path)
+
+        import pickle
+        # load pickle file
+        with open(pkl_file_path, 'rb') as file:
+            params_dict = pickle.load(file)
+
+
+
+        # 打印加载的内容
+
+        if OUTPUT_VARIABLES:
+            print("params_dict = ", params_dict)
+
+
+        # Robomimic Transport
+        # 'network.time_mlp.1.weight'
+        # 'network.time_mlp.1.bias'
+        # 'network.time_mlp.3.weight'
+        # 'network.time_mlp.3.bias'
+        # 'network.mid_modules.0.blocks.0.block.0.weight'
+        # 'network.mid_modules.0.blocks.0.block.0.bias'
+        # 'network.mid_modules.0.blocks.0.block.2.weight'
+        # 'network.mid_modules.0.blocks.0.block.2.bias'
+        # 'network.mid_modules.0.blocks.1.block.0.weight'
+        # 'network.mid_modules.0.blocks.1.block.0.bias'
+        # 'network.mid_modules.0.blocks.1.block.2.weight'
+        # 'network.mid_modules.0.blocks.1.block.2.bias'
+        # 'network.mid_modules.0.cond_encoder.0.weight'
+        # 'network.mid_modules.0.cond_encoder.0.bias'
+        # 'network.mid_modules.0.cond_encoder.2.weight'
+        # 'network.mid_modules.0.cond_encoder.2.bias'
+        # 'network.mid_modules.0.cond_encoder.4.weight'
+        # 'network.mid_modules.0.cond_encoder.4.bias'
+        # 'network.mid_modules.1.blocks.0.block.0.weight'
+        # 'network.mid_modules.1.blocks.0.block.0.bias'
+        # 'network.mid_modules.1.blocks.0.block.2.weight'
+        # 'network.mid_modules.1.blocks.0.block.2.bias'
+        # 'network.mid_modules.1.blocks.1.block.0.weight'
+        # 'network.mid_modules.1.blocks.1.block.0.bias'
+        # 'network.mid_modules.1.blocks.1.block.2.weight'
+        # 'network.mid_modules.1.blocks.1.block.2.bias'
+        # 'network.mid_modules.1.cond_encoder.0.weight'
+        # 'network.mid_modules.1.cond_encoder.0.bias'
+        # 'network.mid_modules.1.cond_encoder.2.weight'
+        # 'network.mid_modules.1.cond_encoder.2.bias'
+        # 'network.mid_modules.1.cond_encoder.4.weight'
+        # 'network.mid_modules.1.cond_encoder.4.bias'
+
+        # 'network.down_modules.0.0.blocks.0.block.0.weight'
+        # 'network.down_modules.0.0.blocks.0.block.0.bias'
+        # 'network.down_modules.0.0.blocks.0.block.2.weight'
+        # 'network.down_modules.0.0.blocks.0.block.2.bias'
+        # 'network.down_modules.0.0.blocks.1.block.0.weight'
+        # 'network.down_modules.0.0.blocks.1.block.0.bias'
+        # 'network.down_modules.0.0.blocks.1.block.2.weight'
+        # 'network.down_modules.0.0.blocks.1.block.2.bias'
+        # 'network.down_modules.0.0.cond_encoder.0.weight'
+        # 'network.down_modules.0.0.cond_encoder.0.bias'
+        # 'network.down_modules.0.0.cond_encoder.2.weight'
+        # 'network.down_modules.0.0.cond_encoder.2.bias'
+        # 'network.down_modules.0.0.cond_encoder.4.weight'
+        # 'network.down_modules.0.0.cond_encoder.4.bias'
+        # 'network.down_modules.0.0.residual_conv.weight'
+        # 'network.down_modules.0.0.residual_conv.bias'
+        # 'network.down_modules.0.1.blocks.0.block.0.weight'
+        # 'network.down_modules.0.1.blocks.0.block.0.bias'
+        # 'network.down_modules.0.1.blocks.0.block.2.weight'
+        # 'network.down_modules.0.1.blocks.0.block.2.bias'
+        # 'network.down_modules.0.1.blocks.1.block.0.weight'
+        # 'network.down_modules.0.1.blocks.1.block.0.bias'
+        # 'network.down_modules.0.1.blocks.1.block.2.weight'
+        # 'network.down_modules.0.1.blocks.1.block.2.bias'
+        # 'network.down_modules.0.1.cond_encoder.0.weight'
+        # 'network.down_modules.0.1.cond_encoder.0.bias'
+        # 'network.down_modules.0.1.cond_encoder.2.weight'
+        # 'network.down_modules.0.1.cond_encoder.2.bias'
+        # 'network.down_modules.0.1.cond_encoder.4.weight'
+        # 'network.down_modules.0.1.cond_encoder.4.bias'
+        # 'network.down_modules.0.2.conv.weight'
+        # 'network.down_modules.0.2.conv.bias'
+
+        # 'network.down_modules.1.0.blocks.0.block.0.weight'
+        # 'network.down_modules.1.0.blocks.0.block.0.bias'
+        # 'network.down_modules.1.0.blocks.0.block.2.weight'
+        # 'network.down_modules.1.0.blocks.0.block.2.bias'
+        # 'network.down_modules.1.0.blocks.1.block.0.weight'
+        # 'network.down_modules.1.0.blocks.1.block.0.bias'
+        # 'network.down_modules.1.0.blocks.1.block.2.weight'
+        # 'network.down_modules.1.0.blocks.1.block.2.bias'
+        # 'network.down_modules.1.0.cond_encoder.0.weight'
+        # 'network.down_modules.1.0.cond_encoder.0.bias'
+        # 'network.down_modules.1.0.cond_encoder.2.weight'
+        # 'network.down_modules.1.0.cond_encoder.2.bias'
+        # 'network.down_modules.1.0.cond_encoder.4.weight'
+        # 'network.down_modules.1.0.cond_encoder.4.bias'
+        # 'network.down_modules.1.0.residual_conv.weight'
+        # 'network.down_modules.1.0.residual_conv.bias'
+        # 'network.down_modules.1.1.blocks.0.block.0.weight'
+        # 'network.down_modules.1.1.blocks.0.block.0.bias'
+        # 'network.down_modules.1.1.blocks.0.block.2.weight'
+        # 'network.down_modules.1.1.blocks.0.block.2.bias'
+        # 'network.down_modules.1.1.blocks.1.block.0.weight'
+        # 'network.down_modules.1.1.blocks.1.block.0.bias'
+        # 'network.down_modules.1.1.blocks.1.block.2.weight'
+        # 'network.down_modules.1.1.blocks.1.block.2.bias'
+        # 'network.down_modules.1.1.cond_encoder.0.weight'
+        # 'network.down_modules.1.1.cond_encoder.0.bias'
+        # 'network.down_modules.1.1.cond_encoder.2.weight'
+        # 'network.down_modules.1.1.cond_encoder.2.bias'
+        # 'network.down_modules.1.1.cond_encoder.4.weight'
+        # 'network.down_modules.1.1.cond_encoder.4.bias'
+
+        # 'network.up_modules.0.0.blocks.0.block.0.weight'
+        # 'network.up_modules.0.0.blocks.0.block.0.bias'
+        # 'network.up_modules.0.0.blocks.0.block.2.weight'
+        # 'network.up_modules.0.0.blocks.0.block.2.bias'
+        # 'network.up_modules.0.0.blocks.1.block.0.weight'
+        # 'network.up_modules.0.0.blocks.1.block.0.bias'
+        # 'network.up_modules.0.0.blocks.1.block.2.weight'
+        # 'network.up_modules.0.0.blocks.1.block.2.bias'
+        # 'network.up_modules.0.0.cond_encoder.0.weight'
+        # 'network.up_modules.0.0.cond_encoder.0.bias'
+        # 'network.up_modules.0.0.cond_encoder.2.weight'
+        # 'network.up_modules.0.0.cond_encoder.2.bias'
+        # 'network.up_modules.0.0.cond_encoder.4.weight'
+        # 'network.up_modules.0.0.cond_encoder.4.bias'
+        # 'network.up_modules.0.0.residual_conv.weight'
+        # 'network.up_modules.0.0.residual_conv.bias'
+        # 'network.up_modules.0.1.blocks.0.block.0.weight'
+        # 'network.up_modules.0.1.blocks.0.block.0.bias'
+        # 'network.up_modules.0.1.blocks.0.block.2.weight'
+        # 'network.up_modules.0.1.blocks.0.block.2.bias'
+        # 'network.up_modules.0.1.blocks.1.block.0.weight'
+        # 'network.up_modules.0.1.blocks.1.block.0.bias'
+        # 'network.up_modules.0.1.blocks.1.block.2.weight'
+        # 'network.up_modules.0.1.blocks.1.block.2.bias'
+        # 'network.up_modules.0.1.cond_encoder.0.weight'
+        # 'network.up_modules.0.1.cond_encoder.0.bias'
+        # 'network.up_modules.0.1.cond_encoder.2.weight'
+        # 'network.up_modules.0.1.cond_encoder.2.bias'
+        # 'network.up_modules.0.1.cond_encoder.4.weight'
+        # 'network.up_modules.0.1.cond_encoder.4.bias'
+        # 'network.up_modules.0.2.conv.weight'
+        # 'network.up_modules.0.2.conv.bias'
+
+        # 'network.final_conv.0.block.0.weight'
+        # 'network.final_conv.0.block.0.bias'
+        # 'network.final_conv.0.block.2.weight'
+        # 'network.final_conv.0.block.2.bias'
+        # 'network.final_conv.1.weight'
+        # 'network.final_conv.1.bias'
+
+
+
+
+
+        if 'network.time_mlp.1.weight' in params_dict:
+            self.network.time_mlp[1].trainable_weights[0].assign(params_dict['network.time_mlp.1.weight'].T)  # kernel
+        if 'network.time_mlp.1.bias' in params_dict:
+            self.network.time_mlp[1].trainable_weights[1].assign(params_dict['network.time_mlp.1.bias'])  # bias
+        if 'network.time_mlp.3.weight' in params_dict:
+            self.network.time_mlp[3].trainable_weights[0].assign(params_dict['network.time_mlp.3.weight'].T)  # kernel
+        if 'network.time_mlp.3.bias' in params_dict:
+            self.network.time_mlp[3].trainable_weights[1].assign(params_dict['network.time_mlp.3.bias'])  # bias
+
+
+
+        if 'network.mid_modules.0.blocks.0.block.0.weight' in params_dict:
+            self.network.mid_modules[0].blocks[0].block[0].trainable_weights[0].assign(params_dict['network.mid_modules.0.blocks.0.block.0.weight'].T)  # kernel
+        if 'network.mid_modules.0.blocks.0.block.0.bias' in params_dict:
+            self.network.mid_modules[0].blocks[0].block[0].trainable_weights[1].assign(params_dict['network.mid_modules.0.blocks.0.block.0.bias'])  # bias
+        if 'network.mid_modules.0.blocks.0.block.2.weight' in params_dict:
+            self.network.mid_modules[0].blocks[0].block[2].trainable_weights[0].assign(params_dict['network.mid_modules.0.blocks.0.block.2.weight'].T)  # kernel
+        if 'network.mid_modules.0.blocks.0.block.2.bias' in params_dict:
+            self.network.mid_modules[0].blocks[0].block[2].trainable_weights[1].assign(params_dict['network.mid_modules.0.blocks.0.block.2.bias'])  # bias
+        if 'network.mid_modules.0.blocks.1.block.0.weight' in params_dict:
+            self.network.mid_modules[0].blocks[1].block[0].trainable_weights[0].assign(params_dict['network.mid_modules.0.blocks.1.block.0.weight'].T)  # kernel
+        if 'network.mid_modules.0.blocks.1.block.0.bias' in params_dict:
+            self.network.mid_modules[0].blocks[1].block[0].trainable_weights[1].assign(params_dict['network.mid_modules.0.blocks.1.block.0.bias'])  # bias
+        if 'network.mid_modules.0.blocks.1.block.2.weight' in params_dict:
+            self.network.mid_modules[0].blocks[1].block[2].trainable_weights[0].assign(params_dict['network.mid_modules.0.blocks.1.block.2.weight'].T)  # kernel
+        if 'network.mid_modules.0.blocks.1.block.2.bias' in params_dict:
+            self.network.mid_modules[0].blocks[1].block[2].trainable_weights[1].assign(params_dict['network.mid_modules.0.blocks.1.block.2.bias'])  # bias
+
+        if 'network.mid_modules.0.cond_encoder.0.weight' in params_dict:
+            self.network.mid_modules[0].cond_encoder[0].trainable_weights[0].assign(params_dict['network.mid_modules.0.cond_encoder.0.weight'].T)  # kernel
+        if 'network.mid_modules.0.cond_encoder.0.bias' in params_dict:
+            self.network.mid_modules[0].cond_encoder[0].trainable_weights[1].assign(params_dict['network.mid_modules.0.cond_encoder.0.bias'])  # bias
+        if 'network.mid_modules.0.cond_encoder.2.weight' in params_dict:
+            self.network.mid_modules[0].cond_encoder[2].trainable_weights[0].assign(params_dict['network.mid_modules.0.cond_encoder.2.weight'].T)  # kernel
+        if 'network.mid_modules.0.cond_encoder.2.bias' in params_dict:
+            self.network.mid_modules[0].cond_encoder[2].trainable_weights[1].assign(params_dict['network.mid_modules.0.cond_encoder.2.bias'])  # bias
+        if 'network.mid_modules.0.cond_encoder.4.weight' in params_dict:
+            self.network.mid_modules[0].cond_encoder[4].trainable_weights[0].assign(params_dict['network.mid_modules.0.cond_encoder.4.weight'].T)  # kernel
+        if 'network.mid_modules.0.cond_encoder.4.bias' in params_dict:
+            self.network.mid_modules[0].cond_encoder[4].trainable_weights[1].assign(params_dict['network.mid_modules.0.cond_encoder.4.bias'])  # bias
+
+        
+        
+
+
+
+        if 'network.mid_modules.1.blocks.0.block.0.weight' in params_dict:
+            self.network.mid_modules[1].blocks[0].block[0].trainable_weights[0].assign(params_dict['network.mid_modules.1.blocks.0.block.0.weight'].T)  # kernel
+        if 'network.mid_modules.1.blocks.0.block.0.bias' in params_dict:
+            self.network.mid_modules[1].blocks[0].block[0].trainable_weights[1].assign(params_dict['network.mid_modules.1.blocks.0.block.0.bias'])  # bias
+        if 'network.mid_modules.1.blocks.0.block.2.weight' in params_dict:
+            self.network.mid_modules[1].blocks[0].block[2].trainable_weights[0].assign(params_dict['network.mid_modules.1.blocks.0.block.2.weight'].T)  # kernel
+        if 'network.mid_modules.1.blocks.0.block.2.bias' in params_dict:
+            self.network.mid_modules[1].blocks[0].block[2].trainable_weights[1].assign(params_dict['network.mid_modules.1.blocks.0.block.2.bias'])  # bias
+        if 'network.mid_modules.1.blocks.1.block.0.weight' in params_dict:
+            self.network.mid_modules[1].blocks[1].block[0].trainable_weights[0].assign(params_dict['network.mid_modules.1.blocks.1.block.0.weight'].T)  # kernel
+        if 'network.mid_modules.1.blocks.1.block.0.bias' in params_dict:
+            self.network.mid_modules[1].blocks[1].block[0].trainable_weights[1].assign(params_dict['network.mid_modules.1.blocks.1.block.0.bias'])  # bias
+        if 'network.mid_modules.1.blocks.1.block.2.weight' in params_dict:
+            self.network.mid_modules[1].blocks[1].block[2].trainable_weights[0].assign(params_dict['network.mid_modules.1.blocks.1.block.2.weight'].T)  # kernel
+        if 'network.mid_modules.1.blocks.1.block.2.bias' in params_dict:
+            self.network.mid_modules[1].blocks[1].block[2].trainable_weights[1].assign(params_dict['network.mid_modules.1.blocks.1.block.2.bias'])  # bias
+
+        if 'network.mid_modules.1.cond_encoder.0.weight' in params_dict:
+            self.network.mid_modules[1].cond_encoder[0].trainable_weights[0].assign(params_dict['network.mid_modules.1.cond_encoder.0.weight'].T)  # kernel
+        if 'network.mid_modules.1.cond_encoder.0.bias' in params_dict:
+            self.network.mid_modules[1].cond_encoder[0].trainable_weights[1].assign(params_dict['network.mid_modules.1.cond_encoder.0.bias'])  # bias
+        if 'network.mid_modules.1.cond_encoder.2.weight' in params_dict:
+            self.network.mid_modules[1].cond_encoder[2].trainable_weights[0].assign(params_dict['network.mid_modules.1.cond_encoder.2.weight'].T)  # kernel
+        if 'network.mid_modules.1.cond_encoder.2.bias' in params_dict:
+            self.network.mid_modules[1].cond_encoder[2].trainable_weights[1].assign(params_dict['network.mid_modules.1.cond_encoder.2.bias'])  # bias
+        if 'network.mid_modules.1.cond_encoder.4.weight' in params_dict:
+            self.network.mid_modules[1].cond_encoder[4].trainable_weights[0].assign(params_dict['network.mid_modules.1.cond_encoder.4.weight'].T)  # kernel
+        if 'network.mid_modules.1.cond_encoder.4.bias' in params_dict:
+            self.network.mid_modules[1].cond_encoder[4].trainable_weights[1].assign(params_dict['network.mid_modules.1.cond_encoder.4.bias'])  # bias
+
+        
+        
+
+
+        if 'network.down_modules.0.0.blocks.0.block.0.weight' in params_dict:
+            self.network.down_modules[0][0].blocks[0].block[0].trainable_weights[0].assign(params_dict['network.down_modules.0.0.blocks.0.block.0.weight'].T)  # kernel
+        if 'network.down_modules.0.0.blocks.0.block.0.bias' in params_dict:
+            self.network.down_modules[0][0].blocks[0].block[0].trainable_weights[1].assign(params_dict['network.down_modules.0.0.blocks.0.block.0.bias'])  # bias
+        if 'network.down_modules.0.0.blocks.0.block.2.weight' in params_dict:
+            self.network.down_modules[0][0].blocks[0].block[2].trainable_weights[0].assign(params_dict['network.down_modules.0.0.blocks.0.block.2.weight'].T)  # kernel
+        if 'network.down_modules.0.0.blocks.0.block.2.bias' in params_dict:
+            self.network.down_modules[0][0].blocks[0].block[2].trainable_weights[1].assign(params_dict['network.down_modules.0.0.blocks.0.block.2.bias'])  # bias
+        if 'network.down_modules.0.0.blocks.1.block.0.weight' in params_dict:
+            self.network.down_modules[0][0].blocks[1].block[0].trainable_weights[0].assign(params_dict['network.down_modules.0.0.blocks.1.block.0.weight'].T)  # kernel
+        if 'network.down_modules.0.0.blocks.1.block.0.bias' in params_dict:
+            self.network.down_modules[0][0].blocks[1].block[0].trainable_weights[1].assign(params_dict['network.down_modules.0.0.blocks.1.block.0.bias'])  # bias
+        if 'network.down_modules.0.0.blocks.1.block.2.weight' in params_dict:
+            self.network.down_modules[0][0].blocks[1].block[2].trainable_weights[0].assign(params_dict['network.down_modules.0.0.blocks.1.block.2.weight'].T)  # kernel
+        if 'network.down_modules.0.0.blocks.1.block.2.bias' in params_dict:
+            self.network.down_modules[0][0].blocks[1].block[2].trainable_weights[1].assign(params_dict['network.down_modules.0.0.blocks.1.block.2.bias'])  # bias
+
+        if 'network.down_modules.0.0.cond_encoder.0.weight' in params_dict:
+            self.network.down_modules[0][0].cond_encoder[0].trainable_weights[0].assign(params_dict['network.down_modules.0.0.cond_encoder.0.weight'].T)  # kernel
+        if 'network.down_modules.0.0.cond_encoder.0.bias' in params_dict:
+            self.network.down_modules[0][0].cond_encoder[0].trainable_weights[1].assign(params_dict['network.down_modules.0.0.cond_encoder.0.bias'])  # bias
+        if 'network.down_modules.0.0.cond_encoder.2.weight' in params_dict:
+            self.network.down_modules[0][0].cond_encoder[2].trainable_weights[0].assign(params_dict['network.down_modules.0.0.cond_encoder.2.weight'].T)  # kernel
+        if 'network.down_modules.0.0.cond_encoder.2.bias' in params_dict:
+            self.network.down_modules[0][0].cond_encoder[2].trainable_weights[1].assign(params_dict['network.down_modules.0.0.cond_encoder.2.bias'])  # bias
+        if 'network.down_modules.0.0.cond_encoder.4.weight' in params_dict:
+            self.network.down_modules[0][0].cond_encoder[4].trainable_weights[0].assign(params_dict['network.down_modules.0.0.cond_encoder.4.weight'].T)  # kernel
+        if 'network.down_modules.0.0.cond_encoder.4.bias' in params_dict:
+            self.network.down_modules[0][0].cond_encoder[4].trainable_weights[1].assign(params_dict['network.down_modules.0.0.cond_encoder.4.bias'])  # bias
+
+
+        if 'network.down_modules.0.0.residual_conv.weight' in params_dict:
+            self.network.down_modules[0][0].residual_conv.trainable_weights[0].assign(params_dict['network.down_modules.0.0.residual_conv.weight'].T)  # kernel
+        if 'network.down_modules.0.0.residual_conv.bias' in params_dict:
+            self.network.down_modules[0][0].residual_conv.trainable_weights[1].assign(params_dict['network.down_modules.0.0.residual_conv.bias'])  # bias
+
+
+
+
+
+
+
+
+        if 'network.down_modules.0.1.blocks.0.block.0.weight' in params_dict:
+            self.network.down_modules[0][1].blocks[0].block[0].trainable_weights[0].assign(params_dict['network.down_modules.0.1.blocks.0.block.0.weight'].T)  # kernel
+        if 'network.down_modules.0.1.blocks.0.block.0.bias' in params_dict:
+            self.network.down_modules[0][1].blocks[0].block[0].trainable_weights[1].assign(params_dict['network.down_modules.0.1.blocks.0.block.0.bias'])  # bias
+        if 'network.down_modules.0.1.blocks.0.block.2.weight' in params_dict:
+            self.network.down_modules[0][1].blocks[0].block[2].trainable_weights[0].assign(params_dict['network.down_modules.0.1.blocks.0.block.2.weight'].T)  # kernel
+        if 'network.down_modules.0.1.blocks.0.block.2.bias' in params_dict:
+            self.network.down_modules[0][1].blocks[0].block[2].trainable_weights[1].assign(params_dict['network.down_modules.0.1.blocks.0.block.2.bias'])  # bias
+        if 'network.down_modules.0.1.blocks.1.block.0.weight' in params_dict:
+            self.network.down_modules[0][1].blocks[1].block[0].trainable_weights[0].assign(params_dict['network.down_modules.0.1.blocks.1.block.0.weight'].T)  # kernel
+        if 'network.down_modules.0.1.blocks.1.block.0.bias' in params_dict:
+            self.network.down_modules[0][1].blocks[1].block[0].trainable_weights[1].assign(params_dict['network.down_modules.0.1.blocks.1.block.0.bias'])  # bias
+        if 'network.down_modules.0.1.blocks.1.block.2.weight' in params_dict:
+            self.network.down_modules[0][1].blocks[1].block[2].trainable_weights[0].assign(params_dict['network.down_modules.0.1.blocks.1.block.2.weight'].T)  # kernel
+        if 'network.down_modules.0.1.blocks.1.block.2.bias' in params_dict:
+            self.network.down_modules[0][1].blocks[1].block[2].trainable_weights[1].assign(params_dict['network.down_modules.0.1.blocks.1.block.2.bias'])  # bias
+
+        if 'network.down_modules.0.1.cond_encoder.0.weight' in params_dict:
+            self.network.down_modules[0][1].cond_encoder[0].trainable_weights[0].assign(params_dict['network.down_modules.0.1.cond_encoder.0.weight'].T)  # kernel
+        if 'network.down_modules.0.1.cond_encoder.0.bias' in params_dict:
+            self.network.down_modules[0][1].cond_encoder[0].trainable_weights[1].assign(params_dict['network.down_modules.0.1.cond_encoder.0.bias'])  # bias
+        if 'network.down_modules.0.1.cond_encoder.2.weight' in params_dict:
+            self.network.down_modules[0][1].cond_encoder[2].trainable_weights[0].assign(params_dict['network.down_modules.0.1.cond_encoder.2.weight'].T)  # kernel
+        if 'network.down_modules.0.1.cond_encoder.2.bias' in params_dict:
+            self.network.down_modules[0][1].cond_encoder[2].trainable_weights[1].assign(params_dict['network.down_modules.0.1.cond_encoder.2.bias'])  # bias
+        if 'network.down_modules.0.1.cond_encoder.4.weight' in params_dict:
+            self.network.down_modules[0][1].cond_encoder[4].trainable_weights[0].assign(params_dict['network.down_modules.0.1.cond_encoder.4.weight'].T)  # kernel
+        if 'network.down_modules.0.1.cond_encoder.4.bias' in params_dict:
+            self.network.down_modules[0][1].cond_encoder[4].trainable_weights[1].assign(params_dict['network.down_modules.0.1.cond_encoder.4.bias'])  # bias
+
+
+        if 'network.down_modules.0.2.conv.weight' in params_dict:
+            self.network.down_modules[0][2].conv.trainable_weights[0].assign(params_dict['network.down_modules.0.2.conv.weight'].T)  # kernel
+        if 'network.down_modules.0.2.conv.bias' in params_dict:
+            self.network.down_modules[0][2].conv.trainable_weights[1].assign(params_dict['network.down_modules.0.2.conv.bias'])  # bias
 
 
 
@@ -845,7 +1133,75 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-     
+
+        if 'network.down_modules.1.0.blocks.0.block.0.weight' in params_dict:
+            self.network.down_modules[1][0].blocks[0].block[0].trainable_weights[0].assign(params_dict['network.down_modules.1.0.blocks.0.block.0.weight'].T)  # kernel
+        if 'network.down_modules.1.0.blocks.0.block.0.bias' in params_dict:
+            self.network.down_modules[1][0].blocks[0].block[0].trainable_weights[1].assign(params_dict['network.down_modules.1.0.blocks.0.block.0.bias'])  # bias
+        if 'network.down_modules.1.0.blocks.0.block.2.weight' in params_dict:
+            self.network.down_modules[1][0].blocks[0].block[2].trainable_weights[0].assign(params_dict['network.down_modules.1.0.blocks.0.block.2.weight'].T)  # kernel
+        if 'network.down_modules.1.0.blocks.0.block.2.bias' in params_dict:
+            self.network.down_modules[1][0].blocks[0].block[2].trainable_weights[1].assign(params_dict['network.down_modules.1.0.blocks.0.block.2.bias'])  # bias
+        if 'network.down_modules.1.0.blocks.1.block.0.weight' in params_dict:
+            self.network.down_modules[1][0].blocks[1].block[0].trainable_weights[0].assign(params_dict['network.down_modules.1.0.blocks.1.block.0.weight'].T)  # kernel
+        if 'network.down_modules.1.0.blocks.1.block.0.bias' in params_dict:
+            self.network.down_modules[1][0].blocks[1].block[0].trainable_weights[1].assign(params_dict['network.down_modules.1.0.blocks.1.block.0.bias'])  # bias
+        if 'network.down_modules.1.0.blocks.1.block.2.weight' in params_dict:
+            self.network.down_modules[1][0].blocks[1].block[2].trainable_weights[0].assign(params_dict['network.down_modules.1.0.blocks.1.block.2.weight'].T)  # kernel
+        if 'network.down_modules.1.0.blocks.1.block.2.bias' in params_dict:
+            self.network.down_modules[1][0].blocks[1].block[2].trainable_weights[1].assign(params_dict['network.down_modules.1.0.blocks.1.block.2.bias'])  # bias
+
+        if 'network.down_modules.1.0.cond_encoder.0.weight' in params_dict:
+            self.network.down_modules[1][0].cond_encoder[0].trainable_weights[0].assign(params_dict['network.down_modules.1.0.cond_encoder.0.weight'].T)  # kernel
+        if 'network.down_modules.1.0.cond_encoder.0.bias' in params_dict:
+            self.network.down_modules[1][0].cond_encoder[0].trainable_weights[1].assign(params_dict['network.down_modules.1.0.cond_encoder.0.bias'])  # bias
+        if 'network.down_modules.1.0.cond_encoder.2.weight' in params_dict:
+            self.network.down_modules[1][0].cond_encoder[2].trainable_weights[0].assign(params_dict['network.down_modules.1.0.cond_encoder.2.weight'].T)  # kernel
+        if 'network.down_modules.1.0.cond_encoder.2.bias' in params_dict:
+            self.network.down_modules[1][0].cond_encoder[2].trainable_weights[1].assign(params_dict['network.down_modules.1.0.cond_encoder.2.bias'])  # bias
+        if 'network.down_modules.1.0.cond_encoder.4.weight' in params_dict:
+            self.network.down_modules[1][0].cond_encoder[4].trainable_weights[0].assign(params_dict['network.down_modules.1.0.cond_encoder.4.weight'].T)  # kernel
+        if 'network.down_modules.1.0.cond_encoder.4.bias' in params_dict:
+            self.network.down_modules[1][0].cond_encoder[4].trainable_weights[1].assign(params_dict['network.down_modules.1.0.cond_encoder.4.bias'])  # bias
+
+
+        if 'network.down_modules.1.0.residual_conv.weight' in params_dict:
+            self.network.down_modules[1][0].residual_conv.trainable_weights[0].assign(params_dict['network.down_modules.1.0.residual_conv.weight'].T)  # kernel
+        if 'network.down_modules.1.0.residual_conv.bias' in params_dict:
+            self.network.down_modules[1][0].residual_conv.trainable_weights[1].assign(params_dict['network.down_modules.1.0.residual_conv.bias'])  # bias
+
+
+
+
+        if 'network.down_modules.1.1.blocks.0.block.0.weight' in params_dict:
+            self.network.down_modules[1][1].blocks[0].block[0].trainable_weights[0].assign(params_dict['network.down_modules.1.1.blocks.0.block.0.weight'].T)  # kernel
+        if 'network.down_modules.1.1.blocks.0.block.0.bias' in params_dict:
+            self.network.down_modules[1][1].blocks[0].block[0].trainable_weights[1].assign(params_dict['network.down_modules.1.1.blocks.0.block.0.bias'])  # bias
+        if 'network.down_modules.1.1.blocks.0.block.2.weight' in params_dict:
+            self.network.down_modules[1][1].blocks[0].block[2].trainable_weights[0].assign(params_dict['network.down_modules.1.1.blocks.0.block.2.weight'].T)  # kernel
+        if 'network.down_modules.1.1.blocks.0.block.2.bias' in params_dict:
+            self.network.down_modules[1][1].blocks[0].block[2].trainable_weights[1].assign(params_dict['network.down_modules.1.1.blocks.0.block.2.bias'])  # bias
+        if 'network.down_modules.1.1.blocks.1.block.0.weight' in params_dict:
+            self.network.down_modules[1][1].blocks[1].block[0].trainable_weights[0].assign(params_dict['network.down_modules.1.1.blocks.1.block.0.weight'].T)  # kernel
+        if 'network.down_modules.1.1.blocks.1.block.0.bias' in params_dict:
+            self.network.down_modules[1][1].blocks[1].block[0].trainable_weights[1].assign(params_dict['network.down_modules.1.1.blocks.1.block.0.bias'])  # bias
+        if 'network.down_modules.1.1.blocks.1.block.2.weight' in params_dict:
+            self.network.down_modules[1][1].blocks[1].block[2].trainable_weights[0].assign(params_dict['network.down_modules.1.1.blocks.1.block.2.weight'].T)  # kernel
+        if 'network.down_modules.1.1.blocks.1.block.2.bias' in params_dict:
+            self.network.down_modules[1][1].blocks[1].block[2].trainable_weights[1].assign(params_dict['network.down_modules.1.1.blocks.1.block.2.bias'])  # bias
+
+        if 'network.down_modules.1.1.cond_encoder.0.weight' in params_dict:
+            self.network.down_modules[1][1].cond_encoder[0].trainable_weights[0].assign(params_dict['network.down_modules.1.1.cond_encoder.0.weight'].T)  # kernel
+        if 'network.down_modules.1.1.cond_encoder.0.bias' in params_dict:
+            self.network.down_modules[1][1].cond_encoder[0].trainable_weights[1].assign(params_dict['network.down_modules.1.1.cond_encoder.0.bias'])  # bias
+        if 'network.down_modules.1.1.cond_encoder.2.weight' in params_dict:
+            self.network.down_modules[1][1].cond_encoder[2].trainable_weights[0].assign(params_dict['network.down_modules.1.1.cond_encoder.2.weight'].T)  # kernel
+        if 'network.down_modules.1.1.cond_encoder.2.bias' in params_dict:
+            self.network.down_modules[1][1].cond_encoder[2].trainable_weights[1].assign(params_dict['network.down_modules.1.1.cond_encoder.2.bias'])  # bias
+        if 'network.down_modules.1.1.cond_encoder.4.weight' in params_dict:
+            self.network.down_modules[1][1].cond_encoder[4].trainable_weights[0].assign(params_dict['network.down_modules.1.1.cond_encoder.4.weight'].T)  # kernel
+        if 'network.down_modules.1.1.cond_encoder.4.bias' in params_dict:
+            self.network.down_modules[1][1].cond_encoder[4].trainable_weights[1].assign(params_dict['network.down_modules.1.1.cond_encoder.4.bias'])  # bias
 
 
 
@@ -856,6 +1212,98 @@ class DiffusionModel(tf.keras.Model):
 
 
 
+        if 'network.up_modules.0.0.blocks.0.block.0.weight' in params_dict:
+            self.network.up_modules[0][0].blocks[0].block[0].trainable_weights[0].assign(params_dict['network.up_modules.0.0.blocks.0.block.0.weight'].T)  # kernel
+        if 'network.up_modules.0.0.blocks.0.block.0.bias' in params_dict:
+            self.network.up_modules[0][0].blocks[0].block[0].trainable_weights[1].assign(params_dict['network.up_modules.0.0.blocks.0.block.0.bias'])  # bias
+        if 'network.up_modules.0.0.blocks.0.block.2.weight' in params_dict:
+            self.network.up_modules[0][0].blocks[0].block[2].trainable_weights[0].assign(params_dict['network.up_modules.0.0.blocks.0.block.2.weight'].T)  # kernel
+        if 'network.up_modules.0.0.blocks.0.block.2.bias' in params_dict:
+            self.network.up_modules[0][0].blocks[0].block[2].trainable_weights[1].assign(params_dict['network.up_modules.0.0.blocks.0.block.2.bias'])  # bias
+        if 'network.up_modules.0.0.blocks.1.block.0.weight' in params_dict:
+            self.network.up_modules[0][0].blocks[1].block[0].trainable_weights[0].assign(params_dict['network.up_modules.0.0.blocks.1.block.0.weight'].T)  # kernel
+        if 'network.up_modules.0.0.blocks.1.block.0.bias' in params_dict:
+            self.network.up_modules[0][0].blocks[1].block[0].trainable_weights[1].assign(params_dict['network.up_modules.0.0.blocks.1.block.0.bias'])  # bias
+        if 'network.up_modules.0.0.blocks.1.block.2.weight' in params_dict:
+            self.network.up_modules[0][0].blocks[1].block[2].trainable_weights[0].assign(params_dict['network.up_modules.0.0.blocks.1.block.2.weight'].T)  # kernel
+        if 'network.up_modules.0.0.blocks.1.block.2.bias' in params_dict:
+            self.network.up_modules[0][0].blocks[1].block[2].trainable_weights[1].assign(params_dict['network.up_modules.0.0.blocks.1.block.2.bias'])  # bias
+
+        if 'network.up_modules.0.0.cond_encoder.0.weight' in params_dict:
+            self.network.up_modules[0][0].cond_encoder[0].trainable_weights[0].assign(params_dict['network.up_modules.0.0.cond_encoder.0.weight'].T)  # kernel
+        if 'network.up_modules.0.0.cond_encoder.0.bias' in params_dict:
+            self.network.up_modules[0][0].cond_encoder[0].trainable_weights[1].assign(params_dict['network.up_modules.0.0.cond_encoder.0.bias'])  # bias
+        if 'network.up_modules.0.0.cond_encoder.2.weight' in params_dict:
+            self.network.up_modules[0][0].cond_encoder[2].trainable_weights[0].assign(params_dict['network.up_modules.0.0.cond_encoder.2.weight'].T)  # kernel
+        if 'network.up_modules.0.0.cond_encoder.2.bias' in params_dict:
+            self.network.up_modules[0][0].cond_encoder[2].trainable_weights[1].assign(params_dict['network.up_modules.0.0.cond_encoder.2.bias'])  # bias
+        if 'network.up_modules.0.0.cond_encoder.4.weight' in params_dict:
+            self.network.up_modules[0][0].cond_encoder[4].trainable_weights[0].assign(params_dict['network.up_modules.0.0.cond_encoder.4.weight'].T)  # kernel
+        if 'network.up_modules.0.0.cond_encoder.4.bias' in params_dict:
+            self.network.up_modules[0][0].cond_encoder[4].trainable_weights[1].assign(params_dict['network.up_modules.0.0.cond_encoder.4.bias'])  # bias
+
+
+        if 'network.up_modules.0.0.residual_conv.weight' in params_dict:
+            self.network.up_modules[0][0].residual_conv.trainable_weights[0].assign(params_dict['network.up_modules.0.0.residual_conv.weight'].T)  # kernel
+        if 'network.up_modules.0.0.residual_conv.bias' in params_dict:
+            self.network.up_modules[0][0].residual_conv.trainable_weights[1].assign(params_dict['network.up_modules.0.0.residual_conv.bias'])  # bias
+
+
+
+        if 'network.up_modules.0.1.blocks.0.block.0.weight' in params_dict:
+            self.network.up_modules[0][1].blocks[0].block[0].trainable_weights[0].assign(params_dict['network.up_modules.0.1.blocks.0.block.0.weight'].T)  # kernel
+        if 'network.up_modules.0.1.blocks.0.block.0.bias' in params_dict:
+            self.network.up_modules[0][1].blocks[0].block[0].trainable_weights[1].assign(params_dict['network.up_modules.0.1.blocks.0.block.0.bias'])  # bias
+        if 'network.up_modules.0.1.blocks.0.block.2.weight' in params_dict:
+            self.network.up_modules[0][1].blocks[0].block[2].trainable_weights[0].assign(params_dict['network.up_modules.0.1.blocks.0.block.2.weight'].T)  # kernel
+        if 'network.up_modules.0.1.blocks.0.block.2.bias' in params_dict:
+            self.network.up_modules[0][1].blocks[0].block[2].trainable_weights[1].assign(params_dict['network.up_modules.0.1.blocks.0.block.2.bias'])  # bias
+        if 'network.up_modules.0.1.blocks.1.block.0.weight' in params_dict:
+            self.network.up_modules[0][1].blocks[1].block[0].trainable_weights[0].assign(params_dict['network.up_modules.0.1.blocks.1.block.0.weight'].T)  # kernel
+        if 'network.up_modules.0.1.blocks.1.block.0.bias' in params_dict:
+            self.network.up_modules[0][1].blocks[1].block[0].trainable_weights[1].assign(params_dict['network.up_modules.0.1.blocks.1.block.0.bias'])  # bias
+        if 'network.up_modules.0.1.blocks.1.block.2.weight' in params_dict:
+            self.network.up_modules[0][1].blocks[1].block[2].trainable_weights[0].assign(params_dict['network.up_modules.0.1.blocks.1.block.2.weight'].T)  # kernel
+        if 'network.up_modules.0.1.blocks.1.block.2.bias' in params_dict:
+            self.network.up_modules[0][1].blocks[1].block[2].trainable_weights[1].assign(params_dict['network.up_modules.0.1.blocks.1.block.2.bias'])  # bias
+
+        if 'network.up_modules.0.1.cond_encoder.0.weight' in params_dict:
+            self.network.up_modules[0][1].cond_encoder[0].trainable_weights[0].assign(params_dict['network.up_modules.0.1.cond_encoder.0.weight'].T)  # kernel
+        if 'network.up_modules.0.1.cond_encoder.0.bias' in params_dict:
+            self.network.up_modules[0][1].cond_encoder[0].trainable_weights[1].assign(params_dict['network.up_modules.0.1.cond_encoder.0.bias'])  # bias
+        if 'network.up_modules.0.1.cond_encoder.2.weight' in params_dict:
+            self.network.up_modules[0][1].cond_encoder[2].trainable_weights[0].assign(params_dict['network.up_modules.0.1.cond_encoder.2.weight'].T)  # kernel
+        if 'network.up_modules.0.1.cond_encoder.2.bias' in params_dict:
+            self.network.up_modules[0][1].cond_encoder[2].trainable_weights[1].assign(params_dict['network.up_modules.0.1.cond_encoder.2.bias'])  # bias
+        if 'network.up_modules.0.1.cond_encoder.4.weight' in params_dict:
+            self.network.up_modules[0][1].cond_encoder[4].trainable_weights[0].assign(params_dict['network.up_modules.0.1.cond_encoder.4.weight'].T)  # kernel
+        if 'network.up_modules.0.1.cond_encoder.4.bias' in params_dict:
+            self.network.up_modules[0][1].cond_encoder[4].trainable_weights[1].assign(params_dict['network.up_modules.0.1.cond_encoder.4.bias'])  # bias
+
+
+        if 'network.up_modules.0.2.conv.weight' in params_dict:
+            self.network.up_modules[0][2].conv.trainable_weights[0].assign(params_dict['network.up_modules.0.2.conv.weight'].T)  # kernel
+        if 'network.up_modules.0.2.conv.bias' in params_dict:
+            self.network.up_modules[0][2].conv.trainable_weights[1].assign(params_dict['network.up_modules.0.2.conv.bias'])  # bias
+
+
+
+
+        if 'network.final_conv.0.block.0.weight':
+            self.network.final_conv[0].block[0].trainable_weights[0].assign(params_dict['network.final_conv.0.block.0.weight'].T)  # kernel
+        if 'network.final_conv.0.block.0.bias':
+            self.network.final_conv[0].block[0].trainable_weights[1].assign(params_dict['network.final_conv.0.block.0.bias'])  # bias
+
+        if 'network.final_conv.0.block.2.weight':
+            self.network.final_conv[0].block[2].trainable_weights[0].assign(params_dict['network.final_conv.0.block.2.weight'].T)  # kernel
+        if 'network.final_conv.0.block.2.bias':
+            self.network.final_conv[0].block[2].trainable_weights[1].assign(params_dict['network.final_conv.0.block.2.bias'])  # bias
+
+
+        if 'network.final_conv.1.weight':
+            self.network.final_conv[1].trainable_weights[0].assign(params_dict['network.final_conv.1.weight'].T)  # kernel
+        if 'network.final_conv.1.bias':
+            self.network.final_conv[1].trainable_weights[1].assign(params_dict['network.final_conv.1.bias'])  # bias
 
 
 
@@ -1752,7 +2200,8 @@ class DiffusionModel(tf.keras.Model):
 
 
     def build_actor(self, actor, shape1=None, shape2=None):
-
+        return
+    
         print("build_actor: self.env_name = ", self.env_name)
 
         if shape1 != None and shape2 != None:

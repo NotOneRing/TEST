@@ -42,7 +42,7 @@ class EtaFixed(tf.keras.Model):
         #     dtype=tf.float32,
         # )
 
-        self.eta_logit = nn_Parameter(  torch_atanh(torch_tensor([2 * (base_eta - min_eta) / (max_eta - min_eta) - 1]) ) )
+        self.eta_logit = nn_Parameter(  torch_atanh(torch_tensor( np.array([2 * (base_eta - min_eta) / (max_eta - min_eta) - 1]) ) ) )
         # self.eta_logit.data = torch.atanh(
         #     torch.tensor([2 * (base_eta - min_eta) / (max_eta - min_eta) - 1])
         # )

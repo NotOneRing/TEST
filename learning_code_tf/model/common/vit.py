@@ -15,7 +15,7 @@ import math
 
 from util.torch_to_tf import nn_GELU, torch_flatten, nn_Conv2d, nn_GroupNorm, \
 nn_Linear, nn_LayerNorm, nn_Dropout, torch_rand, torch_zeros, nn_Sequential, \
-nn_Parameter, nn_ReLU, torch_nn_init_trunc_normal_
+nn_Parameter, nn_ReLU, torch_nn_init_trunc_normal_, nn_Identity, torch_nn_init_zeros_
 
 
 @dataclass
@@ -111,13 +111,13 @@ class PatchEmbed2(tf.keras.layers.Layer):
 
         #输入是num_channel
         layers = [
-            nn_Conv2d(num_channel, embed_dim, kernel_size=8, strides=4),
-            nn_GroupNorm() if use_norm else layers.Lambda(lambda x: x),
+            nn_Conv2d(num_channel, embed_dim, kernel_size=8, stride=4),
+            nn_GroupNorm() if use_norm else nn_Identity(),
             nn_ReLU(),
-            nn_Conv2d(embed_dim, embed_dim, kernel_size=3, strides=2),
+            nn_Conv2d(embed_dim, embed_dim, kernel_size=3, stride=2),
         ]
 
-        self.embed = tf.keras.Sequential(layers)
+        self.embed = nn_Sequential(layers)
 
         H1 = math.ceil((img_h - 8) / 4) + 1
         W1 = math.ceil((img_w - 8) / 4) + 1
@@ -145,8 +145,9 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
         self.num_head = num_head
         #输入维度是embed_dim
-        self.qkv_proj = nn_Linear(3 * embed_dim)
-        self.out_proj = nn_Linear(embed_dim)
+        self.qkv_proj = nn_Linear(embed_dim, 3 * embed_dim)
+        self.out_proj = nn_Linear(embed_dim, embed_dim)
+
 
     def call(self, x, attn_mask):
         """
@@ -310,19 +311,26 @@ class MinVit(tf.keras.Model):
 
 
 
-def init_weights_vit_timm(module, name=""):
-    """ViT weight initialization, similar to timm for reproducibility"""
+# def init_weights_vit_timm(module, name=""):
+#     """ViT weight initialization, similar to timm for reproducibility"""
 
-    print("vit.py: init_weights_vit_timm()")
+#     print("vit.py: init_weights_vit_timm()")
 
-    if isinstance(module, layers.Dense):
-        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
-        module.kernel_initializer = initializer
+#     if isinstance(module, layers.Dense):
+#         initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
+#         module.kernel_initializer = initializer
+#         if module.bias is not None:
+#             module.bias_initializer = tf.keras.initializers.Zeros()
+#     elif isinstance(module, layers.Conv2D):
+#         initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
+#         module.kernel_initializer = initializer
+
+
+def init_weights_vit_timm(module, name: str = ""):
+    if isinstance(module, nn_Linear):
+        torch_nn_init_trunc_normal_(module.kernel, std=0.02)
         if module.bias is not None:
-            module.bias_initializer = tf.keras.initializers.Zeros()
-    elif isinstance(module, layers.Conv2D):
-        initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
-        module.kernel_initializer = initializer
+            torch_nn_init_zeros_(module.bias)
 
 
 

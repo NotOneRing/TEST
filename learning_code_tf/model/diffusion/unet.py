@@ -27,7 +27,8 @@ from model.common.mlp import ResidualMLP
 
 
 from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish, nn_ReLU,\
-nn_Conv1d, nn_Identity, torch_tensor_expand, torch_cat, torch_reshape\
+nn_Conv1d, nn_Identity, torch_tensor_expand, torch_cat, torch_reshape, \
+einops_layers_torch_Rearrange
 
 
 # class ResidualBlock1D(nn.Module):
@@ -65,9 +66,9 @@ class ResidualBlock1D(tf.keras.layers.Layer):
 
         # Activation Function
         if activation_type == "Mish":
-            act = nn_Mish
+            act = nn_Mish()
         elif activation_type == "ReLU":
-            act = nn_ReLU
+            act = nn_ReLU()
         else:
             raise ValueError("Unknown activation type for ResidualBlock1D")
 
@@ -90,13 +91,15 @@ class ResidualBlock1D(tf.keras.layers.Layer):
                 nn_Linear(cond_channels, cond_channels),
                 act,
                 nn_Linear(cond_channels, cond_channels),
-                Rearrange("batch t -> batch t 1"),
+                # Rearrange("batch t -> batch t 1"),
+                einops_layers_torch_Rearrange("batch t -> batch t 1", name = "ResidualBlock1D_Rearrange1"),
             ])
         else:
             self.cond_encoder = nn_Sequential([
                 act,
                 nn_Linear(cond_dim, cond_channels),
-                Rearrange("batch t -> batch t 1"),
+                # Rearrange("batch t -> batch t 1"),
+                einops_layers_torch_Rearrange("batch t -> batch t 1", name = "ResidualBlock1D_Rearrange2"),
             ])
 
 
@@ -189,10 +192,12 @@ class Unet1D(tf.keras.Model):
 
         dsed = diffusion_step_embed_dim
         self.time_mlp = nn_Sequential(
+            [
             SinusoidalPosEmb(dsed),
             nn_Linear(dsed, dsed * 4),
             nn_Mish(),
             nn_Linear(dsed * 4, dsed),
+            ]
         )
 
 
@@ -249,7 +254,9 @@ class Unet1D(tf.keras.Model):
         self.down_modules = []
         for ind, (dim_in, dim_out) in enumerate(in_out):
             is_last = ind >= (len(in_out) - 1)
-            self.down_modules.extend([
+            self.down_modules.append(
+                nn_Sequential(
+                [
                 ResidualBlock1D(
                     dim_in,
                     dim_out,
@@ -273,8 +280,9 @@ class Unet1D(tf.keras.Model):
                     groupnorm_eps=groupnorm_eps,
                 ),
                 Downsample1d(dim_out) if not is_last else nn_Identity(),
-
-            ])
+            ]
+                )
+            )
 
         self.down_modules = nn_Sequential(self.down_modules)
 
@@ -286,7 +294,9 @@ class Unet1D(tf.keras.Model):
         self.up_modules = []
         for ind, (dim_in, dim_out) in enumerate(reversed(in_out[1:])):
             is_last = ind >= (len(in_out) - 1)
-            self.up_modules.extend([
+            self.up_modules.append(
+                nn_Sequential(
+                [
                 ResidualBlock1D(
                     dim_out * 2,
                     dim_in,
@@ -310,7 +320,9 @@ class Unet1D(tf.keras.Model):
                     groupnorm_eps=groupnorm_eps,
                 ),
                 Upsample1d(dim_in) if not is_last else nn_Identity(),
-            ])
+            ]
+                )
+            )
 
         self.up_modules = nn_Sequential(self.up_modules)
 

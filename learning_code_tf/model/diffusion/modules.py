@@ -6,10 +6,13 @@ from util.torch_to_tf import torch_exp, torch_arange, torch_cat, torch_unsqueeze
     torch_squeeze
 
 from util.torch_to_tf import nn_Identity, nn_Mish, nn_ReLU, nn_Sequential, nn_GroupNorm, nn_Conv1d, \
-nn_ConvTranspose1d
+nn_ConvTranspose1d, einops_layers_torch_Rearrange
+
+# from einops.layers.tensorflow import Rearrange
 
 
 from tensorflow.keras.saving import register_keras_serializable
+
 
 
 
@@ -191,14 +194,26 @@ class Conv1dBlock(tf.keras.layers.Layer):
                 inp_channels, out_channels, kernel_size, padding=kernel_size // 2
             ),
             # (lambda x: x.unsqueeze(2)) if n_groups is not None else nn_Identity(),
-            (lambda x: torch_unsqueeze(x, 2)) if n_groups is not None else nn_Identity(),
+            # (lambda x: torch_unsqueeze(x, 2)) if n_groups is not None else nn_Identity(),
+            (
+                # Rearrange("batch channels horizon -> batch channels 1 horizon")
+                einops_layers_torch_Rearrange("batch channels horizon -> batch channels 1 horizon", name = "Conv1dBlock_Rearrange1")
+                if n_groups is not None
+                else nn_Identity()
+            ),
             (
                 nn_GroupNorm(n_groups, out_channels, eps=eps)
                 if n_groups is not None
                 else nn_Identity()
             ),
             # (lambda x: x.squeeze(2)) if n_groups is not None else nn_Identity(),
-            (lambda x: torch_squeeze(x, 2)) if n_groups is not None else nn_Identity(),
+            # (lambda x: torch_squeeze(x, 2)) if n_groups is not None else nn_Identity(),
+            (
+                # Rearrange("batch channels 1 horizon -> batch channels horizon")
+                einops_layers_torch_Rearrange("batch channels 1 horizon -> batch channels horizon", name = "Conv1dBlock_Rearrange2")
+                if n_groups is not None
+                else nn_Identity()
+            ),
             act,
         )
 
