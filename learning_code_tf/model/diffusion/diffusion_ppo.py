@@ -22,7 +22,7 @@ import tensorflow as tf
 from util.torch_to_tf import torch_quantile
 # import tensorflow_probability as tfp
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_tensor_item
 
 from util.torch_to_tf import torch_clamp, torch_exp, torch_mean, torch_max, torch_tensor_float, torch_abs, torch_tensor, torch_std, torch_tensor_view
 
@@ -341,10 +341,10 @@ class PPODiffusion(VPGDiffusion):
             entropy_loss,
             v_loss,
             clipfrac,
-            approx_kl.numpy(),
-            torch_mean(ratio).numpy(),
+            torch_tensor_item( approx_kl ),
+            torch_tensor_item( torch_mean(ratio) ),
             bc_loss,
-            torch_mean(eta).numpy(),
+            torch_tensor_item( torch_mean(eta) ),
         )
 
 

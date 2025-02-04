@@ -66,6 +66,12 @@ def test_nn_Sequential():
 
 
 
+
+    print("len(tf_model) = ", len(tf_model))
+    print("len(pytorch_model) = ", len(pytorch_model))
+
+
+
     tf_input = tf.convert_to_tensor(pytorch_input.numpy())  # Convert PyTorch input to TensorFlow tensor
     tf_output = tf_model(tf_input).numpy()
     print("\nTensorFlow output:")

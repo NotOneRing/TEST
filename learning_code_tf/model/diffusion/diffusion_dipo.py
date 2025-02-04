@@ -113,47 +113,49 @@ class DIPODiffusion(DiffusionModel):
     ):
         """Use target actor"""
 
-        print("diffusion_dipo.py: DIPODiffusion.call()")
+        with torch_no_grad() as tape:
 
-        # device = self.betas.device
-        # B = len(cond["state"])
-        B = tf.shape(cond["state"])[0]
+            print("diffusion_dipo.py: DIPODiffusion.call()")
 
-        # Loop
-        # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
-        x = torch_randn((B, self.horizon_steps, self.action_dim))
+            # device = self.betas.device
+            # B = len(cond["state"])
+            B = tf.shape(cond["state"])[0]
 
-        t_all = list(reversed(range(self.denoising_steps)))
-        for i, t in enumerate(t_all):
-            t_b = make_timesteps(B, t)
-            mean, logvar = self.p_mean_var(
-                x=x,
-                t=t_b,
-                # cond=cond,
-                cond_state=cond['state'],
-                network_override=self.actor_target,
-            )
-            std = torch_exp(0.5 * logvar)
+            # Loop
+            # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
+            x = torch_randn((B, self.horizon_steps, self.action_dim))
 
-            # Determine the noise level
-            if deterministic and t == 0:
-                std = torch_zeros_like(std)
-            elif deterministic:  # For DDPM, sample with noise
-                std = torch_clip(std, 1e-3, float('inf'))
-            else:
-                std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
-            
-            # noise = tf.random.normal(x.shape)
-            noise = torch_randn_like(x)
-            noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
+            t_all = list(reversed(range(self.denoising_steps)))
+            for i, t in enumerate(t_all):
+                t_b = make_timesteps(B, t)
+                mean, logvar = self.p_mean_var(
+                    x=x,
+                    t=t_b,
+                    # cond=cond,
+                    cond_state=cond['state'],
+                    network_override=self.actor_target,
+                )
+                std = torch_exp(0.5 * logvar)
 
-            x = mean + std * noise
+                # Determine the noise level
+                if deterministic and t == 0:
+                    std = torch_zeros_like(std)
+                elif deterministic:  # For DDPM, sample with noise
+                    std = torch_clip(std, 1e-3, float('inf'))
+                else:
+                    std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
+                
+                # noise = tf.random.normal(x.shape)
+                noise = torch_randn_like(x)
+                noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
 
-            # clamp action at final step
-            if self.final_action_clip_value is not None and i == len(t_all) - 1:
-                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
+                x = mean + std * noise
 
-        return x
+                # clamp action at final step
+                if self.final_action_clip_value is not None and i == len(t_all) - 1:
+                    x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
+
+            return x
 
 
 

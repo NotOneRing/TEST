@@ -17,6 +17,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 from model.diffusion.modules import (
     SinusoidalPosEmb,
     Downsample1d,
@@ -29,6 +30,9 @@ from model.common.mlp import ResidualMLP
 from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish, nn_ReLU,\
 nn_Conv1d, nn_Identity, torch_tensor_expand, torch_cat, torch_reshape, \
 einops_layers_torch_Rearrange
+
+
+from util.config import OUTPUT_FUNCTION_HEADER, OUTPUT_VARIABLES
 
 
 # class ResidualBlock1D(nn.Module):
@@ -44,24 +48,40 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         larger_encoder=False,
         activation_type="Mish",
         groupnorm_eps=1e-5,
+        blocks = None,
+        cond_encoder = None,
+        residual_conv=None,
+        **kwargs
     ):
 
         print("unet.py: ResidualBlock1D.__init__()")
 
         super().__init__()
 
-
+        self.in_channels = in_channels
+        self.initial_out_channels = out_channels
+        self.cond_dim = cond_dim
+        self.kernel_size = kernel_size
+        self.n_groups = n_groups
         self.cond_predict_scale = cond_predict_scale
+        self.larger_encoder = larger_encoder
+        self.activation_type = activation_type
+        self.groupnorm_eps = groupnorm_eps
+
+
+
         self.out_channels = out_channels
 
 
-        # Convolutional Blocks
-        self.blocks = nn_Sequential([
-            Conv1dBlock(in_channels, out_channels, kernel_size, n_groups, activation_type, groupnorm_eps),
-            Conv1dBlock(out_channels, out_channels, kernel_size, n_groups, activation_type, groupnorm_eps),
-        ])
 
-
+        if blocks == None:
+            # Convolutional Blocks
+            self.blocks = nn_Sequential([
+                Conv1dBlock(in_channels, out_channels, kernel_size, n_groups, activation_type, groupnorm_eps),
+                Conv1dBlock(out_channels, out_channels, kernel_size, n_groups, activation_type, groupnorm_eps),
+            ])
+        else:
+            self.blocks = blocks
 
 
         # Activation Function
@@ -80,42 +100,54 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         if cond_predict_scale:
             cond_channels = out_channels * 2
 
-        self.cond_predict_scale = cond_predict_scale
         self.out_channels = out_channels
 
-        #input是cond_dim维度的
-        if larger_encoder:
-            self.cond_encoder = nn_Sequential([
-                nn_Linear(cond_dim, cond_channels),
-                act,
-                nn_Linear(cond_channels, cond_channels),
-                act,
-                nn_Linear(cond_channels, cond_channels),
-                # Rearrange("batch t -> batch t 1"),
-                einops_layers_torch_Rearrange("batch t -> batch t 1", name = "ResidualBlock1D_Rearrange1"),
-            ])
-        else:
-            self.cond_encoder = nn_Sequential([
-                act,
-                nn_Linear(cond_dim, cond_channels),
-                # Rearrange("batch t -> batch t 1"),
-                einops_layers_torch_Rearrange("batch t -> batch t 1", name = "ResidualBlock1D_Rearrange2"),
-            ])
 
+
+
+
+
+        if cond_encoder == None:
+            #input是cond_dim维度的
+            if larger_encoder:
+                self.cond_encoder = nn_Sequential([
+                    nn_Linear(cond_dim, cond_channels),
+                    act,
+                    nn_Linear(cond_channels, cond_channels),
+                    act,
+                    nn_Linear(cond_channels, cond_channels),
+                    # Rearrange("batch t -> batch t 1"),
+                    einops_layers_torch_Rearrange("batch t -> batch t 1", name = "ResidualBlock1D_Rearrange1"),
+                ])
+            else:
+                self.cond_encoder = nn_Sequential([
+                    act,
+                    nn_Linear(cond_dim, cond_channels),
+                    # Rearrange("batch t -> batch t 1"),
+                    einops_layers_torch_Rearrange("batch t -> batch t 1", name = "ResidualBlock1D_Rearrange2"),
+                ])
+        else:
+            self.cond_encoder = cond_encoder
+
+
+        # print("residual_conv: in_channels = ", in_channels)
+        # print("residual_conv: out_channels = ", out_channels)
 
         # make sure dimensions compatible
         # 输入是in_channels的
-        # Residual Connection
-        self.residual_conv = (
-            nn_Conv1d(in_channels, out_channels, 1)
-            if in_channels != out_channels
-            else nn_Identity()
-        )
+
+        if residual_conv == None:
+            # Residual Connection
+            self.residual_conv = (
+                nn_Conv1d(in_channels, out_channels, 1)
+                if in_channels != out_channels
+                else nn_Identity()
+            )
+        else:
+            self.residual_conv = residual_conv
 
 
 
-    # def mish(self, x):
-    #     return x * tf.math.tanh(tf.math.softplus(x))
 
 
 
@@ -130,7 +162,13 @@ class ResidualBlock1D(tf.keras.layers.Layer):
 
         print("unet.py: ResidualBlock1D.forward()")
 
+        print("x = ", x)
+        print("self.blocks = ", self.blocks)
+        print("self.blocks[0] = ", self.blocks[0])
+        
         out = self.blocks[0](x)
+        print("out = ", out)
+
         embed = self.cond_encoder(cond)
         if self.cond_predict_scale:
             # embed = embed.reshape(embed.shape[0], 2, self.out_channels, 1)
@@ -141,7 +179,117 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         else:
             out = out + embed
         out = self.blocks[1](out)
-        return out + self.residual_conv(x)
+
+        print("self.residual_conv = ", self.residual_conv)
+        print("x.shape = ", x.shape)
+        residual_result = self.residual_conv(x)
+
+        return out + residual_result
+
+
+
+
+    def get_config(self):
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("ResidualBlock1D: get_config()")
+
+        config = super(ResidualBlock1D, self).get_config()
+
+        if OUTPUT_VARIABLES:
+            print("Checking ResidualBlock1D Config elements:")
+            print(f"in_channels: {self.in_channels}, type: {type(self.in_channels)}")
+            print(f"initial_out_channels: {self.initial_out_channels}, type: {type(self.initial_out_channels)}")
+            print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
+            print(f"kernel_size: {self.kernel_size}, type: {type(self.kernel_size)}")
+            
+            print(f"n_groups: {self.n_groups}, type: {type(self.n_groups)}")
+
+            print(f"cond_predict_scale: {self.cond_predict_scale}, type: {type(self.cond_predict_scale)}")
+            print(f"larger_encoder: {self.larger_encoder}, type: {type(self.larger_encoder)}")
+            print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+
+            print(f"groupnorm_eps: {self.groupnorm_eps}, type: {type(self.groupnorm_eps)}")
+
+
+
+        config.update({
+            "in_channels" : self.in_channels,
+            "initial_out_channels" : self.out_channels,
+            "cond_dim" : self.cond_dim,
+            "kernel_size" : self.kernel_size,
+            "n_groups" : self.n_groups,
+            "cond_predict_scale" : self.cond_predict_scale,
+            "larger_encoder" : self.larger_encoder,
+            "activation_type" : self.activation_type,
+            "groupnorm_eps" : self.groupnorm_eps
+        })
+
+
+        config.update({
+            "blocks": tf.keras.layers.serialize(self.blocks),
+            "cond_encoder": tf.keras.layers.serialize(self.cond_encoder),
+            "residual_conv": tf.keras.layers.serialize(self.residual_conv),
+        })
+
+
+
+
+        return config
+
+
+
+
+
+
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("ResidualBlock1D: from_config()")
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+        from tensorflow.keras.utils import get_custom_objects
+
+
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'nn_Identity': nn_Identity,
+            'nn_Conv1d': nn_Conv1d,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "einops_layers_torch_Rearrange": einops_layers_torch_Rearrange,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        # time_embedding = nn_Sequential.from_config( config.pop("time_embedding") )
+        blocks = tf.keras.layers.deserialize(config.pop("blocks") ,  custom_objects=get_custom_objects() )
+
+        cond_encoder = tf.keras.layers.deserialize(config.pop("cond_encoder"),  custom_objects=get_custom_objects() )
+
+        residual_conv = tf.keras.layers.deserialize(config.pop("residual_conv") ,  custom_objects=get_custom_objects() )
+
+
+        result = cls(blocks = blocks, cond_encoder = cond_encoder, residual_conv = residual_conv, **config)
+        return result
 
 
 
@@ -170,6 +318,22 @@ class Unet1D(tf.keras.Model):
         groupnorm_eps=1e-5,
     ):
 
+        dim_mults = list(dim_mults)
+
+        self.action_dim = action_dim
+        self.cond_dim = cond_dim
+        self.diffusion_step_embed_dim = diffusion_step_embed_dim
+        self.dim = dim
+        self.dim_mults = dim_mults
+        self.smaller_encoder = smaller_encoder
+        self.cond_mlp_dims = cond_mlp_dims
+        self.kernel_size = kernel_size
+        self.n_groups = n_groups
+        self.activation_type = activation_type
+        self.cond_predict_scale = cond_predict_scale
+        self.groupnorm_eps = groupnorm_eps
+
+
         print("unet.py: Unet1D.__init__()")
 
         super().__init__()
@@ -179,16 +343,8 @@ class Unet1D(tf.keras.Model):
 
         dsed = diffusion_step_embed_dim
         
-        # self.time_mlp = tf.keras.Sequential([
-        #     SinusoidalPosEmb(diffusion_step_embed_dim),
-        #     # tf.keras.layers.Dense(diffusion_step_embed_dim * 4),
-        #     # tf.keras.layers.Activation(self.mish),
-        #     # tf.keras.layers.Dense(diffusion_step_embed_dim),
-        #     tf.keras.layers.Dense(diffusion_step_embed_dim * 4),
-        #     tf.keras.layers.Activation(self.mish),
-        #     tf.keras.layers.Dense(diffusion_step_embed_dim),
 
-        # ])
+
 
         dsed = diffusion_step_embed_dim
         self.time_mlp = nn_Sequential(
@@ -203,6 +359,7 @@ class Unet1D(tf.keras.Model):
 
 
 
+
         if cond_mlp_dims is not None:
             self.cond_mlp = ResidualMLP(
                 dim_list=[cond_dim] + cond_mlp_dims,
@@ -211,6 +368,9 @@ class Unet1D(tf.keras.Model):
             )
             cond_block_dim = dsed + cond_mlp_dims[-1]
         else:
+            #added
+            self.cond_mlp = None
+
             cond_block_dim = dsed + cond_dim
 
 
@@ -253,6 +413,7 @@ class Unet1D(tf.keras.Model):
        # Down Modules
         self.down_modules = []
         for ind, (dim_in, dim_out) in enumerate(in_out):
+            # print("len(in_out) - 1 = ", len(in_out) - 1)
             is_last = ind >= (len(in_out) - 1)
             self.down_modules.append(
                 nn_Sequential(
@@ -346,9 +507,10 @@ class Unet1D(tf.keras.Model):
 
     def call(
         self,
-        x,
-        time,
-        cond,
+        # x,
+        # time,
+        # cond,
+        inputs,
         **kwargs,
     ):
         """
@@ -360,16 +522,18 @@ class Unet1D(tf.keras.Model):
 
         print("unet.py: Unet1D.forward()")
 
-        B = x.shape.as_list[0]
+        x, time, cond_state = inputs
+
+        B = x.shape[0]
 
         # move chunk dim to the end
         x = einops.rearrange(x, "b h t -> b t h")
 
         # flatten history
-        state = tf.reshape( cond["state"], [B, -1] )
+        state = tf.reshape( cond_state, [B, -1] )
 
         # obs encoder
-        if hasattr(self, "cond_mlp"):
+        if hasattr(self, "cond_mlp") and self.cond_mlp:
             state = self.cond_mlp(state)
 
 
@@ -387,13 +551,25 @@ class Unet1D(tf.keras.Model):
         time = torch_tensor_expand(time, x.shape[0])
 
         global_feature = self.time_mlp(time)
-        global_feature = torch_cat([global_feature, state], axis=-1)
+        global_feature = torch_cat([global_feature, state], dim=-1)
+
+
+        # print("x = ", x)
+        # print("global_feature = ", global_feature)
+        print("x.shape = ", x.shape)
+        print("global_feature.shape = ", global_feature.shape)
 
 
         # encode local features
         h_local = []
         h = []
         for idx, (resnet, resnet2, downsample) in enumerate(self.down_modules):
+            
+            print("idx = ", idx)
+            print("resnet = ", resnet)
+            print("resnet2 = ", resnet2)
+            print("downsample = ", downsample)
+
             x = resnet(x, global_feature)
             if idx == 0 and len(h_local) > 0:
                 x = x + h_local[0]
@@ -406,9 +582,13 @@ class Unet1D(tf.keras.Model):
 
         for idx, (resnet, resnet2, upsample) in enumerate(self.up_modules):
 
-            x = torch_cat([x, h.pop()], axis=1)  # Concatenate along channel dimension
+            x = torch_cat([x, h.pop()], dim=1)  # Concatenate along channel dimension
 
             x = resnet(x, global_feature)
+
+            print("len(self.up_modules) = ", len(self.up_modules))
+            print("len(h_local) = ", len(h_local))
+
             if idx == len(self.up_modules) and len(h_local) > 0:
                 x = x + h_local[1]
             x = resnet2(x, global_feature)
@@ -418,6 +598,139 @@ class Unet1D(tf.keras.Model):
 
         x = einops.rearrange(x, "b t h -> b h t")
         return x
+
+
+
+    def get_config(self):
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("Unet1D: get_config()")
+
+        # config = {}
+        config = super(Unet1D, self).get_config()
+
+
+
+        # 打印每个属性及其类型和值
+        if OUTPUT_VARIABLES:
+            print("Checking Unet1D Config elements:")
+            print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
+            print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
+            print(f"diffusion_step_embed_dim: {self.diffusion_step_embed_dim}, type: {type(self.diffusion_step_embed_dim)}")
+            print(f"dim: {self.dim}, type: {type(self.dim)}")
+            print(f"dim_mults: {self.dim_mults}, type: {type(self.dim_mults)}")
+            print(f"smaller_encoder: {self.smaller_encoder}, type: {type(self.smaller_encoder)}")
+            print(f"cond_mlp_dims: {self.cond_mlp_dims}, type: {type(self.cond_mlp_dims)}")
+            print(f"kernel_size: {self.kernel_size}, type: {type(self.kernel_size)}")
+            print(f"n_groups: {self.n_groups}, type: {type(self.n_groups)}")
+            print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+            print(f"cond_predict_scale: {self.cond_predict_scale}, type: {type(self.cond_predict_scale)}")
+            print(f"groupnorm_eps: {self.groupnorm_eps}, type: {type(self.groupnorm_eps)}")
+
+
+
+        config.update({
+            "action_dim" : self.action_dim,
+            "cond_dim" : self.cond_dim,
+            "diffusion_step_embed_dim" : self.diffusion_step_embed_dim,
+            "dim" : self.dim,
+            "dim_mults" : self.dim_mults,
+            "smaller_encoder" : self.smaller_encoder,
+            "cond_mlp_dims" : self.cond_mlp_dims,
+            "kernel_size" : self.kernel_size,
+            "n_groups" : self.n_groups,
+            "activation_type" : self.activation_type,
+            "cond_predict_scale" : self.cond_predict_scale,
+            "groupnorm_eps" : self.groupnorm_eps
+        })
+
+
+
+
+        config.update({
+            "time_mlp": tf.keras.layers.serialize(self.time_mlp),
+            "mid_modules": tf.keras.layers.serialize(self.mid_modules),
+            "cond_mlp": tf.keras.layers.serialize(self.cond_mlp),
+            "down_modules": tf.keras.layers.serialize(self.down_modules),
+            "up_modules": tf.keras.layers.serialize(self.up_modules),
+            "final_conv": tf.keras.layers.serialize(self.final_conv),
+                
+        })
+
+
+        return config
+    
+
+
+
+
+
+
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("Unet1D: from_config()")
+
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            'Downsample1d': Downsample1d,
+            'ResidualBlock1D':ResidualBlock1D,
+            'Conv1dBlock': Conv1dBlock,
+            'nn_Conv1d': nn_Conv1d
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+
+        time_mlp = tf.keras.layers.deserialize(config.pop("time_mlp") ,  custom_objects=get_custom_objects() )
+
+
+        config_cond_mlp = config.pop("cond_mlp")
+        if config_cond_mlp:
+            cond_mlp = tf.keras.layers.deserialize(config_cond_mlp,  custom_objects=get_custom_objects() )
+        else:
+            cond_mlp = None
+
+
+        mid_modules = tf.keras.layers.deserialize(config.pop("mid_modules") ,  custom_objects=get_custom_objects() )
+
+
+        down_modules = tf.keras.layers.deserialize(config.pop("down_modules") ,  custom_objects=get_custom_objects() )
+
+
+        up_modules = tf.keras.layers.deserialize(config.pop("up_modules") ,  custom_objects=get_custom_objects() )
+
+
+        final_conv = tf.keras.layers.deserialize(config.pop("final_conv") ,  custom_objects=get_custom_objects() )
+
+
+
+        result = cls(time_mlp = time_mlp, cond_mlp = cond_mlp, mid_modules = mid_modules, down_modules = down_modules, up_modules = up_modules, final_conv = final_conv, **config)
+        return result
+
 
 
 

@@ -31,6 +31,10 @@ class GMMModel(tf.keras.Model):
         super().__init__()
         self.network = network
         if network_path is not None:
+            print("self = ", self)
+            print("self.network = ", self.network)
+            print("checkpoint = ", checkpoint)
+            
             checkpoint = tf.train.Checkpoint(model=self)
             checkpoint.restore(network_path).expect_partial()
             logging.info("Loaded actor from %s", network_path)

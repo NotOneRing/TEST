@@ -1,6 +1,5 @@
 """
 ViT image encoder implementation from IBRL, https://github.com/hengyuan-hu/ibrl
-
 """
 
 from dataclasses import dataclass

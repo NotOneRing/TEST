@@ -354,6 +354,8 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             if epoch == 0:
                 with tf.GradientTape() as tape:
+                    print("self.model = ", self.model)
+                    
                     model_config = self.model.get_config()
                     
                     print("model_config = ", model_config)

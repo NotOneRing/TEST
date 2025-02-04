@@ -33,7 +33,7 @@ class AWR_Gaussian(RWR_Gaussian):
         adv = self.critic(obs)
 
         # Update critic
-        loss_critic = tf.reduce_mean( tf.square(adv - advantages) )
+        loss_critic = torch_mean( (adv - advantages)**2 )
 
         return loss_critic
 

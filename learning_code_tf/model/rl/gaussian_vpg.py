@@ -9,7 +9,7 @@ from copy import deepcopy
 import logging
 from model.common.gaussian import GaussianModel
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_tensor_view, torch_mean
 
 
 class VPG_Gaussian(GaussianModel):
@@ -34,11 +34,14 @@ class VPG_Gaussian(GaussianModel):
 
         # Save a copy of original actor
         self.actor = deepcopy(actor)
+
+
         # for param in self.actor.parameters():
         #     param.requires_grad = False
 
         for layer in self.actor.layers:
             layer.trainable = False
+
 
 
     # ---------- Sampling ----------#
@@ -51,14 +54,16 @@ class VPG_Gaussian(GaussianModel):
         deterministic=False,
         use_base_policy=False,
     ):
+        with torch_no_grad() as tape:
 
-        print("gaussian_vpg.py: VPG_Gaussian.call()")
+            print("gaussian_vpg.py: VPG_Gaussian.call()")
 
-        return super().call(
-            cond=cond,
-            deterministic=deterministic,
-            network_override=self.actor if use_base_policy else None,
-        )
+            return super().call(
+                cond=cond,
+                deterministic=deterministic,
+                network_override=self.actor if use_base_policy else None,
+            )
+        
 
     # ---------- RL training ----------#
 
@@ -80,12 +85,13 @@ class VPG_Gaussian(GaussianModel):
         )
 
         # Compute log probability
-        log_prob = dist.log_prob(tf.reshape(actions, [B, -1]))
-        log_prob = tf.reduce_mean(log_prob, axis=-1)
+        log_prob = dist.log_prob( torch_tensor_view(actions, [B, -1]) )
+        log_prob = torch_mean(log_prob, -1)
 
         # Compute entropy and standard deviation
-        entropy = tf.reduce_mean(dist.entropy())
-        std = tf.reduce_mean(dist.stddev())
+        entropy = torch_mean(dist.entropy())
+        # std = torch_mean(dist.stddev())
+        std = torch_mean(dist.scale)
 
         return log_prob, entropy, std
 

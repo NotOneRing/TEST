@@ -18,7 +18,8 @@ import tensorflow as tf
 
 from model.rl.gaussian_vpg import VPG_Gaussian
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_nanmean, torch_mean, torch_tensor_float, torch_abs, torch_tensor_item, \
+torch_clamp, torch_exp, torch_std, torch_max, torch_tensor_view
 
 
 class PPO_Gaussian(VPG_Gaussian):
@@ -71,8 +72,8 @@ class PPO_Gaussian(VPG_Gaussian):
 
         # Get new log probabilities and entropy
         newlogprobs, entropy, std = self.get_logprobs(obs, actions)
-        newlogprobs = tf.clip_by_value(newlogprobs, -5.0, 2.0)
-        oldlogprobs = tf.clip_by_value(oldlogprobs, -5.0, 2.0)
+        newlogprobs = torch_clamp(newlogprobs, -5.0, 2.0)
+        oldlogprobs = torch_clamp(oldlogprobs, -5.0, 2.0)
         entropy_loss = -entropy
         
         bc_loss = 0.0
@@ -91,53 +92,62 @@ class PPO_Gaussian(VPG_Gaussian):
             # Get logprobs of teacher actions under this policy
             bc_logprobs, _, _ = self.get_logprobs(obs, samples, use_base_policy=False)
 
-            bc_logprobs = tf.clip_by_value(bc_logprobs, -5.0, 2.0)
-            bc_loss = -tf.reduce_mean(bc_logprobs)
+            bc_logprobs = torch_clamp(bc_logprobs, -5.0, 2.0)
+            bc_loss = -torch_mean(bc_logprobs)
 
         # get ratio
         logratio = newlogprobs - oldlogprobs
 
-        ratio = tf.exp(logratio)
+        ratio = torch_exp(logratio)
+
+        # # get kl difference and whether value clipped
+        # with torch_no_grad() as tape:
+        #     approx_kl = tf.reduce_mean(
+        #         tf.boolean_mask((ratio - 1) - logratio, ~tf.is_nan((ratio - 1) - logratio))
+        #     )
+
+        #     clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
+
 
         # get kl difference and whether value clipped
         with torch_no_grad() as tape:
-            approx_kl = tf.reduce_mean(
-                tf.boolean_mask((ratio - 1) - logratio, ~tf.is_nan((ratio - 1) - logratio))
+            approx_kl = torch_nanmean( (ratio - 1) - logratio )
+            clipfrac = (
+                torch_tensor_item( torch_mean( torch_tensor_float( torch_abs(ratio - 1.0) > self.clip_ploss_coef) ) )
             )
-
-            clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
 
         # Normalize advantages
         if self.norm_adv:
-            advantages = (advantages - tf.reduce_mean(advantages)) / (tf.math.reduce_std(advantages) + 1e-8)
+            advantages = (advantages - torch_mean(advantages)) / ( torch_std(advantages) + 1e-8 )
 
 
         # Policy loss with clipping
         pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * tf.clip_by_value(ratio, 1 - self.clip_ploss_coef, 1 + self.clip_ploss_coef)
-        pg_loss = tf.reduce_mean(tf.maximum(pg_loss1, pg_loss2))
+        pg_loss2 = -advantages * torch_clamp(ratio, 1 - self.clip_ploss_coef, 1 + self.clip_ploss_coef)
+        pg_loss = torch_mean( torch_max(pg_loss1, pg_loss2) )
 
 
         # Value loss optionally with clipping
         newvalues = self.critic(obs)
-        newvalues = tf.reshape(newvalues, [-1])
+        newvalues = torch_tensor_view(newvalues, [-1])
+
         if self.clip_vloss_coef is not None:
             v_loss_unclipped = (newvalues - returns) ** 2
-            v_clipped = oldvalues + tf.clip_by_value(newvalues - oldvalues, -self.clip_vloss_coef, self.clip_vloss_coef)
+            v_clipped = oldvalues + torch_clamp(newvalues - oldvalues, -self.clip_vloss_coef, self.clip_vloss_coef)
             v_loss_clipped = (v_clipped - returns) ** 2
-            v_loss = 0.5 * tf.reduce_mean(tf.maximum(v_loss_unclipped, v_loss_clipped))
+            v_loss = 0.5 * torch_mean( torch_clamp(v_loss_unclipped, v_loss_clipped) )
         else:
-            v_loss = 0.5 * tf.reduce_mean((newvalues - returns) ** 2)
+            v_loss = 0.5 * torch_mean((newvalues - returns) ** 2)
 
         return (
             pg_loss,
             entropy_loss,
             v_loss,
             clipfrac,
-            int( approx_kl.numpy() ),
-            int( tf.reduce_mean(ratio).numpy() ),
+            torch_tensor_item( approx_kl ),
+            torch_tensor_item( torch_mean(ratio) ),
             bc_loss,
-            int( std.numpy() ),
+            torch_tensor_item( std ),
         )
 
 

@@ -64,6 +64,10 @@ class CalQL_Gaussian(GaussianModel):
 
         # Load pretrained weights if specified
         if network_path is not None:
+            print("network_path = ", network_path)
+            print("self.critic = ", self.critic)
+
+
             checkpoint = tf.keras.models.load_model(network_path)
             self.actor.set_weights(checkpoint["actor_weights"])
             self.critic.set_weights(checkpoint["critic_weights"])
@@ -186,14 +190,14 @@ class CalQL_Gaussian(GaussianModel):
         # skip cal_lagrange since the paper shows cql_target_action_gap not used in kitchen
 
         # Subtract the log likelihood of the data
-        cql_qf1_diff = tf.reduce_mean( torch_clamp(
+        cql_qf1_diff = torch_mean( torch_clamp(
             cql_qf1_ood - q_data1,
             min=self.cql_clip_diff_min,
             max=self.cql_clip_diff_max,
         )
         )
         # .mean()
-        cql_qf2_diff = tf.reduce_mean(
+        cql_qf2_diff = torch_mean(
         torch_clamp(
             cql_qf2_ood - q_data2,
             min=self.cql_clip_diff_min,

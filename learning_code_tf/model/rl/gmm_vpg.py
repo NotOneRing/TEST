@@ -3,7 +3,7 @@ import tensorflow as tf
 import logging
 from model.common.gmm import GMMModel
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_tensor_view
 
 
 class VPG_GMM(GMMModel):
@@ -30,13 +30,12 @@ class VPG_GMM(GMMModel):
     # @torch.no_grad()
     @tf.function
     def call(self, cond, deterministic=False):
-
         print("gmm_vpg.py: VPG_GMM.call()")
-
-        return super().call(
-            cond=cond,
-            deterministic=deterministic,
-        )
+        with torch_no_grad() as tape:
+            return super().call(
+                cond=cond,
+                deterministic=deterministic,
+            )
 
     # ---------- RL training ----------#
 
@@ -54,7 +53,7 @@ class VPG_GMM(GMMModel):
             cond,
             deterministic=False,
         )
-        log_prob = dist.log_prob( tf.reshape(actions, [B, -1]) )
+        log_prob = dist.log_prob( torch_tensor_view(actions, [B, -1]) )
         return log_prob, entropy, std
 
     def loss(self, obs, chains, reward):

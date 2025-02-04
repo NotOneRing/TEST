@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 from util.torch_to_tf import torch_mse_loss, torch_min, torch_mean
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_mean
 
 import tensorflow as tf
 
@@ -84,7 +84,7 @@ class SAC_Gaussian(GaussianModel):
         )
         current_q1, current_q2 = self.critic(obs, action)
         loss_actor = -torch_min(current_q1, current_q2) + alpha * logprob
-        return tf.reduce_mean(loss_actor)
+        return torch_mean(loss_actor)
     
     def loss_temperature(self, obs, alpha, target_entropy):
 

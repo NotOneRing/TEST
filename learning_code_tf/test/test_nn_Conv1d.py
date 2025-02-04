@@ -20,6 +20,21 @@ padding = 1
 dilation = 1
 groups = 1  # 确保 in_channels % groups == 0
 
+
+
+
+
+# case2:
+in_channels = 7
+out_channels = 64
+kernel_size = 1
+batch_size = 256
+in_channels = 7
+length = 4
+stride =  1
+padding=0
+
+
 # 生成输入数据 (PyTorch 格式: batch_size, in_channels, length)
 input_np = np.random.randn(batch_size, in_channels, length).astype(np.float32)
 input_torch = torch.from_numpy(input_np)
@@ -40,6 +55,14 @@ torch_conv1d = torch.nn.Conv1d(
     bias=True
 )
 
+output_torch = torch_conv1d(input_torch).detach().numpy()  # (batch, out_channels, length)
+
+print("output_torch = ", output_torch)
+
+print("output_torch.shape = ", output_torch.shape)
+
+
+
 # 创建 TensorFlow 层
 tf_conv1d = nn_Conv1d(
     in_channels=in_channels,
@@ -52,9 +75,13 @@ tf_conv1d = nn_Conv1d(
     bias=True
 )
 
-# 手动构建 TF 层（输入形状不含 batch_size）
-input_shape = (length, in_channels)  # 正确形状为 (length, in_channels)
-tf_conv1d.build(input_shape=input_shape)
+
+
+# # 手动构建 TF 层（输入形状不含 batch_size）
+# input_shape = (length, in_channels)  # 正确形状为 (length, in_channels)
+# # tf_conv1d.build(input_shape=input_shape)
+
+output_tf = tf_conv1d(input_tf).numpy()  
 
 # 复制权重
 with torch.no_grad():
@@ -73,7 +100,8 @@ with torch.no_grad():
     tf_conv1d.conv1d.bias.assign(torch_bias)
 
 # 前向传播
-output_torch = torch_conv1d(input_torch).detach().numpy()  # (batch, out_channels, length)
+
+
 output_tf = tf_conv1d(input_tf).numpy()  
 # (batch, length, out_channels)
 

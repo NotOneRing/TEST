@@ -157,7 +157,7 @@ class VisionDiffusionMLP(tf.keras.Model):
             feat2 = self.backbone(rgb2)
             feat1 = self.compress1(feat1, state)
             feat2 = self.compress2(feat2, state)
-            feat = torch_cat([feat1, feat2], axis=-1)
+            feat = torch_cat([feat1, feat2], dim=-1)
         else:
             if self.augment:
                 rgb = self.aug(rgb)

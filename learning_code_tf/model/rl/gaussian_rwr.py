@@ -11,7 +11,7 @@ from model.common.gaussian import GaussianModel
 
 from util.torch_to_tf import Normal
 
-from util.torch_to_tf import torch_no_grad
+from util.torch_to_tf import torch_no_grad, torch_mean, torch_tensor_view
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class RWR_Gaussian(GaussianModel):
         self.actor = self.network
 
     # override
-    def loss(self, actions, obs, reward_weights):
+    def loss_ori(self, actions, obs, reward_weights):
 
         print("gaussian_rwr.py: RWR_Gaussian.loss()")
 
@@ -40,25 +40,26 @@ class RWR_Gaussian(GaussianModel):
         means, scales = self.network(obs)
 
         dist = Normal(means, scales)
-        log_prob = dist.log_prob(tf.reshape(actions, [B, -1]))
-        log_prob = tf.reduce_mean(log_prob, axis = -1)
+        log_prob = dist.log_prob( torch_tensor_view(actions, [B, -1]) )
+        log_prob = torch_mean(log_prob, dim = -1)
 
         log_prob = log_prob * reward_weights
-        log_prob = -tf.reduce_mean(log_prob)
+        log_prob = -torch_mean(log_prob)
         return log_prob
 
     # override
     # @torch.no_grad()
     @tf.function
     def call(self, cond, deterministic=False, **kwargs):
+        with torch_no_grad() as tape:
 
-        print("gaussian_rwr.py: RWR_Gaussian.call()")
+            print("gaussian_rwr.py: RWR_Gaussian.call()")
 
-        actions = super().call(
-            cond=cond,
-            deterministic=deterministic,
-        )
-        return actions
+            actions = super().call(
+                cond=cond,
+                deterministic=deterministic,
+            )
+            return actions
 
 
 

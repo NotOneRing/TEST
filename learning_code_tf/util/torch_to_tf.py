@@ -2038,10 +2038,14 @@ class nn_Sequential(tf.keras.layers.Layer):
 
     def __iter__(self):
         # return iter(self.model_list)\
-        print("iter: self.model.layers = ", self.model.layers)
+        # print("iter: self.model.layers = ", self.model.layers)
         return iter(self.model.layers)
 
-
+    def __len__(self):
+            nn_Sequential_len = len(self.model.layers)
+            # print("nn_Sequential_len = ", nn_Sequential_len)
+            return nn_Sequential_len
+    
 
     def get_config(self):
         # Get the configuration of all layers in the model_list
@@ -2686,6 +2690,9 @@ class nn_Conv1d(tf.keras.layers.Layer):
         self.groups = groups
         self.bias = bias
 
+
+        assert (kernel_size - 1) // 2 == padding, "padding mode is 'same'"
+
         # Ensure in_channels is divisible by groups
         if self.in_channels % self.groups != 0:
             raise ValueError("in_channels must be divisible by groups")
@@ -2694,7 +2701,8 @@ class nn_Conv1d(tf.keras.layers.Layer):
             filters=self.out_channels,
             kernel_size=self.kernel_size,
             strides=self.stride,
-            padding='valid',  # 手动处理填充
+            # padding='valid',  # 手动处理填充
+            padding='same',
             dilation_rate=self.dilation,
             groups=self.groups,
             use_bias=self.bias,
@@ -2736,10 +2744,10 @@ class nn_Conv1d(tf.keras.layers.Layer):
     #     """
     #     super(nn_Conv1d, self).build(input_shape)
 
-    def build(self, input_shape):
-        # 显式构建 Conv1D 层
-        self.conv1d.build(input_shape)
-        super(nn_Conv1d, self).build(input_shape)
+    # def build(self, input_shape):
+    #     # 显式构建 Conv1D 层
+    #     self.conv1d.build(input_shape)
+    #     super(nn_Conv1d, self).build(input_shape)
 
 
     def call(self, x):
@@ -2753,12 +2761,32 @@ class nn_Conv1d(tf.keras.layers.Layer):
             tf.Tensor: The convolved tensor.
         """
 
-        torch_to_tf_input = tf.transpose(x, perm = (0, 2, 1) )
-        # Apply padding manually
-        if self.padding > 0:
-            x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
+        # print("nn_Conv1d: self.in_channels = ", self.in_channels)
 
-        result = self.conv1d(x)
+        # print("nn_Conv1d: self.out_channels = ", self.out_channels)
+
+        # print("nn_Conv1d: self.kernel_size = ", self.kernel_size)
+
+        # print("nn_Conv1d: self.stride = ", self.stride)
+
+        # print("nn_Conv1d: x.shape = ", x.shape)
+
+        # print("nn_Conv1d: self.padding = ", self.padding)
+        # print("nn_Conv1d: self.dilation = ", self.dilation)
+        # print("nn_Conv1d: self.groups = ", self.groups)
+        # print("nn_Conv1d: self.bias = ", self.bias)
+
+
+        torch_to_tf_input = tf.transpose(x, perm = (0, 2, 1) )
+        
+        # # Apply padding manually
+        # if self.padding > 0:
+        #     x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
+
+        # result = self.conv1d(x)
+
+        result = self.conv1d(torch_to_tf_input)
+
         result = tf.transpose(result, perm = (0, 2, 1) )
 
         return result
@@ -2994,9 +3022,25 @@ class nn_GroupNorm(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: The normalized tensor.
         """
+        x = torch_tensor_permute(x, [0, 2, 3, 1])
+
+        print("x.shape = ", x.shape)
+
         # Reshape the input tensor to group the channels
         batch_size, height, width, channels = tf.unstack(tf.shape(x))
+        # batch_size, channels, height, width = tf.unstack(tf.shape(x))
+
         group_size = channels // self.num_groups
+
+        # print("nn_GroupNorm: self.num_groups = ", self.num_groups)
+        # print("nn_GroupNorm: self.num_channels = ", self.num_channels)
+        # print("nn_GroupNorm: batch_size = ", batch_size)
+        # print("nn_GroupNorm: height = ", height)
+        # print("nn_GroupNorm: width = ", width)
+        # print("nn_GroupNorm: channels = ", channels)
+        # print("nn_GroupNorm: self.num_groups = ", self.num_groups)
+        # print("nn_GroupNorm: group_size  = ", group_size )
+
         x = tf.reshape(x, [batch_size, height, width, self.num_groups, group_size])
 
         # Compute mean and variance for each group
@@ -3012,6 +3056,7 @@ class nn_GroupNorm(tf.keras.layers.Layer):
         if self.affine:
             normalized_x = self.gamma * normalized_x + self.beta
 
+        normalized_x = torch_tensor_permute(normalized_x, [0,3,1,2])
         return normalized_x
 
 

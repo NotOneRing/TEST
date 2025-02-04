@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 from util.torch_to_tf import torch_mean, torch_where, torch_softmax, torch_stack, torch_multinomial, torch_func_functional_call, \
-    torch_min, torch_func_stack_module_state, torch_vmap
+    torch_min, torch_func_stack_module_state, torch_vmap, torch_exp
 
 from util.torch_to_tf import torch_no_grad
 
@@ -136,28 +136,35 @@ class IBRL_Gaussian(GaussianModel):
             # BC Q value
             next_q1_bc = self.target_networks[q1_ind](next_obs, next_actions_bc)
             next_q2_bc = self.target_networks[q2_ind](next_obs, next_actions_bc)
-            next_q_bc = tf.minimum(next_q1_bc, next_q2_bc)
+            next_q_bc = torch_min(next_q1_bc, next_q2_bc)
 
             # RL Q value
             next_q1_rl = self.target_networks[q1_ind](next_obs, next_actions_rl)
             next_q2_rl = self.target_networks[q2_ind](next_obs, next_actions_rl)
-            next_q_rl = tf.minimum(next_q1_rl, next_q2_rl)
+            next_q_rl = torch_min(next_q1_rl, next_q2_rl)
 
             # Target Q value
-            next_q = tf.where(next_q_bc > next_q_rl, next_q_bc, next_q_rl)
+            next_q = torch_where(next_q_bc > next_q_rl, next_q_bc, next_q_rl)
             target_q = rewards + gamma * (1 - terminated) * next_q
 
         # Current Q value
         current_q_list = [
             critic(obs, actions) for critic in self.critic_networks
         ]
-        current_q = tf.stack(current_q_list, axis=0)  # Shape: (n_critics, batch_size)
-        loss_critic = tf.reduce_mean((current_q - target_q[None, :]) ** 2)
+
+        
+        
+        
+        loss_critic = torch_mean((current_q - target_q[None, :]) ** 2)
+
+
 
         # # run all critics in batch
         # current_q = torch_vmap( self.critic_wrapper, in_dims=(0, 0, None) )(
         #     self.ensemble_params, self.ensemble_buffers, (obs, actions)
         # )  # (n_critics, B)
+
+        current_q = tf.stack(current_q_list, axis=0)  # Shape: (n_critics, batch_size)
 
         # run all critics in batch
         current_q = torch_vmap( self.critic_wrapper, self.ensemble_params, self.ensemble_buffers, (obs, actions), in_dims=(0, 0, None) )  # (n_critics, B)
@@ -288,12 +295,12 @@ class IBRL_Gaussian(GaussianModel):
         # compute Q value of BC policy
         q_bc_1 = self.critic_networks[q1_ind](cond, bc_action)
         q_bc_2 = self.critic_networks[q2_ind](cond, bc_action)
-        q_bc = tf.minimum(q_bc_1, q_bc_2)
+        q_bc = torch_min(q_bc_1, q_bc_2)
 
         # compute Q value of RL policy
         q_rl_1 = self.critic_networks[q1_ind](cond, rl_action)
         q_rl_2 = self.critic_networks[q2_ind](cond, rl_action)
-        q_rl = tf.minimum(q_rl_1, q_rl_2)
+        q_rl = torch_min(q_rl_1, q_rl_2)
 
         # soft sample or greedy
         if deterministic or not self.soft_action_sample:
@@ -303,12 +310,12 @@ class IBRL_Gaussian(GaussianModel):
                 rl_action,
             )
 
-            action = tf.where(q_bc > q_rl, bc_action, rl_action)
+            action = torch_where(q_bc > q_rl, bc_action, rl_action)
 
         else:
             # compute the Q weights with probability proportional to exp(\beta * Q(a))
-            qw_bc = tf.exp(q_bc * self.soft_action_sample_beta)
-            qw_rl = tf.exp(q_rl * self.soft_action_sample_beta)
+            qw_bc = torch_exp(q_bc * self.soft_action_sample_beta)
+            qw_rl = torch_exp(q_rl * self.soft_action_sample_beta)
 
 
             q_weights = torch_softmax(

@@ -18,7 +18,7 @@ from model.diffusion.sampling import make_timesteps
 
 from util.torch_to_tf import torch_randn_like, torch_mse_loss, torch_mean, torch_randn
 
-from util.torch_to_tf import torch_exp, torch_zeros_like, torch_clip, torch_clamp
+from util.torch_to_tf import torch_exp, torch_zeros_like, torch_clip, torch_clamp, torch_no_grad
 
 
 class RWRDiffusion(DiffusionModel):
@@ -91,47 +91,49 @@ class RWRDiffusion(DiffusionModel):
     # ):
         """Modifying denoising schedule"""
 
-        print("diffusion_rwr.py: RWRDiffusion.forward()")
+        with torch_no_grad() as tape:
 
-        # device = self.betas.device
-        # B = len(cond["state"])
+            print("diffusion_rwr.py: RWRDiffusion.forward()")
 
-        B = cond["state"].shape[0]
+            # device = self.betas.device
+            # B = len(cond["state"])
 
-        # Initialize x
-        # x = tf.random.normal((B, self.horizon_steps, self.action_dim), dtype=tf.float32)
-        x = torch_randn( (B, self.horizon_steps, self.action_dim) )
+            B = cond["state"].shape[0]
 
-        t_all = list(reversed(range(self.denoising_steps)))
-        for i, t in enumerate(t_all):
-            t_b = make_timesteps(B, t)
-            mean, logvar = self.p_mean_var(
-                x=x,
-                t=t_b,
-                # cond=cond,
-                cond_state=cond['state'],
-            )
+            # Initialize x
+            # x = tf.random.normal((B, self.horizon_steps, self.action_dim), dtype=tf.float32)
+            x = torch_randn( (B, self.horizon_steps, self.action_dim) )
 
-            std = torch_exp(0.5 * logvar)
+            t_all = list(reversed(range(self.denoising_steps)))
+            for i, t in enumerate(t_all):
+                t_b = make_timesteps(B, t)
+                mean, logvar = self.p_mean_var(
+                    x=x,
+                    t=t_b,
+                    # cond=cond,
+                    cond_state=cond['state'],
+                )
+
+                std = torch_exp(0.5 * logvar)
 
 
-            # Determine noise level
-            if deterministic and t == 0:
-                std = torch_zeros_like(std)
-            elif deterministic:
-                std = torch_clip(std, 1e-3, float('inf'))
-            else:
-                std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
+                # Determine noise level
+                if deterministic and t == 0:
+                    std = torch_zeros_like(std)
+                elif deterministic:
+                    std = torch_clip(std, 1e-3, float('inf'))
+                else:
+                    std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
 
-            # Add noise
-            noise = torch_randn_like(x)
-            noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
-            x = mean + std * noise
+                # Add noise
+                noise = torch_randn_like(x)
+                noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
+                x = mean + std * noise
 
-            # Clamp action at final step
-            if self.final_action_clip_value is not None and i == len(t_all) - 1:
-                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
-        
-        return x
+                # Clamp action at final step
+                if self.final_action_clip_value is not None and i == len(t_all) - 1:
+                    x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
+            
+            return x
 
 

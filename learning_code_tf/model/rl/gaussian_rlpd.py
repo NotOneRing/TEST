@@ -10,7 +10,7 @@ Use ensemble of critics.
 
 from util.torch_to_tf import torch_mean, torch_min, torch_randperm, torch_func_functional_call, torch_func_stack_module_state, torch_vmap
 
-from util.torch_to_tf import torch_no_grad, nn_ModuleList
+from util.torch_to_tf import torch_no_grad, nn_ModuleList, nn_Sequential
 
 import logging
 from copy import deepcopy
@@ -43,7 +43,8 @@ class RLPD_Gaussian(GaussianModel):
             for _ in range(n_critics)
         ]
 
-        self.critic_networks = nn_ModuleList(self.critic_networks)
+        # self.critic_networks = nn_ModuleList(self.critic_networks)
+        self.critic_networks = nn_Sequential(self.critic_networks)
 
         # initialize target networks
         self.target_networks = [
@@ -52,7 +53,8 @@ class RLPD_Gaussian(GaussianModel):
             for _ in range(n_critics)
         ]
 
-        self.target_networks = nn_ModuleList(self.target_networks)
+        # self.target_networks = nn_ModuleList(self.target_networks)
+        self.target_networks = nn_Sequential(self.target_networks)
 
         # Construct a "stateless" version of one of the models. It is "stateless" in the sense that the parameters are meta Tensors and do not have storage.
         base_model = deepcopy(self.critic_networks[0])

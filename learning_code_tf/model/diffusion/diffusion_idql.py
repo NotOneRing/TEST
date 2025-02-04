@@ -159,88 +159,90 @@ class IDQLDiffusion(RWRDiffusion):
     ):
         """assume state-only, no rgb in cond"""
 
-        print("diffusion_idql.py: IDQLDiffusion.forward()")
+        with torch_no_grad() as tape:
 
-        # repeat obs num_sample times along dim 0
-        cond_shape_repeat_dims = tuple(1 for _ in cond["state"].shape)
-        B, T, D = cond["state"].shape
-        S = num_sample
+            print("diffusion_idql.py: IDQLDiffusion.forward()")
 
-        # cond_repeat = cond["state"][None].repeat(num_sample, *cond_shape_repeat_dims)
+            # repeat obs num_sample times along dim 0
+            cond_shape_repeat_dims = tuple(1 for _ in cond["state"].shape)
+            B, T, D = cond["state"].shape
+            S = num_sample
 
-        # cond_repeat = tf.tile(cond["state"][None], [num_sample] + [1] * len(cond["state"].shape))
+            # cond_repeat = cond["state"][None].repeat(num_sample, *cond_shape_repeat_dims)
 
-        # cond_repeat = tf.reshape(cond_repeat, [-1, T, D])  # [B*S, T, D]
+            # cond_repeat = tf.tile(cond["state"][None], [num_sample] + [1] * len(cond["state"].shape))
 
-        cond_repeat = torch_tensor_repeat( cond["state"][None], num_sample, *cond_shape_repeat_dims)
+            # cond_repeat = tf.reshape(cond_repeat, [-1, T, D])  # [B*S, T, D]
 
-        cond_repeat = torch_tensor_view(cond_repeat, -1, T, D)
+            cond_repeat = torch_tensor_repeat( cond["state"][None], num_sample, *cond_shape_repeat_dims)
 
-
-        # for eval, use less noisy samples --- there is still DDPM noise, but final action uses small min_sampling_std
-        samples = super(IDQLDiffusion, self).call(
-            {"state": cond_repeat},
-            deterministic=deterministic,
-        )
-
-        _, H, A = samples.shape
-
-        # get current Q-function
-        current_q1, current_q2 = self.target_q({"state": cond_repeat}, samples)
-
-        q = torch_min(current_q1, current_q2)
-        q = torch_tensor_view(q, [S, B])
+            cond_repeat = torch_tensor_view(cond_repeat, -1, T, D)
 
 
-        # Use argmax
-        if deterministic or (not use_expectile_exploration):
-            # gather the best sample -- filter out suboptimal Q during inference
-            best_indices = torch_argmax(q, 0)
-            samples_expanded = torch_tensor_view(samples, [S, B, H, A])
+            # for eval, use less noisy samples --- there is still DDPM noise, but final action uses small min_sampling_std
+            samples = super(IDQLDiffusion, self).call(
+                {"state": cond_repeat},
+                deterministic=deterministic,
+            )
 
-            # dummy dimension @ dim 0 for batched indexing
-            sample_indices = best_indices[None, :, None, None]  # [1, B, 1, 1]
-            sample_indices = torch_tensor_repeat(sample_indices, S, 1, H, A)
+            _, H, A = samples.shape
 
-            samples_best = torch_gather(samples_expanded, 0, sample_indices)
+            # get current Q-function
+            current_q1, current_q2 = self.target_q({"state": cond_repeat}, samples)
 
-        # Sample as an implicit policy for exploration
-        else:
-            # get the current value function for probabilistic exploration
-            current_v = self.critic_v({"state": cond_repeat})
-
-            v = torch_tensor_view(current_v, [S, B])
-
-            adv = q - v
-
-            # Compute weights for sampling
-            samples_expanded = torch_tensor_view(samples, [S, B, H, A])
-
-            # expectile exploration policy
-            tau_weights = torch_where(adv > 0, critic_hyperparam, 1 - critic_hyperparam)
-            tau_weights = tau_weights / torch_sum(tau_weights, 0)  # normalize
-
-            assert len( tau_weights.shape.as_list() ) >= 2, "tau_weights.shape.as_list() should be at least 2"
-
-            # select a sample from DP probabilistically -- sample index per batch and compile
-            # sample_indices = tf.random.categorical(tau_weights.T, 1)  # [B, 1]
-            
-            sample_indices = torch_multinomial(tf.transpose(tau_weights), 1)  # [B, 1]
-            
-            # dummy dimension @ dim 0 for batched indexing
-            # sample_indices = tf.expand_dims(sample_indices, 0)  # [1, B, 1]
-            # sample_indices = tf.expand_dims(sample_indices, -1)  # [1, B, 1, 1]
-
-            # sample_indices = tf.tile(sample_indices, [S, 1, H, A])
-            sample_indices = sample_indices[None, :, None]  # [1, B, 1, 1]
-            sample_indices = torch_tensor_repeat(sample_indices, S, 1, H, A)
-
-            samples_best = torch_gather(samples_expanded, 0, sample_indices)
+            q = torch_min(current_q1, current_q2)
+            q = torch_tensor_view(q, [S, B])
 
 
-        # squeeze dummy dimension
-        samples = samples_best[0]
-        return samples
+            # Use argmax
+            if deterministic or (not use_expectile_exploration):
+                # gather the best sample -- filter out suboptimal Q during inference
+                best_indices = torch_argmax(q, 0)
+                samples_expanded = torch_tensor_view(samples, [S, B, H, A])
+
+                # dummy dimension @ dim 0 for batched indexing
+                sample_indices = best_indices[None, :, None, None]  # [1, B, 1, 1]
+                sample_indices = torch_tensor_repeat(sample_indices, S, 1, H, A)
+
+                samples_best = torch_gather(samples_expanded, 0, sample_indices)
+
+            # Sample as an implicit policy for exploration
+            else:
+                # get the current value function for probabilistic exploration
+                current_v = self.critic_v({"state": cond_repeat})
+
+                v = torch_tensor_view(current_v, [S, B])
+
+                adv = q - v
+
+                # Compute weights for sampling
+                samples_expanded = torch_tensor_view(samples, [S, B, H, A])
+
+                # expectile exploration policy
+                tau_weights = torch_where(adv > 0, critic_hyperparam, 1 - critic_hyperparam)
+                tau_weights = tau_weights / torch_sum(tau_weights, 0)  # normalize
+
+                assert len( tau_weights.shape.as_list() ) >= 2, "tau_weights.shape.as_list() should be at least 2"
+
+                # select a sample from DP probabilistically -- sample index per batch and compile
+                # sample_indices = tf.random.categorical(tau_weights.T, 1)  # [B, 1]
+                
+                sample_indices = torch_multinomial(tf.transpose(tau_weights), 1)  # [B, 1]
+                
+                # dummy dimension @ dim 0 for batched indexing
+                # sample_indices = tf.expand_dims(sample_indices, 0)  # [1, B, 1]
+                # sample_indices = tf.expand_dims(sample_indices, -1)  # [1, B, 1, 1]
+
+                # sample_indices = tf.tile(sample_indices, [S, 1, H, A])
+                sample_indices = sample_indices[None, :, None]  # [1, B, 1, 1]
+                sample_indices = torch_tensor_repeat(sample_indices, S, 1, H, A)
+
+                samples_best = torch_gather(samples_expanded, 0, sample_indices)
+
+
+            # squeeze dummy dimension
+            samples = samples_best[0]
+            return samples
 
 
 

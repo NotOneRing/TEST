@@ -37,7 +37,14 @@ class GaussianModel(tf.keras.Model):
         # .to(device)
 
         if network_path is not None:
+            print("self.network = ", self.network)
+            print("GaussianModel: network_path = ", network_path)
+
+            
             checkpoint = tf.train.Checkpoint(model=self)
+
+            print("checkpoint = ", checkpoint)
+
             checkpoint.restore(network_path).expect_partial()
             log.info("Loaded actor from %s", network_path)
 
@@ -141,7 +148,7 @@ class GaussianModel(tf.keras.Model):
                 sampled_action = torch_tanh(sampled_action)
                 log_prob -= torch_log(1 - tf.square(sampled_action) + 1e-6)
 
-            return torch_tensor_view(sampled_action, [B, T, -1]), torch_sum(log_prob, axis=1)
+            return torch_tensor_view(sampled_action, [B, T, -1]), torch_sum(log_prob, dim=1)
         else:
             if self.tanh_output:
                 sampled_action = torch_tanh(sampled_action)

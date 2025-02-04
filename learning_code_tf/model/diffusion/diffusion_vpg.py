@@ -731,117 +731,119 @@ class VPGDiffusion(DiffusionModel):
                 chain: (B, K + 1, Ta, Da)
         """
 
-        print("diffusion_vpg.py: VPGDiffusion.call()")
+        with torch_no_grad() as tape:
 
-        # device = self.betas.device
-        sample_data = cond["state"] if "state" in cond else cond["rgb"]
-        B = tf.shape(sample_data)[0]
+            print("diffusion_vpg.py: VPGDiffusion.call()")
 
-        # Get updated minimum sampling denoising std
-        min_sampling_denoising_std = self.get_min_sampling_denoising_std()
+            # device = self.betas.device
+            sample_data = cond["state"] if "state" in cond else cond["rgb"]
+            B = tf.shape(sample_data)[0]
 
-        # Loop
-        # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
+            # Get updated minimum sampling denoising std
+            min_sampling_denoising_std = self.get_min_sampling_denoising_std()
 
-        if DEBUG or NP_RANDOM:
-            x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32 )
-        else:
-            x = torch_randn([B, self.horizon_steps, self.action_dim])
-
-        if OUTPUT_VARIABLES:
-            print("VPGDiffusion: call(): x = ", x)
-
-
-
-        if self.use_ddim:
-            t_all = self.ddim_t
-        else:
-            t_all = list(reversed(range(self.denoising_steps)))
-        
-        chain = [] if return_chain else None
-        if not self.use_ddim and self.ft_denoising_steps == self.denoising_steps:
-            chain.append(x)
-        if self.use_ddim and self.ft_denoising_steps == self.ddim_steps:
-            chain.append(x)
-
-        for i, t in enumerate(t_all):
-            t_b = make_timesteps(B, t)
-            index_b = make_timesteps(B, i)
-
-
-            if OUTPUT_VARIABLES:
-                print("VPGDiffusion: call(): before p_mean_var()")
-            mean, logvar, _ = self.p_mean_var(
-                x=x,
-                t=t_b,
-                cond=cond,
-                index=index_b,
-                use_base_policy=use_base_policy,
-                deterministic=deterministic,
-            )
-
-            std = torch_exp(0.5 * logvar)
-
-            # Determine noise level
-            if self.use_ddim:
-                if deterministic:
-                    std = torch_zeros_like(std)
-                else:
-                    std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
-            else:
-                if deterministic and t == 0:
-                    std = torch_zeros_like(std)
-                elif deterministic:  # still keep the original noise
-                    std = torch_clip(std, 1e-3, tf.float32.max)
-                else:  # use higher minimum noise
-                    std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
-            
+            # Loop
+            # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
 
             if DEBUG or NP_RANDOM:
-                noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) ), dtype=tf.float32 )
+                x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32 )
             else:
-                noise = torch_randn_like(x)
-
+                x = torch_randn([B, self.horizon_steps, self.action_dim])
 
             if OUTPUT_VARIABLES:
-                print("VPGDiffusion: call(): noise = ", noise)
+                print("VPGDiffusion: call(): x = ", x)
 
 
-            # temp_noise_variable = tf.Variable(temp_noise)
 
-            # print("temp_noise = ", temp_noise)
-            # print("temp_noise_variable = ", temp_noise_variable)
+            if self.use_ddim:
+                t_all = self.ddim_t
+            else:
+                t_all = list(reversed(range(self.denoising_steps)))
+            
+            chain = [] if return_chain else None
+            if not self.use_ddim and self.ft_denoising_steps == self.denoising_steps:
+                chain.append(x)
+            if self.use_ddim and self.ft_denoising_steps == self.ddim_steps:
+                chain.append(x)
 
-            # print("self.randn_clip_value = ", self.randn_clip_value)
-
-            noise = torch_clamp(
-                noise, -self.randn_clip_value, self.randn_clip_value
-            )
-
-            # noise = temp_noise_variable
-
-            # print("std = ", std)
-            # print("noise = ", noise)
+            for i, t in enumerate(t_all):
+                t_b = make_timesteps(B, t)
+                index_b = make_timesteps(B, i)
 
 
-            x = mean + std * noise
+                if OUTPUT_VARIABLES:
+                    print("VPGDiffusion: call(): before p_mean_var()")
+                mean, logvar, _ = self.p_mean_var(
+                    x=x,
+                    t=t_b,
+                    cond=cond,
+                    index=index_b,
+                    use_base_policy=use_base_policy,
+                    deterministic=deterministic,
+                )
 
-            # clamp action at final step
-            if self.final_action_clip_value is not None and i == len(t_all) - 1:
-                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
+                std = torch_exp(0.5 * logvar)
 
+                # Determine noise level
+                if self.use_ddim:
+                    if deterministic:
+                        std = torch_zeros_like(std)
+                    else:
+                        std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
+                else:
+                    if deterministic and t == 0:
+                        std = torch_zeros_like(std)
+                    elif deterministic:  # still keep the original noise
+                        std = torch_clip(std, 1e-3, tf.float32.max)
+                    else:  # use higher minimum noise
+                        std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
+                
+
+                if DEBUG or NP_RANDOM:
+                    noise = tf.convert_to_tensor( np.random.randn( *(x.numpy().shape) ), dtype=tf.float32 )
+                else:
+                    noise = torch_randn_like(x)
+
+
+                if OUTPUT_VARIABLES:
+                    print("VPGDiffusion: call(): noise = ", noise)
+
+
+                # temp_noise_variable = tf.Variable(temp_noise)
+
+                # print("temp_noise = ", temp_noise)
+                # print("temp_noise_variable = ", temp_noise_variable)
+
+                # print("self.randn_clip_value = ", self.randn_clip_value)
+
+                noise = torch_clamp(
+                    noise, -self.randn_clip_value, self.randn_clip_value
+                )
+
+                # noise = temp_noise_variable
+
+                # print("std = ", std)
+                # print("noise = ", noise)
+
+
+                x = mean + std * noise
+
+                # clamp action at final step
+                if self.final_action_clip_value is not None and i == len(t_all) - 1:
+                    x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
+
+
+                if return_chain:
+                    if not self.use_ddim and t <= self.ft_denoising_steps:
+                        chain.append(x)
+                    elif self.use_ddim and i >= (
+                        self.ddim_steps - self.ft_denoising_steps - 1
+                    ):
+                        chain.append(x)
 
             if return_chain:
-                if not self.use_ddim and t <= self.ft_denoising_steps:
-                    chain.append(x)
-                elif self.use_ddim and i >= (
-                    self.ddim_steps - self.ft_denoising_steps - 1
-                ):
-                    chain.append(x)
-
-        if return_chain:
-            chain = torch_stack(chain, dim=1)
-        return Sample(x, chain)
+                chain = torch_stack(chain, dim=1)
+            return Sample(x, chain)
 
 
 

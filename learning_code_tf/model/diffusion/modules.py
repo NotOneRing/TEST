@@ -110,6 +110,8 @@ class Downsample1d(tf.keras.layers.Layer):
 
         print("modules.py: Downsample1d.__init__()")
 
+        self.dim = dim
+
         super(Downsample1d, self).__init__()
         self.conv = nn_Conv1d(dim, dim, 3, 2, 1)
 
@@ -133,8 +135,10 @@ class Downsample1d(tf.keras.layers.Layer):
 
 class Upsample1d(tf.keras.layers.Layer):
     def __init__(self, dim):
-
+        
         print("modules.py: Upsample1d.__init__()")
+
+        self.dim = dim
 
         super(Upsample1d, self).__init__()
         # self.conv = tf.keras.layers.Conv1DTranspose(dim, 4, strides=2, padding="same")
@@ -174,9 +178,19 @@ class Conv1dBlock(tf.keras.layers.Layer):
         n_groups=None,
         activation_type="Mish",
         eps=1e-5,
+        **kwargs
     ):
 
         print("modules.py: Conv1dBlock.__init__()")
+
+
+        self.inp_channels = inp_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.n_groups = n_groups
+        self.activation_type = activation_type
+        self.eps = eps
+
 
         super(Conv1dBlock, self).__init__()
 
@@ -188,7 +202,11 @@ class Conv1dBlock(tf.keras.layers.Layer):
         else:
             raise ValueError("Unknown activation type for Conv1dBlock")
 
+        print("n_groups = ", n_groups)
+        print("out_channels = ", out_channels)
 
+        print("padding = ", kernel_size // 2)
+        
         self.block = nn_Sequential(
             nn_Conv1d(
                 inp_channels, out_channels, kernel_size, padding=kernel_size // 2
@@ -222,6 +240,17 @@ class Conv1dBlock(tf.keras.layers.Layer):
     def call(self, x):
 
         print("modules.py: Conv1dBlock.call()")
+
+        # block0_result = self.block[0](x)
+        # # print("block0_result.shape = ", block0_result.shape)
+        # block1_result = self.block[1](block0_result)
+        # # print("block1_result.shape = ", block1_result.shape)
+        # block2_result = self.block[2](block1_result)
+        # # print("block2_result.shape = ", block2_result.shape)
+        # block3_result = self.block[3](block2_result)
+        # # print("block3_result.shape = ", block3_result.shape)
+        # block4_result = self.block[4](block3_result)
+        # # print("block4_result.shape = ", block4_result.shape)
 
         return self.block(x)
 

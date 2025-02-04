@@ -2686,6 +2686,7 @@ class nn_Conv1d(tf.keras.layers.Layer):
         self.groups = groups
         self.bias = bias
 
+
         # Ensure in_channels is divisible by groups
         if self.in_channels % self.groups != 0:
             raise ValueError("in_channels must be divisible by groups")
@@ -2694,7 +2695,8 @@ class nn_Conv1d(tf.keras.layers.Layer):
             filters=self.out_channels,
             kernel_size=self.kernel_size,
             strides=self.stride,
-            padding='valid',  # 手动处理填充
+            # padding='valid',  # 手动处理填充
+            padding='same',  # 手动处理填充
             dilation_rate=self.dilation,
             groups=self.groups,
             use_bias=self.bias,
@@ -2736,10 +2738,6 @@ class nn_Conv1d(tf.keras.layers.Layer):
     #     """
     #     super(nn_Conv1d, self).build(input_shape)
 
-    def build(self, input_shape):
-        # 显式构建 Conv1D 层
-        self.conv1d.build(input_shape)
-        super(nn_Conv1d, self).build(input_shape)
 
 
     def call(self, x):
@@ -2754,11 +2752,12 @@ class nn_Conv1d(tf.keras.layers.Layer):
         """
 
         torch_to_tf_input = tf.transpose(x, perm = (0, 2, 1) )
-        # Apply padding manually
-        if self.padding > 0:
-            x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
+        # # Apply padding manually
+        # if self.padding > 0:
+        #     x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
 
-        result = self.conv1d(x)
+        # result = self.conv1d(x)
+        result = self.conv1d(torch_to_tf_input)
         result = tf.transpose(result, perm = (0, 2, 1) )
 
         return result
