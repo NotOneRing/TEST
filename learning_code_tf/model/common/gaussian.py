@@ -18,7 +18,7 @@ torch_log, torch_tanh, torch_sum, nn_Parameter, torch_tensor, torch_ones
 
 
 
-from util.config import OUTPUT_VARIABLES
+from util.config import OUTPUT_VARIABLES, OUTPUT_FUNCTION_HEADER, OUTPUT_POSITIONS
 
 
 
@@ -41,6 +41,7 @@ class GaussianModel(tf.keras.Model):
 
         self.env_name = kwargs.get("env_name", None)
 
+        self.device = device
 
         print("self.env_name = ", self.env_name)
         
@@ -157,8 +158,168 @@ class GaussianModel(tf.keras.Model):
 
 
 
+
+
+
+
+    def get_config(self):
+        config = super(GaussianModel, self).get_config()
+
+        # config = {}
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("get_config: diffusion.py:GaussianModel.get_config()")
+
+
+        if OUTPUT_VARIABLES:
+            # Debugging each attribute to make sure they are initialized correctly
+            print(f"network: {self.network}")
+            print(f"device: {self.device}")
+            print(f"horizon_steps: {self.horizon_steps}")
+            print(f"network: {self.network}")
+            print(f"network_path: {self.network_path}")
+            print(f"randn_clip_value: {self.randn_clip_value}")
+            print(f"tanh_output: {self.tanh_output}")
+
+
+
+        from model.common.mlp_gaussian import Gaussian_MLP
+        from model.diffusion.unet import Unet1D
+
+        if isinstance( self.network, (Gaussian_MLP, Unet1D) ):
+            network_repr = self.network.get_config()
+            if OUTPUT_VARIABLES:
+                print("network_repr = ", network_repr)
+        else:
+            if OUTPUT_VARIABLES:
+                print("type(self.network) = ", type(self.network))
+            raise RuntimeError("not recognozed type of self.network")
+
+
+
+        config.update({
+            "device": self.device,
+            "horizon_steps": self.horizon_steps,
+            "network": network_repr,
+            "network_path": self.network_path,
+            "randn_clip_value": self.randn_clip_value,
+            "tanh_output": self.tanh_output,
+        })
+
+
+
+        if hasattr(self, "env_name"):
+            print("get_config(): self.env_name = ", self.env_name)
+            config.update({
+            "env_name": self.env_name,
+            })
+        else:
+            print("get_config(): self.env_name = ", None)
+        
+
+
+        
+
+        if OUTPUT_VARIABLES:
+            print("GaussianModel.config = ", config)
+        
+        return config
+
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+
+        from model.common.mlp_gaussian import Gaussian_MLP
+
+        # from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, \
+            nn_Dropout, nn_ReLU, nn_Mish, nn_Identity, nn_Conv1d, nn_ConvTranspose1d
+
+        from model.diffusion.unet import Unet1D, ResidualBlock1D
+
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            # 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'Gaussian_MLP': Gaussian_MLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            "nn_Identity": nn_Identity,
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+            "Unet1D": Unet1D,
+            "ResidualBlock1D": ResidualBlock1D,
+            "nn_Conv1d": nn_Conv1d,
+            "nn_ConvTranspose1d": nn_ConvTranspose1d
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        # print('get_custom_objects() = ', get_custom_objects())
+
+        network = config.pop("network")
+
+        if OUTPUT_VARIABLES:
+            print("GaussianModel from_config(): network = ", network)
+
+        name = network["name"]
+    
+        # if OUTPUT_VARIABLES:
+        print("network['name'] = ", name)
+
+        if name.startswith("gaussian_mlp"):
+            network = Gaussian_MLP.from_config(network)
+        elif name.startswith("unet1d"):
+            network = Unet1D.from_config(network)
+        else:
+            raise RuntimeError("name not recognized")
+
+
+        # if name in cur_dict:
+        #     cur_dict[name].from_config(network)
+        # else:
+        #     raise RuntimeError("name not recognized")
+
+
+        result = cls(
+            # 
+            network=network, 
+            **config)
+
+
+
+        env_name = config.pop("env_name")
+        if env_name:
+            if OUTPUT_POSITIONS:
+                print("Enter env_name")
+            result.env_name = env_name
+        else:
+            result.env_name = None
+
+        return result
+
+
+
+
+
+
     def loss_ori(
         self,
+        training,
         true_action,
         cond,
         ent_coef,
@@ -168,7 +329,7 @@ class GaussianModel(tf.keras.Model):
         print("gaussian.py: GaussianModel.loss()")
 
         B = len(true_action)
-        dist = self.forward_train(cond, deterministic=False)
+        dist = self.forward_train(training, cond, deterministic=False)
         # true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         true_action = torch_tensor_view(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         log_prob = dist.log_prob(true_action)
@@ -189,6 +350,7 @@ class GaussianModel(tf.keras.Model):
 
     def loss_ori_build(
         self,
+        training,
         true_action,
         cond,
         ent_coef,
@@ -198,7 +360,7 @@ class GaussianModel(tf.keras.Model):
         print("gaussian.py: GaussianModel.loss()")
 
         B = len(true_action)
-        dist = GaussianModel.forward_train(cond, deterministic=False)
+        dist = GaussianModel.forward_train(training, cond, deterministic=False)
         # true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         true_action = torch_tensor_view(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         log_prob = dist.log_prob(true_action)
@@ -218,6 +380,7 @@ class GaussianModel(tf.keras.Model):
 
     def forward_train(
         self,
+        training,
         cond,
         deterministic=False,
         network_override=None,
@@ -229,9 +392,11 @@ class GaussianModel(tf.keras.Model):
         print("gaussian.py: GaussianModel.forward_train()")
 
         if network_override is not None:
-            means, scales = network_override(cond)
+            print("network_override = ", network_override)
+            means, scales = network_override(cond, training=training)
         else:
-            means, scales = self.network(cond)
+            print("self.network = ", self.network)
+            means, scales = self.network(cond, training=training)
         if deterministic:
             # low-noise for all Gaussian dists
             scales = torch_ones_like(means) * 1e-4
@@ -241,8 +406,20 @@ class GaussianModel(tf.keras.Model):
 
         return dist
 
+
+
+
+
+
+
+
+
+
+
+
     def call(
         self,
+        training,
         cond,
         deterministic=False,
         network_override=None,
@@ -255,6 +432,7 @@ class GaussianModel(tf.keras.Model):
         B = len(cond["state"]) if "state" in cond else len(cond["rgb"])
         T = self.horizon_steps
         dist = self.forward_train(
+            training,
             cond,
             deterministic=deterministic,
             network_override=network_override,
@@ -517,6 +695,97 @@ class GaussianModel(tf.keras.Model):
             self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
         if 'network.mlp_mean.layers.2.bias' in params_dict:
             self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
+
+
+
+
+
+    def load_pickle_gmm_mlp(self, network_path):
+        pkl_file_path = network_path.replace('.pt', '_ema.pkl')
+
+        print("pkl_file_path = ", pkl_file_path)
+
+        import pickle
+        # load pickle file
+        with open(pkl_file_path, 'rb') as file:
+            params_dict = pickle.load(file)
+
+
+
+        # 打印加载的内容
+
+        if OUTPUT_VARIABLES:
+            print("params_dict = ", params_dict)
+
+        # # Square
+        # 'network.logvar_min'
+        # 'network.logvar_max'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+        # 'network.mlp_weights.layers.0.weight'
+        # 'network.mlp_weights.layers.0.bias'
+        # 'network.mlp_weights.layers.1.l1.weight'
+        # 'network.mlp_weights.layers.1.l1.bias'
+        # 'network.mlp_weights.layers.1.l2.weight'
+        # 'network.mlp_weights.layers.1.l2.bias'
+        # 'network.mlp_weights.layers.2.weight'
+        # 'network.mlp_weights.layers.2.bias'
+
+        self.logvar_min = nn_Parameter(
+            torch_tensor(params_dict['network.logvar_min']), requires_grad=False
+        )
+
+        self.logvar_max = nn_Parameter(
+            torch_tensor(params_dict['network.logvar_max']), requires_grad=False
+        )
+
+        if 'network.mlp_mean.layers.0.weight' in params_dict:
+            self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.0.bias' in params_dict:
+            self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
+
+        if 'network.mlp_mean.layers.1.l1.weight' in params_dict:
+            self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.1.l1.bias' in params_dict:
+            self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
+
+        if 'network.mlp_mean.layers.1.l2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.1.l2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
+
+        if 'network.mlp_mean.layers.2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
+
+
+
+        if 'network.mlp_weights.layers.0.weight' in params_dict:
+            self.network.mlp_weights.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_weights.layers.0.weight'].T)  # kernel
+        if 'network.mlp_weights.layers.0.bias' in params_dict:
+            self.network.mlp_weights.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_weights.layers.0.bias'])     # bias
+
+        if 'network.mlp_weights.layers.1.l1.weight' in params_dict:
+            self.network.mlp_weights.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_weights.layers.1.l1.weight'].T)  # kernel
+        if 'network.mlp_weights.layers.1.l1.bias' in params_dict:
+            self.network.mlp_weights.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_weights.layers.1.l1.bias'])     # bias
+
+        if 'network.mlp_weights.layers.1.l2.weight' in params_dict:
+            self.network.mlp_weights.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_weights.layers.1.l2.weight'].T)  # kernel
+        if 'network.mlp_weights.layers.1.l2.bias' in params_dict:
+            self.network.mlp_weights.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_weights.layers.1.l2.bias'])     # bias
+
+        if 'network.mlp_weights.layers.2.weight' in params_dict:
+            self.network.mlp_weights.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_weights.layers.2.weight'].T)  # kernel
+        if 'network.mlp_weights.layers.2.bias' in params_dict:
+            self.network.mlp_weights.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_weights.layers.2.bias'])     # bias
 
 
 

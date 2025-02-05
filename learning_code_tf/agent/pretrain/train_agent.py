@@ -14,9 +14,10 @@ from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts,\
       torch_optim_AdamW, torch_utils_data_DataLoader
 
 
+
 # DEBUG = True
 # DEBUG = False
-from util.config import DEBUG
+from util.config import DEBUG, METHOD_NAME
 
 
 # DEVICE = "/GPU:0"
@@ -966,6 +967,72 @@ class PreTrainAgent:
         self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"),  custom_objects=get_custom_objects() )
 
         # self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras") ,  custom_objects=get_custom_objects() )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def load_pickle_network(self):            
+        if METHOD_NAME == "Diffusion_MLP":
+            print("self.model.load_pickle()")
+            self.model.load_pickle(self.base_policy_path)
+        elif METHOD_NAME == "Diffusion_UNet":
+            print("self.model.load_pickle_diffusion_unet()")
+            self.model.load_pickle_diffusion_unet(self.base_policy_path)
+        elif METHOD_NAME == "Diffusion_ViT_UNet":
+            print("self.model.load_pickle_diffusion_unet_img()")
+            self.model.load_pickle_diffusion_unet_img(self.base_policy_path)
+        elif METHOD_NAME == "Gaussian_MLP":
+            print("self.model.load_pickle_gaussian_mlp()")
+            self.model.load_pickle_gaussian_mlp(self.base_policy_path)
+        elif METHOD_NAME == "GMM_MLP":
+            print("self.model.load_pickle_gmm_mlp()")
+            self.model.load_pickle_gmm_mlp(self.base_policy_path)
+        elif METHOD_NAME == "Gaussian_ViT_MLP":
+            print("self.model.load_pickle_gaussian_mlp_img()")
+            self.model.load_pickle_gaussian_mlp_img(self.base_policy_path)
+        else:
+            raise RuntimeError("Method Undefined")
+        
+        # self.model.output_weights()
+
+        savepath = self.base_policy_path.replace(".pt", ".keras")
+
+
+        self.model.build_actor(self.model.network
+                            #    , cur_actions.shape, cond['state'].shape
+                                )
+
+        self.save_load_pretrain_model(savepath)
+
+
 
 
 

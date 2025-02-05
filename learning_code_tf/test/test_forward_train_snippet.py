@@ -60,7 +60,7 @@ print("std = ", std)
 
 print("approx_entropy = ", approx_entropy)
 
-print("dist = ", dist)
+print("dist.log_prob() = ", dist.log_prob())
 
 
 
@@ -113,7 +113,10 @@ dist = MixtureSameFamily(
     component_distribution=component_distribution,
 )
 
-print("dist = ", dist)
+print("dist.log_prob() = ", dist.log_prob())
+
+
+
 
 # log_prob = dist.log_prob( tf.reshape(actions, [B, -1]) )
 

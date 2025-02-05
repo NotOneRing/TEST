@@ -4458,10 +4458,10 @@ class MixtureSameFamily:
         # if self._validate_args:
         #     self._validate_sample(x)
         x = tf.expand_dims(x, axis=-1 - self._event_ndims)
-        log_prob_x = self.component_distribution.log_prob(x)  # [S, B, k]
+        log_prob_x = self._component_distribution.log_prob(x)  # [S, B, k]
 
 
-        log_mix_prob = tf.math.log(self.mixture_distribution.probs)
+        log_mix_prob = tf.math.log(self._mixture_distribution.probs)
 
         return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]
 

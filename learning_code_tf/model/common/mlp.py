@@ -420,7 +420,7 @@ class ResidualMLP(
         **kwargs
     ):
 
-        self.dim_list = dim_list
+        self.dim_list = list(dim_list)
         self.activation_type = activation_type
         self.out_activation_type = out_activation_type
         self.use_layernorm = use_layernorm
@@ -434,8 +434,12 @@ class ResidualMLP(
         super(ResidualMLP, self).__init__(name=name, **kwargs)
 
         hidden_dim = dim_list[1]
+
         num_hidden_layers = len(dim_list) - 3
+        print("num_hidden_layers = ", num_hidden_layers)
+
         assert num_hidden_layers % 2 == 0
+
         if my_layers == None:
 
             if OUTPUT_VARIABLES:

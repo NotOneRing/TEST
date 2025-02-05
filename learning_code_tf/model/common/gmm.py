@@ -48,6 +48,7 @@ class GMMModel(tf.keras.Model):
 
     def loss_ori(
         self,
+        training,
         true_action,
         cond,
         **kwargs,
@@ -58,6 +59,7 @@ class GMMModel(tf.keras.Model):
         B = tf.shape(true_action)[0]
 
         dist, entropy, _ = self.forward_train(
+            training,
             cond,
             deterministic=False,
         )
@@ -70,6 +72,7 @@ class GMMModel(tf.keras.Model):
 
     def forward_train(
         self,
+        training,
         cond,
         deterministic=False,
     ):
@@ -78,8 +81,8 @@ class GMMModel(tf.keras.Model):
         """
 
         print("gmm.py: GMMModel.forward_train()")
-
-        means, scales, logits = self.network(cond)
+        print("self.network = ", self.network)
+        means, scales, logits = self.network(cond, training=training)
         if deterministic:
             # low-noise for all Gaussian dists
             scales = torch_ones_like(means) * 1e-4

@@ -33,10 +33,6 @@ from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, METHOD_NAME
 RUN_FUNCTION_TEST_SAVE_LOAD = False
 
 
-# DEBUG = True
-# DEBUG = False
-
-
 from util.torch_to_tf import torch_tensor_item
 
 
@@ -216,16 +212,6 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
 
-
-
-
-
-
-
-
-
-
-
     def build_ema_model(self, training_flag, item_actions_copy, cond_copy):
         with tf.GradientTape() as tape:
             print("self.model = ", self.model)
@@ -294,25 +280,11 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
 
-    def load_pickle_network(self):            
-        if METHOD_NAME == "Diffusion_MLP":
-            self.model.load_pickle(self.base_policy_path)
-            print("self.model.load_pickle()")
-        elif METHOD_NAME == "Diffusion_UNet":
-            print("self.model.load_pickle_diffusion_unet()")
-            self.model.load_pickle_diffusion_unet(self.base_policy_path)
-        else:
-            raise RuntimeError("Method Undefined")
-        
-        # self.model.output_weights()
 
-        savepath = self.base_policy_path.replace(".pt", ".keras")
 
-        self.model.build_actor(self.model.network
-                            #    , cur_actions.shape, cond['state'].shape
-                                )
 
-        self.save_load_pretrain_model(savepath)
+
+
 
 
 
