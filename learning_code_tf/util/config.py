@@ -1,6 +1,6 @@
-DEBUG = True
+# DEBUG = True
 
-# DEBUG = False
+DEBUG = False
 
 
 
@@ -42,5 +42,8 @@ NP_RANDOM = True
 
 
 
+METHOD_NAME = "Diffusion_MLP"
+
+# METHOD_NAME = "Diffusion_UNet"
 
 

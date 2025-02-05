@@ -45,7 +45,7 @@ class PPO_Gaussian(VPG_Gaussian):
         # Clipping value for value loss
         self.clip_vloss_coef = clip_vloss_coef
 
-    def loss(
+    def loss_ori(
         self,
         obs,
         actions,

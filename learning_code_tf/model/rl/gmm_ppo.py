@@ -45,7 +45,7 @@ class PPO_GMM(VPG_GMM):
         # Clipping value for value loss
         self.clip_vloss_coef = clip_vloss_coef
 
-    def loss(
+    def loss_ori(
         self,
         obs,
         actions,

@@ -64,7 +64,7 @@ class Gaussian_Transformer(tf.keras.Model):
             self.logvar = nn_Parameter(
                 # initial_value=np.log(fixed_std ** 2) * np.ones(action_dim, dtype=np.float32),
                 # trainable=True,
-                torch_log(torch_tensor([fixed_std**2 for _ in range(action_dim)])),
+                torch_log(torch_tensor( np.array([fixed_std**2 for _ in range(action_dim)]) )),
                 requires_grad=True,
             )
             logger.info(f"Using fixed std {fixed_std} with learning")
@@ -76,10 +76,10 @@ class Gaussian_Transformer(tf.keras.Model):
         # self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
 
         self.logvar_min = nn_Parameter(
-            torch_log(torch_tensor(std_min**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
         )
         self.logvar_max = nn_Parameter(
-            torch_log(torch_tensor(std_max**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
         )
 
 
@@ -190,10 +190,10 @@ class GMM_Transformer(tf.keras.Model):
         # self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
         # self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
         self.logvar_min = nn_Parameter(
-            torch_log(torch_tensor(std_min**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
         )
         self.logvar_max = nn_Parameter(
-            torch_log(torch_tensor(std_max**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
         )
 
         self.fixed_std = fixed_std

@@ -453,16 +453,15 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                     #     reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
                     # )
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} \
-                        | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} \
-                        | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} \
-                        | t:{time:8.4f} \ 
-                        | std:{std:8.4f} | approx kl:{approx_kl:8.4f} | ratio:{ratio:8.4f}\
-                        | clipfrac:{np.mean(clipfracs):8.4f} | explained variance:{explained_var:8.4f} \
-                        | num episode - train: {num_episode_finished:8.4f} \
-                        | actor lr : {self.actor_optimizer.param_groups[0]["lr"]:8.4f}, \
-                        | critic lr : {self.critic_optimizer.param_groups[0]["lr"]:8.4f}
-                        "
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} "
+                        f"| pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} "
+                        f"| bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} "
+                        f"| t:{time:8.4f} "
+                        f"| std:{std:8.4f} | approx kl:{approx_kl:8.4f} | ratio:{ratio:8.4f}"
+                        f"| clipfrac:{np.mean(clipfracs):8.4f} | explained variance:{explained_var:8.4f} "
+                        f"| num episode - train: {num_episode_finished:8.4f} "
+                        # f"| actor lr : {self.actor_optimizer.param_groups[0]["lr"]:8.4f}, "
+                        # f"| critic lr : {self.critic_optimizer.param_groups[0]["lr"]:8.4f} "
                     )
                     # if self.use_wandb:
                     #     wandb.log(

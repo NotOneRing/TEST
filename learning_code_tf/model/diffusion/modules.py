@@ -106,7 +106,7 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
 
 
 class Downsample1d(tf.keras.layers.Layer):
-    def __init__(self, dim):
+    def __init__(self, dim, **kwargs):
 
         print("modules.py: Downsample1d.__init__()")
 
@@ -134,7 +134,7 @@ class Downsample1d(tf.keras.layers.Layer):
 
 
 class Upsample1d(tf.keras.layers.Layer):
-    def __init__(self, dim):
+    def __init__(self, dim, **kwargs):
         
         print("modules.py: Upsample1d.__init__()")
 

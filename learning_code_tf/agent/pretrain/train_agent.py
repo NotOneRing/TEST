@@ -10,7 +10,8 @@ from omegaconf import OmegaConf
 
 from copy import deepcopy
 
-from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW
+from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts,\
+      torch_optim_AdamW, torch_utils_data_DataLoader
 
 
 # DEBUG = True
@@ -53,35 +54,23 @@ class EMA:
 
     def update_model_average(self, ma_model, current_model):
         print("train_agent.py: EMA.update_model_average()")
-        for ma_weights, current_weights in zip(ma_model.trainable_variables, current_model.trainable_variables):
-            updated_parameters = self.update_average(ma_weights, current_weights)
+
 
 
         if DEBUG:
 
 
-            epoch0_model_weights = self.model.get_weights()
+            epoch0_model_weights = current_model.get_weights()
 
-            epoch0_model_network_weights = self.model.network.get_weights()
+            epoch0_model_network_weights = current_model.network.get_weights()
 
-            epoch0_model_network_mlpmean_weights = self.model.network.mlp_mean.get_weights()
+            epoch0_model_network_mlpmean_weights = current_model.network.mlp_mean.get_weights()
 
-            if self.model.network.cond_mlp:
-                epoch0_model_network_condmlp_weights = self.model.network.cond_mlp.get_weights()
+            if current_model.network.cond_mlp:
+                epoch0_model_network_condmlp_weights = current_model.network.cond_mlp.get_weights()
 
 
-            epoch0_model_network_timeemb_weights = self.model.network.time_embedding.get_weights()
-
-            epoch0_model_trainable_variables = self.model.trainable_variables
-
-            epoch0_model_network_trainable_variables = self.model.network.trainable_variables
-
-            epoch0_model_network_mlpmean_trainable_variables = self.model.network.mlp_mean.trainable_variables
-
-            if self.model.network.cond_mlp:
-                epoch0_model_network_condmlp_trainable_variables = self.model.network.cond_mlp.trainable_variables
-
-            epoch0_model_network_timeemb_trainable_variables = self.model.network.time_embedding.trainable_variables
+            epoch0_model_network_timeemb_weights = current_model.network.time_embedding.get_weights()
 
 
 
@@ -90,30 +79,16 @@ class EMA:
 
 
 
+            epoch0_model_trainable_variables = deepcopy(current_model.trainable_variables)
 
+            epoch0_model_network_trainable_variables = deepcopy(current_model.network.trainable_variables)
 
-            epoch0_ema_model_weights = self.ema_model.get_weights()
+            epoch0_model_network_mlpmean_trainable_variables = deepcopy(current_model.network.mlp_mean.trainable_variables)
 
-            epoch0_ema_model_network_weights = self.ema_model.network.get_weights()
+            if current_model.network.cond_mlp:
+                epoch0_model_network_condmlp_trainable_variables = deepcopy(current_model.network.cond_mlp.trainable_variables)
 
-            epoch0_ema_model_network_mlpmean_weights = self.ema_model.network.mlp_mean.get_weights()
-
-            if self.ema_model.network.cond_mlp:
-                epoch0_ema_model_network_condmlp_weights = self.ema_model.network.cond_mlp.get_weights()
-
-
-            epoch0_ema_model_network_timeemb_weights = self.ema_model.network.time_embedding.get_weights()
-
-            epoch0_ema_model_trainable_variables = self.ema_model.trainable_variables
-
-            epoch0_ema_model_network_trainable_variables = self.ema_model.network.trainable_variables
-
-            epoch0_ema_model_network_mlpmean_trainable_variables = self.ema_model.network.mlp_mean.trainable_variables
-
-            if self.ema_model.network.cond_mlp:
-                epoch0_ema_model_network_condmlp_trainable_variables = self.ema_model.network.cond_mlp.trainable_variables
-
-            epoch0_ema_model_network_timeemb_trainable_variables = self.ema_model.network.time_embedding.trainable_variables
+            epoch0_model_network_timeemb_trainable_variables = deepcopy(current_model.network.time_embedding.trainable_variables)
 
 
 
@@ -122,72 +97,190 @@ class EMA:
 
 
 
-        ma_weights.assign(updated_parameters)
 
 
+            epoch0_ema_model_weights = ma_model.get_weights()
+
+            epoch0_ema_model_network_weights = ma_model.network.get_weights()
+
+            epoch0_ema_model_network_mlpmean_weights = ma_model.network.mlp_mean.get_weights()
+
+            if ma_model.network.cond_mlp:
+                epoch0_ema_model_network_condmlp_weights = ma_model.network.cond_mlp.get_weights()
+
+
+            epoch0_ema_model_network_timeemb_weights = ma_model.network.time_embedding.get_weights()
+
+
+
+
+
+            epoch0_ema_model_trainable_variables = deepcopy( ma_model.trainable_variables )
+
+            epoch0_ema_model_network_trainable_variables = deepcopy( ma_model.network.trainable_variables )
+
+            epoch0_ema_model_network_mlpmean_trainable_variables = deepcopy( ma_model.network.mlp_mean.trainable_variables )
+
+            if ma_model.network.cond_mlp:
+                epoch0_ema_model_network_condmlp_trainable_variables = deepcopy( ma_model.network.cond_mlp.trainable_variables )
+
+            epoch0_ema_model_network_timeemb_trainable_variables = deepcopy( ma_model.network.time_embedding.trainable_variables )
+
+
+
+
+
+        # for ma_weights, current_weights in zip(ma_model.trainable_variables, current_model.trainable_variables):
+        #     updated_parameters = self.update_average(ma_weights, current_weights)
+
+        #     ma_weights.assign(updated_parameters)
+
+        # for ma_weights, current_weights in zip(ma_model.variables, current_model.variables):
+        #     updated_parameters = self.update_average(ma_weights, current_weights)
+
+        #     ma_weights.assign(updated_parameters)
+
+        for ma_weights, current_weights in zip(ma_model.trainable_variables, current_model.trainable_variables):
+            updated_parameters = self.update_average(ma_weights, current_weights)
+            ma_weights.assign(updated_parameters)
+
+
+        # for ma_weights, ma_trainable_variables in zip(ma_model.trainable_variables, ma_model.get_weights()):
+        #     print("type(ma_weights) = ", type(ma_weights))
+        #     print("type(ma_trainable_variables) = ", type(ma_trainable_variables))
+        #     diff = ma_weights - ma_trainable_variables
+        #     print("diff = ", diff)
+
+        # # ma_model.set_weights(ma_model.get_weights())  # 强制刷新 trainable_variables
+        # for i, var in enumerate(ma_model.trainable_variables):
+        #     print("type(ma_model.get_weights()[i]) = ", type(ma_model.get_weights()[i]))
+        #     print("type(var) = ", type(var))
+        #     print("ma_model.get_weights()[i].shape = ", ma_model.get_weights()[i].shape)
+        #     print("var.shape = ", var.shape)
+        #     # tf.keras.backend.set_value(var, ma_model.get_weights()[i] )  #
+        #     ma_model.trainable_variables[i].assign(ma_model.get_weights()[i])
 
         # ema_model * self.beta + (1 - self.beta) * model
 
         if DEBUG:
 
 
-            epoch_model_weights = self.model.get_weights()
+            epoch_model_weights = ma_model.get_weights()
 
             for i in range(len(epoch_model_weights)):
-                assert np.sum(epoch0_model_weights[i] * (1-self.beta) + epoch0_ema_model_weights[i] * self.beta - epoch_model_weights[i]) == 0, "np.sum(epoch0_model_weights[i] - epoch_model_weights[i]) != 0"
+                # print("epoch0_model_weights[i] = ", epoch0_model_weights[i])
+                part1_weights = epoch0_model_weights[i] * (1-self.beta) + epoch0_ema_model_weights[i] * self.beta
+                part2_weights = epoch_model_weights[i]
+                # print( " part1 - part2 = ", part1 - part2 )
+                assert np.allclose(part1_weights, part2_weights), "np.allclose(epoch0_model_weights[i] - epoch_model_weights[i]) != 0"
 
-            epoch_model_network_weights = self.model.network.get_weights()
+
+            epoch_model_trainable_variables = ma_model.trainable_variables
+            for i in range(len(epoch_model_trainable_variables)):
+                part1 = (epoch0_model_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_trainable_variables[i] * self.beta).numpy()
+                part2 = (epoch_model_trainable_variables[i]).numpy()
+                # print("type(part1_weights) = ", type(part1_weights))
+                # print("type(part1) = ", type(part1))
+
+                # print(" np.sum(part1_weights - part1) = ", np.sum(part1_weights - part1))
+                # print( "trainable_variables: part1 - part2 = ", part1 - part2 )
+                assert np.allclose(part1, part2, atol=1e-4), "np.allclose(epoch0_model_trainable_variables[i] - epoch_model_trainable_variables[i]) != 0"
+
+
+
+
+
+
+
+
+
+            epoch_model_network_weights = ma_model.network.get_weights()
 
             for i in range(len(epoch_model_network_weights)):
-                assert np.sum(epoch0_model_network_weights[i] * (1-self.beta) + epoch0_ema_model_network_weights[i] * self.beta - epoch_model_network_weights[i]) == 0, "np.sum(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) != 0"
+                part1_weights = epoch0_model_network_weights[i] * (1-self.beta) + epoch0_ema_model_network_weights[i] * self.beta
+                part2_weights = epoch_model_network_weights[i]
+                assert np.allclose(part1_weights, part2_weights ), "np.allclose(epoch0_model_network_weights[i] - epoch_model_network_weights[i]) != 0"
 
-            epoch_model_network_mlpmean_weights = self.model.network.mlp_mean.get_weights()
+            epoch_model_network_trainable_variables = ma_model.network.trainable_variables
+            for i in range(len(epoch_model_network_trainable_variables)):
+                part1 = (epoch0_model_network_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_trainable_variables[i] * self.beta).numpy()
+                part2 = (epoch_model_network_trainable_variables[i]).numpy()
+                # print(" np.sum(part1_weights - part1) = ", np.sum(part1_weights - part1))
+                # print( "trainable_variables: part1 - part2 = ", part1 - part2)
+                assert np.allclose(part1, part2 , atol=1e-4), "np.allclose(epoch0_model_network_trainable_variables[i] - epoch_model_network_trainable_variables[i]) != 0"
 
+
+
+
+
+
+
+            epoch_model_network_mlpmean_weights = ma_model.network.mlp_mean.get_weights()
 
             for i in range(len(epoch_model_network_mlpmean_weights)):
-                assert np.sum(epoch0_model_network_mlpmean_weights[i] * (1-self.beta) + epoch0_ema_model_network_mlpmean_weights[i] * self.beta - epoch_model_network_mlpmean_weights[i]) == 0, "np.sum(epoch0_model_network_mlpmean_weights[i] - epoch_model_network_mlpmean_weights[i]) != 0"
+                part1_weights = epoch0_model_network_mlpmean_weights[i] * (1-self.beta) + epoch0_ema_model_network_mlpmean_weights[i] * self.beta
+                part2_weights = epoch_model_network_mlpmean_weights[i]
+                assert np.allclose(part1_weights, part2_weights ), "np.allclose(epoch0_model_network_mlpmean_weights[i] - epoch_model_network_mlpmean_weights[i]) != 0"
+
+
+            epoch_model_network_mlpmean_trainable_variables = ma_model.network.mlp_mean.trainable_variables
+            for i in range(len(epoch_model_network_mlpmean_trainable_variables)):
+                part1 = (epoch0_model_network_mlpmean_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_mlpmean_trainable_variables[i] * self.beta).numpy()
+                part2 = (epoch_model_network_mlpmean_trainable_variables[i]).numpy()
+                # print(" np.sum(part1_weights - part1) = ", np.sum(part1_weights - part1))
+                # print( "trainable_variables: part1 - part2 = ", part1 - part2 )
+                assert np.allclose(part1, part2 , atol=1e-4), "np.allclose(epoch0_model_network_mlpmean_trainable_variables[i] - epoch_model_network_mlpmean_trainable_variables[i]) != 0"
 
 
 
-            if self.model.network.cond_mlp:
 
-                epoch_model_network_condmlp_weights = self.model.network.cond_mlp.get_weights()
+
+
+
+
+            if ma_model.network.cond_mlp:
+
+                epoch_model_network_condmlp_weights = ma_model.network.cond_mlp.get_weights()
 
                 for i in range(len(epoch_model_network_condmlp_weights)):
-                    assert np.sum(epoch0_model_network_condmlp_weights[i] * (1-self.beta) + epoch0_ema_model_network_condmlp_weights[i] * self.beta - epoch_model_network_condmlp_weights[i]) == 0, "np.sum(epoch0_model_network_condmlp_weights[i] - epoch_model_network_condmlp_weights[i]) != 0"
+                    part1_weights = epoch0_model_network_condmlp_weights[i] * (1-self.beta) + epoch0_ema_model_network_condmlp_weights[i] * self.beta
+                    part2_weights = epoch_model_network_condmlp_weights[i]
+                    assert np.allclose(part1_weights, part2_weights), "np.allclose(epoch0_model_network_condmlp_weights[i] - epoch_model_network_condmlp_weights[i]) != 0"
 
-            epoch_model_network_timeemb_weights = self.model.network.time_embedding.get_weights()
+            if ma_model.network.cond_mlp:
+
+                epoch_model_network_condmlp_trainable_variables = ma_model.network.cond_mlp.trainable_variables
+                for i in range(len(epoch_model_network_condmlp_trainable_variables)):
+                    part1 = (epoch0_model_network_condmlp_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_condmlp_trainable_variables[i] * self.beta).numpy()
+                    part2 = (epoch_model_network_condmlp_trainable_variables[i]).numpy()
+                    # print(" np.sum(part1_weights - part1) = ", np.sum(part1_weights - part1))
+                    # print( "trainable_variables: part1 - part2 = ", part1 - part2 )
+                    assert np.allclose(part1, part2 , atol=1e-4), "np.allclose(epoch0_model_network_condmlp_trainable_variables[i] - epoch_model_network_condmlp_trainable_variables[i]) != 0"
+
+
+
+
+
+            epoch_model_network_timeemb_weights = ma_model.network.time_embedding.get_weights()
 
             for i in range(len(epoch_model_network_timeemb_weights)):
-                assert np.sum(epoch0_model_network_timeemb_weights[i] * (1-self.beta) + epoch0_ema_model_network_timeemb_weights[i] * self.beta - epoch_model_network_timeemb_weights[i]) == 0, "np.sum(epoch0_model_network_timeemb_weights[i] - epoch_model_network_timeemb_weights[i]) != 0"
+                part1_weights = epoch0_model_network_timeemb_weights[i] * (1-self.beta) + epoch0_ema_model_network_timeemb_weights[i] * self.beta
+                part2_weights = epoch_model_network_timeemb_weights[i]
+                assert np.allclose(part1_weights, part2_weights ), "np.allclose(epoch0_model_network_timeemb_weights[i] - epoch_model_network_timeemb_weights[i]) != 0"
 
 
-
-            epoch_model_trainable_variables = self.model.trainable_variables
-            for i in range(len(epoch_model_trainable_variables)):
-                assert np.sum(epoch0_model_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_trainable_variables[i] * self.beta - epoch_model_trainable_variables[i]) == 0, "np.sum(epoch0_model_trainable_variables[i] - epoch_model_trainable_variables[i]) != 0"
-
-            epoch_model_network_trainable_variables = self.model.network.trainable_variables
-            for i in range(len(epoch_model_network_trainable_variables)):
-                assert np.sum(epoch0_model_network_weights[i] * (1-self.beta) + epoch0_ema_model_network_weights[i] * self.beta - epoch_model_network_weights[i]) == 0, "np.sum(epoch0_model_network_trainable_variables[i] - epoch_model_network_trainable_variables[i]) != 0"
-
-            epoch_model_network_mlpmean_trainable_variables = self.model.network.mlp_mean.trainable_variables
-            for i in range(len(epoch_model_network_mlpmean_trainable_variables)):
-                assert np.sum(epoch0_model_network_mlpmean_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_mlpmean_trainable_variables[i] * self.beta - epoch_model_network_mlpmean_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_mlpmean_trainable_variables[i] - epoch_model_network_mlpmean_trainable_variables[i]) != 0"
-
-
-
-
-            if self.model.network.cond_mlp:
-
-                epoch_model_network_condmlp_trainable_variables = self.model.network.cond_mlp.trainable_variables
-                for i in range(len(epoch_model_network_condmlp_trainable_variables)):
-                    assert np.sum(epoch0_model_network_condmlp_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_condmlp_trainable_variables[i] * self.beta - epoch_model_network_condmlp_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_condmlp_trainable_variables[i] - epoch_model_network_condmlp_trainable_variables[i]) != 0"
-
-
-            epoch_model_network_timeemb_trainable_variables = self.model.network.time_embedding.trainable_variables
+            epoch_model_network_timeemb_trainable_variables = ma_model.network.time_embedding.trainable_variables
             for i in range(len(epoch_model_network_timeemb_trainable_variables)):
-                assert np.sum(epoch0_model_network_timeemb_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_timeemb_trainable_variables[i] * self.beta - epoch_model_network_timeemb_trainable_variables[i]) == 0, "np.sum(epoch0_model_network_timeemb_trainable_variables[i] - epoch_model_network_timeemb_trainable_variables[i]) != 0"
+                part1 = (epoch0_model_network_timeemb_trainable_variables[i] * (1-self.beta) + epoch0_ema_model_network_timeemb_trainable_variables[i] * self.beta).numpy()
+                part2 = (epoch_model_network_timeemb_trainable_variables[i]).numpy()
+                # print(" np.sum(part1_weights - part1) = ", np.sum(part1_weights - part1))
+                # print( "trainable_variables: part1 - part2 = ", part1 - part2)
+                assert np.allclose(part1, part2 , atol=1e-4), "np.allclose(epoch0_model_network_timeemb_trainable_variables[i] - epoch_model_network_timeemb_trainable_variables[i]) != 0"
+
+
+
+
+
 
 
 
@@ -302,7 +395,19 @@ class PreTrainAgent:
 
         # Build dataset
         self.dataset_train = hydra.utils.instantiate(cfg.train_dataset)
-        
+
+        print("type(self.dataset_train) = ", self.dataset_train)
+
+
+        self.dataloader_train = torch_utils_data_DataLoader(
+            self.dataset_train,
+            batch_size=self.batch_size,
+            num_workers=4 if self.dataset_train.device == "cpu" else 0,
+            shuffle=True,
+            pin_memory=True if self.dataset_train.device == "cpu" else False,
+        )
+
+
         print("after instantiate_dataset()")
 
         print("type(self.dataset_train) = ", type(self.dataset_train))
@@ -422,7 +527,7 @@ class PreTrainAgent:
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # 自定义的 MLP 层
             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
@@ -635,7 +740,7 @@ class PreTrainAgent:
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # 自定义的 MLP 层
             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
@@ -661,7 +766,7 @@ class PreTrainAgent:
         # self.model = self.model2
 
 
-        self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+        # self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
         # self.model.network.cond_mlp = tf.keras.models.load_model(loadpath.replace(".keras", "_network_condmlp.keras") ,  custom_objects=get_custom_objects() )
         # self.model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_network_mlpmean.keras") ,  custom_objects=get_custom_objects() )
@@ -680,7 +785,7 @@ class PreTrainAgent:
 
         # self.ema_model = self.ema_model2
 
-        self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras") ,  custom_objects=get_custom_objects() )
+        # self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras") ,  custom_objects=get_custom_objects() )
 
         # self.ema_model.network.cond_mlp = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network_condmlp.keras") ,  custom_objects=get_custom_objects() )
         # self.ema_model.network.mlp_mean = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network_mlpmean.keras") ,  custom_objects=get_custom_objects() )
@@ -829,7 +934,7 @@ class PreTrainAgent:
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # 自定义的 MLP 层
             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
@@ -852,7 +957,7 @@ class PreTrainAgent:
 
         self.model = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
-        self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+        # self.model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
 
 
 
@@ -860,7 +965,7 @@ class PreTrainAgent:
 
         self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"),  custom_objects=get_custom_objects() )
 
-        self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras") ,  custom_objects=get_custom_objects() )
+        # self.ema_model.network = tf.keras.models.load_model(loadpath.replace(".keras", "_ema_network.keras") ,  custom_objects=get_custom_objects() )
 
 
 

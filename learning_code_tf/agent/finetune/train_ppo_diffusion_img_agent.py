@@ -518,16 +518,16 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} \
-                        | bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | eta {eta:8.4f} | t:{time:8.4f} \
-                        | diffusion_min_sampling_std {diffusion_min_sampling_std:8.4f}\
-                        | num episode - train {num_episode_finished:8.4f}\
-                        | explained variance: {explained_var:8.4f}\
-                        | approx kl: {approx_kl:8.4f},\
-                        | ratio: {ratio:8.4f},\
-                        | clipfrac: {np.mean(clipfracs):8.4f},\
-                        | actor lr {self.actor_optimizer.param_groups[0]["lr"]:8.4f}, \
-                        | critic lr {self.critic_optimizer.param_groups[0]["lr"]:8.4f} "
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} "
+                        f"| bc loss {bc_loss:8.4f} | reward {avg_episode_reward:8.4f} | eta {eta:8.4f} | t:{time:8.4f} "
+                        f"| diffusion_min_sampling_std {diffusion_min_sampling_std:8.4f}"
+                        f"| num episode - train {num_episode_finished:8.4f}"
+                        f"| explained variance: {explained_var:8.4f}"
+                        f"| approx kl: {approx_kl:8.4f},"
+                        f"| ratio: {ratio:8.4f},"
+                        f"| clipfrac: {np.mean(clipfracs):8.4f},"
+                        # | actor lr {self.actor_optimizer.param_groups[0]["lr"]:8.4f}, \
+                        # | critic lr {self.critic_optimizer.param_groups[0]["lr"]:8.4f} "
                     )
                     # if self.use_wandb:
                     #     wandb.log(

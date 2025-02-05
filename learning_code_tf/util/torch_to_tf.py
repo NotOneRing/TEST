@@ -2092,7 +2092,7 @@ class nn_Sequential(tf.keras.layers.Layer):
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # 自定义的 MLP 层
             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
             'nn_Identity': nn_Identity,
@@ -2256,7 +2256,7 @@ class nn_ModuleList(tf.keras.layers.Layer):
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # 自定义的 MLP 层
             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
@@ -3607,17 +3607,165 @@ def torch_tensor_requires_grad_(tensor, requires_grad=True):
 
 
 
-def torch_utils_data_DataLoader(dataset, batch_size=1, shuffle=False, sampler=None,
-           batch_sampler=None, num_workers=0, collate_fn=None,
-           pin_memory=False, drop_last=False, timeout=0,
-           worker_init_fn=None, *, prefetch_factor=2,
-           persistent_workers=False):
-    # torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, sampler=None,
-    #    batch_sampler=None, num_workers=0, collate_fn=None,
-    #    pin_memory=False, drop_last=False, timeout=0,
-    #    worker_init_fn=None, *, prefetch_factor=2,
-    #    persistent_workers=False)
-    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# class torch_utils_data_DataLoader:
+#     # dataset,          # 数据集
+#     # batch_size=32,    # 批量大小
+#     # shuffle=True,     # 训练时打乱数据
+#     # num_workers=4,    # 4 个子进程加载
+#     # pin_memory=True,  # GPU 训练时开启
+#     # drop_last=False,  # 保留最后不完整批次
+#     # prefetch_factor=2 # 每个 worker 预加载 2 个批次
+#     def __init__(self,
+#         dataset, 
+#         batch_size=1, 
+#         shuffle=False, 
+#         # sampler=None,
+#         # batch_sampler=None, 
+#         num_workers=0, 
+#         # collate_fn=None,
+#         pin_memory=False, 
+#         drop_last=False, 
+#         # timeout=0,
+#         # worker_init_fn=None, *, 
+#         prefetch_factor=2,
+#         # persistent_workers=False
+#         ):
+#         # torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, sampler=None,
+#         #    batch_sampler=None, num_workers=0, collate_fn=None,
+#         #    pin_memory=False, drop_last=False, timeout=0,
+#         #    worker_init_fn=None, *, prefetch_factor=2,
+#         #    persistent_workers=False)
+#         self.batch_size = batch_size
+#         self.shuffle = shuffle
+#         self.drop_last = drop_last
+#         self.prefetch_factor = prefetch_factor
+
+    
+#     def 
+
+    
+#     pass
+
+class torch_utils_data_DataLoader:
+    def __init__(self, dataset, batch_size=1, shuffle=False, 
+            num_workers=0, pin_memory=False, drop_last=False, prefetch_factor=2):
+        """
+        PyTorch 风格的 DataLoader 实现，支持 TensorFlow 兼容的数据加载方式
+        :param dataset: 数据集，必须是 list[dict] 或者实现了 __getitem__ 和 __len__
+        :param batch_size: 每个批次的大小
+        :param shuffle: 是否打乱数据
+        :param drop_last: 是否丢弃最后一个不完整批次
+        :param n_epochs: 训练的总轮数
+        :param seed: 随机种子
+        """
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.drop_last = drop_last
+        # self.n_epochs = n_epochs
+        # self.seed = seed
+        self.data_size = len(dataset)
+
+
+    def __iter__(self):
+        """
+        迭代器方法，允许 `for batch in dataloader` 这样的方式遍历数据
+        """
+        # self.seed
+        rng = np.random.default_rng()  # 保持可复现性
+        indices = list(range(self.data_size))
+
+        # for epoch in range(self.n_epochs):
+        if self.shuffle:
+            rng.shuffle(indices)  # 打乱索引顺序
+        
+        batch_data = {
+            "actions": [],
+            "states": [],
+            "rewards": [],
+            "next_states": [],
+            "rgb": [],
+        }
+        batch_count = 0
+
+        for i in indices:
+            sample = self.dataset[i]  # 取样本
+            batch_data["actions"].append(sample.get("actions", None))
+            batch_data["states"].append(sample.get("states", None))
+            batch_data["rewards"].append(sample.get("rewards", None))
+            batch_data["next_states"].append(sample.get("next_states", None))
+            batch_data["rgb"].append(sample.get("rgb", None))
+
+            batch_count += 1
+
+            if batch_count == self.batch_size:  # 满足 batch_size 时 yield
+                return_dict = {}
+                for key, value in batch_data.items():
+                    # print("key = ", key)
+                    # print("value = ", value) 
+                    # print("value[0] = ", value[0])                   
+                    if value[0] is not None:
+                        return_dict[key] = tf.convert_to_tensor(value)
+                        # print("return_dict[key].shape = ", return_dict[key].shape)
+                    else:
+                        return_dict[key] = None
+                yield return_dict
+                batch_data = {key: [] for key in batch_data}  # 重新初始化
+                batch_count = 0
+
+        if not self.drop_last and batch_count > 0:
+            # 处理最后一个 batch（如果 drop_last=False）
+            # yield {key: tf.convert_to_tensor(value) for key, value in batch_data.items()}
+                return_dict = {}
+                for key, value in batch_data.items():
+                    # print("key = ", key)
+                    # print("value = ", value)
+                    if value[0] is not None:   
+                        return_dict[key] = tf.convert_to_tensor(value)
+                    else:
+                        return_dict[key] = None
+                yield return_dict
+
+
+    def __len__(self):
+        """
+        计算总批次数量
+        """
+        if self.drop_last:
+            return self.data_size // self.batch_size
+        return (self.data_size + self.batch_size - 1) // self.batch_size  # 向上取整
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -56,7 +56,7 @@ class VPG_GMM(GMMModel):
         log_prob = dist.log_prob( torch_tensor_view(actions, [B, -1]) )
         return log_prob, entropy, std
 
-    def loss(self, obs, chains, reward):
+    def loss_ori(self, obs, chains, reward):
 
         print("gmm_vpg.py: VPG_GMM.loss()")
 

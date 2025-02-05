@@ -95,7 +95,7 @@ class VPG_Gaussian(GaussianModel):
 
         return log_prob, entropy, std
 
-    def loss(self, obs, actions, reward):
+    def loss_ori(self, obs, actions, reward):
 
         print("gaussian_vpg.py: VPG_Gaussian.loss()")
 

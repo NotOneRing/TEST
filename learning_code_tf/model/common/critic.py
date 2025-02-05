@@ -181,7 +181,7 @@ class CriticObsAct(tf.keras.Model):
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # 自定义的 MLP 层
             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类

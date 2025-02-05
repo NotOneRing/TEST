@@ -5,6 +5,8 @@ MLP models for GMM policy.
 
 import tensorflow as tf
 
+import numpy as np
+
 from model.common.mlp import MLP, ResidualMLP
 
 from util.torch_to_tf import nn_Parameter, torch_log, torch_tensor, torch_tanh, torch_tensor_view, torch_exp, torch_clamp, torch_tensor_repeat, torch_ones_like
@@ -82,10 +84,10 @@ class GMM_MLP(tf.keras.Model):
         #     tf.math.log(std_max**2), dtype=tf.float32, name="logvar_max"
         # )
         self.logvar_min = nn_Parameter(
-            torch_log(torch_tensor(std_min**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
         )
         self.logvar_max = nn_Parameter(
-            torch_log(torch_tensor(std_max**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
         )
 
 

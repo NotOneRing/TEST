@@ -335,7 +335,9 @@ class DiffusionModel(tf.keras.Model):
             from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
             from model.diffusion.modules import SinusoidalPosEmb
             from model.common.modules import SpatialEmb, RandomShiftsAug
-            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity, nn_Conv1d
+
+            from model.diffusion.unet import Downsample1d, ResidualBlock1D, Conv1dBlock, Unet1D
 
             from tensorflow.keras.utils import get_custom_objects
 
@@ -343,7 +345,7 @@ class DiffusionModel(tf.keras.Model):
                 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
                 'DiffusionMLP': DiffusionMLP,
                 # 'VPGDiffusion': VPGDiffusion,
-                'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+                'SinusoidalPosEmb': SinusoidalPosEmb,   
                 'MLP': MLP,                            # 自定义的 MLP 层
                 'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
                 'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
@@ -356,11 +358,17 @@ class DiffusionModel(tf.keras.Model):
                 'SpatialEmb': SpatialEmb,
                 'RandomShiftsAug': RandomShiftsAug,
                 "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+                'Downsample1d': Downsample1d,
+                'ResidualBlock1D':ResidualBlock1D,
+                'Conv1dBlock': Conv1dBlock,
+                'nn_Conv1d': nn_Conv1d,
+                'Unet1D': Unet1D,
             }
             # Register your custom class with Keras
             get_custom_objects().update(cur_dict)
 
 
+            # loadpath =  /ssddata/qtguo/GENERAL_DATA/weights_tensorflow/robomimic-pretrain/transport/transport_pre_diffusion_unet_ta16_td20/2024-07-04_02-20-53/checkpoint/state_8000.pt
 
             # self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
@@ -500,6 +508,184 @@ class DiffusionModel(tf.keras.Model):
 
                 # # _ = self.loss_ori(param1, build_dict)
                 # _ = DiffusionModel.loss_ori(self, training=False, x_start = param1, cond=build_dict)
+
+
+
+    def get_config(self):
+        config = super(DiffusionModel, self).get_config()
+
+        # config = {}
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("get_config: diffusion.py: DiffusionModel.get_config()")
+
+        if OUTPUT_VARIABLES:
+            # Debugging each attribute to make sure they are initialized correctly
+            print(f"ddim_discretize: {self.ddim_discretize}")
+            print(f"device: {self.device}")
+            print(f"horizon_steps: {self.horizon_steps}")
+            print(f"obs_dim: {self.obs_dim}")
+            print(f"action_dim: {self.action_dim}")
+            print(f"denoising_steps: {self.denoising_steps}")
+            print(f"predict_epsilon: {self.predict_epsilon}")
+            print(f"use_ddim: {self.use_ddim}")
+            print(f"ddim_steps: {self.ddim_steps}")
+            print(f"denoised_clip_value: {self.denoised_clip_value}")
+            print(f"final_action_clip_value: {self.final_action_clip_value}")
+            print(f"randn_clip_value: {self.randn_clip_value}")
+            print(f"eps_clip_value: {self.eps_clip_value}")
+            print(f"network: {self.network}")
+            print(f"network_path: {self.network_path}")
+
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.unet import Unet1D
+
+        if isinstance( self.network, (DiffusionMLP, Unet1D) ):
+            network_repr = self.network.get_config()
+            if OUTPUT_VARIABLES:
+                print("network_repr = ", network_repr)
+        else:
+            if OUTPUT_VARIABLES:
+                print("type(self.network) = ", type(self.network))
+            raise RuntimeError("not recognozed type of self.network")
+
+        config.update({
+            "network": network_repr,
+            "horizon_steps": self.horizon_steps,
+            "obs_dim": self.obs_dim,
+            "action_dim": self.action_dim,
+            "network_path": self.network_path,
+            "device": self.device,
+            "denoised_clip_value": self.denoised_clip_value,
+            "randn_clip_value": self.randn_clip_value,
+            "final_action_clip_value": self.final_action_clip_value,
+            "eps_clip_value": self.eps_clip_value,
+            "denoising_steps": self.denoising_steps,
+            "predict_epsilon": self.predict_epsilon,
+            "use_ddim": self.use_ddim,
+            "ddim_discretize": self.ddim_discretize,
+            "ddim_steps": self.ddim_steps,
+
+        })
+
+
+
+        if hasattr(self, "env_name"):
+            print("get_config(): self.env_name = ", self.env_name)
+            config.update({
+            "env_name": self.env_name,
+            })
+        else:
+            print("get_config(): self.env_name = ", None)
+        
+
+        # if DEBUG:
+        #     if OUTPUT_POSITIONS:
+        #         print("DiffusionModel: get_config DEBUG = True")
+        #     config.update({
+        #     "loss_ori_t": self.loss_ori_t,
+        #     "p_losses_noise": self.p_losses_noise,
+        #     "call_noise": self.call_noise,
+        #     "call_noise": self.call_noise,
+        #     "call_x": self.call_x,
+        #     "q_sample_noise": self.q_sample_noise,
+        #     })
+        
+
+        if OUTPUT_VARIABLES:
+            print("DiffusionModel.config = ", config)
+        
+        return config
+
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        # from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, \
+            nn_Dropout, nn_ReLU, nn_Mish, nn_Identity, nn_Conv1d, nn_ConvTranspose1d
+
+        from model.diffusion.unet import Unet1D, ResidualBlock1D
+
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            # 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            "nn_Identity": nn_Identity,
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+            "Unet1D": Unet1D,
+            "ResidualBlock1D": ResidualBlock1D,
+            "nn_Conv1d": nn_Conv1d,
+            "nn_ConvTranspose1d": nn_ConvTranspose1d
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        # print('get_custom_objects() = ', get_custom_objects())
+
+        network = config.pop("network")
+
+        if OUTPUT_VARIABLES:
+            print("DiffusionModel from_config(): network = ", network)
+
+        name = network["name"]
+    
+        # if OUTPUT_VARIABLES:
+        print("name = ", name)
+
+        # if name == "diffusion_mlp":
+        #     name = "DiffusionMLP"
+        if name.startswith("diffusion_mlp"):
+            name = "DiffusionMLP"
+            network = DiffusionMLP.from_config(network)
+        elif name.startswith("unet1d"):
+            network = Unet1D.from_config(network)
+        else:
+            raise RuntimeError("name not recognized")
+
+
+        # if name in cur_dict:
+        #     cur_dict[name].from_config(network)
+        # else:
+        #     raise RuntimeError("name not recognized")
+
+
+        result = cls(
+            # 
+            network=network, 
+            **config)
+
+
+
+        env_name = config.pop("env_name")
+        if env_name:
+            if OUTPUT_POSITIONS:
+                print("Enter env_name")
+            result.env_name = env_name
+        else:
+            result.env_name = None
+
+        return result
 
 
 
@@ -2233,237 +2419,6 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-    def load_pickle_gaussian_mlp(self, network_path):
-        pkl_file_path = network_path.replace('.pt', '_ema.pkl')
-
-        print("pkl_file_path = ", pkl_file_path)
-
-        import pickle
-        # load pickle file
-        with open(pkl_file_path, 'rb') as file:
-            params_dict = pickle.load(file)
-
-
-
-        # 打印加载的内容
-
-        if OUTPUT_VARIABLES:
-            print("params_dict = ", params_dict)
-
-
-        # # Square
-        # 'network.logvar_min'
-        # 'network.logvar_max'
-        # 'network.mlp_mean.layers.0.weight'
-        # 'network.mlp_mean.layers.0.bias'
-        # 'network.mlp_mean.layers.1.l1.weight'
-        # 'network.mlp_mean.layers.1.l1.bias'
-        # 'network.mlp_mean.layers.1.l2.weight'
-        # 'network.mlp_mean.layers.1.l2.bias'
-        # 'network.mlp_mean.layers.2.weight'
-        # 'network.mlp_mean.layers.2.bias'
-
-
-        self.logvar_min = nn_Parameter(
-            torch_tensor(params_dict['network.logvar_min']), requires_grad=False
-        )
-
-        self.logvar_max = nn_Parameter(
-            torch_tensor(params_dict['network.logvar_max']), requires_grad=False
-        )
-
-        if 'network.mlp_mean.layers.0.weight' in params_dict:
-            self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
-        if 'network.mlp_mean.layers.0.bias' in params_dict:
-            self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
-
-        if 'network.mlp_mean.layers.1.l1.weight' in params_dict:
-            self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
-        if 'network.mlp_mean.layers.1.l1.bias' in params_dict:
-            self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
-
-        if 'network.mlp_mean.layers.1.l2.weight' in params_dict:
-            self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
-        if 'network.mlp_mean.layers.1.l2.bias' in params_dict:
-            self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
-
-        if 'network.mlp_mean.layers.2.weight' in params_dict:
-            self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
-        if 'network.mlp_mean.layers.2.bias' in params_dict:
-            self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
-
-
-
-
-
-
-    def load_pickle_gaussian_mlp_img(self, network_path):
-        pkl_file_path = network_path.replace('.pt', '_ema.pkl')
-
-        print("pkl_file_path = ", pkl_file_path)
-
-        import pickle
-        # load pickle file
-        with open(pkl_file_path, 'rb') as file:
-            params_dict = pickle.load(file)
-
-
-
-        # 打印加载的内容
-
-        if OUTPUT_VARIABLES:
-            print("params_dict = ", params_dict)
-
-        # 'network.logvar_min'
-        # 'network.logvar_max'
-        # 'network.backbone.vit.pos_embed'
-        # 'network.backbone.vit.patch_embed.embed.0.weight'
-        # 'network.backbone.vit.patch_embed.embed.0.bias'
-        # 'network.backbone.vit.patch_embed.embed.3.weight'
-        # 'network.backbone.vit.patch_embed.embed.3.bias'
-        # 'network.backbone.vit.net.0.layer_norm1.weight'
-        # 'network.backbone.vit.net.0.layer_norm1.bias'
-        # 'network.backbone.vit.net.0.mha.qkv_proj.weight'
-        # 'network.backbone.vit.net.0.mha.qkv_proj.bias'
-        # 'network.backbone.vit.net.0.mha.out_proj.weight'
-        # 'network.backbone.vit.net.0.mha.out_proj.bias'
-        # 'network.backbone.vit.net.0.layer_norm2.weight'
-        # 'network.backbone.vit.net.0.layer_norm2.bias'
-        # 'network.backbone.vit.net.0.linear1.weight'
-        # 'network.backbone.vit.net.0.linear1.bias'
-        # 'network.backbone.vit.net.0.linear2.weight'
-        # 'network.backbone.vit.net.0.linear2.bias'
-        # 'network.backbone.vit.norm.weight'
-        # 'network.backbone.vit.norm.bias'
-        # 'network.compress.weight'
-        # 'network.compress.input_proj.0.weight'
-        # 'network.compress.input_proj.0.bias'
-        # 'network.compress.input_proj.1.weight'
-        # 'network.compress.input_proj.1.bias'
-        # 'network.mlp_mean.layers.0.weight'
-        # 'network.mlp_mean.layers.0.bias'
-        # 'network.mlp_mean.layers.1.l1.weight'
-        # 'network.mlp_mean.layers.1.l1.bias'
-        # 'network.mlp_mean.layers.1.l2.weight'
-        # 'network.mlp_mean.layers.1.l2.bias'
-        # 'network.mlp_mean.layers.2.weight'
-        # 'network.mlp_mean.layers.2.bias'
-
-
-
-        self.logvar_min = nn_Parameter(
-            torch_tensor(params_dict['network.logvar_min']), requires_grad=False
-        )
-
-        self.logvar_max = nn_Parameter(
-            torch_tensor(params_dict['network.logvar_max']), requires_grad=False
-        )
-
-
-        if 'network.backbone.vit.pos_embed' in params_dict:
-            self.network.backbone.vit.pos_embed = nn_Parameter( torch_tensor(params_dict['network.backbone.vit.pos_embed']) )
-            
-        if 'network.backbone.vit.patch_embed.embed.0.weight' in params_dict:
-            self.network.backbone.vit.patch_embed.embed[0].trainable_weights[0].assign(params_dict['network.backbone.vit.patch_embed.embed.0.weight'].T)  # kernel
-        if 'network.backbone.vit.patch_embed.embed.0.bias' in params_dict:
-            self.network.backbone.vit.patch_embed.embed[0].trainable_weights[1].assign(params_dict['network.backbone.vit.patch_embed.embed.0.bias'])  # bias
-
-        if 'network.backbone.vit.patch_embed.embed.3.weight' in params_dict:
-            self.network.backbone.vit.patch_embed.embed[3].trainable_weights[0].assign(params_dict['network.backbone.vit.patch_embed.embed.3.weight'].T)  # kernel
-        if 'network.backbone.vit.patch_embed.embed.3.bias' in params_dict:
-            self.network.backbone.vit.patch_embed.embed[3].trainable_weights[1].assign(params_dict['network.backbone.vit.patch_embed.embed.3.bias'])  # bias
-
-
-
-
-        if 'network.backbone.vit.net.0.layer_norm1.weight' in params_dict:
-            self.network.backbone.vit.net[0].layer_norm1.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.layer_norm1.weight'].T)  # kernel
-        if 'network.backbone.vit.net.0.layer_norm1.bias' in params_dict:
-            self.network.backbone.vit.net[0].layer_norm1.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.layer_norm1.bias'])  # bias
-
-        if 'network.backbone.vit.net.0.mha.qkv_proj.weight' in params_dict:
-            self.network.backbone.vit.net[0].mha.qkv_proj.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.mha.qkv_proj.weight'].T)  # kernel
-        if 'network.backbone.vit.net.0.mha.qkv_proj.bias' in params_dict:
-            self.network.backbone.vit.net[0].mha.qkv_proj.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.mha.qkv_proj.bias'])  # bias
-
-
-        if 'network.backbone.vit.net.0.mha.out_proj.weight' in params_dict:
-            self.network.backbone.vit.net[0].mha.out_proj.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.mha.out_proj.weight'].T)  # kernel
-        if 'network.backbone.vit.net.0.mha.out_proj.bias' in params_dict:
-            self.network.backbone.vit.net[0].mha.out_proj.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.mha.out_proj.bias'])  # bias
-
-        if 'network.backbone.vit.net.0.layer_norm2.weight' in params_dict:
-            self.network.backbone.vit.net[0].layer_norm2.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.layer_norm2.weight'].T)  # kernel
-        if 'network.backbone.vit.net.0.layer_norm2.bias' in params_dict:
-            self.network.backbone.vit.net[0].layer_norm2.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.layer_norm2.bias'])  # bias
-
-
-        if 'network.backbone.vit.net.0.linear1.weight' in params_dict:
-            self.network.backbone.vit.net[0].linear1.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.linear1.weight'].T)  # kernel
-        if 'network.backbone.vit.net.0.linear1.bias' in params_dict:
-            self.network.backbone.vit.net[0].linear1.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.linear1.bias'])  # bias
-
-
-        if 'network.backbone.vit.net.0.linear2.weight' in params_dict:
-            self.network.backbone.vit.net[0].linear2.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.linear2.weight'].T)  # kernel
-        if 'network.backbone.vit.net.0.linear2.bias' in params_dict:
-            self.network.backbone.vit.net[0].linear2.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.linear2.bias'])  # bias
-
-
-        if 'network.backbone.vit.norm.weight' in params_dict:
-            self.network.backbone.vit.norm.trainable_weights[0].assign(params_dict['network.backbone.vit.norm.weight'].T)  # kernel
-        if 'network.backbone.vit.norm.bias' in params_dict:
-            self.network.backbone.vit.norm.trainable_weights[1].assign(params_dict['network.backbone.vit.norm.bias'])  # bias
-
-
-
-
-
-        print("self.network.compress = ", self.network.compress)
-        assert 0 == 1, "network.compress check"
-        # 'network.compress.weight'
-        if 'network.compress.weight' in params_dict:
-            self.network.compress.trainable_weights[0].assign(params_dict['network.compress.weight'])  # kernel
-
-        if 'network.compress.input_proj.0.weight' in params_dict:
-            self.network.compress.input_proj[0].trainable_weights[0].assign(params_dict['network.compress.input_proj.0.weight'].T)  # kernel
-        if 'network.compress.input_proj.0.bias' in params_dict:
-            self.network.compress.input_proj[0].trainable_weights[1].assign(params_dict['network.compress.input_proj.0.bias'])  # bias
-
-        if 'network.compress.input_proj.1.weight' in params_dict:
-            self.network.compress.input_proj[1].trainable_weights[0].assign(params_dict['network.compress.input_proj.1.weight'].T)  # kernel
-        if 'network.compress.input_proj.1.bias' in params_dict:
-            self.network.compress.input_proj[1].trainable_weights[1].assign(params_dict['network.compress.input_proj.1.bias'])  # bias
-
-
-
-        if 'network.mlp_mean.layers.0.weight' in params_dict:
-            self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
-        if 'network.mlp_mean.layers.0.bias' in params_dict:
-            self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
-
-        if 'network.mlp_mean.layers.1.l1.weight' in params_dict:
-            self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
-        if 'network.mlp_mean.layers.1.l1.bias' in params_dict:
-            self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
-
-        if 'network.mlp_mean.layers.1.l2.weight' in params_dict:
-            self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
-        if 'network.mlp_mean.layers.1.l2.bias' in params_dict:
-            self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
-
-        if 'network.mlp_mean.layers.2.weight' in params_dict:
-            self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
-        if 'network.mlp_mean.layers.2.bias' in params_dict:
-            self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
-
-
-
-
-
-
-
-
 
 
 
@@ -2643,9 +2598,9 @@ class DiffusionModel(tf.keras.Model):
 
         # t = tf.fill([batch_size], 3)  # 固定为 3
 
-        args_list = [*args]
+        # args_list = [*args]
 
-        print("args_list = ", args_list)
+        # print("args_list = ", args_list)
 
         
 
@@ -3488,176 +3443,6 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-    def get_config(self):
-        config = super(DiffusionModel, self).get_config()
-
-        # config = {}
-
-        if OUTPUT_FUNCTION_HEADER:
-            print("get_config: diffusion.py: DiffusionModel.get_config()")
-
-        if OUTPUT_VARIABLES:
-            # Debugging each attribute to make sure they are initialized correctly
-            print(f"ddim_discretize: {self.ddim_discretize}")
-            print(f"device: {self.device}")
-            print(f"horizon_steps: {self.horizon_steps}")
-            print(f"obs_dim: {self.obs_dim}")
-            print(f"action_dim: {self.action_dim}")
-            print(f"denoising_steps: {self.denoising_steps}")
-            print(f"predict_epsilon: {self.predict_epsilon}")
-            print(f"use_ddim: {self.use_ddim}")
-            print(f"ddim_steps: {self.ddim_steps}")
-            print(f"denoised_clip_value: {self.denoised_clip_value}")
-            print(f"final_action_clip_value: {self.final_action_clip_value}")
-            print(f"randn_clip_value: {self.randn_clip_value}")
-            print(f"eps_clip_value: {self.eps_clip_value}")
-            print(f"network: {self.network}")
-            print(f"network_path: {self.network_path}")
-
-
-        from model.diffusion.mlp_diffusion import DiffusionMLP
-        from model.diffusion.unet import Unet1D
-
-        if isinstance( self.network, (DiffusionMLP, Unet1D) ):
-            network_repr = self.network.get_config()
-            if OUTPUT_VARIABLES:
-                print("network_repr = ", network_repr)
-        else:
-            if OUTPUT_VARIABLES:
-                print("type(self.network) = ", type(self.network))
-            raise RuntimeError("not recognozed type of self.network")
-
-        config.update({
-            "network": network_repr,
-            "horizon_steps": self.horizon_steps,
-            "obs_dim": self.obs_dim,
-            "action_dim": self.action_dim,
-            "network_path": self.network_path,
-            "device": self.device,
-            "denoised_clip_value": self.denoised_clip_value,
-            "randn_clip_value": self.randn_clip_value,
-            "final_action_clip_value": self.final_action_clip_value,
-            "eps_clip_value": self.eps_clip_value,
-            "denoising_steps": self.denoising_steps,
-            "predict_epsilon": self.predict_epsilon,
-            "use_ddim": self.use_ddim,
-            "ddim_discretize": self.ddim_discretize,
-            "ddim_steps": self.ddim_steps,
-
-        })
-
-
-
-        if hasattr(self, "env_name"):
-            print("get_config(): self.env_name = ", self.env_name)
-            config.update({
-            "env_name": self.env_name,
-            })
-        else:
-            print("get_config(): self.env_name = ", None)
-        
-
-        # if DEBUG:
-        #     if OUTPUT_POSITIONS:
-        #         print("DiffusionModel: get_config DEBUG = True")
-        #     config.update({
-        #     "loss_ori_t": self.loss_ori_t,
-        #     "p_losses_noise": self.p_losses_noise,
-        #     "call_noise": self.call_noise,
-        #     "call_noise": self.call_noise,
-        #     "call_x": self.call_x,
-        #     "q_sample_noise": self.q_sample_noise,
-        #     })
-        
-
-        if OUTPUT_VARIABLES:
-            print("DiffusionModel.config = ", config)
-        
-        return config
-
-
-    @classmethod
-    def from_config(cls, config):
-        """Creates the layer from its config."""
-
-        from model.diffusion.mlp_diffusion import DiffusionMLP
-        # from model.diffusion.diffusion import DiffusionModel
-        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-        from model.diffusion.modules import SinusoidalPosEmb
-        from model.common.modules import SpatialEmb, RandomShiftsAug
-        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, \
-            nn_Dropout, nn_ReLU, nn_Mish, nn_Identity, nn_Conv1d, nn_ConvTranspose1d
-
-        from model.diffusion.unet import Unet1D, ResidualBlock1D
-
-
-        from tensorflow.keras.utils import get_custom_objects
-
-        cur_dict = {
-            # 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            'DiffusionMLP': DiffusionMLP,
-            # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-            "nn_Identity": nn_Identity,
-            'nn_Linear': nn_Linear,
-            'nn_LayerNorm': nn_LayerNorm,
-            'nn_Dropout': nn_Dropout,
-            'nn_ReLU': nn_ReLU,
-            'nn_Mish': nn_Mish,
-            'SpatialEmb': SpatialEmb,
-            'RandomShiftsAug': RandomShiftsAug,
-            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-            "Unet1D": Unet1D,
-            "ResidualBlock1D": ResidualBlock1D,
-            "nn_Conv1d": nn_Conv1d,
-            "nn_ConvTranspose1d": nn_ConvTranspose1d
-         }
-        # Register your custom class with Keras
-        get_custom_objects().update(cur_dict)
-
-        # print('get_custom_objects() = ', get_custom_objects())
-
-        network = config.pop("network")
-
-        if OUTPUT_VARIABLES:
-            print("DiffusionModel from_config(): network = ", network)
-
-        name = network["name"]
-    
-        # if OUTPUT_VARIABLES:
-        print("name = ", name)
-
-        # if name == "diffusion_mlp":
-        #     name = "DiffusionMLP"
-        if name.startswith("diffusion_mlp"):
-            name = "DiffusionMLP"
-            network = DiffusionMLP.from_config(network)
-        elif name.startswith("unet1d"):
-            network = Unet1D.from_config(network)
-        else:
-            raise RuntimeError("name not recognized")
-
-
-        # if name in cur_dict:
-        #     cur_dict[name].from_config(network)
-        # else:
-        #     raise RuntimeError("name not recognized")
-
-
-        result = cls(network=network, **config)
-
-
-
-        env_name = config.pop("env_name")
-        if env_name:
-            if OUTPUT_POSITIONS:
-                print("Enter env_name")
-            result.env_name = env_name
-        else:
-            result.env_name = None
 
 
         # if DEBUG:
@@ -3728,5 +3513,4 @@ class DiffusionModel(tf.keras.Model):
         #         result.q_sample_noise = None
 
         
-        return result
 

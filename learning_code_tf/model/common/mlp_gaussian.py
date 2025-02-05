@@ -112,16 +112,16 @@ class Gaussian_VisionMLP(tf.keras.Model):
             )
         elif learn_fixed_std:  # initialize to fixed_std
             self.logvar = nn_Parameter(
-                torch_log(torch_tensor([fixed_std**2 for _ in range(action_dim)])),
+                torch_log(torch_tensor( np.array([fixed_std**2 for _ in range(action_dim)]) )),
                 requires_grad=True,
             )
 
 
         self.logvar_min = nn_Parameter(
-            torch_log(torch_tensor(std_min**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
         )
         self.logvar_max = nn_Parameter(
-            torch_log(torch_tensor(std_max**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
         )
 
 
@@ -266,15 +266,15 @@ class Gaussian_MLP(tf.keras.Model):
             if learn_fixed_std:
                 # initialize to fixed_std
                 self.logvar = nn_Parameter(
-                    torch_log(torch_tensor([fixed_std**2 for _ in range(action_dim)])),
+                    torch_log(torch_tensor( np.array([fixed_std**2 for _ in range(action_dim)]) )),
                     requires_grad=True,
                 )
                         
         self.logvar_min = nn_Parameter(
-            torch_log(torch_tensor(std_min**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
         )
         self.logvar_max = nn_Parameter(
-            torch_log(torch_tensor(std_max**2)), requires_grad=False
+            torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
         )
 
         self.use_fixed_std = fixed_std is not None

@@ -24,7 +24,8 @@ from agent.finetune.train_ppo_agent import TrainPPOAgent
 
 
 from util.torch_to_tf import torch_no_grad, torch_from_numpy,\
-torch_tensor_float, torch_tensor_transpose, torch_split, torch_reshape, torch_tensor, torch_tensor_float,\
+torch_tensor_float, torch_tensor_transpose, torch_split, \
+torch_reshape, torch_tensor, torch_tensor_float,\
 torch_randperm, torch_nn_utils_clip_grad_norm_and_step
 
 
@@ -320,7 +321,7 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                                 ratio,
                                 bc_loss,
                                 std,
-                            ) = self.model.loss(
+                            ) = self.model.loss_ori(
                                 obs_b,
                                 samples_b,
                                 returns_b,
@@ -432,13 +433,13 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} \
-                        | pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} \
-                        | ent {-entropy_loss:8.4f} | reward {avg_episode_reward:8.4f} \
-                        | t:{time:8.4f} \ 
-                        | std:{std:8.4f} | approx kl:{approx_kl:8.4f} | ratio:{ratio:8.4f}\
-                        | clipfrac:{np.mean(clipfracs):8.4f} | explained variance:{explained_var:8.4f} \
-                        | num episode - train: {num_episode_finished:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} "
+                        f"| pg loss {pg_loss:8.4f} | value loss {v_loss:8.4f} "
+                        f"| ent {-entropy_loss:8.4f} | reward {avg_episode_reward:8.4f} "
+                        f"| t:{time:8.4f} "
+                        f"| std:{std:8.4f} | approx kl:{approx_kl:8.4f} | ratio:{ratio:8.4f} "
+                        f"| clipfrac:{np.mean(clipfracs):8.4f} | explained variance:{explained_var:8.4f} "
+                        f"| num episode - train: {num_episode_finished:8.4f}"
                     )
                     # if self.use_wandb:
                     #     wandb.log(

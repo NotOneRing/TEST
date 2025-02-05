@@ -46,7 +46,7 @@ class GMMModel(tf.keras.Model):
 
         self.horizon_steps = horizon_steps
 
-    def loss(
+    def loss_ori(
         self,
         true_action,
         cond,

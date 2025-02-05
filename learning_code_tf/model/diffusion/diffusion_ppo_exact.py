@@ -85,7 +85,7 @@ class PPOExactDiffusion(VPGDiffusion):
             cond=cond,
         )
 
-    def loss(
+    def loss_ori(
         self,
         obs,
         samples,

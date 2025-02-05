@@ -455,13 +455,13 @@ class TrainRLPDAgent(TrainAgent):
                     #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t:{time:8.4f}"
                     # )
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} \
-                        | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} \
-                        | entropy coeff: {alpha:8.4f} \
-                        | reward {avg_episode_reward:8.4f} \
-                        | num episode - train: {num_episode_finished:8.4f} \
-                        | t:{time:8.4f}"
-                    )       
+                        f"{self.itr}: step {cnt_train_step:8d} "
+                        f"| loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} "
+                        f"| entropy coeff: {alpha:8.4f} "
+                        f"| reward {avg_episode_reward:8.4f} "
+                        f"| num episode - train: {num_episode_finished:8.4f} "
+                        f"| t:{time:8.4f} "
+                    )
                     # if self.use_wandb:
                     #     wandb.log(
                     #         {

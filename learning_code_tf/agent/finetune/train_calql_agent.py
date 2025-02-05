@@ -535,8 +535,8 @@ class TrainCalQLAgent(TrainAgent):
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f}\
-                        | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t:{time:8.4f} | num episode - train: {num_episode_finished:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} "
+                        f"| reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t:{time:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
                     # if self.use_wandb:
                     #     wandb.log(

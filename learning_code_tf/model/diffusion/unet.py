@@ -199,7 +199,7 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         if OUTPUT_VARIABLES:
             print("Checking ResidualBlock1D Config elements:")
             print(f"in_channels: {self.in_channels}, type: {type(self.in_channels)}")
-            print(f"initial_out_channels: {self.initial_out_channels}, type: {type(self.initial_out_channels)}")
+            print(f"out_channels: {self.initial_out_channels}, type: {type(self.initial_out_channels)}")
             print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
             print(f"kernel_size: {self.kernel_size}, type: {type(self.kernel_size)}")
             
@@ -215,7 +215,7 @@ class ResidualBlock1D(tf.keras.layers.Layer):
 
         config.update({
             "in_channels" : self.in_channels,
-            "initial_out_channels" : self.out_channels,
+            "out_channels" : self.initial_out_channels,
             "cond_dim" : self.cond_dim,
             "kernel_size" : self.kernel_size,
             "n_groups" : self.n_groups,
@@ -262,7 +262,7 @@ class ResidualBlock1D(tf.keras.layers.Layer):
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # 自定义的 MLP 层
             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
@@ -316,6 +316,7 @@ class Unet1D(tf.keras.Model):
         activation_type="Mish",
         cond_predict_scale=False,
         groupnorm_eps=1e-5,
+        **kwargs
     ):
 
         dim_mults = list(dim_mults)
@@ -554,10 +555,10 @@ class Unet1D(tf.keras.Model):
         global_feature = torch_cat([global_feature, state], dim=-1)
 
 
-        # print("x = ", x)
-        # print("global_feature = ", global_feature)
-        print("x.shape = ", x.shape)
-        print("global_feature.shape = ", global_feature.shape)
+        # # print("x = ", x)
+        # # print("global_feature = ", global_feature)
+        # print("x.shape = ", x.shape)
+        # print("global_feature.shape = ", global_feature.shape)
 
 
         # encode local features
@@ -565,10 +566,10 @@ class Unet1D(tf.keras.Model):
         h = []
         for idx, (resnet, resnet2, downsample) in enumerate(self.down_modules):
             
-            print("idx = ", idx)
-            print("resnet = ", resnet)
-            print("resnet2 = ", resnet2)
-            print("downsample = ", downsample)
+            # print("idx = ", idx)
+            # print("resnet = ", resnet)
+            # print("resnet2 = ", resnet2)
+            # print("downsample = ", downsample)
 
             x = resnet(x, global_feature)
             if idx == 0 and len(h_local) > 0:
@@ -586,8 +587,8 @@ class Unet1D(tf.keras.Model):
 
             x = resnet(x, global_feature)
 
-            print("len(self.up_modules) = ", len(self.up_modules))
-            print("len(h_local) = ", len(h_local))
+            # print("len(self.up_modules) = ", len(self.up_modules))
+            # print("len(h_local) = ", len(h_local))
 
             if idx == len(self.up_modules) and len(h_local) > 0:
                 x = x + h_local[1]
@@ -685,7 +686,7 @@ class Unet1D(tf.keras.Model):
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,  # 假设 SinusoidalPosEmb 是你自定义的层
+            'SinusoidalPosEmb': SinusoidalPosEmb,  
             'MLP': MLP,                            # 自定义的 MLP 层
             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
