@@ -61,6 +61,12 @@ def seeding(seed: Optional[int] = None) -> Tuple[np.random.Generator, int]:
 
 
 
+
+
+
+
+
+
 def fix_repr(cls):
     print("fax_utils.py:", "fix_repr()")
     
@@ -76,6 +82,14 @@ def fix_repr(cls):
     cls.__post_init__ = __post_init__
     return cls
 
+
+
+
+
+
+
+
+
 def is_broadcastable(src, dst):
     print("fax_utils.py:", "is_broadcastable()")
     
@@ -83,6 +97,14 @@ def is_broadcastable(src, dst):
         return jnp.broadcast_shapes(src, dst) == dst
     except ValueError:
         return False
+
+
+
+
+
+
+
+
 
 def random_key_from_data(data: jax.Array) -> jax.Array:
     print("fax_utils.py:", "random_key_from_data()")
@@ -113,6 +135,9 @@ class DistributionalQNet2(hk.Module):
         value_mean = output[..., 0]
         value_std = jax.nn.softplus(output[..., 1])
         return value_mean, value_std
+
+
+
 @dataclass
 @fix_repr
 class DACERPolicyNet(hk.Module):

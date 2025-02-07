@@ -195,6 +195,50 @@ class TrainGaussianAgent(PreTrainAgent):
 
 
 
+    def debug_gmm_load_iter(self):
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        from model.common.mlp import MLP, ResidualMLP
+        from model.common.mlp_gmm import GMM_MLP
+        
+        cur_dict = {
+                "MLP": MLP,
+                "ResidualMLP": ResidualMLP, 
+                "GMM_MLP": GMM_MLP
+        }
+        get_custom_objects().update(cur_dict)
+
+        print("self.model.network = ", self.model.network)
+        for var in self.model.network.variables:
+            print(f"1:GMM_MLP.network: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+
+        num_params = sum(np.prod(var.shape) for var in self.model.network.trainable_variables)
+        print(f"1:Number of network parameters: {num_params}")
+        print(f"1:Number of network parameters: {sum(var.numpy().size for var in self.model.network.trainable_variables)}")
+
+        import os
+
+        base_loadpath = "/ssddata/qtguo/GENERAL_DATA/weights_tensorflow/d3il-pretrain/avoid_m3_pre_gmm_mlp_ta4/2025-02-07_03-56-27_42/checkpoint/state_"
+
+        iter_list = [500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000]
+
+        for num in iter_list:
+            print("iter_list: epoch = ", num)
+            loadpath = base_loadpath + str(num) + "_network.keras"
+            network = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
+
+            num_params = sum(np.prod(var.shape) for var in network.trainable_variables)
+            print(f"2:Number of network parameters: {num_params}")
+            print(f"2:Number of network parameters: {sum(var.numpy().size for var in network.trainable_variables)}")
+
+            print("network = ", network)
+            for var in network.variables:
+                print(f"2:GMM_MLP.network: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+
+
+        
+
 
 
     def run(self):
@@ -212,6 +256,9 @@ class TrainGaussianAgent(PreTrainAgent):
             
             loss_train_epoch = []
             ent_train_epoch = []
+
+            if DEBUG and _ >= 1:
+                break
 
             for batch_train in self.dataloader_train:
 
@@ -261,10 +308,11 @@ class TrainGaussianAgent(PreTrainAgent):
                     break
                 
 
-                if DEBUG and epoch == 0:
-                    self.debug_gmm_save_load()
-                    # self.debug_gmm_mlp_save_load()
-                    break
+                # if DEBUG and epoch == 0:
+                #     # self.debug_gmm_save_load()
+                #     # self.debug_gmm_mlp_save_load()
+                #     # self.debug_gmm_load_iter()
+                #     break
 
                 # print("loss_train = ", loss_train)
                 # print("loss_train_epoch = ", loss_train_epoch)

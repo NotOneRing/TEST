@@ -482,6 +482,39 @@ class TrainAgent:
 
 
 
+
+    def save_model_sac(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        critic_savepath = savepath.replace(".keras", "_critic.keras")
+        print("critic_savepath = ", critic_savepath)
+        print(f"Saved model to {critic_savepath}")
+        tf.keras.models.save_model(self.model.critic, critic_savepath)
+
+
+        target_critic_savepath = savepath.replace(".keras", "_target_critic.keras")
+        print("target_critic_savepath = ", target_critic_savepath)
+        print(f"Saved model to {target_critic_savepath}")
+        tf.keras.models.save_model(self.model.target_critic, target_critic_savepath)
+
+
+
+
     # def save_model(self):
     #     """
     #     saves model to disk; no ema

@@ -698,9 +698,9 @@ class Gaussian_MLP(tf.keras.Model):
         # Mean prediction
         out_mean = self.mlp_mean(state)
 
-        print("self.mlp_mean = ", self.mlp_mean)
-        for var in self.mlp_mean.variables:
-            print(f"Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+        # print("self.mlp_mean = ", self.mlp_mean)
+        # for var in self.mlp_mean.variables:
+        #     print(f"Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
             
         if self.tanh_output:
             out_mean = torch_tanh(out_mean)

@@ -177,7 +177,10 @@ class GMMModel(tf.keras.Model):
 
             # self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
-            self.network = tf.keras.models.load_model( loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+            final_load_path = loadpath.replace(".keras", "_network.keras")
+            print("final_load_path = ", final_load_path)
+
+            self.network = tf.keras.models.load_model( final_load_path ,  custom_objects=get_custom_objects() )
 
 
             if OUTPUT_VARIABLES:
@@ -459,7 +462,7 @@ class GMMModel(tf.keras.Model):
         means, scales, logits = self.network(cond, training=training)
 
 
-        print("forward_train: logits = ", logits)
+        # print("forward_train: logits = ", logits)
 
 
         if deterministic:
@@ -581,13 +584,13 @@ class GMMModel(tf.keras.Model):
             deterministic=deterministic,
         )
 
-        print("type(dist) = ", type(dist))
-        print("dist = ", dist)
+        # print("type(dist) = ", type(dist))
+        # print("dist = ", dist)
 
         sampled_action = dist.sample()
 
-        print("sampled_action = ", sampled_action)
-        print("sampled_action.shape = ", sampled_action.shape)
+        # print("sampled_action = ", sampled_action)
+        # print("sampled_action.shape = ", sampled_action.shape)
 
         sampled_action = torch_tensor_view(sampled_action, [B, T, -1])
         return sampled_action

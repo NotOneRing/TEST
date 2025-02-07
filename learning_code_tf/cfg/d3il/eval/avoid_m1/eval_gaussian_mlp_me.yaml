@@ -7,7 +7,10 @@ _target_: agent.eval.eval_gaussian_agent.EvalGaussianAgent
 
 name: ${env_name}_eval_gaussian_mlp_ta${horizon_steps}
 logdir: ${oc.env:DPPO_LOG_DIR}/d3il-eval/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
-base_policy_path: ${oc.env:DPPO_LOG_DIR}/d3il-pretrain/avoid_m1_pre_gaussian_mlp_ta4/2025-02-06_17-10-45_42/checkpoint/state_5000.keras
+
+base_policy_path: ${oc.env:DPPO_LOG_DIR}/d3il-pretrain/avoid_m1_pre_gaussian_mlp_ta4/2025-02-07_21-02-02_42/checkpoint/state_5000.keras
+
+
 
 # normalization_path: ${oc.env:DPPO_DATA_DIR}/d3il-pretrain/${env_name}/normalization.npz
 normalization_path: ${oc.env:DPPO_DATA_DIR}/d3il/avoid_m1/normalization.npz

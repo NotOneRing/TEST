@@ -1,5 +1,5 @@
 """
-Soft Actor Critic (SAC) agent training script.
+Diffusion Actor-Critic with Entropy Regulator(DACER) agent training script.
 
 Does not support image observations right now. 
 """
@@ -24,7 +24,7 @@ from util.torch_to_tf import torch_tensor, torch_from_numpy, torch_tensor_float,
 from util.torch_to_tf import torch_no_grad, torch_optim_Adam, torch_exp, torch_tensor_item, torch_tensor_requires_grad_
 
 
-class TrainSACAgent(TrainAgent):
+class TrainDacerAgent(TrainAgent):
     def __init__(self, cfg):
         print("train_sac_agent.py: TrainSACAgent.__init__()")
 
@@ -71,10 +71,7 @@ class TrainSACAgent(TrainAgent):
 
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
-
-        print("init_temperature = ")
-
-        self.log_alpha = torch_tensor( np.log(np.array([init_temperature])) )
+        self.log_alpha = torch_tensor(np.log(init_temperature))
         # .to(self.device)
 
 
@@ -332,7 +329,7 @@ class TrainSACAgent(TrainAgent):
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model_sac()
+                self.save_model()
 
             # Log loss and save metrics
             run_results.append(

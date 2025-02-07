@@ -141,13 +141,10 @@ class GMM_MLP(tf.keras.Model):
         self.std_max = std_max
 
 
-
-
-
-
         input_dim = cond_dim
         output_dim = action_dim * horizon_steps * num_modes
         self.num_modes = num_modes
+
         if residual_style:
             model = ResidualMLP
         else:

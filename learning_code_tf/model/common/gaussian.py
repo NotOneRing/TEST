@@ -212,7 +212,10 @@ class GaussianModel(tf.keras.Model):
 
             # self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
-            self.network = tf.keras.models.load_model( loadpath.replace(".keras", "_network.keras") ,  custom_objects=get_custom_objects() )
+            final_load_path = loadpath.replace(".keras", "_network.keras")
+            print("final_load_path = ", final_load_path)
+
+            self.network = tf.keras.models.load_model( final_load_path ,  custom_objects=get_custom_objects() )
 
 
             if OUTPUT_VARIABLES:
@@ -221,17 +224,17 @@ class GaussianModel(tf.keras.Model):
             self.build_actor(self.network)
 
 
-            print("GaussianModel: self.network = ", self.network )
+            # print("GaussianModel: self.network = ", self.network )
 
 
 
 
-        # Log number of parameters in the network
-        num_params = sum(np.prod(var.shape) for var in self.network.trainable_variables)
-        log.info(f"Number of network parameters: {num_params}")
+        # # Log number of parameters in the network
+        # num_params = sum(np.prod(var.shape) for var in self.network.trainable_variables)
+        # log.info(f"Number of network parameters: {num_params}")
 
-        for var in self.network.variables:
-            print(f"Gaussian.network: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+        # for var in self.network.variables:
+        #     print(f"Gaussian.network: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
 
 
         self.horizon_steps = horizon_steps
@@ -417,9 +420,15 @@ class GaussianModel(tf.keras.Model):
         dist = self.forward_train(training, cond, deterministic=False)
         # true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         true_action = torch_tensor_view(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
-        log_prob = dist.log_prob(true_action)
+
         entropy = torch_mean(dist.entropy())
-        loss = -torch_mean(log_prob) - entropy * ent_coef
+        # log_prob = dist.log_prob(true_action)
+        # loss = -torch_mean(log_prob) - entropy * ent_coef
+
+        loss = -dist.log_prob(true_action)  # [B]
+        # print("Distribution.Normal log_prob = ", loss)
+        loss = torch_mean(loss) - entropy * ent_coef
+
         return loss, {"entropy": entropy}
 
 
@@ -573,7 +582,7 @@ class GaussianModel(tf.keras.Model):
                 sampled_action = torch_tanh(sampled_action)
                 log_prob -= torch_log(1 - tf.square(sampled_action) + 1e-6)
 
-            return torch_tensor_view(sampled_action, [B, T, -1]), torch_sum(log_prob, dim=1)
+            return torch_tensor_view(sampled_action, [B, T, -1]), torch_sum(log_prob, dim=1, keepdim=False)
         else:
             if self.tanh_output:
                 sampled_action = torch_tanh(sampled_action)
