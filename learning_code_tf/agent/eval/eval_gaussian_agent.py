@@ -17,6 +17,8 @@ from agent.eval.eval_agent import EvalAgent
 
 from util.torch_to_tf import torch_no_grad
 
+
+
 class EvalGaussianAgent(EvalAgent):
 
     def __init__(self, cfg):
@@ -41,11 +43,24 @@ class EvalGaussianAgent(EvalAgent):
                 )
 
         # Reset env before iteration starts
-        self.model.eval()
+        # self.model.eval()
+        training = False
+
         firsts_trajs = np.zeros((self.n_steps + 1, self.n_envs))
         prev_obs_venv = self.reset_env_all(options_venv=options_venv)
         firsts_trajs[0] = 1
         reward_trajs = np.zeros((self.n_steps, self.n_envs))
+
+
+        if self.save_full_observations:  # state-only
+            obs_full_trajs = np.empty((0, self.n_envs, self.obs_dim))
+            obs_full_trajs = np.vstack(
+                (obs_full_trajs, prev_obs_venv["state"][:, -1][None])
+            )
+
+
+        np.random.seed(42)
+
 
         # Collect a set of trajectories from env
         for step in range(self.n_steps):
@@ -56,13 +71,15 @@ class EvalGaussianAgent(EvalAgent):
             # with torch.no_grad():
             with torch_no_grad() as tape:
                 cond = {
-                    "state": 
-                    # torch.from_numpy(prev_obs_venv["state"])
-                    # .float()
-                    tf.convert_to_tensor(prev_obs_venv["state"], dtype=tf.float32)
-                    # .to(self.device)
+                    # "state": 
+                    # # torch.from_numpy(prev_obs_venv["state"])
+                    # # .float()
+                    # tf.convert_to_tensor(prev_obs_venv["state"], dtype=tf.float32)
+                    # # .to(self.device)
+                "state": tf.Variable(prev_obs_venv["state"], dtype=tf.float32)
                 }
-                samples = self.model(cond=cond, deterministic=True)
+                samples = self.model(cond=cond, deterministic=True, training=False)
+
                 # output_venv = samples.cpu().numpy()
                 output_venv = samples.numpy()
 
@@ -75,8 +92,24 @@ class EvalGaussianAgent(EvalAgent):
             reward_trajs[step] = reward_venv
             firsts_trajs[step + 1] = terminated_venv | truncated_venv
 
+
+            if self.save_full_observations:  # state-only
+                obs_full_venv = np.array(
+                    [info["full_obs"]["state"] for info in info_venv]
+                )  # n_envs x act_steps x obs_dim
+                obs_full_trajs = np.vstack(
+                    (obs_full_trajs, obs_full_venv.transpose(1, 0, 2))
+                )
+
+
+
             # update for next step
             prev_obs_venv = obs_venv
+
+
+
+
+
 
         # Summarize episode reward --- this needs to be handled differently depending on whether the environment is reset after each iteration. Only count episodes that finish within the iteration.
         episodes_start_end = []
@@ -119,6 +152,19 @@ class EvalGaussianAgent(EvalAgent):
             avg_best_reward = 0
             success_rate = 0
             log.info("[WARNING] No episode completed within the iteration!")
+
+
+
+        # Plot state trajectories (only in D3IL)
+        if self.traj_plotter is not None:
+            self.traj_plotter(
+                obs_full_trajs=obs_full_trajs,
+                n_render=self.n_render,
+                max_episode_steps=self.max_episode_steps,
+                render_dir=self.render_dir,
+                itr=0,
+            )
+
 
         # Log loss and save metrics
         time = timer()

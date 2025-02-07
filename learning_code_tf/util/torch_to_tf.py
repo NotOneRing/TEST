@@ -8,6 +8,8 @@ from collections import OrderedDict
 from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
 
 
+
+
 def torch_tensor_permute(input, *dims):
     "A wrapper for torch.Tensor.permute() function"
     if isinstance(dims[0], (tuple, list)):
@@ -49,10 +51,18 @@ def torch_gather(input_tensor, dim, index_tensor):
     input_array = input_tensor.numpy()
 
 
-    input_dim_list = input_tensor.shape.as_list()
-    dim_list = index_tensor.shape.as_list()
+    # input_dim_list = input_tensor.shape.as_list()
+    # dim_list = index_tensor.shape.as_list()
+
+    input_dim_list = list(input_tensor.shape)
+    dim_list = list(index_tensor.shape)
+
+    # print("list(input_tensor.shape) = ", list(input_tensor.shape) )
+    # print("list(index_tensor.shape) = ", list(index_tensor.shape) )
 
     #transfer negative index to positive one
+    # print("dim = ", dim)
+    # print("input_dim_list = ")
     dim = list(range(len( input_dim_list )))[dim]
 
     for i in range(len( input_dim_list )):
@@ -902,6 +912,8 @@ def torch_tensor_repeat(tensor, *repeats):
     if not repeats:
         raise ValueError("At least one repeat value must be provided.")
 
+    print("torch_tensor_repeat: 1")
+
     # processed_repeats = []
     if isinstance(repeats[0], (tuple, list)):
         repeat_shape = [ *repeats[0] ]
@@ -910,6 +922,10 @@ def torch_tensor_repeat(tensor, *repeats):
         repeat_shape = [*repeats]
         repeats_tensor = tf.constant(repeats, dtype=tf.int32)
 
+    repeats_tensor = torch_reshape( repeats_tensor, -1)
+
+    print("torch_tensor_repeat: 2")
+
     # Compute the target shape for tiling
     tensor_shape = tf.shape(tensor)
 
@@ -917,14 +933,24 @@ def torch_tensor_repeat(tensor, *repeats):
     tensor_dim = len(tensor_shape)
     repeat_dim = len(repeat_shape)
 
+    print("torch_tensor_repeat: 3")
+
     temp_tensor = tensor
 
     if repeat_dim > tensor_dim:
         tensor_shape = [1] * (repeat_dim - tensor_dim) + tensor_shape.numpy().tolist()
         temp_tensor = tf.reshape(tensor, tensor_shape)
 
+    print("torch_tensor_repeat: 4")
+
+    print("temp_tensor = ", temp_tensor)
+    print("repeats_tensor = ", repeats_tensor)
+
     # Perform tiling
     repeated_tensor = tf.tile(temp_tensor, repeats_tensor)
+
+    print("torch_tensor_repeat: 5")
+
     return repeated_tensor
 
 
@@ -1997,6 +2023,7 @@ class nn_Sequential(tf.keras.layers.Layer):
                     if OUTPUT_VARIABLES:
                         print("name = ", name)
                         print("module = ", module)
+
                     self.model_list.append(module)
             else:
                 for module in args:
@@ -2005,6 +2032,10 @@ class nn_Sequential(tf.keras.layers.Layer):
             if OUTPUT_VARIABLES:
                 print("branch1")
                 print("self.model_list = ")
+
+            for i in range(len(self.model_list)):
+                if isinstance(self.model_list[i], nn_Sequential):
+                    self.model_list[i] = tf.keras.Sequential(self.model_list[i].model_list)
 
             self.model = tf.keras.Sequential(self.model_list)
         else:
@@ -4211,6 +4242,8 @@ class Normal:
 
         sampled = tf.random.normal(shape=shape, mean=self.loc, stddev=self.scale)
 
+        print("Normal.sample(): = ", sampled)
+
         # sampled = torch.tensor(sampled.numpy())
 
         # print("normal: sampled = ", sampled)
@@ -4292,7 +4325,9 @@ class Independent:
         return _sum_rightmost(entropy, self.reinterpreted_batch_ndims)
     
     def sample(self, sample_shape=tf.TensorShape([])):
-        return self.base_dist.sample(sample_shape)
+        sample_result = self.base_dist.sample(sample_shape)
+        print("Independent: sample_result = ", sample_result)
+        return sample_result
     
 
 # class Categorical:
@@ -4312,6 +4347,11 @@ class Categorical:
         
         # print("logits.shape = ", logits.shape)
 
+        print("Categorical: __init__(): probs = ", probs)
+
+        print("Categorical: __init__(): logits = ", logits)
+
+
         if (probs is None) == (logits is None):
             raise ValueError(
                 "Either `probs` or `logits` must be specified, but not both."
@@ -4326,6 +4366,7 @@ class Categorical:
         # else:
         #     raise ValueError("Must specify either probs or logits.")
     
+        print("1: Categorical: __init__(): self.probs = ", self.probs)
 
         # self.batch_shape = logits.shape
 
@@ -4337,6 +4378,8 @@ class Categorical:
         # self.probs = probs / probs.sum(-1, keepdim=True)
         if probs is not None:
             self.probs = probs / tf.reduce_sum(probs, axis=-1, keepdims=True)
+        
+        print("2: Categorical: __init__(): self.probs = ", self.probs)
 
         # else:
         #     raise ValueError("must specify probs.")
@@ -4353,9 +4396,33 @@ class Categorical:
         self.batch_shape = batch_shape
         # super().__init__(batch_shape, validate_args=validate_args)
 
+        self.event_shape = tf.TensorShape([])
 
-    def sample(self):
-        return tf.random.categorical(self.probs, num_samples = 1, dtype=tf.int32)
+
+    def sample(self, sample_shape = tf.TensorShape([]) ):
+        # if shape == None or shape == tf.TensorShape([]):
+        #     shape = self.probs.shape
+
+        # return tf.random.categorical(self.probs, num_samples = 1, dtype=tf.int32)
+
+        if not isinstance(sample_shape, tf.TensorShape):
+            sample_shape = tf.TensorShape(sample_shape)
+        num_elements = torch_tensor_item( tf.reduce_prod(sample_shape) )
+
+        print("Categorical: sample(): num_elements = ", num_elements)
+        # print("sample_shape.as_list() = ", sample_shape.as_list())
+        probs_2d = torch_reshape(self.probs, -1, self._num_events)
+
+        print("Categorical: sample(): probs_2d = ", probs_2d)
+
+        samples_2d = torch_tensor_transpose( torch_multinomial(probs_2d, num_elements, True), 0, 1)
+        extended_shape = tf.TensorShape(sample_shape + self.batch_shape + self.event_shape).as_list()
+
+        print("Categorical: sample(): extended_shape = ", extended_shape)
+
+        return torch_reshape( samples_2d, extended_shape )
+
+
 
     def log_prob(self, value):
         assert len(value.shape.as_list()) <= 2
@@ -4464,6 +4531,72 @@ class MixtureSameFamily:
         log_mix_prob = tf.math.log(self._mixture_distribution.probs)
 
         return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]
+
+
+
+    def sample(self, sample_shape = tf.TensorShape([]) ):
+        with torch_no_grad() as tape:
+            # sample_len = len(sample_shape)
+            # batch_len = len(self.batch_shape)
+
+            # sample_len = sample_shape[0]
+            # batch_len = self.batch_shape[0]
+            sample_len = len(sample_shape)
+            # [0] if sample_shape.rank > 0 else 0
+            batch_len = len(self.batch_shape)
+            # [0] if self.batch_shape.rank > 0 else 0
+
+
+
+            gather_dim = sample_len + batch_len
+            es = self.event_shape
+
+
+
+            # mixture samples [n, B]
+            mix_sample = self._mixture_distribution.sample(sample_shape)
+            mix_shape = mix_sample.shape
+
+            # component samples [n, B, k, E]
+            comp_samples = self._component_distribution.sample(sample_shape)
+
+            mix_sample_shape = list(mix_shape) + [1] * (len(es) + 1)
+
+            print("MixtureSameFamily.sample(): list(mix_shape) = ", list(mix_shape))
+
+            print("MixtureSameFamily.sample(): [1] * (len(es) + 1) = ", [1] * (len(es) + 1))
+
+            print("MixtureSameFamily.sample(): mix_sample_shape = ", mix_sample_shape)
+
+            # Gather along the k dimension
+            mix_sample_r = torch_reshape(mix_sample,
+                mix_sample_shape
+            )
+
+            shape_list = [1] * len(mix_shape) + [1] + es
+
+            print("MixtureSameFamily.sample(): mix_sample_r = ", mix_sample_r)
+            print("MixtureSameFamily.sample(): shape_list = ", shape_list)
+
+            mix_sample_r = torch_tensor_repeat( mix_sample_r,
+                shape_list
+            )
+
+            # print("mix_sample_r:2 = ", mix_sample_r)
+
+            print("MixtureSameFamily.sample(): comp_samples = ", comp_samples)
+            print("MixtureSameFamily.sample(): gather_dim = ", gather_dim)
+            print("MixtureSameFamily.sample(): mix_sample_r = ", mix_sample_r)
+
+            # (40, 5, 8)
+            # 40
+            # (40, 1, 8)
+
+            samples = torch_gather(comp_samples, gather_dim, mix_sample_r)
+
+            return torch_squeeze(samples, gather_dim)
+
+
 
 
 

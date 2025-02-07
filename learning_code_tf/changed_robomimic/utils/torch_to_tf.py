@@ -4206,7 +4206,43 @@ class MixtureSameFamily:
         return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]
 
 
+    def sample(self, sample_shape = tf.TensorShape([]) ):
+        with torch_no_grad() as tape:
+            # sample_len = len(sample_shape)
+            # batch_len = len(self.batch_shape)
 
+            sample_len = sample_shape[0]
+            batch_len = self.batch_shape[0]
+
+            gather_dim = sample_len + batch_len
+            es = self.event_shape
+
+            # mixture samples [n, B]
+            mix_sample = self.mixture_distribution.sample(sample_shape)
+            mix_shape = mix_sample.shape
+
+            # component samples [n, B, k, E]
+            comp_samples = self.component_distribution.sample(sample_shape)
+
+            mix_sample_shape = list(mix_shape) + [1] * (len(es) + 1)
+
+            print("list(mix_shape) = ", list(mix_shape))
+
+            print("[1] * (len(es) + 1) = ", [1] * (len(es) + 1))
+
+            print("mix_sample_shape = ", mix_sample_shape)
+
+            # Gather along the k dimension
+            mix_sample_r = torch_reshape(mix_sample,
+                mix_sample_shape
+            )
+
+            mix_sample_r = torch_tensor_repeat( mix_sample_r,
+                [1] * mix_shape[0] + [1] + es
+            )
+
+            samples = torch_gather(comp_samples, gather_dim, mix_sample_r)
+            return torch_squeeze(samples, gather_dim)
 
 
 

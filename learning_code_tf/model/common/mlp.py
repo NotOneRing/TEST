@@ -316,6 +316,7 @@ class MLP(
         if OUTPUT_FUNCTION_HEADER:
             print("mlp.py: MLP.call()")
 
+        # print("MLP: call() x.shape = ", x.shape)
         # for layer_ind, m in enumerate(self.moduleList):
         #     if append is not None and layer_ind in self.append_layers:
         #         # x = tf.concat([x, append], axis=-1)

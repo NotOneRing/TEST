@@ -110,10 +110,88 @@ class TrainGaussianAgent(PreTrainAgent):
 
             self.reset_parameters()
 
-            if DEBUG:
-                self.take_out_epoch0_weights()
+            # if DEBUG:
+            #     self.take_out_epoch0_weights()
 
 
+
+
+
+    def debug_gmm_mlp_save_load(self):
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        from model.common.mlp import MLP, ResidualMLP
+        
+        cur_dict = {
+                "MLP": MLP,
+                "ResidualMLP": ResidualMLP, 
+        }
+        get_custom_objects().update(cur_dict)
+
+        print("self.model.network.mlp_weights = ", self.model.network.mlp_weights)
+        for var in self.model.network.mlp_weights.moduleList.variables:
+            print(f"1:GMM_MLP.mlp_weights: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+
+        import os
+
+        savepath = os.path.join("/ssddata/qtguo/GENERAL_DATA/save_load_test_path/", f"state_{1}.keras")
+
+        tf.keras.models.save_model(self.model.network.mlp_weights, savepath)
+
+        mlp_weights = tf.keras.models.load_model(savepath,  custom_objects=get_custom_objects() )
+
+        # MLP: call() x.shape =  (16, 4)
+        
+        print("mlp_weights = ", mlp_weights)
+        for var in mlp_weights.moduleList.variables:
+            print(f"2:GMM_MLP.mlp_weights: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+
+
+
+
+
+
+
+    def debug_gmm_save_load(self):
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        from model.common.mlp import MLP, ResidualMLP
+        from model.common.mlp_gmm import GMM_MLP
+        
+        cur_dict = {
+                "MLP": MLP,
+                "ResidualMLP": ResidualMLP, 
+                "GMM_MLP": GMM_MLP
+        }
+        get_custom_objects().update(cur_dict)
+
+        print("self.model.network = ", self.model.network)
+        for var in self.model.network.variables:
+            print(f"1:GMM_MLP.network: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+
+        num_params = sum(np.prod(var.shape) for var in self.model.network.trainable_variables)
+        print(f"1:Number of network parameters: {num_params}")
+        print(f"1:Number of network parameters: {sum(var.numpy().size for var in self.model.network.trainable_variables)}")
+
+        import os
+
+        savepath = os.path.join("/ssddata/qtguo/GENERAL_DATA/save_load_test_path/", f"state_{1}.keras")
+
+        tf.keras.models.save_model(self.model.network, savepath)
+
+        network = tf.keras.models.load_model(savepath,  custom_objects=get_custom_objects() )
+
+        num_params = sum(np.prod(var.shape) for var in network.trainable_variables)
+        print(f"2:Number of network parameters: {num_params}")
+        print(f"2:Number of network parameters: {sum(var.numpy().size for var in network.trainable_variables)}")
+
+        # MLP: call() x.shape =  (16, 4)
+        
+        print("network = ", network)
+        for var in network.variables:
+            print(f"2:GMM_MLP.network: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
 
 
 
@@ -147,7 +225,7 @@ class TrainGaussianAgent(PreTrainAgent):
 
 
                 if flag:
-                    print("batch_train = ", batch_train)
+                    # print("batch_train = ", batch_train)
                     flag = False
 
 
@@ -181,7 +259,12 @@ class TrainGaussianAgent(PreTrainAgent):
                 if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
                     self.load_pickle_network()
                     break
+                
 
+                if DEBUG and epoch == 0:
+                    self.debug_gmm_save_load()
+                    # self.debug_gmm_mlp_save_load()
+                    break
 
                 # print("loss_train = ", loss_train)
                 # print("loss_train_epoch = ", loss_train_epoch)
@@ -238,6 +321,8 @@ class TrainGaussianAgent(PreTrainAgent):
             # save model
             if self.epoch % self.save_model_freq == 0 or self.epoch == self.n_epochs:
                 self.save_model(self.epoch)
+
+
 
             # log loss
             if self.epoch % self.log_freq == 0:

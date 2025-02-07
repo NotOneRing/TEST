@@ -102,3 +102,4 @@ model:
     cond_dim: ${eval:'${obs_dim} * ${cond_steps}'}
   horizon_steps: ${horizon_steps}
   device: ${device}
+  

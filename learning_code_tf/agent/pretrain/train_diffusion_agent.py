@@ -314,7 +314,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
                 if flag:
-                    print("batch_train = ", batch_train)
+                    # print("batch_train = ", batch_train)
                     flag = False
 
 

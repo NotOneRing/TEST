@@ -21,6 +21,92 @@ torch_log, torch_tanh, torch_sum, nn_Parameter, torch_tensor, torch_ones
 from util.config import OUTPUT_VARIABLES, OUTPUT_FUNCTION_HEADER, OUTPUT_POSITIONS
 
 
+from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, nn_TransformerDecoder,\
+nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
+nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
+nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
+# from model.rl.gaussian_calql import CalQL_Gaussian
+from model.diffusion.unet import ResidualBlock1D, Unet1D
+from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
+# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
+# from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
+# from model.diffusion.diffusion import DiffusionModel
+from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
+from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
+from model.common.modules import SpatialEmb, RandomShiftsAug
+from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+# from model.common.mlp_gmm import GMM_MLP
+from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
+# from model.common.gaussian import  GaussianModel
+# from model.common.critic import CriticObs, CriticObsAct
+# from model.common.gmm import GMMModel
+
+
+cur_dict = {
+#part1:
+"nn_TransformerEncoder": nn_TransformerEncoder, 
+"nn_TransformerEncoderLayer": nn_TransformerEncoderLayer, 
+"nn_TransformerDecoder": nn_TransformerDecoder,
+"nn_TransformerDecoderLayer": nn_TransformerDecoderLayer, 
+"einops_layers_torch_Rearrange": einops_layers_torch_Rearrange, 
+"nn_GroupNorm": nn_GroupNorm, 
+"nn_ConvTranspose1d": nn_ConvTranspose1d, 
+"nn_Conv2d": nn_Conv2d, 
+"nn_Conv1d": nn_Conv1d,
+"nn_MultiheadAttention": nn_MultiheadAttention,
+"nn_LayerNorm": nn_LayerNorm, 
+"nn_Embedding": nn_Embedding, 
+"nn_ModuleList": nn_ModuleList, 
+"nn_Sequential": nn_Sequential,
+"nn_Linear": nn_Linear, 
+"nn_Dropout": nn_Dropout, 
+"nn_ReLU": nn_ReLU, 
+"nn_GELU": nn_GELU, 
+"nn_ELU": nn_ELU, 
+"nn_Mish": nn_Mish, 
+"nn_Softplus": nn_Softplus, 
+"nn_Identity": nn_Identity, 
+"nn_Tanh": nn_Tanh,
+#part2:
+# "CalQL_Gaussian": CalQL_Gaussian,
+"ResidualBlock1D": ResidualBlock1D,
+"Unet1D": Unet1D,
+"Conv1dBlock": Conv1dBlock, 
+"Upsample1d": Upsample1d, 
+"Downsample1d": Downsample1d, 
+"SinusoidalPosEmb": SinusoidalPosEmb,
+# "DiffusionMLP": DiffusionMLP, 
+# # "VisionDiffusionMLP": VisionDiffusionMLP,
+# "EtaStateAction": EtaStateAction, 
+# "EtaState": EtaState, 
+# "EtaAction": EtaAction, 
+# "EtaFixed": EtaFixed,
+# # "DiffusionModel": DiffusionModel,
+#part3:
+"VitEncoder": VitEncoder, 
+"PatchEmbed1": PatchEmbed1, 
+"PatchEmbed2": PatchEmbed2,
+"MultiHeadAttention": MultiHeadAttention, 
+"TransformerLayer": TransformerLayer, 
+"MinVit": MinVit,
+"Gaussian_Transformer": Gaussian_Transformer, 
+"GMM_Transformer": GMM_Transformer, 
+"Transformer": Transformer,
+"SpatialEmb": SpatialEmb,
+"RandomShiftsAug": RandomShiftsAug,
+"MLP": MLP,
+"ResidualMLP": ResidualMLP, 
+"TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+# "GMM_MLP": GMM_MLP,
+"Gaussian_MLP": Gaussian_MLP, 
+"Gaussian_VisionMLP": Gaussian_VisionMLP,
+# # "GaussianModel": GaussianModel,
+# "CriticObs": CriticObs, 
+# "CriticObsAct": CriticObsAct,
+# # "GMMModel": GMMModel
+}
+
+
 
 class GaussianModel(tf.keras.Model):
 
@@ -49,7 +135,10 @@ class GaussianModel(tf.keras.Model):
 
         super().__init__()
         # self.device = device
-        self.network = network
+        # self.network = network
+        if not hasattr(self, "network"):
+            self.network = network
+
         # .to(device)
 
         # if network_path is not None:
@@ -79,44 +168,43 @@ class GaussianModel(tf.keras.Model):
             else:
                 loadpath = network_path.replace('.pt', '.keras')
 
-            from model.diffusion.mlp_diffusion import DiffusionMLP
-            from model.diffusion.diffusion import DiffusionModel
-            from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-            from model.diffusion.modules import SinusoidalPosEmb
-            from model.common.modules import SpatialEmb, RandomShiftsAug
-            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+            # from model.common.mlp_gaussian import Gaussian_MLP
+            # from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+            # from model.diffusion.modules import SinusoidalPosEmb
+            # from model.common.modules import SpatialEmb, RandomShiftsAug
+            # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
 
-            from model.diffusion.unet import Downsample1d, ResidualBlock1D, Conv1dBlock, Unet1D
+            # from model.diffusion.unet import Downsample1d, ResidualBlock1D, Conv1dBlock, Unet1D
 
-            from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish, nn_ReLU,\
-            nn_Conv1d, nn_Identity, einops_layers_torch_Rearrange
+            # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish, nn_ReLU,\
+            # nn_Conv1d, nn_Identity, einops_layers_torch_Rearrange
 
             from tensorflow.keras.utils import get_custom_objects
 
-            cur_dict = {
-                'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-                'DiffusionMLP': DiffusionMLP,
-                # 'VPGDiffusion': VPGDiffusion,
-                'SinusoidalPosEmb': SinusoidalPosEmb,   
-                'MLP': MLP,                            # 自定义的 MLP 层
-                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-                "nn_Identity": nn_Identity,
-                'nn_Linear': nn_Linear,
-                'nn_LayerNorm': nn_LayerNorm,
-                'nn_Dropout': nn_Dropout,
-                'nn_ReLU': nn_ReLU,
-                'nn_Mish': nn_Mish,
-                'SpatialEmb': SpatialEmb,
-                'RandomShiftsAug': RandomShiftsAug,
-                "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-                'RandomShiftsAug': RandomShiftsAug,
-                'Downsample1d': Downsample1d,
-                'ResidualBlock1D':ResidualBlock1D,
-                'Conv1dBlock': Conv1dBlock,
-                'nn_Conv1d': nn_Conv1d,
-                'Unet1D': Unet1D,
-            }
+            # cur_dict = {
+            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            #     'Gaussian_MLP': Gaussian_MLP,
+            #     # 'VPGDiffusion': VPGDiffusion,
+            #     'SinusoidalPosEmb': SinusoidalPosEmb,   
+            #     'MLP': MLP,                            # 自定义的 MLP 层
+            #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            #     "nn_Identity": nn_Identity,
+            #     'nn_Linear': nn_Linear,
+            #     'nn_LayerNorm': nn_LayerNorm,
+            #     'nn_Dropout': nn_Dropout,
+            #     'nn_ReLU': nn_ReLU,
+            #     'nn_Mish': nn_Mish,
+            #     'SpatialEmb': SpatialEmb,
+            #     'RandomShiftsAug': RandomShiftsAug,
+            #     "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+            #     'RandomShiftsAug': RandomShiftsAug,
+            #     'Downsample1d': Downsample1d,
+            #     'ResidualBlock1D':ResidualBlock1D,
+            #     'Conv1dBlock': Conv1dBlock,
+            #     'nn_Conv1d': nn_Conv1d,
+            #     'Unet1D': Unet1D,
+            # }
             # Register your custom class with Keras
             get_custom_objects().update(cur_dict)
 
@@ -133,12 +221,7 @@ class GaussianModel(tf.keras.Model):
             self.build_actor(self.network)
 
 
-            print("DiffusionModel: self.network = ", self.network )
-
-
-
-
-
+            print("GaussianModel: self.network = ", self.network )
 
 
 
@@ -146,6 +229,9 @@ class GaussianModel(tf.keras.Model):
         # Log number of parameters in the network
         num_params = sum(np.prod(var.shape) for var in self.network.trainable_variables)
         log.info(f"Number of network parameters: {num_params}")
+
+        for var in self.network.variables:
+            print(f"Gaussian.network: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
 
 
         self.horizon_steps = horizon_steps
@@ -232,41 +318,41 @@ class GaussianModel(tf.keras.Model):
 
         from model.common.mlp_gaussian import Gaussian_MLP
 
-        # from model.diffusion.diffusion import DiffusionModel
-        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-        from model.diffusion.modules import SinusoidalPosEmb
-        from model.common.modules import SpatialEmb, RandomShiftsAug
-        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, \
-            nn_Dropout, nn_ReLU, nn_Mish, nn_Identity, nn_Conv1d, nn_ConvTranspose1d
+        # # from model.diffusion.diffusion import DiffusionModel
+        # from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        # from model.diffusion.modules import SinusoidalPosEmb
+        # from model.common.modules import SpatialEmb, RandomShiftsAug
+        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, \
+        #     nn_Dropout, nn_ReLU, nn_Mish, nn_Identity, nn_Conv1d, nn_ConvTranspose1d
 
-        from model.diffusion.unet import Unet1D, ResidualBlock1D
+        # from model.diffusion.unet import Unet1D, ResidualBlock1D
 
 
         from tensorflow.keras.utils import get_custom_objects
 
-        cur_dict = {
-            # 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            'Gaussian_MLP': Gaussian_MLP,
-            # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-            "nn_Identity": nn_Identity,
-            'nn_Linear': nn_Linear,
-            'nn_LayerNorm': nn_LayerNorm,
-            'nn_Dropout': nn_Dropout,
-            'nn_ReLU': nn_ReLU,
-            'nn_Mish': nn_Mish,
-            'SpatialEmb': SpatialEmb,
-            'RandomShiftsAug': RandomShiftsAug,
-            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-            "Unet1D": Unet1D,
-            "ResidualBlock1D": ResidualBlock1D,
-            "nn_Conv1d": nn_Conv1d,
-            "nn_ConvTranspose1d": nn_ConvTranspose1d
-         }
-        # Register your custom class with Keras
+        # cur_dict = {
+        #     # 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+        #     'Gaussian_MLP': Gaussian_MLP,
+        #     # 'VPGDiffusion': VPGDiffusion,
+        #     'SinusoidalPosEmb': SinusoidalPosEmb,   
+        #     'MLP': MLP,                            # 自定义的 MLP 层
+        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #     "nn_Identity": nn_Identity,
+        #     'nn_Linear': nn_Linear,
+        #     'nn_LayerNorm': nn_LayerNorm,
+        #     'nn_Dropout': nn_Dropout,
+        #     'nn_ReLU': nn_ReLU,
+        #     'nn_Mish': nn_Mish,
+        #     'SpatialEmb': SpatialEmb,
+        #     'RandomShiftsAug': RandomShiftsAug,
+        #     "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+        #     "Unet1D": Unet1D,
+        #     "ResidualBlock1D": ResidualBlock1D,
+        #     "nn_Conv1d": nn_Conv1d,
+        #     "nn_ConvTranspose1d": nn_ConvTranspose1d
+        #  }
+        # # Register your custom class with Keras
         get_custom_objects().update(cur_dict)
 
         # print('get_custom_objects() = ', get_custom_objects())
@@ -296,7 +382,6 @@ class GaussianModel(tf.keras.Model):
 
 
         result = cls(
-            # 
             network=network, 
             **config)
 
@@ -350,6 +435,7 @@ class GaussianModel(tf.keras.Model):
 
     def loss_ori_build(
         self,
+        network,
         training,
         true_action,
         cond,
@@ -360,7 +446,7 @@ class GaussianModel(tf.keras.Model):
         print("gaussian.py: GaussianModel.loss()")
 
         B = len(true_action)
-        dist = GaussianModel.forward_train(training, cond, deterministic=False)
+        dist = GaussianModel.forward_train_build(self, network, training, cond, deterministic=False)
         # true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         true_action = torch_tensor_view(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         log_prob = dist.log_prob(true_action)
@@ -409,6 +495,34 @@ class GaussianModel(tf.keras.Model):
 
 
 
+    def forward_train_build(
+        self,
+        network,
+        training,
+        cond,
+        deterministic=False,
+        network_override=None,
+    ):
+        """
+        Calls the MLP to compute the mean, scale, and logits of the GMM. Returns the torch.Distribution object.
+        """
+
+        print("gaussian.py: GaussianModel.forward_train()")
+
+        if network_override is not None:
+            means, scales = network(cond, training=training)
+        else:
+            means, scales = network(cond, training=training)
+        if deterministic:
+            # low-noise for all Gaussian dists
+            scales = torch_ones_like(means) * 1e-4
+
+        # dist = tfp.distributions.Normal(loc=means, scale=scales)
+        dist = Normal(means, scales)
+
+        return dist
+
+
 
 
 
@@ -419,17 +533,19 @@ class GaussianModel(tf.keras.Model):
 
     def call(
         self,
-        training,
         cond,
         deterministic=False,
         network_override=None,
         reparameterize=False,
         get_logprob=False,
+        training = True,
     ):
 
         print("gaussian.py: GaussianModel.call()")
 
-        B = len(cond["state"]) if "state" in cond else len(cond["rgb"])
+        # B = len(cond["state"]) if "state" in cond else len(cond["rgb"])
+        B = cond["state"].shape[0] if "state" in cond else cond["rgb"].shape[0]
+
         T = self.horizon_steps
         dist = self.forward_train(
             training,
@@ -899,10 +1015,8 @@ class GaussianModel(tf.keras.Model):
 
         
         # _ = self.loss_ori(param1, build_dict)
-        all_one_build_result = self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
+        all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict, ent_coef = 0)
 
         print("all_one_build_result = ", all_one_build_result)
-
-
 
 

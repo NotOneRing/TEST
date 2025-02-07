@@ -24,6 +24,101 @@ from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSI
 
 
 
+
+
+
+from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, nn_TransformerDecoder,\
+nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
+nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
+nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
+# from model.rl.gaussian_calql import CalQL_Gaussian
+from model.diffusion.unet import ResidualBlock1D, Unet1D
+from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
+# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
+from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
+# from model.diffusion.diffusion import DiffusionModel
+from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
+from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
+from model.common.modules import SpatialEmb, RandomShiftsAug
+from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+# from model.common.mlp_gmm import GMM_MLP
+# from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
+# from model.common.gaussian import  GaussianModel
+# from model.common.critic import CriticObs, CriticObsAct
+# from model.common.gmm import GMMModel
+
+
+cur_dict = {
+#part1:
+"nn_TransformerEncoder": nn_TransformerEncoder, 
+"nn_TransformerEncoderLayer": nn_TransformerEncoderLayer, 
+"nn_TransformerDecoder": nn_TransformerDecoder,
+"nn_TransformerDecoderLayer": nn_TransformerDecoderLayer, 
+"einops_layers_torch_Rearrange": einops_layers_torch_Rearrange, 
+"nn_GroupNorm": nn_GroupNorm, 
+"nn_ConvTranspose1d": nn_ConvTranspose1d, 
+"nn_Conv2d": nn_Conv2d, 
+"nn_Conv1d": nn_Conv1d,
+"nn_MultiheadAttention": nn_MultiheadAttention,
+"nn_LayerNorm": nn_LayerNorm, 
+"nn_Embedding": nn_Embedding, 
+"nn_ModuleList": nn_ModuleList, 
+"nn_Sequential": nn_Sequential,
+"nn_Linear": nn_Linear, 
+"nn_Dropout": nn_Dropout, 
+"nn_ReLU": nn_ReLU, 
+"nn_GELU": nn_GELU, 
+"nn_ELU": nn_ELU, 
+"nn_Mish": nn_Mish, 
+"nn_Softplus": nn_Softplus, 
+"nn_Identity": nn_Identity, 
+"nn_Tanh": nn_Tanh,
+#part2:
+# "CalQL_Gaussian": CalQL_Gaussian,
+"ResidualBlock1D": ResidualBlock1D,
+"Unet1D": Unet1D,
+"Conv1dBlock": Conv1dBlock, 
+"Upsample1d": Upsample1d, 
+"Downsample1d": Downsample1d, 
+"SinusoidalPosEmb": SinusoidalPosEmb,
+# "DiffusionMLP": DiffusionMLP, 
+# "VisionDiffusionMLP": VisionDiffusionMLP,
+"EtaStateAction": EtaStateAction, 
+"EtaState": EtaState, 
+"EtaAction": EtaAction, 
+"EtaFixed": EtaFixed,
+# "DiffusionModel": DiffusionModel,
+#part3:
+"VitEncoder": VitEncoder, 
+"PatchEmbed1": PatchEmbed1, 
+"PatchEmbed2": PatchEmbed2,
+"MultiHeadAttention": MultiHeadAttention, 
+"TransformerLayer": TransformerLayer, 
+"MinVit": MinVit,
+"Gaussian_Transformer": Gaussian_Transformer, 
+"GMM_Transformer": GMM_Transformer, 
+"Transformer": Transformer,
+"SpatialEmb": SpatialEmb,
+"RandomShiftsAug": RandomShiftsAug,
+"MLP": MLP,
+"ResidualMLP": ResidualMLP, 
+"TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+# "GMM_MLP": GMM_MLP,
+# "Gaussian_MLP": Gaussian_MLP, 
+# "Gaussian_VisionMLP": Gaussian_VisionMLP,
+# "GaussianModel": GaussianModel,
+# "CriticObs": CriticObs, 
+# "CriticObsAct": CriticObsAct,
+# "GMMModel": GMMModel
+}
+
+
+
+
+
+
+
+
 class Gaussian_VisionMLP(tf.keras.Model):
     """With ViT backbone"""
 
@@ -47,26 +142,27 @@ class Gaussian_VisionMLP(tf.keras.Model):
         dropout=0,
         num_img=1,
         augment=False,
+        **kwargs
     ):
 
-        # # self.backbone = backbone
-        # # self.action_dim = action_dim
-        # # self.horizon_steps = horizon_steps
-        # self.cond_dim = cond_dim
-        # # self.img_cond_steps = img_cond_steps
-        # self.mlp_dims = list(mlp_dims)
-        # self.activation_type = activation_type
-        # self.residual_style = residual_style
-        # self.use_layernorm = use_layernorm
-        # # self.fixed_std = fixed_std
-        # # self.learn_fixed_std = learn_fixed_std
-        # self.std_min = std_min
-        # self.std_max = std_max
-        # self.spatial_emb = spatial_emb
-        # self.visual_feature_dim = visual_feature_dim
-        # self.dropout = dropout
-        # # self.num_img = num_img
-        # # self.augment = augment
+        # self.backbone = backbone
+        # self.action_dim = action_dim
+        # self.horizon_steps = horizon_steps
+        self.cond_dim = cond_dim
+        # self.img_cond_steps = img_cond_steps
+        self.mlp_dims = list(mlp_dims)
+        self.activation_type = activation_type
+        self.residual_style = residual_style
+        self.use_layernorm = use_layernorm
+        # self.fixed_std = fixed_std
+        # self.learn_fixed_std = learn_fixed_std
+        self.std_min = std_min
+        self.std_max = std_max
+        self.spatial_emb = spatial_emb
+        self.visual_feature_dim = visual_feature_dim
+        self.dropout = dropout
+        # self.num_img = num_img
+        # self.augment = augment
 
 
         print("mlp_gaussian.py: Gaussian_VisionMLP.__init__()")
@@ -162,27 +258,6 @@ class Gaussian_VisionMLP(tf.keras.Model):
 
 
 
-        # # self.backbone = backbone
-        # # self.action_dim = action_dim
-        # # self.horizon_steps = horizon_steps
-        # self.cond_dim = cond_dim
-        # # self.img_cond_steps = img_cond_steps
-        # self.mlp_dims = list(mlp_dims)
-        # self.activation_type = activation_type
-        # self.residual_style = residual_style
-        # self.use_layernorm = use_layernorm
-        # # self.fixed_std = fixed_std
-        # # self.learn_fixed_std = learn_fixed_std
-        # self.std_min = std_min
-        # self.std_max = std_max
-        # self.spatial_emb = spatial_emb
-        # self.visual_feature_dim = visual_feature_dim
-        # self.dropout = dropout
-        # # self.num_img = num_img
-        # # self.augment = augment
-
-
-
         # 打印每个属性及其类型和值
         if OUTPUT_VARIABLES:
             print("Checking DiffusionMLP Config elements:")
@@ -240,31 +315,31 @@ class Gaussian_VisionMLP(tf.keras.Model):
 
         # print("Gaussian_MLP: config = ", config)
 
-        from model.common.mlp_gaussian import Gaussian_MLP
-        from model.common.gaussian import GaussianModel
-        from model.common.mlp import MLP, ResidualMLP
-        from model.diffusion.modules import SinusoidalPosEmb
-        from model.common.modules import SpatialEmb, RandomShiftsAug
-        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+        # from model.common.mlp_gaussian import Gaussian_MLP
+        # from model.common.gaussian import GaussianModel
+        # from model.common.mlp import MLP, ResidualMLP
+        # from model.diffusion.modules import SinusoidalPosEmb
+        # from model.common.modules import SpatialEmb, RandomShiftsAug
+        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
 
         from tensorflow.keras.utils import get_custom_objects
 
-        cur_dict = {
-            'Gaussian_MLP': Gaussian_MLP,  # Register the custom DiffusionModel class
-            'GaussianModel': GaussianModel,
-            # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-            'nn_Linear': nn_Linear,
-            'nn_LayerNorm': nn_LayerNorm,
-            'nn_Dropout': nn_Dropout,
-            'nn_ReLU': nn_ReLU,
-            'nn_Mish': nn_Mish,
-            'SpatialEmb': SpatialEmb,
-            'RandomShiftsAug': RandomShiftsAug,
-         }
+        # cur_dict = {
+        #     'Gaussian_MLP': Gaussian_MLP,  # Register the custom DiffusionModel class
+        #     'GaussianModel': GaussianModel,
+        #     # 'VPGDiffusion': VPGDiffusion,
+        #     'SinusoidalPosEmb': SinusoidalPosEmb,   
+        #     'MLP': MLP,                            # 自定义的 MLP 层
+        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #     'nn_Linear': nn_Linear,
+        #     'nn_LayerNorm': nn_LayerNorm,
+        #     'nn_Dropout': nn_Dropout,
+        #     'nn_ReLU': nn_ReLU,
+        #     'nn_Mish': nn_Mish,
+        #     'SpatialEmb': SpatialEmb,
+        #     'RandomShiftsAug': RandomShiftsAug,
+        #  }
         # Register your custom class with Keras
         get_custom_objects().update(cur_dict)
 
@@ -544,31 +619,31 @@ class Gaussian_MLP(tf.keras.Model):
 
         # print("Gaussian_MLP: config = ", config)
 
-        from model.common.mlp_gaussian import Gaussian_MLP
-        from model.common.gaussian import GaussianModel
-        from model.common.mlp import MLP, ResidualMLP
-        from model.diffusion.modules import SinusoidalPosEmb
-        from model.common.modules import SpatialEmb, RandomShiftsAug
-        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+        # from model.common.mlp_gaussian import Gaussian_MLP
+        # from model.common.gaussian import GaussianModel
+        # from model.common.mlp import MLP, ResidualMLP
+        # from model.diffusion.modules import SinusoidalPosEmb
+        # from model.common.modules import SpatialEmb, RandomShiftsAug
+        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
 
         from tensorflow.keras.utils import get_custom_objects
 
-        cur_dict = {
-            'Gaussian_MLP': Gaussian_MLP,  # Register the custom DiffusionModel class
-            'GaussianModel': GaussianModel,
-            # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-            'nn_Linear': nn_Linear,
-            'nn_LayerNorm': nn_LayerNorm,
-            'nn_Dropout': nn_Dropout,
-            'nn_ReLU': nn_ReLU,
-            'nn_Mish': nn_Mish,
-            'SpatialEmb': SpatialEmb,
-            'RandomShiftsAug': RandomShiftsAug,
-         }
+        # cur_dict = {
+        #     'Gaussian_MLP': Gaussian_MLP,  # Register the custom DiffusionModel class
+        #     'GaussianModel': GaussianModel,
+        #     # 'VPGDiffusion': VPGDiffusion,
+        #     'SinusoidalPosEmb': SinusoidalPosEmb,   
+        #     'MLP': MLP,                            # 自定义的 MLP 层
+        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #     'nn_Linear': nn_Linear,
+        #     'nn_LayerNorm': nn_LayerNorm,
+        #     'nn_Dropout': nn_Dropout,
+        #     'nn_ReLU': nn_ReLU,
+        #     'nn_Mish': nn_Mish,
+        #     'SpatialEmb': SpatialEmb,
+        #     'RandomShiftsAug': RandomShiftsAug,
+        #  }
         # Register your custom class with Keras
         get_custom_objects().update(cur_dict)
 
@@ -622,6 +697,11 @@ class Gaussian_MLP(tf.keras.Model):
 
         # Mean prediction
         out_mean = self.mlp_mean(state)
+
+        print("self.mlp_mean = ", self.mlp_mean)
+        for var in self.mlp_mean.variables:
+            print(f"Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+            
         if self.tanh_output:
             out_mean = torch_tanh(out_mean)
 

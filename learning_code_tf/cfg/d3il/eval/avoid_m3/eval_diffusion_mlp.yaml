@@ -8,7 +8,7 @@ _target_: agent.eval.eval_diffusion_agent.EvalDiffusionAgent
 name: ${env_name}_m3_eval_diffusion_mlp_ta${horizon_steps}_td${denoising_steps}
 logdir: ${oc.env:DPPO_LOG_DIR}/d3il-eval/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
 
-base_policy_path: ${oc.env:DPPO_LOG_DIR}/d3il-pretrain/avoid_m3_pre_diffusion_mlp_ta4_td20/2025-01-31_13-56-42_42/checkpoint/state_205000.keras
+base_policy_path: ${oc.env:DPPO_LOG_DIR}/d3il-pretrain/avoid_m3_pre_diffusion_mlp_ta4_td20/2025-02-06_02-26-06_42/checkpoint/state_5000.keras
 normalization_path: ${oc.env:DPPO_DATA_DIR}/d3il/avoid_m3/normalization.npz
 
 seed: 42

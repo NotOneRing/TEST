@@ -132,6 +132,13 @@ print(f"2Entropy of batch: {entropy_batch}")
 
 
 
+# a = torch.Size([])
+# print("a.numel() = ", a.numel())
+
+
+
+
+
 from util.torch_to_tf import Categorical
 
 
@@ -155,10 +162,6 @@ print("log_prob_batch.shape = ", log_prob_batch.shape)
 # 计算批量的熵
 entropy_batch = dist_batch.entropy()
 print(f"3Entropy of batch: {entropy_batch}")
-
-
-
-
 
 
 

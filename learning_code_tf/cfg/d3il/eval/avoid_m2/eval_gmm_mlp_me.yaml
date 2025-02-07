@@ -1,0 +1,97 @@
+defaults:
+  - _self_
+hydra:
+  run:  
+    dir: ${logdir}
+_target_: agent.eval.eval_gaussian_agent.EvalGaussianAgent
+
+name: ${env_name}_m2_eval_gmm_mlp_ta${horizon_steps}
+logdir: ${oc.env:DPPO_LOG_DIR}/d3il-eval/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
+base_policy_path: ${oc.env:DPPO_LOG_DIR}/d3il-pretrain/avoid_m2_pre_gmm_mlp_ta4/2025-02-06_17-15-49_42/checkpoint/state_5000.keras
+
+# normalization_path: ${oc.env:DPPO_DATA_DIR}/d3il-pretrain/${env_name}/normalization.npz
+normalization_path: ${oc.env:DPPO_DATA_DIR}/d3il/avoid_m2/normalization.npz
+
+
+
+seed: 42
+device: cuda:0
+env_name: avoiding-m5
+# mode: d56_r12 # M1, desired modes 5 and 6, required modes 1 and 2
+obs_dim: 4
+action_dim: 2
+cond_steps: 1
+horizon_steps: 4
+act_steps: 4
+num_modes: 5
+
+
+n_steps: 25
+render_num: 40
+
+
+plotter:
+  _target_: env.plot_traj.TrajPlotter
+  env_type: avoid
+  normalization_path: ${normalization_path}
+
+
+env:
+  n_envs: 40
+  # n_envs: 1
+  name: ${env_name}
+  max_episode_steps: 100
+  reset_at_iteration: True
+  save_video: False
+  best_reward_threshold_for_success: 2
+  save_full_observations: True
+  wrappers:
+    d3il_lowdim:
+      normalization_path: ${normalization_path}
+    multi_step:
+      n_obs_steps: ${cond_steps}
+      n_action_steps: ${act_steps}
+      max_episode_steps: ${env.max_episode_steps}
+      pass_full_observations: ${env.save_full_observations}
+      reset_within_step: False
+
+
+# model:
+#   _target_: model.common.gaussian.GaussianModel
+#   network:
+#     _target_: model.common.mlp_gaussian.Gaussian_MLP
+#     mlp_dims: [256, 256, 256] # smaller MLP for less overfitting
+#     activation_type: ReLU
+#     residual_style: True
+#     fixed_std: 0.1
+#     cond_dim: ${eval:'${obs_dim} * ${cond_steps}'}
+#     horizon_steps: ${horizon_steps}
+#     action_dim: ${action_dim}
+#   horizon_steps: ${horizon_steps}
+#   device: ${device}
+
+model:
+  _target_: model.common.gmm.GMMModel
+  network_path: ${base_policy_path}
+  network:
+    _target_: model.common.mlp_gmm.GMM_MLP
+    mlp_dims: [256, 256]  # smaller MLP for less overfitting
+    activation_type: ReLU
+    residual_style: False
+    fixed_std: 0.1
+    num_modes: ${num_modes}
+    cond_dim: ${eval:'${obs_dim} * ${cond_steps}'}
+    horizon_steps: ${horizon_steps}
+    action_dim: ${action_dim}
+  horizon_steps: ${horizon_steps}
+  device: ${device}
+
+  # critic:
+  #   _target_: model.common.critic.CriticObs
+  #   mlp_dims: [256, 256, 256]
+  #   residual_style: True
+  #   cond_dim: ${eval:'${obs_dim} * ${cond_steps}'}
+  # horizon_steps: ${horizon_steps}
+  # device: ${device}
+  
+  
