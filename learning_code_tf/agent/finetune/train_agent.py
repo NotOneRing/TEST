@@ -481,6 +481,47 @@ class TrainAgent:
 
 
 
+    def save_model_gaussian_or_gmm(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+
+        # critic_savepath = savepath.replace(".keras", "_critic.keras")
+        # print("critic_savepath = ", critic_savepath)
+        # print(f"Saved model to {critic_savepath}")
+        # tf.keras.models.save_model(self.model.critic, critic_savepath)
+
+
+        # actor_ft_savepath = savepath.replace(".keras", "_actor_ft.keras")
+        # print("actor_ft_savepath = ", actor_ft_savepath)
+        # print(f"Saved model to {actor_ft_savepath}")
+        # tf.keras.models.save_model(self.model.actor_ft, actor_ft_savepath)
+
+
+
+        # actor_savepath = savepath.replace(".keras", "_actor.keras")
+        # print("actor_savepath = ", actor_savepath)
+        # print(f"Saved model to {actor_savepath}")
+        # tf.keras.models.save_model(self.model.actor, actor_savepath)
+
+
+
+
+
 
 
     def save_model_sac(self):

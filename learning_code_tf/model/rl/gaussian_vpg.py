@@ -29,11 +29,28 @@ class VPG_Gaussian(GaussianModel):
         self.critic = critic
         # .to(self.device)
 
-        # Re-name network to actor
-        self.actor_ft = actor
+        # # Re-name network to actor
+        # self.actor_ft = actor
 
-        # Save a copy of original actor
-        self.actor = deepcopy(actor)
+        # # # Save a copy of original actor
+        # # self.actor = deepcopy(actor)
+
+
+
+        # Re-name network to actor
+        self.actor_ft = self.network
+
+
+        self.build_actor(self.actor_ft)
+        
+        self.actor = tf.keras.models.clone_model(self.actor_ft)
+
+        self.build_actor(self.actor)
+
+        self.actor.set_weights(self.actor_ft.get_weights())
+
+
+
 
 
         # for param in self.actor.parameters():
@@ -72,6 +89,7 @@ class VPG_Gaussian(GaussianModel):
         cond,
         actions,
         use_base_policy=False,
+        training = True
     ):
 
         print("gaussian_vpg.py: VPG_Gaussian.get_logprobs()")
@@ -79,6 +97,7 @@ class VPG_Gaussian(GaussianModel):
         B = tf.shape(actions)[0]
 
         dist = self.forward_train(
+            training,
             cond,
             deterministic=False,
             network_override=self.actor if use_base_policy else None,

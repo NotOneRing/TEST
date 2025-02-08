@@ -185,7 +185,7 @@ class GMM_MLP(tf.keras.Model):
             self.logvar = nn_Parameter(
                 torch_log(
                     torch_tensor(
-                        [fixed_std**2 for _ in range(action_dim * num_modes)]
+                        np.array([fixed_std**2 for _ in range(action_dim * num_modes)])
                     )
                 ),
                 requires_grad=True,
@@ -329,28 +329,29 @@ class GMM_MLP(tf.keras.Model):
         # flatten history
         state = torch_tensor_view(cond["state"], [B, -1])
 
-        print("GMM_MLP call(): state = ", state)
+        # print("GMM_MLP call(): state = ", state)
 
-        print("GMM_MLP call(): self.mlp_mean = ", self.mlp_mean)
+        # print("GMM_MLP call(): self.mlp_mean = ", self.mlp_mean)
 
         # mlp
         out_mean = self.mlp_mean(state)
 
-        for var in self.mlp_mean.moduleList.variables:
-            print(f"GMM_MLP.mlp_mean: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+        # if isinstance(self.mlp_mean, MLP):
+        #     for var in self.mlp_mean.moduleList.variables:
+        #         print(f"GMM_MLP.mlp_mean: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
 
 
-        print("1: GMM_MLP: out_mean = ", out_mean)
+        # print("1: GMM_MLP: out_mean = ", out_mean)
 
         out_mean = torch_tanh(out_mean)
 
-        print("2: GMM_MLP: out_mean = ", out_mean)
+        # print("2: GMM_MLP: out_mean = ", out_mean)
 
         out_mean = torch_tensor_view(
             out_mean, [B, self.num_modes, self.horizon_steps * self.action_dim]
         ) # tanh squashing in [-1, 1]
 
-        print("3: GMM_MLP: out_mean = ", out_mean)
+        # print("3: GMM_MLP: out_mean = ", out_mean)
 
         if self.learn_fixed_std:
             out_logvar = torch_clamp(self.logvar, self.logvar_min, self.logvar_max)
@@ -366,9 +367,9 @@ class GMM_MLP(tf.keras.Model):
 
         else:
 
-            print("self.mlp_logvar = ", self.mlp_logvar)
-            for var in self.mlp_logvar.moduleList.variables:
-                print(f"GMM_MLP.mlp_logvar: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+            # print("self.mlp_logvar = ", self.mlp_logvar)
+            # for var in self.mlp_logvar.moduleList.variables:
+            #     print(f"GMM_MLP.mlp_logvar: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
 
             out_logvar = self.mlp_logvar(state)
 
@@ -379,21 +380,21 @@ class GMM_MLP(tf.keras.Model):
                 B, self.num_modes, self.horizon_steps * self.action_dim
             )
 
-            print("2: GMM_MLP: out_logvar = ", out_logvar)
+            # print("2: GMM_MLP: out_logvar = ", out_logvar)
 
             out_logvar = torch_clamp(out_logvar, self.logvar_min, self.logvar_max)
 
-            print("3: GMM_MLP: out_logvar = ", out_logvar)
+            # print("3: GMM_MLP: out_logvar = ", out_logvar)
 
             out_scale = torch_exp(0.5 * out_logvar)
 
-            print("GMM_MLP: out_scale = ", out_scale)
-            print("GMM_MLP: out_scale.shape = ", out_scale.shape)
+            # print("GMM_MLP: out_scale = ", out_scale)
+            # print("GMM_MLP: out_scale.shape = ", out_scale.shape)
 
-
-        print("self.mlp_weights = ", self.mlp_weights)
-        for var in self.mlp_weights.moduleList.variables:
-            print(f"GMM_MLP.mlp_weights: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+        # print("self.mlp_weights = ", self.mlp_weights)
+        # if isinstance(self.mlp_weights, MLP):
+        #     for var in self.mlp_weights.moduleList.variables:
+        #         print(f"GMM_MLP.mlp_weights: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
 
 
 
@@ -406,12 +407,12 @@ class GMM_MLP(tf.keras.Model):
 
         out_weights = self.mlp_weights(state)
 
-        print("out_weights.shape = ", out_weights.shape)
+        # print("out_weights.shape = ", out_weights.shape)
 
         out_weights = torch_tensor_view(out_weights, [B, self.num_modes])
 
         # print("4: GMM_MLP: out_mean = ", out_mean)
-        print("4: GMM_MLP: out_mean.shape = ", out_mean.shape)
+        # print("4: GMM_MLP: out_mean.shape = ", out_mean.shape)
 
 
 

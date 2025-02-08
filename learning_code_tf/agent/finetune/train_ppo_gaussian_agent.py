@@ -59,7 +59,14 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
 
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
-            self.model.eval() if eval_mode else self.model.train()
+            
+            # self.model.eval() if eval_mode else self.model.train()
+
+            if eval_mode:
+                training = False
+            else:
+                training = True
+
             last_itr_eval = eval_mode
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) right after eval mode
@@ -109,8 +116,11 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                     samples = self.model(
                         cond=cond,
                         deterministic=eval_mode,
+                        training = training
                     )
-                    output_venv = samples.cpu().numpy()
+                    # output_venv = samples.cpu().numpy()
+                    output_venv = samples.numpy()
+
                 action_venv = output_venv[:, : self.act_steps]
 
                 # Apply multi-step action
@@ -186,7 +196,7 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                 # with torch.no_grad():
                 with torch_no_grad() as tape:
                     obs_trajs["state"] = (
-                        torch_from_numpy(obs_trajs["state"]).float().to(self.device)
+                        torch_tensor_float( torch_from_numpy(obs_trajs["state"]) )
                     )
 
                     # Calculate value and logprobs - split into batches to prevent out of memory
@@ -203,7 +213,9 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                         obs_ts[i]["state"] = obs_t
                     values_trajs = np.empty((0, self.n_envs))
                     for obs in obs_ts:
-                        values = self.model.critic(obs).cpu().numpy().flatten()
+                        # values = self.model.critic(obs).cpu().numpy().flatten()
+                        values = self.model.critic(obs).numpy().flatten()
+
                         values_trajs = np.vstack(
                             (values_trajs, values.reshape(-1, self.n_envs))
                         )
@@ -218,7 +230,8 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                     logprobs_trajs = np.empty((0))
                     for obs_t, samples_t in zip(obs_ts, samples_ts):
                         logprobs = (
-                            self.model.get_logprobs(obs_t, samples_t)[0].cpu().numpy()
+                            # self.model.get_logprobs(obs_t, samples_t)[0].cpu().numpy()
+                            self.model.get_logprobs(obs_t, samples_t)[0].numpy()
                         )
                         logprobs_trajs = np.concatenate(
                             (
@@ -247,9 +260,9 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                             nextvalues = (
                                 # self.model.critic(obs_venv_ts)
                                 # .reshape(1, -1)
-                                torch_reshape( self.model.critic(obs_venv_ts), 1, -1)
-                                .cpu()
-                                .numpy()
+                                torch_reshape( self.model.critic(obs_venv_ts), 1, -1).numpy()
+                                # .cpu()
+                                # .numpy()
                             )
                         else:
                             nextvalues = values_trajs[t + 1]
@@ -296,18 +309,31 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
 
                     # for each epoch, go through all data in batches
                     flag_break = False
-                    inds_k = torch_randperm(total_steps, device=self.device)
+                    inds_k = torch_randperm(total_steps)
                     num_batch = max(1, total_steps // self.batch_size)  # skip last ones
                     for batch in range(num_batch):
                         start = batch * self.batch_size
                         end = start + self.batch_size
                         inds_b = inds_k[start:end]  # b for batch
-                        obs_b = {"state": obs_k["state"][inds_b]}
-                        samples_b = samples_k[inds_b]
-                        returns_b = returns_k[inds_b]
-                        values_b = values_k[inds_b]
-                        advantages_b = advantages_k[inds_b]
-                        logprobs_b = logprobs_k[inds_b]
+                        
+
+                        # obs_b = {"state": obs_k["state"][inds_b]}
+                        temp_result = tf.gather(obs_k["state"], inds_b, axis=0)
+                        obs_b = {"state": temp_result}
+
+
+                        # samples_b = samples_k[inds_b]
+                        # returns_b = returns_k[inds_b]
+                        # values_b = values_k[inds_b]
+                        # advantages_b = advantages_k[inds_b]
+                        # logprobs_b = logprobs_k[inds_b]
+
+                        samples_b = tf.gather(samples_k, inds_b, axis=0)
+                        returns_b = tf.gather(returns_k, inds_b, axis=0)
+                        values_b = tf.gather(values_k, inds_b, axis=0)
+                        advantages_b = tf.gather(advantages_k, inds_b, axis=0)
+                        logprobs_b = tf.gather(logprobs_k, inds_b, axis=0)
+
 
                         with tf.GradientTape(persistent=True) as tape:
 
@@ -342,6 +368,11 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
 
                         tf_gradients_critic = tape.gradient(loss, self.model.critic.trainable_variables)
 
+                        zip_tf_gradients_actor_ft = zip(tf_gradients_actor_ft, self.model.actor_ft.trainable_variables)
+
+                        zip_tf_gradients_critic = zip(tf_gradients_critic, self.model.critic.trainable_variables)
+
+
                         # # update policy and critic
                         # self.actor_optimizer.zero_grad()
                         # self.critic_optimizer.zero_grad()
@@ -355,8 +386,13 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                                     tf_gradients_actor_ft
                                 )
                             else:
-                                self.actor_optimizer.step(tf_gradients_actor_ft)
-                        self.critic_optimizer.step(tf_gradients_critic)
+                                self.actor_optimizer.apply_gradients(zip_tf_gradients_actor_ft)
+                        #         self.actor_optimizer.step(tf_gradients_actor_ft)
+                        # self.critic_optimizer.step(tf_gradients_critic)
+
+                        self.critic_optimizer.apply_gradients(zip_tf_gradients_critic)
+
+
                         log.info(
                             f"approx_kl: {approx_kl}, update_epoch: {update_epoch}, num_batch: {num_batch}"
                         )
@@ -369,7 +405,10 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                         break
 
                 # Explained variation of future rewards using value function
-                y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
+                # y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
+
+                y_pred, y_true = values_k.numpy(), returns_k.numpy()
+
                 var_y = np.var(y_true)
                 explained_var = (
                     np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -396,7 +435,7 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model()
+                self.save_model_gaussian_or_gmm()
 
             # Log loss and save metrics
             run_results.append(
@@ -464,3 +503,9 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+
+
+
+

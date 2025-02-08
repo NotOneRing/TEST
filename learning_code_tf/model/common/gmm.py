@@ -11,7 +11,8 @@ import logging
 log = logging.getLogger(__name__)
 
 from util.torch_to_tf import Normal, Categorical, Independent, MixtureSameFamily, \
-torch_tensor_view, torch_mean, torch_mean, torch_sum, torch_softmax, torch_ones_like, torch_ones
+torch_tensor_view, torch_mean, torch_mean, torch_sum, torch_softmax, torch_ones_like, torch_ones,\
+nn_Parameter, torch_tensor
 
 
 
@@ -458,7 +459,7 @@ class GMMModel(tf.keras.Model):
         """
 
         print("gmm.py: GMMModel.forward_train()")
-        print("self.network = ", self.network)
+        # print("self.network = ", self.network)
         means, scales, logits = self.network(cond, training=training)
 
 
@@ -529,7 +530,7 @@ class GMMModel(tf.keras.Model):
         """
 
         print("gmm.py: GMMModel.forward_train()")
-        print("network = ", network)
+        # print("network = ", network)
         means, scales, logits = network(cond, training=training)
         if deterministic:
             # low-noise for all Gaussian dists
@@ -597,6 +598,103 @@ class GMMModel(tf.keras.Model):
     
 
 
+
+
+
+
+
+
+
+
+
+
+
+    def load_pickle_gmm_mlp(self, network_path):
+        pkl_file_path = network_path.replace('.pt', '_model.pkl')
+
+        print("pkl_file_path = ", pkl_file_path)
+
+        import pickle
+        # load pickle file
+        with open(pkl_file_path, 'rb') as file:
+            params_dict = pickle.load(file)
+
+
+
+        # 打印加载的内容
+
+        if OUTPUT_VARIABLES:
+            print("params_dict = ", params_dict)
+
+        # # Square
+        # 'network.logvar_min'
+        # 'network.logvar_max'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+        # 'network.mlp_weights.layers.0.weight'
+        # 'network.mlp_weights.layers.0.bias'
+        # 'network.mlp_weights.layers.1.l1.weight'
+        # 'network.mlp_weights.layers.1.l1.bias'
+        # 'network.mlp_weights.layers.1.l2.weight'
+        # 'network.mlp_weights.layers.1.l2.bias'
+        # 'network.mlp_weights.layers.2.weight'
+        # 'network.mlp_weights.layers.2.bias'
+
+        self.logvar_min = nn_Parameter(
+            torch_tensor(params_dict['network.logvar_min']), requires_grad=False
+        )
+
+        self.logvar_max = nn_Parameter(
+            torch_tensor(params_dict['network.logvar_max']), requires_grad=False
+        )
+
+        if 'network.mlp_mean.layers.0.weight' in params_dict:
+            self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.0.bias' in params_dict:
+            self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
+
+        if 'network.mlp_mean.layers.1.l1.weight' in params_dict:
+            self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.1.l1.bias' in params_dict:
+            self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
+
+        if 'network.mlp_mean.layers.1.l2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.1.l2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
+
+        if 'network.mlp_mean.layers.2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
+
+
+
+        if 'network.mlp_weights.layers.0.weight' in params_dict:
+            self.network.mlp_weights.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_weights.layers.0.weight'].T)  # kernel
+        if 'network.mlp_weights.layers.0.bias' in params_dict:
+            self.network.mlp_weights.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_weights.layers.0.bias'])     # bias
+
+        if 'network.mlp_weights.layers.1.l1.weight' in params_dict:
+            self.network.mlp_weights.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_weights.layers.1.l1.weight'].T)  # kernel
+        if 'network.mlp_weights.layers.1.l1.bias' in params_dict:
+            self.network.mlp_weights.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_weights.layers.1.l1.bias'])     # bias
+
+        if 'network.mlp_weights.layers.1.l2.weight' in params_dict:
+            self.network.mlp_weights.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_weights.layers.1.l2.weight'].T)  # kernel
+        if 'network.mlp_weights.layers.1.l2.bias' in params_dict:
+            self.network.mlp_weights.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_weights.layers.1.l2.bias'])     # bias
+
+        if 'network.mlp_weights.layers.2.weight' in params_dict:
+            self.network.mlp_weights.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_weights.layers.2.weight'].T)  # kernel
+        if 'network.mlp_weights.layers.2.bias' in params_dict:
+            self.network.mlp_weights.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_weights.layers.2.bias'])     # bias
 
 
 

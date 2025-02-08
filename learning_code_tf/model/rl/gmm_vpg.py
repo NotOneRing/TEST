@@ -18,8 +18,12 @@ class VPG_GMM(GMMModel):
 
         super().__init__(network=actor, **kwargs)
 
+        # # Re-name network to actor
+        # self.actor_ft = actor
+
         # Re-name network to actor
-        self.actor_ft = actor
+        self.actor_ft = self.network
+
 
         # Value function for obs - simple MLP
         self.critic = critic
@@ -43,13 +47,15 @@ class VPG_GMM(GMMModel):
         self,
         cond,
         actions,
+        training=True
     ):
 
         print("gmm_vpg.py: VPG_GMM.get_logprobs()")
 
         # B = len(actions)
-        B = actions.shape().as_list()[0]
+        B = actions.shape[0]
         dist, entropy, std = self.forward_train(
+            training,
             cond,
             deterministic=False,
         )

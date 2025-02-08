@@ -42,8 +42,19 @@ class DQLDiffusion(DiffusionModel):
         assert not self.use_ddim, "DQL does not support DDIM"
         self.critic = critic
         
-        # target critic
-        self.critic_target = copy.deepcopy(self.critic)
+        # # target critic
+        # self.critic_target = copy.deepcopy(self.critic)
+
+
+        self.build_actor(self.critic)
+
+        self.critic_target = tf.keras.models.clone_model(self.critic)
+
+        self.critic_target.set_weights(self.critic.get_weights())
+
+        self.build_actor(self.critic_target)
+
+
 
         # reassign actor
         self.actor = self.network
@@ -111,7 +122,8 @@ class DQLDiffusion(DiffusionModel):
 
         print("diffusion_dql.py: DQLDiffusion.update_target_critic()")
 
-        for target_param, source_param in zip(self.critic_target.trainable_variables, self.critic.trainable_variables):
+        # for target_param, source_param in zip(self.critic_target.trainable_variables, self.critic.trainable_variables):
+        for target_param, source_param in zip(self.critic_target.variables, self.critic.variables):
             target_param.assign(
                 target_param * (1.0 - tau) + source_param * tau
             )
@@ -158,7 +170,7 @@ class DQLDiffusion(DiffusionModel):
                 elif deterministic:
                     std = torch_clip(std, min = 1e-3)
                 else:
-                    std = torch_clip(std, self.min_sampling_denoising_std)
+                    std = torch_clip(std, min = self.min_sampling_denoising_std)
                 
                 noise = torch_randn_like(x)
                 noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)

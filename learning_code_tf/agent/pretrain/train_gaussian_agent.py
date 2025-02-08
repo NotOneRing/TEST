@@ -36,6 +36,12 @@ class TrainGaussianAgent(PreTrainAgent):
 
         super().__init__(cfg)
 
+        if DEBUG and TEST_LOAD_PRETRAIN:
+            self.base_policy_path = cfg.get("base_policy_path", None)
+
+        # self.model.batch_size = self.batch_size
+
+
         # Entropy bonus - not used right now since using fixed_std
         self.ent_coef = cfg.train.get("ent_coef", 0)
 

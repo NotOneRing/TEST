@@ -76,7 +76,7 @@ class VPGDiffusion(DiffusionModel):
         assert not (learn_eta and not self.use_ddim), "Cannot learn eta with DDPM."
 
         self.actor = actor
-        self.critic = critic
+        # self.critic = critic
 
         # Number of denoising steps to use with fine-tuned model. Thus denoising_step - ft_denoising_steps is the number of denoising steps to use with original model.
         self.ft_denoising_steps = ft_denoising_steps
@@ -142,68 +142,6 @@ class VPGDiffusion(DiffusionModel):
         self.actor_ft = tf.keras.models.clone_model(self.actor)
 
 
-
-
-        # # Gym - hopper/walker2d/halfcheetah
-        # if self.env_name == "hopper-medium-v2":
-        #     # hopper_medium
-        #     # item_actions_copy.shape =  
-        #     shape1 = (128, 4, 3)
-        #     # cond_copy['state'].shape =  
-        #     shape2 = (128, 1, 11)
-        # elif self.env_name == "walker2d-medium-v2":
-        #     pass
-        # elif self.env_name == "halfcheetah-medium-v2":
-        #     pass
-        # # Robomimic - lift/can/square/transport
-        # elif self.env_name == "lift":
-        #     pass
-
-        # elif self.env_name == "can":
-        #     #can 
-        #     # item_actions_copy.shape =  
-        #     shape1 = (256, 4, 7)
-        #     # cond_copy['state'].shape =  
-        #     shape2 = (256, 1, 23)
-
-        # elif self.env_name == "square":
-        #     pass
-
-        # elif self.env_name == "transport":
-        #     pass
-
-        # # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
-        # elif self.env_name == "avoiding-m5":
-        #     #avoid_m1
-        #     # item_actions_copy.shape =  
-        #     shape1 = (16, 4, 2)
-        #     # cond_copy['state'].shape =  
-        #     shape2 = (16, 1, 4)
-        # # Furniture-Bench - one_leg/lamp/round_table_low/med
-        # elif self.env_name == "square":
-        #     pass
-
-        # elif self.env_name == "transport":
-        #     pass
-        
-        # else:
-        #     # #one_leg_low
-        #     # # item_actions_copy.shape =  
-        #     # shape1 = (256, 8, 10)
-        #     # # cond_copy['state'].shape =  
-        #     # shape2 = (256, 1, 58)
-        #     raise RuntimeError("Furniture is not implemented right now")
-
-
-        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
-        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
-        # build_dict = {'state': param2}
-
-
-        
-        # # _ = self.loss_ori(param1, build_dict)
-        # _ = self.loss_ori_build(self.actor, training=False, x_start = param1, cond=build_dict)
-        # _ = self.loss_ori_build(self.actor_ft, training=False, x_start = param1, cond=build_dict)
 
         self.build_actor(self.actor_ft)
 

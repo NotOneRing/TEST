@@ -1,14 +1,32 @@
-# DEBUG = True
+DEBUG = True
 
-DEBUG = False
+# DEBUG = False
+
+# METHOD_NAME = "Diffusion_MLP"
+
+# METHOD_NAME = "Diffusion_UNet"
+
+# METHOD_NAME = "Gaussian_MLP"
+
+METHOD_NAME = "GMM_MLP"
+
+# METHOD_NAME = "Gaussian_Transformer"
+
+# METHOD_NAME = "GMM_Transformer"
+
+
+# METHOD_NAME = "Diffusion_ViT_MLP"
+
+# METHOD_NAME = "Diffusion_ViT_UNet"
+
+# METHOD_NAME = "Gaussian_ViT_MLP"
 
 
 
 
+TEST_LOAD_PRETRAIN = True
 
-# TEST_LOAD_PRETRAIN = True
-
-TEST_LOAD_PRETRAIN = False
+# TEST_LOAD_PRETRAIN = False
 
 
 
@@ -42,21 +60,3 @@ NP_RANDOM = True
 
 
 
-# METHOD_NAME = "Diffusion_MLP"
-
-# METHOD_NAME = "Diffusion_UNet"
-
-METHOD_NAME = "Gaussian_MLP"
-
-# METHOD_NAME = "GMM_MLP"
-
-# METHOD_NAME = "Gaussian_Transformer"
-
-# METHOD_NAME = "GMM_Transformer"
-
-
-# METHOD_NAME = "Diffusion_ViT_MLP"
-
-# METHOD_NAME = "Diffusion_ViT_UNet"
-
-# METHOD_NAME = "Gaussian_ViT_MLP"

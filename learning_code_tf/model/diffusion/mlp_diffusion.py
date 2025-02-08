@@ -20,6 +20,95 @@ from tensorflow.keras.saving import register_keras_serializable
 from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
 
 
+
+
+
+
+
+
+
+from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, nn_TransformerDecoder,\
+nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
+nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
+nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
+# from model.rl.gaussian_calql import CalQL_Gaussian
+from model.diffusion.unet import ResidualBlock1D, Unet1D
+from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
+# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
+# from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
+# from model.diffusion.diffusion import DiffusionModel
+from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
+# from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
+from model.common.modules import SpatialEmb, RandomShiftsAug
+from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+
+
+cur_dict = {
+#part1:
+"nn_TransformerEncoder": nn_TransformerEncoder, 
+"nn_TransformerEncoderLayer": nn_TransformerEncoderLayer, 
+"nn_TransformerDecoder": nn_TransformerDecoder,
+"nn_TransformerDecoderLayer": nn_TransformerDecoderLayer, 
+"einops_layers_torch_Rearrange": einops_layers_torch_Rearrange, 
+"nn_GroupNorm": nn_GroupNorm, 
+"nn_ConvTranspose1d": nn_ConvTranspose1d, 
+"nn_Conv2d": nn_Conv2d, 
+"nn_Conv1d": nn_Conv1d,
+"nn_MultiheadAttention": nn_MultiheadAttention,
+"nn_LayerNorm": nn_LayerNorm, 
+"nn_Embedding": nn_Embedding, 
+"nn_ModuleList": nn_ModuleList, 
+"nn_Sequential": nn_Sequential,
+"nn_Linear": nn_Linear, 
+"nn_Dropout": nn_Dropout, 
+"nn_ReLU": nn_ReLU, 
+"nn_GELU": nn_GELU, 
+"nn_ELU": nn_ELU, 
+"nn_Mish": nn_Mish, 
+"nn_Softplus": nn_Softplus, 
+"nn_Identity": nn_Identity, 
+"nn_Tanh": nn_Tanh,
+#part2:
+"ResidualBlock1D": ResidualBlock1D,
+"Unet1D": Unet1D,
+"Conv1dBlock": Conv1dBlock, 
+"Upsample1d": Upsample1d, 
+"Downsample1d": Downsample1d, 
+"SinusoidalPosEmb": SinusoidalPosEmb,
+# "DiffusionMLP": DiffusionMLP, 
+# "VisionDiffusionMLP": VisionDiffusionMLP,
+# "EtaStateAction": EtaStateAction, 
+# "EtaState": EtaState, 
+# "EtaAction": EtaAction, 
+# "EtaFixed": EtaFixed,
+#part3:
+"VitEncoder": VitEncoder, 
+"PatchEmbed1": PatchEmbed1, 
+"PatchEmbed2": PatchEmbed2,
+"MultiHeadAttention": MultiHeadAttention, 
+"TransformerLayer": TransformerLayer, 
+"MinVit": MinVit,
+# "Gaussian_Transformer": Gaussian_Transformer, 
+# "GMM_Transformer": GMM_Transformer, 
+# "Transformer": Transformer,
+"SpatialEmb": SpatialEmb,
+"RandomShiftsAug": RandomShiftsAug,
+"MLP": MLP,
+"ResidualMLP": ResidualMLP, 
+"TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+}
+
+
+
+
+
+
+
+
+
+
+
+
 # class VisionDiffusionMLP(tf.keras.layers.Layer):
 @register_keras_serializable(package="Custom")
 class VisionDiffusionMLP(tf.keras.Model):
@@ -43,7 +132,14 @@ class VisionDiffusionMLP(tf.keras.Model):
         dropout=0,
         num_img=1,
         augment=False,
+
+        compress = None,
+        compress1 = None,
+        compress2 = None,
+        time_embedding = None,
+        mlp_mean = None
     ):
+
         if OUTPUT_FUNCTION_HEADER:
             print("mlp_diffusion.py: VisionDiffusionMLP.__init__()")
 
@@ -51,10 +147,29 @@ class VisionDiffusionMLP(tf.keras.Model):
 
         # vision
         self.backbone = backbone
+        self.action_dim = action_dim
+        self.horizon_steps = horizon_steps
+        self.cond_dim = cond_dim
+        # self.img_cond_steps
+        # self.time_dim = time_dim
+        if not isinstance(mlp_dims, list):
+            self.mlp_dims = list(mlp_dims)
+        self.activation_type = activation_type
+        self.out_activation_type = out_activation_type
+        self.use_layernorm = use_layernorm
+        self.residual_style = residual_style
+        self.spatial_emb = spatial_emb
+        self.visual_feature_dim = visual_feature_dim      
+        self.dropout = dropout
+        self.num_img = num_img
+        self.augment = augment
+
+
         if augment:
             self.aug = RandomShiftsAug(pad=4)
         self.augment = augment
         self.num_img = num_img
+
         self.img_cond_steps = img_cond_steps
         if spatial_emb > 0:
             assert spatial_emb > 1, "this is the dimension"
@@ -85,7 +200,11 @@ class VisionDiffusionMLP(tf.keras.Model):
             ])
 
         # diffusion
-        input_dim = time_dim + action_dim * horizon_steps + visual_feature_dim + cond_dim
+        # input_dim = time_dim + action_dim * horizon_steps + visual_feature_dim + cond_dim
+        input_dim = (
+            time_dim + action_dim * horizon_steps + visual_feature_dim + cond_dim
+        )
+
         output_dim = action_dim * horizon_steps
         
         self.time_embedding = nn_Sequential([
@@ -100,13 +219,169 @@ class VisionDiffusionMLP(tf.keras.Model):
         else:
             model = MLP
 
+        dim_list = [input_dim] + mlp_dims + [output_dim]
+
+        print("dim_list = ", dim_list)
+
         self.mlp_mean = model(
-            [input_dim] + mlp_dims + [output_dim],
+            dim_list,
             activation_type=activation_type,
             out_activation_type=out_activation_type,
             use_layernorm=use_layernorm,
         )
         self.time_dim = time_dim
+
+
+
+
+
+
+
+    def get_config(self):
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("VisionDiffusionMLP: get_config()")
+
+        # config = {}
+        config = super(VisionDiffusionMLP, self).get_config()
+
+
+        # 打印每个属性及其类型和值
+        if OUTPUT_VARIABLES:
+            print("Checking VisionDiffusionMLP Config elements:")
+
+            print(f"backbone: {self.backbone}, type: {type(self.backbone)}")
+
+            print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
+            print(f"horizon_steps: {self.horizon_steps}, type: {type(self.horizon_steps)}")
+            print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
+
+            print(f"img_cond_steps: {self.img_cond_steps}, type: {type(self.img_cond_steps)}")
+            print(f"time_dim: {self.time_dim}, type: {type(self.time_dim)}")
+
+            print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
+            print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+
+            print(f"out_activation_type: {self.out_activation_type}, type: {type(self.out_activation_type)}")
+
+            print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+            print(f"residual_style: {self.residual_style}, type: {type(self.residual_style)}")
+
+            print(f"spatial_emb: {self.spatial_emb}, type: {type(self.spatial_emb)}")
+            print(f"visual_feature_dim: {self.visual_feature_dim}, type: {type(self.visual_feature_dim)}")
+            print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
+
+            print(f"num_img: {self.num_img}, type: {type(self.num_img)}")
+            print(f"augment: {self.augment}, type: {type(self.augment)}")
+        
+        config.update({
+            "backbone": self.backbone,
+
+            "action_dim": self.action_dim,
+            "horizon_steps": self.horizon_steps,
+            "cond_dim": self.cond_dim,
+
+            "img_cond_steps": self.img_cond_steps,
+            "time_dim": self.time_dim,
+
+            "mlp_dims": self.mlp_dims,
+            "activation_type": self.activation_type,
+            "out_activation_type": self.out_activation_type,
+
+            "use_layernorm": self.use_layernorm,
+            "residual_style": self.residual_style,
+
+            "spatial_emb": self.spatial_emb,
+            "visual_feature_dim": self.visual_feature_dim,
+
+            "dropout": self.dropout,
+            "num_img": self.num_img,
+            "augment": self.augment
+        })
+
+
+        
+
+        if self.spatial_emb > 0:
+            assert self.spatial_emb > 1, "this is the dimension"
+            if self.num_img > 1:
+                config.update({
+                    "compress1": tf.keras.layers.serialize(self.compress1),
+                    "compress2": tf.keras.layers.serialize(self.compress2),
+                })                
+            else:
+                config.update({
+                    "compress": tf.keras.layers.serialize(self.compress),
+                })                
+        else:
+            config.update({
+                "compress": tf.keras.layers.serialize(self.compress),
+            })
+
+        config.update({
+            "time_embedding": tf.keras.layers.serialize(self.time_embedding),
+            "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
+        })
+
+
+        return config
+
+
+
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("VisionDiffusionMLP: from_config()")
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        get_custom_objects().update(cur_dict)
+
+        spatial_emb = config.pop("spatial_emb")
+        num_img = config.pop("num_img")
+
+
+        if spatial_emb > 0:
+            assert spatial_emb > 1, "this is the dimension"
+            if num_img > 1:
+                compress = None
+                compress1 = tf.keras.layers.deserialize(config.pop("compress1"),  custom_objects=get_custom_objects() )
+                compress2 = tf.keras.layers.deserialize(config.pop("compress2"),  custom_objects=get_custom_objects() )
+            else:
+                compress = tf.keras.layers.deserialize(config.pop("compress"),  custom_objects=get_custom_objects() )
+                compress1 = None
+                compress2 = None
+        else:
+            compress = tf.keras.layers.deserialize(config.pop("compress"),  custom_objects=get_custom_objects() )
+            compress1 = None
+            compress2 = None
+
+        time_embedding = tf.keras.layers.deserialize(config.pop("time_embedding"),  custom_objects=get_custom_objects() )
+        mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean"),  custom_objects=get_custom_objects() )
+
+
+        result = cls(spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1, compress2 = compress2, time_embedding = time_embedding, mlp_mean = mlp_mean, **config)
+        return result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def call(self, inputs
             #  , **kwargs
@@ -128,10 +403,10 @@ class VisionDiffusionMLP(tf.keras.Model):
         _, T_rgb, C, H, W = cond["rgb"].shape
 
         # flatten chunk
-        x = tf.reshape(x, [B, -1])
+        x = torch_tensor_view(x, [B, -1])
 
         # flatten history
-        state = tf.reshape(cond["state"], [B, -1])
+        state = torch_tensor_view(cond["state"], [B, -1])
 
         # Take recent images
         rgb = cond["rgb"][:, -self.img_cond_steps:]
@@ -171,7 +446,7 @@ class VisionDiffusionMLP(tf.keras.Model):
                 feat = torch_flatten(feat, 1, -1)
                 feat = self.compress(feat)
 
-        cond_encoded = tf.concat([feat, state], dim=-1)
+        cond_encoded = torch_cat([feat, state], dim=-1)
 
         # append time and cond
         time = torch_tensor_view(time, [B, 1])
@@ -181,6 +456,53 @@ class VisionDiffusionMLP(tf.keras.Model):
         # mlp
         out = self.mlp_mean(x)
         return torch_tensor_view(out, [B, Ta, Da])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # import math

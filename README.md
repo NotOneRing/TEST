@@ -6,17 +6,21 @@
 <center class="third">
     <div>
         <b>Original Results</b><br>
-        <img src="hopper_orig.png" height="200" width="300"/>
-        <img src="walker_orig.png" height="200" width="300"/>
-        <img src="halfcheetah_orig.png" height="200" width="300"/>
+        <img src="figure/hopper_orig.png" height="120" width="180"/>
+        <img src="figure/walker_orig.png" height="120" width="180"/>
+        <img src="figure/halfcheetah_orig.png" height="120" width="180"/>
     </div>
     <br>
     <div>
         <b>Replicated Results</b><br>
-        <img src="hopper.png" height="200" width="300"/>
-        <img src="walker.png" height="200" width="300"/>
-        <img src="halfcheetah.png" height="200" width="300"/>
+        <img src="figure/hopper.png" height="120" width="180"/>
+        <img src="figure/walker.png" height="120" width="180"/>
+        <img src="figure/halfcheetah.png" height="120" width="180"/>
     </div>
+    <br>
+    <div>
+        <img src="figure/legeng.png" width="540">
+    <div>
 </center>
 
 
@@ -24,19 +28,23 @@
 <center class="forth">
     <div>
         <b>Original Results</b><br>
-        <img src="lift_orig.png" height="200" width="300"/>
-        <img src="can_orig.png" height="200" width="300"/>
-        <img src="square_orig.png" height="200" width="300"/>
-        <img src="transport_orig.png" height="200" width="300"/>
+        <img src="figure/lift_orig.png" height="120" width="180"/>
+        <img src="figure/can_orig.png" height="120" width="180"/>
+        <img src="figure/square_orig.png" height="120" width="180"/>
+        <img src="figure/transport_orig.png" height="120" width="180"/>
     </div>
     <br>
     <div>
         <b>Replicated Results</b><br>
-        <img src="lift.png" height="200" width="300"/>   
-        <img src="can.png" height="200" width="300"/>
-        <img src="square.png" height="200" width="300"/>
-        <img src="transport.png" height="200" width="300"/>
+        <img src="figure/lift.png" height="120" width="180"/>   
+        <img src="figure/can.png" height="120" width="180"/>
+        <img src="figure/square.png" height="120" width="180"/>
+        <img src="figure/transport.png" height="120" width="180"/>
     </div>
+    <br>
+    <div>
+        <img src="figure/legeng.png" width="540">
+    <div>
 </center>
 
 
@@ -49,24 +57,84 @@
     <div style="display: flex; justify-content: space-around; text-align: center;">
         <div>
             <b>Pre-training Data</b><br>
-            <img src="pre_1.png" height="200"/><br>
-            <img src="pre_2.png" height="200"/><br>
-            <img src="pre_2.png" height="200"/>
+            <img src="figure/pre_1.png" height="150"/><br>
+            <img src="figure/pre_2.png" height="150"/><br>
+            <img src="figure/pre_2.png" height="150"/>
         </div>
         <div>
             <b>Original Results</b><br>
-            <img src="DPPO_orig_1.png" height="200"/><br>
-            <img src="DPPO_orig_2.png" height="200"/><br>
-            <img src="DPPO_orig_3.png" height="200"/>
+            <img src="figure/DPPO_orig_1.png" height="150"/><br>
+            <img src="figure/DPPO_orig_2.png" height="150"/><br>
+            <img src="figure/DPPO_orig_3.png" height="150"/>
         </div>
         <div>
             <b>Replicated Results</b><br>
-            <img src="DPPO_1.png" height="200"/><br>
-            <img src="DPPO_2.png" height="200"/><br>
-            <img src="DPPO_3.png" height="200"/>
+            <img src="figure/DPPO_1.png" height="150"/><br>
+            <img src="figure/DPPO_2.png" height="150"/><br>
+            <img src="figure/DPPO_3.png" height="150"/>
         </div>
     </div>
 </center>
+
+
+
+#### 2.2 Structured exploration for Gaussian
+
+Their configuration .yaml file is absent in the ./cfg folders, with the exception of DPPO at M1. Therefore, I created a version of the missing 8 files myself, which include DPPO at M2 and M3, Gaussian at M1, M2, and M3, and GMM at M1, M2, and M3.
+
+
+<center class="third">
+    <div style="display: flex; justify-content: space-around; text-align: center;">
+        <div>
+            <b>Presented results</b><br>
+            <img src="figure/Gaussian_orig_1.png" height="150"/><br>
+            <img src="figure/Gaussian_orig_2.png" height="150"/><br>
+            <img src="figure/Gaussian_orig_3.png" height="150"/>
+        </div>
+        <div>
+            <b>Results by given codes</b><br>
+            <img src="figure/Gaussian_orig_1_code.png" height="150"/><br>
+            <img src="figure/Gaussian_orig_2_code.png" height="150"/><br>
+            <img src="figure/Gaussian_orig_3_code.png" height="150"/>
+        </div>
+        <div>
+            <b>Replicated Results</b><br>
+            <img src="figure/Gaussian_1.png" height="150"/><br>
+            <img src="figure/Gaussian_2_1000.png" height="150"/><br>
+            <!-- <img src="figure/Gaussian_3.png" height="150"/> -->
+        </div>
+    </div>
+</center>
+
+
+
+#### 2.3 Structured exploration for GMM
+
+<center class="third">
+    <div style="display: flex; justify-content: space-around; text-align: center;">
+        <div>
+            <b>Pre-training Data</b><br>
+            <img src="figure/pre_1.png" height="150"/><br>
+            <img src="figure/pre_2.png" height="150"/><br>
+            <img src="figure/pre_2.png" height="150"/>
+        </div>
+        <div>
+            <b>Original Results</b><br>
+            <img src="figure/DPPO_orig_1.png" height="150"/><br>
+            <img src="figure/DPPO_orig_2.png" height="150"/><br>
+            <img src="figure/DPPO_orig_3.png" height="150"/>
+        </div>
+        <div>
+            <b>Replicated Results</b><br>
+            <img src="figure/GMM_1.png" height="150"/><br>
+            <img src="figure/GMM_2.png" height="150"/><br>
+            <!-- <img src="figure/DPPO_3.png" height="150"/> -->
+        </div>
+    </div>
+</center>
+
+
+
 
 
 
