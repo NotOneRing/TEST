@@ -309,6 +309,8 @@ class TrainDiffusionAgent(PreTrainAgent):
                 cond = {}
                 cur_actions = batch_train['actions']
                 cond['state'] = batch_train["states"]
+                cond['rgb'] = batch_train["rgb"]
+
                 item_actions_copy = deepcopy(batch_train['actions'])
                 cond_copy = deepcopy(cond)
 
@@ -379,6 +381,8 @@ class TrainDiffusionAgent(PreTrainAgent):
                     # loss_val, infos_val = self.model.loss(*batch_val)
                     cur_actions = batch_val['actions']
                     cond['state'] = batch_val["states"]
+
+                    cond['rgb'] = batch_val["rgb"]
 
                     loss_val = self.model.loss_ori(training_flag, 
                         cur_actions, cond)

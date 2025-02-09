@@ -394,22 +394,22 @@ class VisionDiffusionMLP(tf.keras.Model):
             rgb: (B, To, C, H, W)
         """
 
-        x, time, cond = inputs
+        x, time, cond_state, cond_rgb = inputs
 
         if OUTPUT_FUNCTION_HEADER:
             print("mlp_diffusion.py: VisionDiffusionMLP.call()")
 
         B, Ta, Da = x.shape
-        _, T_rgb, C, H, W = cond["rgb"].shape
+        _, T_rgb, C, H, W = cond_rgb.shape
 
         # flatten chunk
         x = torch_tensor_view(x, [B, -1])
 
         # flatten history
-        state = torch_tensor_view(cond["state"], [B, -1])
+        state = torch_tensor_view(cond_state, [B, -1])
 
         # Take recent images
-        rgb = cond["rgb"][:, -self.img_cond_steps:]
+        rgb = cond_rgb[:, -self.img_cond_steps:]
 
         # concatenate images in cond by channels
         if self.num_img > 1:

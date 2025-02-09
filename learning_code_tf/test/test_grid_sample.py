@@ -14,6 +14,7 @@ tf.random.set_seed(seed)
 
 
 from util.torch_to_tf import torch_nn_functional_grid_sample
+# , torch_nn_functional_grid_sample2
 
 
 def test_case1_align_corners():
@@ -33,13 +34,17 @@ def test_case1_align_corners():
 
     output_torch = torch.nn.functional.grid_sample(input_tensor_torch, grid_torch, align_corners = True)
 
+    # from util.torch_to_tf import torch_tensor_clone
+    # input_tensor_tf_copy = torch_tensor_clone(input_tensor_tf)
+    # output_tf = torch_nn_functional_grid_sample2(input_tensor_tf, grid_tf, align_corners = True)
+
     output_tf = torch_nn_functional_grid_sample(input_tensor_tf, grid_tf, align_corners = True)
 
     torch_output = output_torch.detach().numpy()
     tensorflow_output = output_tf.numpy()
 
-    # print("torch_output = ", torch_output)
-    # print("tensorflow_output = ", tensorflow_output)
+    print("torch_output = ", torch_output)
+    print("tensorflow_output = ", tensorflow_output)
 
 
     assert np.allclose(torch_output, tensorflow_output, atol=1e-5)

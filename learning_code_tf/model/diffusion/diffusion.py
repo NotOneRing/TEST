@@ -2713,9 +2713,13 @@ class DiffusionModel(tf.keras.Model):
         print("self.network = ", self.network)
 
         # x_recon = self.network(x_noisy, t, cond = cond, training=training_flag)
-        x_recon = self.network([x_noisy, t, cond["state"]]
-                               , training=training)
-                            #    )
+        if 'rgb' in cond:
+            x_recon = self.network([x_noisy, t, cond["state"], cond["rgb"]]
+                                , training=training)
+        else:
+            x_recon = self.network([x_noisy, t, cond["state"]]
+                                , training=training)
+                                #    )
 
 
 

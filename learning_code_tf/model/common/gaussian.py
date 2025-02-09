@@ -275,7 +275,7 @@ class GaussianModel(tf.keras.Model):
         from model.common.mlp_gaussian import Gaussian_MLP
         from model.diffusion.unet import Unet1D
 
-        if isinstance( self.network, (Gaussian_MLP, Unet1D) ):
+        if isinstance( self.network, (Gaussian_MLP, Unet1D, Gaussian_VisionMLP) ):
             network_repr = self.network.get_config()
             if OUTPUT_VARIABLES:
                 print("network_repr = ", network_repr)

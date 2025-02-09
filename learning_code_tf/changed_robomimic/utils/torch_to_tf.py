@@ -759,8 +759,9 @@ def nn_functional_pad(x, pad, mode='replicate'):
     # batch, height, width, channels = x.shape
     from copy import deepcopy
  
-    result = deepcopy(x)
- 
+    # result = deepcopy(x)
+    result = x
+    
     total_dim = len(x.shape)
     assert len(pad) % 2 == 0
     pad_dim = len(pad) / 2
@@ -3763,6 +3764,13 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
 
 
 
+
+
+
+
+
+
+
 def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="zeros", align_corners=False):
 
 
@@ -3800,7 +3808,6 @@ def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="
     # np.zeros_like(image)
 
 
-
     for n in range(N):
         for w in range(W_out):
             for h in range(H_out):
@@ -3817,12 +3824,15 @@ def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="
 
                 y0 = tf.floor(iy)
                 y1 = y0 + 1
+
+                
     
                 # Get W matrix before I matrix, as I matrix requires Channel information
                 wa = (x1 - ix) * (y1 - iy)
                 wb = (x1 - ix) * (iy - y0)
                 wc = (ix - x0) * (y1 - iy)
                 wd = (ix - x0) * (iy - y0)
+
                 
                 # Get values of the image by provided x0, y0, x1, y1 by channel
                 for c in range(C):
@@ -3837,6 +3847,8 @@ def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="
                     output_tensor[n, c, h, w] = out_ch_val.numpy()
     output_tensor = tf.convert_to_tensor(output_tensor)
     return output_tensor
+
+
 
 
 

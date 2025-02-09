@@ -3732,6 +3732,7 @@ class torch_utils_data_DataLoader:
         if self.shuffle:
             rng.shuffle(indices)  # 打乱索引顺序
         
+        
         batch_data = {
             "actions": [],
             "states": [],
@@ -4054,92 +4055,416 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
 
 
 
-def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="zeros", align_corners=False):
+# def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="zeros", align_corners=False):
 
 
-    def grid_sampler_unnormalize_tf(coord, side, align_corners):
-        if align_corners:
-            return ((coord + 1) / 2) * (side - 1)
-        else:
-            return ((coord + 1) * side - 1) / 2
+#     def grid_sampler_unnormalize_tf(coord, side, align_corners):
+#         if align_corners:
+#             return ((coord + 1) / 2) * (side - 1)
+#         else:
+#             return ((coord + 1) * side - 1) / 2
             
-    def grid_sampler_compute_source_index_tf(coord, size, align_corners):
-        return grid_sampler_unnormalize_tf(coord, size, align_corners)
+#     def grid_sampler_compute_source_index_tf(coord, size, align_corners):
+#         return grid_sampler_unnormalize_tf(coord, size, align_corners)
 
-    def safe_get_tf(image, n, c, x, y, H, W):
-        value = tf.zeros([1])
-        x = tf.cast(x, tf.int32)  # Ensure x is an integer type
-        y = tf.cast(y, tf.int32)  # Ensure y is an integer type
-        if x >= 0 and x < W and y >= 0 and y < H:
-            value = image[n, c, y, x]
-        return value
+#     def safe_get_tf(image, n, c, x, y, H, W):
+#         value = tf.zeros([1])
+#         x = tf.cast(x, tf.int32)  # Ensure x is an integer type
+#         y = tf.cast(y, tf.int32)  # Ensure y is an integer type
+#         if x >= 0 and x < W and y >= 0 and y < H:
+#             value = image[n, c, y, x]
+#         return value
 
 
-    assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
-    assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
-    assert mode == "bilinear", "only bilinear is implemented right now"
-    assert len(image.shape) == 4, "len(input.shape) must be 4"
+#     assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+#     assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+#     assert mode == "bilinear", "only bilinear is implemented right now"
+#     assert len(image.shape) == 4, "len(input.shape) must be 4"
 
+#     N, C, H_in, W_in = image.shape
+
+#     H_out = grid.shape[1]
+#     W_out = grid.shape[2]
+    
+#     # output_tensor = tf.zeros_like(image)
+    
+#     output_tensor = np.zeros( [N, C, H_out, W_out] )
+#     # np.zeros_like(image)
+
+
+
+#     for n in range(N):
+#         for w in range(W_out):
+#             for h in range(H_out):
+#                 # Get corresponding grid x and y
+#                 x = grid[n, h, w, 1]
+#                 y = grid[n, h, w, 0]
+                
+#                 # Unnormalize with align_corners condition
+#                 ix = grid_sampler_compute_source_index_tf(x, W_in, align_corners)
+#                 iy = grid_sampler_compute_source_index_tf(y, H_in, align_corners)
+                
+#                 x0 = tf.floor(ix)
+#                 x1 = x0 + 1
+
+#                 y0 = tf.floor(iy)
+#                 y1 = y0 + 1
+    
+#                 # Get W matrix before I matrix, as I matrix requires Channel information
+#                 wa = (x1 - ix) * (y1 - iy)
+#                 wb = (x1 - ix) * (iy - y0)
+#                 wc = (ix - x0) * (y1 - iy)
+#                 wd = (ix - x0) * (iy - y0)
+                
+#                 # Get values of the image by provided x0, y0, x1, y1 by channel
+#                 for c in range(C):
+#                     Ia = safe_get_tf(image, n, c, y0, x0, H_in, W_in)
+#                     Ib = safe_get_tf(image, n, c, y1, x0, H_in, W_in)
+#                     Ic = safe_get_tf(image, n, c, y0, x1, H_in, W_in)
+#                     Id = safe_get_tf(image, n, c, y1, x1, H_in, W_in)
+#                     out_ch_val = Ia * wa + Ib * wb + Ic * wc + Id * wd
+
+#                     # output_tensor[n, h, w, c] = out_ch_val
+#                     # output_tensor[n, h, w, c] = out_ch_val.numpy()
+#                     output_tensor[n, c, h, w] = out_ch_val.numpy()
+#     output_tensor = tf.convert_to_tensor(output_tensor)
+#     return output_tensor
+
+
+
+
+
+
+def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="zeros", align_corners=False):
+    def safe_gather_nd(tensor, indices, default_value=0.0):
+
+        tensor_len = len(tensor.shape)
+        indices_last_len = tf.shape(indices)[-1]
+        augment_dim = tensor_len - indices_last_len
+        
+
+        # print("tensor = ", tensor)
+        # print("indices = ", indices)
+        # 获取 tensor 形状
+        tensor_shape = tf.shape(tensor)
+        max_indices = tensor_shape[:tf.shape(indices)[-1]]  # 计算各维度最大索引
+
+        # print("max_indices = ", max_indices)
+
+        # 检查索引是否越界
+        is_out_of_bounds = tf.reduce_any(indices < 0, axis=-1) | tf.reduce_any(indices >= max_indices, axis=-1)
+
+        match_dim_is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)  # (3, 1)
+        
+        # print("is_out_of_bounds = ", is_out_of_bounds)
+        # print("match_dim_is_out_of_bounds = ", match_dim_is_out_of_bounds)
+        # print("tf.zeros_like(indices) = ", tf.zeros_like(indices))
+        # print("indices = ", indices)
+        # 创建合法索引，将非法索引替换为 (0,0,...) 确保不会报错
+        safe_indices = tf.where(match_dim_is_out_of_bounds, tf.zeros_like(indices), indices)
+
+        # print("safe_indices = ", safe_indices)
+
+        # 获取 gather_nd 结果
+        gathered_values = tf.gather_nd(tensor, safe_indices)
+
+        # print("gathered_values = ", gathered_values)
+        # print("gathered_values = ", tf.transpose(gathered_values, [0, 3, 1, 2]))
+
+        for i in range(augment_dim):
+            is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)
+
+        # print("is_out_of_bounds = ", is_out_of_bounds)
+
+        # 替换越界索引的部分为 default_value
+        result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values), default_value), gathered_values)
+
+        # print("result = ", result)
+
+        return result
+
+    assert mode == "bilinear", "Only bilinear mode is supported."
+    assert padding_mode == "zeros", "Only zeros padding_mode is implemented."
+
+    # PyTorch: [N, C, H, W] → TensorFlow: [N, H, W, C]
+    # x = tf.transpose(x, [0, 2, 3, 1])
+    # N, H_in, W_in, C = x.shape
     N, C, H_in, W_in = image.shape
 
-    H_out = grid.shape[1]
-    W_out = grid.shape[2]
+    H_out, W_out = grid.shape[1:3]
+
+    # 归一化网格 [-1, 1] → [0, H-1] or [0, W-1]
+    def grid_sampler_unnormalize(coord, size, align_corners):
+        # if align_corners:
+        #     return 0.5 * ((coord + 1) * (size - 1))
+        # else:
+        #     return 0.5 * ((coord + 1) * size - 1)
+        if align_corners:
+            return ((coord + 1) / 2) * (size - 1)
+        else:
+            return ((coord + 1) * size - 1) / 2
+            
+    # dim1 = tf.reshape( tf.range(N), [-1, 1, 1, 1] )
+
+    # dim2 = tf.reshape( tf.range(H_in), [1, -1, 1, 1])
+    # dim3 = tf.reshape( tf.range(W_in), [1, 1, -1, 1])
+    # dim4 = tf.reshape( tf.range(2), [1, 1, 1, -1])
+
+    # batch_idx = tf.reshape(tf.range(N), [-1, 1, 1])  # [N, 1, 1]
+    # batch_idx = tf.broadcast_to(batch_idx, [N, y.shape[1], y.shape[2]])  # 扩展为 [N, H_out, W_out]
     
-    # output_tensor = tf.zeros_like(image)
+    # indices_x = tf.stack([dim1, dim3, dim3, dim4], axis=-1)
     
-    output_tensor = np.zeros( [N, C, H_out, W_out] )
-    # np.zeros_like(image)
-
-
-
-    for n in range(N):
-        for w in range(W_out):
-            for h in range(H_out):
-                # Get corresponding grid x and y
-                x = grid[n, h, w, 1]
-                y = grid[n, h, w, 0]
-                
-                # Unnormalize with align_corners condition
-                ix = grid_sampler_compute_source_index_tf(x, W_in, align_corners)
-                iy = grid_sampler_compute_source_index_tf(y, H_in, align_corners)
-                
-                x0 = tf.floor(ix)
-                x1 = x0 + 1
-
-                y0 = tf.floor(iy)
-                y1 = y0 + 1
+    # xy = tf.gather_nd(image, indices_x)
     
-                # Get W matrix before I matrix, as I matrix requires Channel information
-                wa = (x1 - ix) * (y1 - iy)
-                wb = (x1 - ix) * (iy - y0)
-                wc = (ix - x0) * (y1 - iy)
-                wd = (ix - x0) * (iy - y0)
+
+
+    # ix = grid_sampler_unnormalize(grid[..., 0], W_in, align_corners)
+    # iy = grid_sampler_unnormalize(grid[..., 1], H_in, align_corners)
+    ix = grid_sampler_unnormalize(grid[..., 1], W_in, align_corners)
+    iy = grid_sampler_unnormalize(grid[..., 0], H_in, align_corners)
+    
+    # print("image.shape = ", image.shape)
+    # print("grid.shape = ", grid.shape)
+    # print("ix.shape = ", ix.shape)
+    # print("iy.shape = ", iy.shape)
+
+    x0 = tf.math.floor(ix)
+    x1 = x0 + 1
+
+    y0 = tf.math.floor(iy)
+    y1 = y0 + 1
+
+    # print("y0 = ", y0)
+    # print("y0.shape = ", y0.shape)
+
+    # print("y1 = ", y1)
+
+    # print("x0.shape = ", x0.shape)
+    # print("x1.shape = ", x1.shape)
+    # print("y0.shape = ", y0.shape)
+    # print("y1.shape = ", y1.shape)
+
+    # # 限制索引范围 (padding_mode="zeros" 处理边界)
+    # x0 = tf.clip_by_value(x0, 0, W_in - 1)
+    # x1 = tf.clip_by_value(x1, 0, W_in - 1)
+    # y0 = tf.clip_by_value(y0, 0, H_in - 1)
+    # y1 = tf.clip_by_value(y1, 0, H_in - 1)
+
+    # 计算权重
+    wa = (x1 - ix) * (y1 - iy)
+    wb = (x1 - ix) * (iy - y0)
+    wc = (ix - x0) * (y1 - iy)
+    wd = (ix - x0) * (iy - y0)
+
+
+    def gather_nd(image, x, y, N):
+        """ 使用 tf.gather_nd 进行索引，确保 batch_idx 的形状匹配 """
+        batch_idx = tf.reshape(tf.range(N), [-1, 1, 1])  # [N, 1, 1]
+        batch_idx = tf.broadcast_to(batch_idx, [N, y.shape[1], y.shape[2]])  # 扩展为 [N, H_out, W_out]
+        
+        indices = tf.stack([batch_idx, x, y], axis=-1)  # [N, H_out, W_out, 3]
+        return safe_gather_nd(image, indices)
+
+    
+
+    image = tf.transpose(image, [0, 2, 3, 1])
+
+    Ia = gather_nd(image, tf.cast(x0, tf.int32), tf.cast(y0, tf.int32), N)
+    Ib = gather_nd(image, tf.cast(x0, tf.int32), tf.cast(y1, tf.int32), N)
+    Ic = gather_nd(image, tf.cast(x1, tf.int32), tf.cast(y0, tf.int32), N)
+    Id = gather_nd(image, tf.cast(x1, tf.int32), tf.cast(y1, tf.int32), N)
+
+
+    # print("Ia = ", Ia)
+    
+    Ia = tf.transpose(Ia, [0, 3, 1, 2])
+    Ib = tf.transpose(Ib, [0, 3, 1, 2])
+    Ic = tf.transpose(Ic, [0, 3, 1, 2])
+    Id = tf.transpose(Id, [0, 3, 1, 2])
+
+    # print("Ia = ", Ia)
+    # print("Ib = ", Ib)
+    # print("Ic = ", Ic)
+    # print("Id = ", Id)
+
+    wa = tf.expand_dims(wa, axis=1)  # 变成 [N, 1, H_out, W_out]
+    wa = tf.broadcast_to(wa, [N, C, H_out, W_out])
+    wb = tf.expand_dims(wb, axis=1)  # 变成 [N, 1, H_out, W_out]
+    wb = tf.broadcast_to(wb, [N, C, H_out, W_out])
+    wc = tf.expand_dims(wc, axis=1)  # 变成 [N, 1, H_out, W_out]
+    wc = tf.broadcast_to(wc, [N, C, H_out, W_out])
+    wd = tf.expand_dims(wd, axis=1)  # 变成 [N, 1, H_out, W_out]
+    wd = tf.broadcast_to(wd, [N, C, H_out, W_out])
+
+    # print("wa = ",  wa)
+    # print("wb = ",  wb)
+    # print("wc = ",  wc)
+    # print("wd = ",  wd)
+
+    output = Ia * wa + Ib * wb + Ic * wc + Id * wd
+
+    return output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def torch_nn_functional_grid_sample2(image, grid, mode='bilinear', padding_mode="zeros", align_corners=False):
+
+
+#     def grid_sampler_unnormalize_tf(coord, side, align_corners):
+#         if align_corners:
+#             return ((coord + 1) / 2) * (side - 1)
+#         else:
+#             return ((coord + 1) * side - 1) / 2
+            
+#     def grid_sampler_compute_source_index_tf(coord, size, align_corners):
+#         return grid_sampler_unnormalize_tf(coord, size, align_corners)
+
+#     def safe_get_tf(image, n, c, x, y, H, W):
+#         value = tf.zeros([1])
+#         x = tf.cast(x, tf.int32)  # Ensure x is an integer type
+#         y = tf.cast(y, tf.int32)  # Ensure y is an integer type
+#         if x >= 0 and x < W and y >= 0 and y < H:
+#             value = image[n, c, y, x]
+#         return value
+
+
+#     assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+#     assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+#     assert mode == "bilinear", "only bilinear is implemented right now"
+#     assert len(image.shape) == 4, "len(input.shape) must be 4"
+
+#     N, C, H_in, W_in = image.shape
+
+#     H_out = grid.shape[1]
+#     W_out = grid.shape[2]
+    
+#     # output_tensor = tf.zeros_like(image)
+    
+#     output_tensor = np.zeros( [N, C, H_out, W_out] )
+#     # np.zeros_like(image)
+
+
+#     np_Ia = np.zeros( [N, C, H_out, W_out] )
+#     np_Ib = np.zeros( [N, C, H_out, W_out] )
+#     np_Ic = np.zeros( [N, C, H_out, W_out] )
+#     np_Id = np.zeros( [N, C, H_out, W_out] )
+
+#     np_x0 = np.zeros( [N, W_out, H_out] )
+#     np_y0 = np.zeros( [N, W_out, H_out] )
+
+#     np_x1 = np.zeros( [N, W_out, H_out] )
+#     np_y1 = np.zeros( [N, W_out, H_out] )
+
+
+
+#     np_wa = np.zeros( [N, C, H_out, W_out] )
+#     np_wb = np.zeros( [N, C, H_out, W_out] )
+#     np_wc = np.zeros( [N, C, H_out, W_out] )
+#     np_wd = np.zeros( [N, C, H_out, W_out] )
+
+#     for n in range(N):
+#         for w in range(W_out):
+#             for h in range(H_out):
+#                 # Get corresponding grid x and y
+#                 x = grid[n, h, w, 1]
+#                 y = grid[n, h, w, 0]
                 
-                # Get values of the image by provided x0, y0, x1, y1 by channel
-                for c in range(C):
-                    Ia = safe_get_tf(image, n, c, y0, x0, H_in, W_in)
-                    Ib = safe_get_tf(image, n, c, y1, x0, H_in, W_in)
-                    Ic = safe_get_tf(image, n, c, y0, x1, H_in, W_in)
-                    Id = safe_get_tf(image, n, c, y1, x1, H_in, W_in)
-                    out_ch_val = Ia * wa + Ib * wb + Ic * wc + Id * wd
+#                 # Unnormalize with align_corners condition
+#                 ix = grid_sampler_compute_source_index_tf(x, W_in, align_corners)
+#                 iy = grid_sampler_compute_source_index_tf(y, H_in, align_corners)
+                
+#                 x0 = tf.floor(ix)
+#                 np_x0[n, h, w] = x0.numpy()
 
-                    # output_tensor[n, h, w, c] = out_ch_val
-                    # output_tensor[n, h, w, c] = out_ch_val.numpy()
-                    output_tensor[n, c, h, w] = out_ch_val.numpy()
-    output_tensor = tf.convert_to_tensor(output_tensor)
-    return output_tensor
+#                 x1 = x0 + 1
+
+#                 np_x1[n, h, w] = x1.numpy()
 
 
+#                 y0 = tf.floor(iy)
+#                 np_y0[n, h, w] = y0.numpy()
 
 
+#                 y1 = y0 + 1
+    
+#                 np_y1[n, h, w] = y1.numpy()
+
+#                 # Get W matrix before I matrix, as I matrix requires Channel information
+#                 wa = (x1 - ix) * (y1 - iy)
+#                 wb = (x1 - ix) * (iy - y0)
+#                 wc = (ix - x0) * (y1 - iy)
+#                 wd = (ix - x0) * (iy - y0)
+
+                
+#                 # Get values of the image by provided x0, y0, x1, y1 by channel
+#                 for c in range(C):
+#                     Ia = safe_get_tf(image, n, c, y0, x0, H_in, W_in)
+#                     Ib = safe_get_tf(image, n, c, y1, x0, H_in, W_in)
+#                     Ic = safe_get_tf(image, n, c, y0, x1, H_in, W_in)
+#                     Id = safe_get_tf(image, n, c, y1, x1, H_in, W_in)
+#                     # out_ch_val = Ia * wa + Ib * wb + Ic * wc + Id * wd
+
+#                     # output_tensor[n, h, w, c] = out_ch_val
+#                     # output_tensor[n, h, w, c] = out_ch_val.numpy()
+
+#                     np_Ia[n, c, h, w] = Ia.numpy()
+#                     np_Ib[n, c, h, w] = Ib.numpy()
+#                     np_Ic[n, c, h, w] = Ic.numpy()
+#                     np_Id[n, c, h, w] = Id.numpy()
+
+#                     np_wa[n, c, h, w] = wa.numpy()
+#                     np_wb[n, c, h, w] = wb.numpy()
+#                     np_wc[n, c, h, w] = wc.numpy()
+#                     np_wd[n, c, h, w] = wd.numpy()
+
+#                     # output_tensor[n, c, h, w] = out_ch_val.numpy()
+
+#     # print("np_Ia = ", np_Ia)
+#     # print("np_Ib = ", np_Ib)
+#     # print("np_Ic = ", np_Ic)
+#     # print("np_Id = ", np_Id)
+#     print("np_wa = ", np_wa)
+#     print("np_wb = ", np_wb)
+#     print("np_wc = ", np_wc)
+#     print("np_wd = ", np_wd)
+
+#     # print("np_Ia.shape = ", np_Ia.shape)
+
+#     print("np_x1 = ", np_x1)
+
+#     print("np_y1 = ", np_y1)
+
+#     # print("np_x0 = ", np_x0)
+#     # print("np_x0.shape = ", np_x0.shape)
+
+#     # print("np_y0 = ", np_y0)
+#     # print("np_y0.shape = ", np_y0.shape)
+
+#     # print("np_Ib = ", np_Ib)
+#     # print("np_Ic = ", np_Ic)
+#     # print("np_Id = ", np_Id)
 
 
-
-
-
-
-
-
+#     output_tensor = tf.convert_to_tensor(output_tensor)
+#     return output_tensor
 
 
 

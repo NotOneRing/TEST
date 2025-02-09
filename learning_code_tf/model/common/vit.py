@@ -333,25 +333,29 @@ def init_weights_vit_timm(module, name: str = ""):
 
 
 
-# 遍历应用函数
+
 def named_apply(fn, module, name="", depth_first=True, include_root=False):
     """Recursively apply a function to a model's layers"""
     print("vit.py: named_apply()")
     if not depth_first and include_root:
-        fn(module, name=name)
-    for i, child_layer in enumerate(module.layers):
-        child_name = f"{name}.{child_layer.name}" if name else child_layer.name
+        if isinstance(module, tf.keras.layers.Layer):
+            fn(module, name=name)
 
-        named_apply(
-            fn=fn,
-            layer=child_layer,
-            name=child_name,
-            depth_first=depth_first,
-            include_root=True,
-        )
+    if hasattr(module, 'layers'):
+        for i, child_layer in enumerate(module.layers):
+            child_name = f"{name}.{child_layer.name}" if name else child_layer.name
+
+            named_apply(
+                fn=fn,
+                module=child_layer,
+                name=child_name,
+                depth_first=depth_first,
+                include_root=True,
+            )
 
     if depth_first and include_root:
-        fn(module, name=name)
+        if isinstance(module, tf.keras.layers.Layer):
+            fn(module, name=name)
     return module
 
 

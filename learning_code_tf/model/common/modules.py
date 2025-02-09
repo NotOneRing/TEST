@@ -14,7 +14,7 @@ torch_sum, torch_tensor
 
 # class SpatialEmb(nn.Module):
 class SpatialEmb(tf.keras.layers.Layer):
-    def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout, serialized_input_proj = None, serialized_weight = None, serialized_dropout = None):
+    def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout, serialized_input_proj = None, serialized_dropout = None, **kwargs):
 
         print("modules.py: SpatialEmb.__init__()")
 
@@ -25,6 +25,7 @@ class SpatialEmb(tf.keras.layers.Layer):
         self.prop_dim = prop_dim
         self.proj_dim = proj_dim
 
+        self.initial_dropout = dropout
 
         proj_in_dim = num_patch + prop_dim
         num_proj = patch_dim
@@ -56,10 +57,8 @@ class SpatialEmb(tf.keras.layers.Layer):
         #     name="weight"
         # )
         
-        if serialized_weight == None:
-            self.weight = nn_Parameter(torch_zeros(1, num_proj, proj_dim))
-        else:
-            self.weight = serialized_weight
+        self.weight = nn_Parameter(torch_zeros(1, num_proj, proj_dim))
+
 
         if serialized_dropout == None:
             self.dropout = nn_Dropout(dropout)
@@ -79,8 +78,10 @@ class SpatialEmb(tf.keras.layers.Layer):
                         "prop_dim": self.prop_dim,
                         "proj_dim": self.proj_dim,
 
+                        "dropout": self.initial_dropout,
+
                        "serialized_input_proj": tf.keras.layers.serialize(self.input_proj),
-                       "serialized_weight": tf.keras.layers.serialize(self.weight),
+
                        "serialized_dropout": tf.keras.layers.serialize(self.dropout)
                        })
         return config
@@ -118,10 +119,10 @@ class SpatialEmb(tf.keras.layers.Layer):
         get_custom_objects().update(cur_dict)
 
         serialized_input_proj = tf.keras.layers.deserialize(config.pop("serialized_input_proj") ,  custom_objects=get_custom_objects() )
-        serialized_weight = tf.keras.layers.deserialize(config.pop("serialized_weight") ,  custom_objects=get_custom_objects() )
+
         serialized_dropout = tf.keras.layers.deserialize(config.pop("serialized_dropout") ,  custom_objects=get_custom_objects() )
 
-        return cls(serialized_input_proj=serialized_input_proj, serialized_weight=serialized_weight, serialized_dropout=serialized_dropout, **config)
+        return cls(serialized_input_proj=serialized_input_proj, serialized_dropout=serialized_dropout, **config)
     
 
     # def extra_repr(self) -> str:
@@ -160,28 +161,30 @@ class SpatialEmb(tf.keras.layers.Layer):
 from util.torch_to_tf import nn_functional_pad, torch_linspace,\
 torch_randint, torch_nn_functional_grid_sample
 
-class RandomShiftsAug:
-    def __init__(self, pad):
+class RandomShiftsAug(tf.keras.layers.Layer):
+    def __init__(self, pad, **kwargs):
         
         print("modules.py: RandomShiftsAug.__init__()")
+        super().__init__(**kwargs)  # Ensure parent class is initialized
 
         self.pad = pad
+
 
     def get_config(self):
         """Returns the config of the layer for serialization."""
         config = super(RandomShiftsAug, self).get_config()
-        config.update({"pad": self.pad,
+        config.update({
+                        "pad": self.pad,
                        })
         return config
-
 
     @classmethod
     def from_config(cls, config):
         """Creates the layer from its config."""
         return cls(**config)
+    
 
-
-    def __call__(self, x):
+    def call(self, x):
 
         print("modules.py: RandomShiftsAug.__call__()")
 
@@ -191,34 +194,53 @@ class RandomShiftsAug:
         assert h == w
         padding = tuple([self.pad] * 4)
 
+        print("modules.py: RandomShiftsAug.__call__(): 1")
+
         # # Add padding with replication
         x = nn_functional_pad(x, padding, "replicate")
 
+        print("modules.py: RandomShiftsAug.__call__(): 2")
 
         # Create a random shift grid
         eps = 1.0 / (h + 2 * self.pad)
         arange = torch_linspace(-1.0 + eps, 1.0 - eps, h + 2 * self.pad)[:h]
 
+        print("modules.py: RandomShiftsAug.__call__(): 3")
 
         arange = torch_unsqueeze( torch_tensor_repeat( torch_unsqueeze(arange, 0), h, 1), 2)
 
+        print("modules.py: RandomShiftsAug.__call__(): 4")
 
 
 
         base_grid = torch_cat([arange, torch_tensor_transpose(arange, 1, 0)], dim=2)
 
+        print("modules.py: RandomShiftsAug.__call__(): 5")
+
         base_grid = torch_tensor_repeat( torch_unsqueeze(base_grid, 0), n, 1, 1, 1)
+
+        print("modules.py: RandomShiftsAug.__call__(): 6")
 
 
         shift = torch_randint(
             low = 0, high = 2 * self.pad + 1, size=(n, 1, 1, 2), dtype=x.dtype
         )
+
+        print("modules.py: RandomShiftsAug.__call__(): 7")
+
         shift *= 2.0 / (h + 2 * self.pad)
+
+        print("modules.py: RandomShiftsAug.__call__(): 8")
 
         grid = base_grid + shift
         
+        print("modules.py: RandomShiftsAug.__call__(): 9")
         
-        return torch_nn_functional_grid_sample(x, grid, padding_mode="zeros", align_corners=False)
+        result = torch_nn_functional_grid_sample(x, grid, padding_mode="zeros", align_corners=False)
+
+        print("modules.py: RandomShiftsAug.__call__(): 9")
+
+        return result
 
 
 

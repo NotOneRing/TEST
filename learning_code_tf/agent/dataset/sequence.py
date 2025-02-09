@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 #     "Transition", "actions conditions rewards dones reward_to_gos"
 # )
 
+from util.torch_to_tf import torch_stack
 
 
 # class StitchedSequenceDataset(tf.data.Dataset):
@@ -83,6 +84,7 @@ class StitchedSequenceDataset:
         log.info(f"Number of episodes: {min(max_n_episodes, len(traj_lengths))}")
         log.info(f"States shape/type: {self.states.shape, self.states.dtype}")
         log.info(f"Actions shape/type: {self.actions.shape, self.actions.dtype}")
+
         if self.use_img:
             self.images = tf.convert_to_tensor(dataset["images"][:total_num_steps], dtype=tf.float32)  # (total_num_steps, C, H, W)
             log.info(f"Images shape/type: {self.images.shape, self.images.dtype}")
@@ -109,54 +111,15 @@ class StitchedSequenceDataset:
         """
         
         # print("sequence.py: StitchedSequenceDataset.__getitem__()")
-
-        # 从索引列表中获取开始索引和开始前的步数
         start, num_before_start = self.indices[idx]
 
         # 计算结束索引
         end = start + self.horizon_steps
-
-        # print("Start index:", start)
-        # print("Num before start:", num_before_start)
-        # print("End index:", end)
-
-
-        # print("start = ", start)
-        # print("end = ", end)
-        # print("start - num_before_start = ", start - num_before_start)
-        # print("(start + 1) = ", (start + 1))
-        # print("type(self.states) = ", type(self.states))
-        # print("len(self.states) = ", len(self.states))
-        # print("self.states.shape = ", self.states.shape)
-
-
-
-        # # 从开始索引减去开始前的步数到开始索引加1获取状态
-        # states = self.states[(start - num_before_start) : (start + 1)]
+        
         states = self.states[(start - num_before_start) : (start + 1), :]
 
-        # print("type(states) = ", type(states))
-        # print("states.shape = ", states.shape)
-
-        # print("start = ", start)
-        # print("end = ", end)
-        # print("type(self.actions) = ", type(self.actions))
-
-        # print("len(self.actions) = ", len(self.actions))
-        # print("self.actions.shape = ", self.actions.shape)
-
-        # 从开始索引到结束索引获取动作
-        # actions = self.actions[start:end]
-
-
         actions = self.actions[start:end, :]
-
-        # print("type(actions) = ", type(actions))
-        # print("actions.shape = ", actions.shape)
-
-        # print("self.cond_steps = ", self.cond_steps)
-
-
+        
         # 将状态按时间倒序堆叠，因此最近的状态在最后
         states = tf.stack(
             [
@@ -164,38 +127,30 @@ class StitchedSequenceDataset:
                 states[max(num_before_start - t, 0), :]
                 for t in reversed(range(self.cond_steps))
             ]
-        )  # more recent is at the end
-
-
-        # print("stack: type(states) = ", type(states))
-        # print("stack: states.shape = ", states.shape)
-
-
-        # # 创建一个字典来存储条件
-        # conditions = {"states": states}
-
-        # print("before returned dict")
+        ) 
+        
         returned_dict = {"states": states}
 
         # print("after returned dict")
 
         # 如果使用图像，则从开始索引减去开始前的步数到结束索引获取图像
         if self.use_img:
-            raise NotImplementedError("use_img: dimension check is not implemented now.")
+            # raise NotImplementedError("use_img: dimension check is not implemented now.")
             
-            print("images.shape = ", images.shape)
+            # print("images.shape = ", images.shape)
             images = self.images[(start - num_before_start) : end]
 
             # 将图像按时间倒序堆叠，因此最近的图像在最后
-            images = tf.stack(
+            images = torch_stack(
                 [
                     images[max(num_before_start - t, 0)]
                     for t in reversed(range(self.img_cond_steps))
                 ]
             )
 
-            # 将图像添加到条件字典中
-            conditions["rgb"] = images
+            # # 将图像添加到条件字典中
+            # conditions["rgb"] = images
+
             returned_dict['rgb'] = images
 
         # # 创建一个包含动作和条件的批次
@@ -357,11 +312,12 @@ class StitchedSequenceQLearningDataset:
         
         conditions = {"state": states}
         if self.use_img:
-            raise NotImplementedError("use_img is not implemented now.")
+            # raise NotImplementedError("use_img is not implemented now.")
 
             images = self.images[(start - num_before_start):end]
-            images = tf.stack([images[max(num_before_start - t, 0)] for t in reversed(range(self.img_cond_steps))])
+            images = torch_stack([images[max(num_before_start - t, 0)] for t in reversed(range(self.img_cond_steps))])
             conditions["rgb"] = images
+            returned_dict["rgb"] = images
 
 
         returned_dict = {"actions": actions}

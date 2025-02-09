@@ -344,7 +344,7 @@ class Gaussian_VisionMLP(tf.keras.Model):
 
         print("mlp_gaussian.py: Gaussian_VisionMLP.call()")
 
-        B = tf.shape(cond["rgb"])[0]
+        B = cond["rgb"].shape[0]
 
         _, T_rgb, C, H, W = cond["rgb"].shape
 
