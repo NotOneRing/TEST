@@ -1,7 +1,13 @@
 import tensorflow as tf
 
-def safe_gather_nd(tensor, indices, default_value=0):
+def safe_gather_nd(tensor, indices, default_value=0.0):
 
+    tensor_len = len(tensor.shape)
+    indices_last_len = tf.shape(indices)[-1]
+    augment_dim = tensor_len - indices_last_len
+    
+
+    # print("tensor = ", tensor)
     # print("indices = ", indices)
     # 获取 tensor 形状
     tensor_shape = tf.shape(tensor)
@@ -26,14 +32,20 @@ def safe_gather_nd(tensor, indices, default_value=0):
     # 获取 gather_nd 结果
     gathered_values = tf.gather_nd(tensor, safe_indices)
 
-    # print("gathered_values = ", gathered_values)
+    print("gathered_values = ", gathered_values)
+
+    for i in range(augment_dim):
+        is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)
+
+    print("is_out_of_bounds = ", is_out_of_bounds)
 
     # 替换越界索引的部分为 default_value
-    result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values), default_value), gathered_values)
+    result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values), tf.cast(default_value, gathered_values.dtype) ), gathered_values)
 
     # print("result = ", result)
 
     return result
+
 
 # Example usage:
 tensor = tf.constant([[5, 6], [7, 8]])  # shape: (2,2)

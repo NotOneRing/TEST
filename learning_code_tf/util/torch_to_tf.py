@@ -1977,8 +1977,10 @@ class nn_Linear(tf.keras.layers.Layer):
 def nn_Parameter(data=None, requires_grad=True):
     if data is None:
         raise ValueError("data cannot be None. Please provide a tensor value.")
-    return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
-
+    if requires_grad:
+        return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+    else:
+        return tf.convert_to_tensor(data)
 
 
 
@@ -2834,31 +2836,39 @@ class nn_Conv1d(tf.keras.layers.Layer):
 
 
 class nn_Conv2d(tf.keras.layers.Layer):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups = 1):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups = 1, conv2d = None, **kwargs):
         super(nn_Conv2d, self).__init__()
         
         # 解析参数
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
-        self.stride = stride if isinstance(stride, tuple) else (stride, stride)
+        # self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
+        self.kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
+
+        # self.stride = stride if isinstance(stride, tuple) else (stride, stride)
+        self.stride = (stride, stride) if isinstance(stride, int) else stride
+
         self.bias = bias
 
         # TensorFlow 的 Conv2D 需要 NHWC 格式
-        self.conv2d = tf.keras.layers.Conv2D(
-            filters=self.out_channels,
-            kernel_size=self.kernel_size,
-            strides=self.stride,
-            padding="valid",  # PyTorch padding=0 对应 TensorFlow "valid"
-            use_bias=self.bias,
-            # kernel_initializer=tf.keras.initializers.HeUniform(),  # 采用 PyTorch Kaiming 初始化
-            # bias_initializer="zeros" if self.bias else None
-            kernel_initializer = tf.keras.initializers.Constant(
-                pytorch_weight_initializer( (self.kernel_size[0], self.kernel_size[1], in_channels // groups, out_channels),\
-                                            in_channels * self.kernel_size[0] * self.kernel_size[1] // groups )),
-            bias_initializer = tf.keras.initializers.Constant(
-                pytorch_bias_initializer((out_channels,), in_channels * self.kernel_size[0] * self.kernel_size[1] // groups ))
-        )
+
+        if conv2d:
+            self.conv2d = conv2d
+        else:
+            self.conv2d = tf.keras.layers.Conv2D(
+                filters=self.out_channels,
+                kernel_size=self.kernel_size,
+                strides=self.stride,
+                padding="valid",  # PyTorch padding=0 对应 TensorFlow "valid"
+                use_bias=self.bias,
+                # kernel_initializer=tf.keras.initializers.HeUniform(),  # 采用 PyTorch Kaiming 初始化
+                # bias_initializer="zeros" if self.bias else None
+                kernel_initializer = tf.keras.initializers.Constant(
+                    pytorch_weight_initializer( (self.kernel_size[0], self.kernel_size[1], in_channels // groups, out_channels),\
+                                                in_channels * self.kernel_size[0] * self.kernel_size[1] // groups )),
+                bias_initializer = tf.keras.initializers.Constant(
+                    pytorch_bias_initializer((out_channels,), in_channels * self.kernel_size[0] * self.kernel_size[1] // groups ))
+            )
 
     def call(self, x):
         # PyTorch input (N, C, H, W) -> TensorFlow (N, H, W, C)
@@ -2886,6 +2896,12 @@ class nn_Conv2d(tf.keras.layers.Layer):
             'stride': self.stride,
             'bias': self.bias,
         })
+
+        config.update({
+            "conv2d": tf.keras.layers.serialize(self.conv2d)
+        })
+
+
         return config
 
     @classmethod
@@ -2893,7 +2909,40 @@ class nn_Conv2d(tf.keras.layers.Layer):
         """
         Returns an instance of the custom layer from its configuration.
         """
-        return cls(**config)
+
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
+            'MLP': MLP,                            # 自定义的 MLP 层
+            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        conv2d = config.pop("conv2d")
+        conv2d = tf.keras.layers.deserialize( conv2d,  custom_objects=get_custom_objects() )
+
+        return cls(conv2d = conv2d, **config)
 
 
 
@@ -4177,7 +4226,7 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
         # print("is_out_of_bounds = ", is_out_of_bounds)
 
         # 替换越界索引的部分为 default_value
-        result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values), default_value), gathered_values)
+        result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values),  tf.cast(default_value, gathered_values.dtype) ), gathered_values)
 
         # print("result = ", result)
 
@@ -4530,6 +4579,8 @@ class Normal:
 
         self.distribution = tfp.distributions.Normal(loc=loc, scale=scale, name='Normal')
 
+        self.first_rsample = True
+
 
     def log_prob(self, x):
         """
@@ -4579,6 +4630,15 @@ class Normal:
         return self.distribution.sample(sample_shape)
 
 
+    def rsample(self, sample_shape = tf.TensorShape([])):
+
+        if self.first_rsample:
+            import tensorflow_probability as tfp
+            self.distribution = tfp.distributions.Normal(loc=tf.constant(0.0), scale=tf.constant(1.0))
+            self.first_rsample = False
+        eps = self.distribution.sample(sample_shape)
+        result = self.loc + eps * self.scale
+        return result
 
 
     def entropy(self):

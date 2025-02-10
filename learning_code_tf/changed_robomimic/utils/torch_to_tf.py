@@ -1425,281 +1425,233 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 
-import math
-def pytorch_weight_initializer(shape, in_features, dtype=None):
-    limit = math.sqrt(1.0 / in_features)
-    return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+# import math
+# def pytorch_weight_initializer(shape, in_features, dtype=None):
+#     limit = math.sqrt(1.0 / in_features)
+#     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
-def pytorch_bias_initializer(shape, in_features, dtype=None):
-    limit = math.sqrt(1.0 / in_features)
-    return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
-
-
+# def pytorch_bias_initializer(shape, in_features, dtype=None):
+#     limit = math.sqrt(1.0 / in_features)
+#     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
 
 
 
 
-class nn_Tanh(tf.keras.layers.Layer):
-    def __init__(self, name = "nn_Tanh", **kwargs):
-        super(nn_Tanh, self).__init__(name=name, **kwargs)
-
-    def call(self, x):
-        return tf.math.tanh(x)
 
 
-    def get_config(self):
-        config = super(nn_Tanh, self).get_config()  # Call the parent layer's get_config()
-        return config
-    
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Tanh: from_config()")
-        
-        result = cls(**config)
-        return result
-
-
-
-
-class nn_Identity(tf.keras.layers.Layer):
-    def __init__(self, name = "nn_Identity", **kwargs):
-        super(nn_Identity, self).__init__(name = name, **kwargs)
-
-    def call(self, x):
-        # print("nn_Identity: call()")
-        return tf.identity(x)
-
-
-
-    def get_config(self):
-        config = super(nn_Identity, self).get_config()  # Call the parent layer's get_config()
-        return config
-    
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Identity: from_config()")
-        result = cls(**config)
-        return result
-
-
-
-
-class nn_Softplus(tf.keras.layers.Layer):
-    def __init__(self, name = "nn_Softplus", **kwargs):
-        super(nn_Softplus, self).__init__(name = name, **kwargs)
-
-    def call(self, x):
-        return tf.math.softplus(x)
-
-
-
-    def get_config(self):
-        config = super(nn_Softplus, self).get_config()  # Call the parent layer's get_config()
-        return config
-    
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Softplus: from_config()")
-        result = cls(**config)
-        return result
-
-
-
-
-
-class nn_Mish(tf.keras.layers.Layer):
-    def __init__(self, name = "nn_Mish", **kwargs):
-        super(nn_Mish, self).__init__(name=name, **kwargs)
-
-    def call(self, x):
-        # print("nn_Mish.call()")
-        result = tf.clip_by_value(x, float('-inf'), 20)
-
-        beta = 1
-        result = beta * result
-
-        result = tf.math.softplus(result)
-
-        return x * tf.math.tanh(result)
-
-    
-    def get_config(self):
-        config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
-        # config.update({
-        #     "inplace": self.inplace,
-        #     "relu": tf.keras.layers.serialize(self.relu),
-        # })
-        return config
-    
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Mish: from_config()")
-        # relu = tf.keras.layers.deserialize(config.pop("relu"))
-        result = cls(**config)
-        # result.relu=relu
-        return result
-
-
-
-# Define TensorFlow nn.ELU wrapper
-class nn_ELU(tf.keras.layers.Layer):
-    def __init__(self, alpha=1.0, name = "nn_ELU", elu = None, **kwargs):
-        self.alpha = alpha
-        super(nn_ELU, self).__init__(name=name, **kwargs)
-        if elu == None:
-            self.elu = tf.keras.layers.ELU(alpha=alpha)
-        else:
-            self.elu = elu
-    def call(self, x):
-        return self.elu(x)
-
-
-    def get_config(self):
-        config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
-        config.update({
-            "alpha": self.alpha,
-            "elu": tf.keras.layers.serialize(self.elu),
-        })
-        return config
-    
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_ELU: from_config()")
-        elu = tf.keras.layers.deserialize(config.pop("elu"))
-        result = cls(elu=elu, **config)
-        return result
-
-
-
-
-# # Define TensorFlow nn.GELU wrapper
-# class nn_GELU(tf.keras.layers.Layer):
-#     def __init__(self):
-#         super(nn_GELU, self).__init__()
-#         self.gelu = 
-#         # tf.nn.gelu()
-#         # tf.keras.layers.GELU()
+# class nn_Tanh(tf.keras.layers.Layer):
+#     def __init__(self, name = "nn_Tanh", **kwargs):
+#         super(nn_Tanh, self).__init__(name=name, **kwargs)
 
 #     def call(self, x):
-#         return self.gelu(x)
+#         return tf.math.tanh(x)
 
 
-
-class nn_GELU(tf.keras.layers.Layer):
-    def __init__(self, name = "nn_GELU", **kwargs):
-        super(nn_GELU, self).__init__(name=name,**kwargs)
-
-    def call(self, inputs):
-        # GELU 激活函数公式
-        return tf.nn.gelu(inputs)
-
-
-    def get_config(self):
-        config = super(nn_GELU, self).get_config()  # Call the parent layer's get_config()
-        return config
+#     def get_config(self):
+#         config = super(nn_Tanh, self).get_config()  # Call the parent layer's get_config()
+#         return config
     
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_GELU: from_config()")
-        result = cls(**config)
-        return result
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Tanh: from_config()")
+        
+#         result = cls(**config)
+#         return result
 
 
 
-# Define TensorFlow nn.ReLU wrapper
-class nn_ReLU(tf.keras.layers.Layer):
-    def __init__(self, inplace=False, name = "nn_ReLU", relu = None, **kwargs):
+
+# class nn_Identity(tf.keras.layers.Layer):
+#     def __init__(self, name = "nn_Identity", **kwargs):
+#         super(nn_Identity, self).__init__(name = name, **kwargs)
+
+#     def call(self, x):
+#         # print("nn_Identity: call()")
+#         return tf.identity(x)
 
 
-        super(nn_ReLU, self).__init__(name=name, **kwargs)
 
-        if relu == None:
-            self.relu = tf.keras.layers.ReLU()
-        else:
-            self.relu = relu
-
-        self.inplace = inplace
-
-
-    def call(self, x):
-        if self.inplace:
-            x = self.relu(x)
-            return x
-        else:
-            return self.relu(x)
-
-
-    def get_config(self):
-        config = super(nn_ReLU, self).get_config()  # Call the parent layer's get_config()
-        config.update({
-            "inplace": self.inplace,
-            "relu": tf.keras.layers.serialize(self.relu),
-        })
-        return config
+#     def get_config(self):
+#         config = super(nn_Identity, self).get_config()  # Call the parent layer's get_config()
+#         return config
     
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_ReLU: from_config()")
-        relu = tf.keras.layers.deserialize(config.pop("relu"))
-        result = cls(**config)
-        result.relu=relu
-        return result
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Identity: from_config()")
+#         result = cls(**config)
+#         return result
 
 
 
 
+# class nn_Softplus(tf.keras.layers.Layer):
+#     def __init__(self, name = "nn_Softplus", **kwargs):
+#         super(nn_Softplus, self).__init__(name = name, **kwargs)
+
+#     def call(self, x):
+#         return tf.math.softplus(x)
 
 
 
-
-class nn_Dropout(tf.keras.layers.Layer):
-    def __init__(self, p=0.5, name = "nn_Dropout", model = None, **kwargs):
-        super(nn_Dropout, self).__init__(name=name, **kwargs)
-        self.p = p
-        if model == None:
-            self.model = tf.keras.layers.Dropout(rate = p)
-        else:
-            self.model = model
-
-    # torch.nn.Dropout(p=0.5, inplace=False)
-    # tf.keras.layers.Dropout(
-    #     rate, noise_shape=None, seed=None, **kwargs
-    # )
-
-    def call(self, net_params):
-        return self.model(net_params)
-
-
-
-    def get_config(self):
-        config = super(nn_Dropout, self).get_config()  # Call the parent layer's get_config()
-        config.update({
-            "p": self.p,
-            "model": tf.keras.layers.serialize(self.model),
-        })
-        return config
+#     def get_config(self):
+#         config = super(nn_Softplus, self).get_config()  # Call the parent layer's get_config()
+#         return config
     
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Dropout: from_config()")
-
-        model = tf.keras.layers.deserialize(config.pop("model"))
-        result = cls(model=model, **config)
-        return result
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Softplus: from_config()")
+#         result = cls(**config)
+#         return result
 
 
 
 
 
+# class nn_Mish(tf.keras.layers.Layer):
+#     def __init__(self, name = "nn_Mish", **kwargs):
+#         super(nn_Mish, self).__init__(name=name, **kwargs)
+
+#     def call(self, x):
+#         # print("nn_Mish.call()")
+#         result = tf.clip_by_value(x, float('-inf'), 20)
+
+#         beta = 1
+#         result = beta * result
+
+#         result = tf.math.softplus(result)
+
+#         return x * tf.math.tanh(result)
+
+    
+#     def get_config(self):
+#         config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
+#         # config.update({
+#         #     "inplace": self.inplace,
+#         #     "relu": tf.keras.layers.serialize(self.relu),
+#         # })
+#         return config
+    
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Mish: from_config()")
+#         # relu = tf.keras.layers.deserialize(config.pop("relu"))
+#         result = cls(**config)
+#         # result.relu=relu
+#         return result
+
+
+
+# # Define TensorFlow nn.ELU wrapper
+# class nn_ELU(tf.keras.layers.Layer):
+#     def __init__(self, alpha=1.0, name = "nn_ELU", elu = None, **kwargs):
+#         self.alpha = alpha
+#         super(nn_ELU, self).__init__(name=name, **kwargs)
+#         if elu == None:
+#             self.elu = tf.keras.layers.ELU(alpha=alpha)
+#         else:
+#             self.elu = elu
+#     def call(self, x):
+#         return self.elu(x)
+
+
+#     def get_config(self):
+#         config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
+#         config.update({
+#             "alpha": self.alpha,
+#             "elu": tf.keras.layers.serialize(self.elu),
+#         })
+#         return config
+    
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_ELU: from_config()")
+#         elu = tf.keras.layers.deserialize(config.pop("elu"))
+#         result = cls(elu=elu, **config)
+#         return result
+
+
+
+
+# # # Define TensorFlow nn.GELU wrapper
+# # class nn_GELU(tf.keras.layers.Layer):
+# #     def __init__(self):
+# #         super(nn_GELU, self).__init__()
+# #         self.gelu = 
+# #         # tf.nn.gelu()
+# #         # tf.keras.layers.GELU()
+
+# #     def call(self, x):
+# #         return self.gelu(x)
+
+
+
+# class nn_GELU(tf.keras.layers.Layer):
+#     def __init__(self, name = "nn_GELU", **kwargs):
+#         super(nn_GELU, self).__init__(name=name,**kwargs)
+
+#     def call(self, inputs):
+#         # GELU 激活函数公式
+#         return tf.nn.gelu(inputs)
+
+
+#     def get_config(self):
+#         config = super(nn_GELU, self).get_config()  # Call the parent layer's get_config()
+#         return config
+    
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_GELU: from_config()")
+#         result = cls(**config)
+#         return result
+
+
+
+# # Define TensorFlow nn.ReLU wrapper
+# class nn_ReLU(tf.keras.layers.Layer):
+#     def __init__(self, inplace=False, name = "nn_ReLU", relu = None, **kwargs):
+
+
+#         super(nn_ReLU, self).__init__(name=name, **kwargs)
+
+#         if relu == None:
+#             self.relu = tf.keras.layers.ReLU()
+#         else:
+#             self.relu = relu
+
+#         self.inplace = inplace
+
+
+#     def call(self, x):
+#         if self.inplace:
+#             x = self.relu(x)
+#             return x
+#         else:
+#             return self.relu(x)
+
+
+#     def get_config(self):
+#         config = super(nn_ReLU, self).get_config()  # Call the parent layer's get_config()
+#         config.update({
+#             "inplace": self.inplace,
+#             "relu": tf.keras.layers.serialize(self.relu),
+#         })
+#         return config
+    
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_ReLU: from_config()")
+#         relu = tf.keras.layers.deserialize(config.pop("relu"))
+#         result = cls(**config)
+#         result.relu=relu
+#         return result
 
 
 
@@ -1707,1063 +1659,1109 @@ class nn_Dropout(tf.keras.layers.Layer):
 
 
 
-class nn_Linear(tf.keras.layers.Layer):
-    """
-    torch.nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
-    tf.keras.layers.Dense(
-        units,
-        activation=None,
-        use_bias=True,
-        kernel_initializer='glorot_uniform',
-        bias_initializer='zeros',
-        kernel_regularizer=None,
-        bias_regularizer=None,
-        activity_regularizer=None,
-        kernel_constraint=None,
-        bias_constraint=None,
-        lora_rank=None,
-        **kwargs
-    )
-    """
-    def __init__(self, in_features, out_features, 
-                #  bias=True, 
-                 device=None, dtype=None, 
-                #  name="nn_Linear", 
-                 name_Dense = None, model=None, **kwargs):
+
+# class nn_Dropout(tf.keras.layers.Layer):
+#     def __init__(self, p=0.5, name = "nn_Dropout", model = None, **kwargs):
+#         super(nn_Dropout, self).__init__(name=name, **kwargs)
+#         self.p = p
+#         if model == None:
+#             self.model = tf.keras.layers.Dropout(rate = p)
+#         else:
+#             self.model = model
+
+#     # torch.nn.Dropout(p=0.5, inplace=False)
+#     # tf.keras.layers.Dropout(
+#     #     rate, noise_shape=None, seed=None, **kwargs
+#     # )
+
+#     def call(self, net_params):
+#         return self.model(net_params)
+
+
+
+#     def get_config(self):
+#         config = super(nn_Dropout, self).get_config()  # Call the parent layer's get_config()
+#         config.update({
+#             "p": self.p,
+#             "model": tf.keras.layers.serialize(self.model),
+#         })
+#         return config
+    
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Dropout: from_config()")
+
+#         model = tf.keras.layers.deserialize(config.pop("model"))
+#         result = cls(model=model, **config)
+#         return result
+
+
+
+
+
+
+
+
+
+
+
+
+# class nn_Linear(tf.keras.layers.Layer):
+#     """
+#     torch.nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
+#     tf.keras.layers.Dense(
+#         units,
+#         activation=None,
+#         use_bias=True,
+#         kernel_initializer='glorot_uniform',
+#         bias_initializer='zeros',
+#         kernel_regularizer=None,
+#         bias_regularizer=None,
+#         activity_regularizer=None,
+#         kernel_constraint=None,
+#         bias_constraint=None,
+#         lora_rank=None,
+#         **kwargs
+#     )
+#     """
+#     def __init__(self, in_features, out_features, 
+#                 #  bias=True, 
+#                  device=None, dtype=None, 
+#                 #  name="nn_Linear", 
+#                  name_Dense = None, model=None, **kwargs):
         
 
-        # super(nn_Linear, self).__init__(name=name, **kwargs)
-        super(nn_Linear, self).__init__(**kwargs)
+#         # super(nn_Linear, self).__init__(name=name, **kwargs)
+#         super(nn_Linear, self).__init__(**kwargs)
 
-        self.in_features = in_features
-        self.out_features = out_features
-        # self.bias = bias
-        self.device = device
-        # self.dtype=dtype
-
-
-
-        if model == None:
-
-            import math
-            # # PyTorch-style initialization for weights
-            # def pytorch_weight_initializer(shape, dtype=None):
-            #     limit = math.sqrt(1.0 / in_features)
-            #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
-
-            # # PyTorch-style initialization for bias
-            # def pytorch_bias_initializer(shape, dtype=None):
-            #     # if not bias:
-            #     #     return None
-            #     limit = math.sqrt(1.0 / in_features)
-            #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
-
-            # def pytorch_weight_initializer(shape, dtype=None):
-            #     limit = math.sqrt(1.0 / in_features)
-            #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
-
-            # def pytorch_bias_initializer(shape, dtype=None):
-            #     limit = math.sqrt(1.0 / in_features)
-            #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+#         self.in_features = in_features
+#         self.out_features = out_features
+#         # self.bias = bias
+#         self.device = device
+#         # self.dtype=dtype
 
 
 
-            self.model = tf.keras.layers.Dense(
-                out_features,
-                activation=None,
-                use_bias=True,
-                kernel_initializer = tf.keras.initializers.Constant(
-                    pytorch_weight_initializer((in_features, out_features), in_features)),
-                # 'glorot_uniform',
-                bias_initializer = tf.keras.initializers.Constant(
-                    pytorch_bias_initializer((out_features,), in_features)),
-                    # 'zeros',
-                dtype=dtype,
-                name = name_Dense
-                # kernel_regularizer=None,
-                # bias_regularizer=None,
-                # activity_regularizer=None,
-                # kernel_constraint=None,
-                # bias_constraint=None,
-                # ,**kwargs
-            )
+#         if model == None:
+
+#             import math
+#             # # PyTorch-style initialization for weights
+#             # def pytorch_weight_initializer(shape, dtype=None):
+#             #     limit = math.sqrt(1.0 / in_features)
+#             #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+
+#             # # PyTorch-style initialization for bias
+#             # def pytorch_bias_initializer(shape, dtype=None):
+#             #     # if not bias:
+#             #     #     return None
+#             #     limit = math.sqrt(1.0 / in_features)
+#             #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+
+#             # def pytorch_weight_initializer(shape, dtype=None):
+#             #     limit = math.sqrt(1.0 / in_features)
+#             #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+
+#             # def pytorch_bias_initializer(shape, dtype=None):
+#             #     limit = math.sqrt(1.0 / in_features)
+#             #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+
+
+
+#             self.model = tf.keras.layers.Dense(
+#                 out_features,
+#                 activation=None,
+#                 use_bias=True,
+#                 kernel_initializer = tf.keras.initializers.Constant(
+#                     pytorch_weight_initializer((in_features, out_features), in_features)),
+#                 # 'glorot_uniform',
+#                 bias_initializer = tf.keras.initializers.Constant(
+#                     pytorch_bias_initializer((out_features,), in_features)),
+#                     # 'zeros',
+#                 dtype=dtype,
+#                 name = name_Dense
+#                 # kernel_regularizer=None,
+#                 # bias_regularizer=None,
+#                 # activity_regularizer=None,
+#                 # kernel_constraint=None,
+#                 # bias_constraint=None,
+#                 # ,**kwargs
+#             )
 
             
-        else:
-            self.model = model
-            # print("self.model.trainable_variables = ", self.model.trainable_variables)
-            # print("self.model.non_trainable_variables = ", self.model.non_trainable_variables)
+#         else:
+#             self.model = model
+#             # print("self.model.trainable_variables = ", self.model.trainable_variables)
+#             # print("self.model.non_trainable_variables = ", self.model.non_trainable_variables)
 
 
 
 
 
 
-        # print("nn_Linear: self.model = ", self.model)
+#         # print("nn_Linear: self.model = ", self.model)
 
-        if OUTPUT_VARIABLES:
-            print("nn_Linear: name_Dense = ", name_Dense)
-            print("nn_Linear: self.model.name = ", self.model.name)
+#         if OUTPUT_VARIABLES:
+#             print("nn_Linear: name_Dense = ", name_Dense)
+#             print("nn_Linear: self.model.name = ", self.model.name)
 
-    def get_config(self):
-        # Get the configuration of the layer and return it as a dictionary
-        config = super(nn_Linear, self).get_config()  # Call the parent layer's get_config()
-        config.update({
-            "in_features": self.in_features,
-            "out_features": self.out_features,
-            # "bias": self.bias,
-            # "device": self.device,
-            # "dtype": self.dtype,
-            "dense_layer": tf.keras.layers.serialize(self.model),
-        })
+#     def get_config(self):
+#         # Get the configuration of the layer and return it as a dictionary
+#         config = super(nn_Linear, self).get_config()  # Call the parent layer's get_config()
+#         config.update({
+#             "in_features": self.in_features,
+#             "out_features": self.out_features,
+#             # "bias": self.bias,
+#             # "device": self.device,
+#             # "dtype": self.dtype,
+#             "dense_layer": tf.keras.layers.serialize(self.model),
+#         })
         
-        if OUTPUT_VARIABLES:
-            print("nn_Linear.config() = ", config)
+#         if OUTPUT_VARIABLES:
+#             print("nn_Linear.config() = ", config)
 
-        return config
+#         return config
     
-    @classmethod
-    def from_config(cls, config):
+#     @classmethod
+#     def from_config(cls, config):
 
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Linear: from_config()")
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Linear: from_config()")
 
-        model = tf.keras.layers.deserialize(config.pop("dense_layer"))
-        result = cls(model = model, **config)
-        # result = cls(**config)
-        return result
+#         model = tf.keras.layers.deserialize(config.pop("dense_layer"))
+#         result = cls(model = model, **config)
+#         # result = cls(**config)
+#         return result
 
 
-    def call(self, x):
+#     def call(self, x):
 
-        # print("self.model.kernel = ", self.model.kernel)
-        # print("self.model.bias = ", self.model.bias)
-        # print("x = ", x)
+#         # print("self.model.kernel = ", self.model.kernel)
+#         # print("self.model.bias = ", self.model.bias)
+#         # print("x = ", x)
 
-        result = self.model(x)
+#         result = self.model(x)
 
-        # print("nn_Linear.call() result = ", result)
+#         # print("nn_Linear.call() result = ", result)
 
-        # print("nn_Linear.call() result.shape = ", result.shape)
+#         # print("nn_Linear.call() result.shape = ", result.shape)
 
-        if OUTPUT_VARIABLES and DEBUG and self.model.built:
-            # print("nn_Linear.call() self.kernel = ", self.model.kernel)
-            # print("nn_Linear.call() self.bias = ", self.model.bias)
-        #     # print("nn_Linear.call() self.kernel = ", self.model.kernel.numpy())  # 输出 kernel 的值
-        #     # print("nn_Linear.call() self.bias = ", self.model.bias.numpy())      # 输出 bias 的值
+#         if OUTPUT_VARIABLES and DEBUG and self.model.built:
+#             # print("nn_Linear.call() self.kernel = ", self.model.kernel)
+#             # print("nn_Linear.call() self.bias = ", self.model.bias)
+#         #     # print("nn_Linear.call() self.kernel = ", self.model.kernel.numpy())  # 输出 kernel 的值
+#         #     # print("nn_Linear.call() self.bias = ", self.model.bias.numpy())      # 输出 bias 的值
 
-            weights = self.model.kernel
-            bias = self.model.bias
+#             weights = self.model.kernel
+#             bias = self.model.bias
 
-        #     # print("weights.shape = ", weights.shape)
-        #     # print("bias.shape = ", bias.shape)
-        #     # print("x.shape = ", x.shape)
+#         #     # print("weights.shape = ", weights.shape)
+#         #     # print("bias.shape = ", bias.shape)
+#         #     # print("x.shape = ", x.shape)
 
-            result1 = tf.matmul(x, weights) + bias  # 广播加法
+#             result1 = tf.matmul(x, weights) + bias  # 广播加法
 
-        #     # result1 = weights * x.numpy() + bias
+#         #     # result1 = weights * x.numpy() + bias
 
-            print("nn_Linear.call() result1 = ", result1)
+#             print("nn_Linear.call() result1 = ", result1)
 
-        #     assert np.allclose(result1.numpy(), result.numpy())
+#         #     assert np.allclose(result1.numpy(), result.numpy())
 
-        return result
-
-    
-    # def build(self, input_shape):
-    #     self.model.build(input_shape = input_shape)
-
-
-    @property
-    def trainable_variables(self):
-        # Return the trainable variables of the inner Dense layer
-        return self.model.trainable_variables
-
-    @property
-    def non_trainable_variables(self):
-        # Return the non-trainable variables of the inner Dense layer
-        return self.model.non_trainable_variables
-
-    @property
-    def kernel(self):
-        return self.model.kernel
-
-    @kernel.setter
-    def kernel(self, value):
-        self.model.kernel.assign(value)
-    
-    @property
-    def bias(self):
-        return self.model.bias
-
-    @bias.setter
-    def bias(self, value):
-        self.model.bias.assign(value)
-
-
-    # def __getattr__(self, name):
-    #     if hasattr(self.model, name):
-    #         return getattr(self.model, name)
-    #     else:
-    #         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-
-    # def __getattr__(self, name):
-    #     # 先检查当前对象的属性，避免无限递归
-    #     if name in self.__dict__:
-    #         return self.__dict__[name]
-    #     # 再检查 model 的属性
-    #     if hasattr(self.model, name):
-    #         return getattr(self.model, name)
-    #     # 如果都没有，抛出 AttributeError
-    #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-
-
-    # def __getattr__(self, name):
-    #     # 避免递归调用：直接访问 __dict__ 或 object.__getattribute__
-    #     try:
-    #         return object.__getattribute__(self, name)
-    #     except AttributeError:
-    #         pass
-
-    #     # 检查是否为 model 的属性
-    #     model = object.__getattribute__(self, "model")
-
-    #     if hasattr(model, name):
-    #         return getattr(model, name)
-
-    #     # 如果仍然找不到，抛出异常
-    #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def nn_Parameter(data=None, requires_grad=True):
-    if data is None:
-        raise ValueError("data cannot be None. Please provide a tensor value.")
-    return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
-
-
-
-
-
-
-
-
-
-
-# Define TensorFlow nn.Sequential wrapper
-class nn_Sequential(tf.keras.layers.Layer):
-    def __init__(self, *args, 
-                #  name = "nn_Sequential", 
-                 model_list = None, 
-                 model = None, 
-                 **kwargs):
-        super(nn_Sequential, self).__init__(
-            # name=name, 
-            **kwargs)
-
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Sequential: __init__()")
-
-        if OUTPUT_VARIABLES:
-            print("len(args) = ", len(args))
-            print("args = ", args)
-            print("model_list = ", model_list)
-            print("model = ", model)
-            print("**kwargs = ", kwargs)
-
-
-        if model == None:
-            self.model_list = []
-
-            if isinstance(args[0], (tuple, list)):
-                for module in args[0]:
-                    self.model_list.append(module)
-            elif isinstance(args[0], (dict, OrderedDict)):
-                if OUTPUT_VARIABLES:
-                    print("OrderedDict")
-                for name, module in args[0].items():
-                    if OUTPUT_VARIABLES:
-                        print("name = ", name)
-                        print("module = ", module)
-                    self.model_list.append(module)
-            else:
-                for module in args:
-                    self.model_list.append(module)
-
-            if OUTPUT_VARIABLES:
-                print("branch1")
-                print("self.model_list = ")
-
-            self.model = tf.keras.Sequential(self.model_list)
-        else:
-            self.model = model
+#         return result
 
     
-        # if model_list != None:
-
-        # else:
-        #     self.model_list = model_list
+#     # def build(self, input_shape):
+#     #     self.model.build(input_shape = input_shape)
 
 
-        # tf.keras.Sequential(
-        #     layers=None, trainable=True, name=None
-        # )
+#     @property
+#     def trainable_variables(self):
+#         # Return the trainable variables of the inner Dense layer
+#         return self.model.trainable_variables
 
-    def call(self, x):
-        output = x
-        # if self.model_list:
-        #     for module in self.model_list:
-        #         print("module = ", module)
-        #         output = module(output)
-        output = self.model(output)
-        
-        return output
+#     @property
+#     def non_trainable_variables(self):
+#         # Return the non-trainable variables of the inner Dense layer
+#         return self.model.non_trainable_variables
+
+#     @property
+#     def kernel(self):
+#         return self.model.kernel
+
+#     @kernel.setter
+#     def kernel(self, value):
+#         self.model.kernel.assign(value)
     
-    def __getitem__(self, id):
-        # print("getitem: len(self.model_list) = ", len(self.model_list))
-        # return self.model_list[id]
-        return self.model.layers[id]
+#     @property
+#     def bias(self):
+#         return self.model.bias
 
-    def __iter__(self):
-        # return iter(self.model_list)\
-        print("iter: self.model.layers = ", self.model.layers)
-        return iter(self.model.layers)
+#     @bias.setter
+#     def bias(self, value):
+#         self.model.bias.assign(value)
 
 
+#     # def __getattr__(self, name):
+#     #     if hasattr(self.model, name):
+#     #         return getattr(self.model, name)
+#     #     else:
+#     #         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-    def get_config(self):
-        # Get the configuration of all layers in the model_list
-        config = super(nn_Sequential, self).get_config()  # Call the parent class get_config()
+#     # def __getattr__(self, name):
+#     #     # 先检查当前对象的属性，避免无限递归
+#     #     if name in self.__dict__:
+#     #         return self.__dict__[name]
+#     #     # 再检查 model 的属性
+#     #     if hasattr(self.model, name):
+#     #         return getattr(self.model, name)
+#     #     # 如果都没有，抛出 AttributeError
+#     #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+
+#     # def __getattr__(self, name):
+#     #     # 避免递归调用：直接访问 __dict__ 或 object.__getattribute__
+#     #     try:
+#     #         return object.__getattribute__(self, name)
+#     #     except AttributeError:
+#     #         pass
+
+#     #     # 检查是否为 model 的属性
+#     #     model = object.__getattribute__(self, "model")
+
+#     #     if hasattr(model, name):
+#     #         return getattr(model, name)
+
+#     #     # 如果仍然找不到，抛出异常
+#     #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def nn_Parameter(data=None, requires_grad=True):
+#     if data is None:
+#         raise ValueError("data cannot be None. Please provide a tensor value.")
+#     return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+
+
+
+
+
+
+
+
+
+
+# # Define TensorFlow nn.Sequential wrapper
+# class nn_Sequential(tf.keras.layers.Layer):
+#     def __init__(self, *args, 
+#                 #  name = "nn_Sequential", 
+#                  model_list = None, 
+#                  model = None, 
+#                  **kwargs):
+#         super(nn_Sequential, self).__init__(
+#             # name=name, 
+#             **kwargs)
+
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Sequential: __init__()")
+
+#         if OUTPUT_VARIABLES:
+#             print("len(args) = ", len(args))
+#             print("args = ", args)
+#             print("model_list = ", model_list)
+#             print("model = ", model)
+#             print("**kwargs = ", kwargs)
+
+
+#         if model == None:
+#             self.model_list = []
+
+#             if isinstance(args[0], (tuple, list)):
+#                 for module in args[0]:
+#                     self.model_list.append(module)
+#             elif isinstance(args[0], (dict, OrderedDict)):
+#                 if OUTPUT_VARIABLES:
+#                     print("OrderedDict")
+#                 for name, module in args[0].items():
+#                     if OUTPUT_VARIABLES:
+#                         print("name = ", name)
+#                         print("module = ", module)
+#                     self.model_list.append(module)
+#             else:
+#                 for module in args:
+#                     self.model_list.append(module)
+
+#             if OUTPUT_VARIABLES:
+#                 print("branch1")
+#                 print("self.model_list = ")
+
+#             self.model = tf.keras.Sequential(self.model_list)
+#         else:
+#             self.model = model
+
+    
+#         # if model_list != None:
+
+#         # else:
+#         #     self.model_list = model_list
+
+
+#         # tf.keras.Sequential(
+#         #     layers=None, trainable=True, name=None
+#         # )
+
+#     def call(self, x):
+#         output = x
+#         # if self.model_list:
+#         #     for module in self.model_list:
+#         #         print("module = ", module)
+#         #         output = module(output)
+#         output = self.model(output)
         
-        # # Create a list of layer configurations
-        # layer_configs = []
+#         return output
+    
+#     def __getitem__(self, id):
+#         # print("getitem: len(self.model_list) = ", len(self.model_list))
+#         # return self.model_list[id]
+#         return self.model.layers[id]
+
+#     def __iter__(self):
+#         # return iter(self.model_list)\
+#         print("iter: self.model.layers = ", self.model.layers)
+#         return iter(self.model.layers)
 
 
-        # for layer in self.model_list:
-        #     print("layer = ", layer)
-        #     layer_configs.append( layer.get_config() )
+
+#     def get_config(self):
+#         # Get the configuration of all layers in the model_list
+#         config = super(nn_Sequential, self).get_config()  # Call the parent class get_config()
         
-        # Add the list of layer configurations to the config dictionary
-        config.update({
-            'model': tf.keras.layers.serialize(self.model)
-            # layer_configs
-        })
+#         # # Create a list of layer configurations
+#         # layer_configs = []
 
-        if OUTPUT_VARIABLES:
-            print("nn_Sequential: config = ", config)
 
-        return config
+#         # for layer in self.model_list:
+#         #     print("layer = ", layer)
+#         #     layer_configs.append( layer.get_config() )
+        
+#         # Add the list of layer configurations to the config dictionary
+#         config.update({
+#             'model': tf.keras.layers.serialize(self.model)
+#             # layer_configs
+#         })
 
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Sequential: from_config()")
+#         if OUTPUT_VARIABLES:
+#             print("nn_Sequential: config = ", config)
 
-        if OUTPUT_VARIABLES:
-            print("config = ", config)
+#         return config
+
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Sequential: from_config()")
+
+#         if OUTPUT_VARIABLES:
+#             print("config = ", config)
         
 
-        from model.diffusion.mlp_diffusion import DiffusionMLP
-        from model.diffusion.diffusion import DiffusionModel
-        from model.common.mlp import MLP, ResidualMLP
-        from model.diffusion.modules import SinusoidalPosEmb
-        from model.common.modules import SpatialEmb, RandomShiftsAug
-        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+#         from model.diffusion.mlp_diffusion import DiffusionMLP
+#         from model.diffusion.diffusion import DiffusionModel
+#         from model.common.mlp import MLP, ResidualMLP
+#         from model.diffusion.modules import SinusoidalPosEmb
+#         from model.common.modules import SpatialEmb, RandomShiftsAug
+#         # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
 
-        from tensorflow.keras.utils import get_custom_objects
+#         from tensorflow.keras.utils import get_custom_objects
 
-        cur_dict = {
-            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            'DiffusionMLP': DiffusionMLP,
-            # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Identity': nn_Identity,
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-            'nn_Linear': nn_Linear,
-            'nn_LayerNorm': nn_LayerNorm,
-            'nn_Dropout': nn_Dropout,
-            'nn_ReLU': nn_ReLU,
-            'nn_Mish': nn_Mish,
-            'SpatialEmb': SpatialEmb,
-            'RandomShiftsAug': RandomShiftsAug,
-         }
-        # Register your custom class with Keras
-        get_custom_objects().update(cur_dict)
+#         cur_dict = {
+#             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+#             'DiffusionMLP': DiffusionMLP,
+#             # 'VPGDiffusion': VPGDiffusion,
+#             'SinusoidalPosEmb': SinusoidalPosEmb,   
+#             'MLP': MLP,                            # 自定义的 MLP 层
+#             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+#             'nn_Identity': nn_Identity,
+#             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+#             'nn_Linear': nn_Linear,
+#             'nn_LayerNorm': nn_LayerNorm,
+#             'nn_Dropout': nn_Dropout,
+#             'nn_ReLU': nn_ReLU,
+#             'nn_Mish': nn_Mish,
+#             'SpatialEmb': SpatialEmb,
+#             'RandomShiftsAug': RandomShiftsAug,
+#          }
+#         # Register your custom class with Keras
+#         get_custom_objects().update(cur_dict)
 
-        # print('get_custom_objects() = ', get_custom_objects())
+#         # print('get_custom_objects() = ', get_custom_objects())
 
-        # print("Custom objects:", get_custom_objects())
-        # assert 'SinusoidalPosEmb' in get_custom_objects()
+#         # print("Custom objects:", get_custom_objects())
+#         # assert 'SinusoidalPosEmb' in get_custom_objects()
 
-        # model_list = config.pop("model_list")
+#         # model_list = config.pop("model_list")
 
-        # models = []
-        # for model in model_list:
-        #     # print("model = ", model)
-        #     name = model["name"]
-        #     if name in cur_dict:
-        #         models.append( cur_dict[name].from_config(model) )
-        #     else:
-        #         models.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
+#         # models = []
+#         # for model in model_list:
+#         #     # print("model = ", model)
+#         #     name = model["name"]
+#         #     if name in cur_dict:
+#         #         models.append( cur_dict[name].from_config(model) )
+#         #     else:
+#         #         models.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
 
-        model = tf.keras.layers.deserialize( config.pop("model") ,  custom_objects=get_custom_objects() )
+#         model = tf.keras.layers.deserialize( config.pop("model") ,  custom_objects=get_custom_objects() )
         
-        return cls(model = model, **config)
+#         return cls(model = model, **config)
 
 
 
-class nn_ModuleList(tf.keras.layers.Layer):
-    def __init__(self, modules=None, serialized_modules = None, name="nn_ModuleList", **kwargs):
-        super(nn_ModuleList, self).__init__(name=name, **kwargs)
-        self.modules = []
-        if serialized_modules is None:
-            if modules is not None:
-                for module in modules:
-                    self.append(module)
-        else:
-            self.modules = serialized_modules
+# class nn_ModuleList(tf.keras.layers.Layer):
+#     def __init__(self, modules=None, serialized_modules = None, name="nn_ModuleList", **kwargs):
+#         super(nn_ModuleList, self).__init__(name=name, **kwargs)
+#         self.modules = []
+#         if serialized_modules is None:
+#             if modules is not None:
+#                 for module in modules:
+#                     self.append(module)
+#         else:
+#             self.modules = serialized_modules
 
 
 
-    # def get_config(self):
-    #     from tensorflow.python.keras.utils import generic_utils
-    #     import copy
-    #     layer_configs = []
-    #     for layer in self.modules:
-    #         # `super().layers` include the InputLayer if available (it is filtered out
-    #         # of `self.layers`). Note that `self._self_tracked_trackables` is managed
-    #         # by the tracking infrastructure and should not be used.
-    #         layer_configs.append(generic_utils.serialize_keras_object(layer))
-    #     config = {
-    #         'name': self.name,
-    #         'layers': copy.deepcopy(layer_configs)
-    #     }
-    #     if not self._is_graph_network and self._build_input_shape is not None:
-    #         config['build_input_shape'] = self._build_input_shape
-    #     return config
+#     # def get_config(self):
+#     #     from tensorflow.python.keras.utils import generic_utils
+#     #     import copy
+#     #     layer_configs = []
+#     #     for layer in self.modules:
+#     #         # `super().layers` include the InputLayer if available (it is filtered out
+#     #         # of `self.layers`). Note that `self._self_tracked_trackables` is managed
+#     #         # by the tracking infrastructure and should not be used.
+#     #         layer_configs.append(generic_utils.serialize_keras_object(layer))
+#     #     config = {
+#     #         'name': self.name,
+#     #         'layers': copy.deepcopy(layer_configs)
+#     #     }
+#     #     if not self._is_graph_network and self._build_input_shape is not None:
+#     #         config['build_input_shape'] = self._build_input_shape
+#     #     return config
 
 
-    # @classmethod
-    # def from_config(cls, config, custom_objects=None):
-    #     if 'name' in config:
-    #         name = config['name']
-    #         build_input_shape = config.get('build_input_shape')
-    #         layer_configs = config['layers']
-    #     else:
-    #         name = None
-    #         build_input_shape = None
-    #         layer_configs = config
-    #         model = cls(name=name)
+#     # @classmethod
+#     # def from_config(cls, config, custom_objects=None):
+#     #     if 'name' in config:
+#     #         name = config['name']
+#     #         build_input_shape = config.get('build_input_shape')
+#     #         layer_configs = config['layers']
+#     #     else:
+#     #         name = None
+#     #         build_input_shape = None
+#     #         layer_configs = config
+#     #         model = cls(name=name)
 
-    #     from tensorflow.python.keras import layers as layer_module
+#     #     from tensorflow.python.keras import layers as layer_module
 
-    #     for layer_config in layer_configs:
-    #         layer = layer_module.deserialize(layer_config,
-    #                                         custom_objects=custom_objects)
-    #         model.add(layer)
-    #     if (not model.inputs and build_input_shape and
-    #         isinstance(build_input_shape, (tuple, list))):
-    #         model.build(build_input_shape)
-    #     return model
-
-
+#     #     for layer_config in layer_configs:
+#     #         layer = layer_module.deserialize(layer_config,
+#     #                                         custom_objects=custom_objects)
+#     #         model.add(layer)
+#     #     if (not model.inputs and build_input_shape and
+#     #         isinstance(build_input_shape, (tuple, list))):
+#     #         model.build(build_input_shape)
+#     #     return model
 
 
-    def append(self, module):
-        if not isinstance(module, tf.keras.layers.Layer):
-            raise ValueError("All modules must be instances of tf.keras.layers.Layer")
-        self.modules.append(module)
-        # Automatically track the layer by assigning it to an attribute
-        setattr(self, f"module_{len(self.modules) - 1}", module)
-
-    def extend(self, modules):
-        for module in modules:
-            self.append(module)
-
-    def call(self, x):
-        outputs = []
-        output = x
-        for module in self.modules:
-            output = module(output)
-            outputs.append(output)
-        return outputs
 
 
-    def __getitem__(self, idx):
-        return self.modules[idx]
+#     def append(self, module):
+#         if not isinstance(module, tf.keras.layers.Layer):
+#             raise ValueError("All modules must be instances of tf.keras.layers.Layer")
+#         self.modules.append(module)
+#         # Automatically track the layer by assigning it to an attribute
+#         setattr(self, f"module_{len(self.modules) - 1}", module)
 
-    def __len__(self):
-        return len(self.modules)
+#     def extend(self, modules):
+#         for module in modules:
+#             self.append(module)
 
-    def __repr__(self):
-        return f"nn_ModuleList({self.modules})"
+#     def call(self, x):
+#         outputs = []
+#         output = x
+#         for module in self.modules:
+#             output = module(output)
+#             outputs.append(output)
+#         return outputs
 
 
-    def get_config(self):
+#     def __getitem__(self, idx):
+#         return self.modules[idx]
 
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_ModuleList: get_config()")
+#     def __len__(self):
+#         return len(self.modules)
 
-        # Get the configuration of all layers in the modules list
-        config = super(nn_ModuleList, self).get_config()  # Call the parent class get_config()
+#     def __repr__(self):
+#         return f"nn_ModuleList({self.modules})"
 
-        # Create a list of module configurations
-        module_configs = [module.get_config() for module in self.modules]
+
+#     def get_config(self):
+
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_ModuleList: get_config()")
+
+#         # Get the configuration of all layers in the modules list
+#         config = super(nn_ModuleList, self).get_config()  # Call the parent class get_config()
+
+#         # Create a list of module configurations
+#         module_configs = [module.get_config() for module in self.modules]
         
-        # Add the list of module configurations to the config dictionary
-        config.update({
-            'modules': module_configs
-        })
-        return config
+#         # Add the list of module configurations to the config dictionary
+#         config.update({
+#             'modules': module_configs
+#         })
+#         return config
 
 
 
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_ModuleList: from_config()")
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_ModuleList: from_config()")
 
-        model_list = config.pop("modules")
+#         model_list = config.pop("modules")
 
-        from model.diffusion.mlp_diffusion import DiffusionMLP
-        from model.diffusion.diffusion import DiffusionModel
-        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-        from model.diffusion.modules import SinusoidalPosEmb
-        from model.common.modules import SpatialEmb, RandomShiftsAug
-        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+#         from model.diffusion.mlp_diffusion import DiffusionMLP
+#         from model.diffusion.diffusion import DiffusionModel
+#         from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+#         from model.diffusion.modules import SinusoidalPosEmb
+#         from model.common.modules import SpatialEmb, RandomShiftsAug
+#         # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
 
-        from tensorflow.keras.utils import get_custom_objects
+#         from tensorflow.keras.utils import get_custom_objects
 
-        cur_dict = {
-            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            'DiffusionMLP': DiffusionMLP,
-            # 'VPGDiffusion': VPGDiffusion,
-            'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-            "nn_Identity": nn_Identity,
-            'nn_Linear': nn_Linear,
-            'nn_LayerNorm': nn_LayerNorm,
-            'nn_Dropout': nn_Dropout,
-            'nn_ReLU': nn_ReLU,
-            'nn_Mish': nn_Mish,
-            'SpatialEmb': SpatialEmb,
-            'RandomShiftsAug': RandomShiftsAug,
-            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-         }
-        # Register your custom class with Keras
-        get_custom_objects().update(cur_dict)
+#         cur_dict = {
+#             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+#             'DiffusionMLP': DiffusionMLP,
+#             # 'VPGDiffusion': VPGDiffusion,
+#             'SinusoidalPosEmb': SinusoidalPosEmb,   
+#             'MLP': MLP,                            # 自定义的 MLP 层
+#             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+#             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+#             "nn_Identity": nn_Identity,
+#             'nn_Linear': nn_Linear,
+#             'nn_LayerNorm': nn_LayerNorm,
+#             'nn_Dropout': nn_Dropout,
+#             'nn_ReLU': nn_ReLU,
+#             'nn_Mish': nn_Mish,
+#             'SpatialEmb': SpatialEmb,
+#             'RandomShiftsAug': RandomShiftsAug,
+#             "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+#          }
+#         # Register your custom class with Keras
+#         get_custom_objects().update(cur_dict)
 
-        # print('get_custom_objects() = ', get_custom_objects())
-
-
-        modules = []
-
-        if OUTPUT_VARIABLES:
-            print("type(model_list) = ", type(model_list))
-            print("model_list = ", model_list)
+#         # print('get_custom_objects() = ', get_custom_objects())
 
 
+#         modules = []
 
-        for model in model_list:
-            if OUTPUT_VARIABLES:
-                print("model = ", model)
-            name = model["name"]
-            if OUTPUT_VARIABLES:
-                print("name = ", name)
-            if name in cur_dict:
-                modules.append( cur_dict[name].from_config(model) )
-            else:
-                if OUTPUT_VARIABLES:
-                    print("nn_ModuleList: name = ", name)
-                modules.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
+#         if OUTPUT_VARIABLES:
+#             print("type(model_list) = ", type(model_list))
+#             print("model_list = ", model_list)
 
 
 
-        return cls(serialized_modules = modules, **config)
+#         for model in model_list:
+#             if OUTPUT_VARIABLES:
+#                 print("model = ", model)
+#             name = model["name"]
+#             if OUTPUT_VARIABLES:
+#                 print("name = ", name)
+#             if name in cur_dict:
+#                 modules.append( cur_dict[name].from_config(model) )
+#             else:
+#                 if OUTPUT_VARIABLES:
+#                     print("nn_ModuleList: name = ", name)
+#                 modules.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
 
 
 
+#         return cls(serialized_modules = modules, **config)
+
+
+
+
+
+
+# # class nn_Embedding(tf.keras.layers.Layer):
+# #     # torch.nn.Embedding(num_embeddings, embedding_dim, padding_idx=None, max_norm=None, 
+# #     # norm_type=2.0, scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None)    
+# #     def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
+# #                  scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None):
+# #         super(nn_Embedding, self).__init__()
+# #         pass
+    
+# #     def call(self, x):
+# #         pass
 
 
 
 # class nn_Embedding(tf.keras.layers.Layer):
-#     # torch.nn.Embedding(num_embeddings, embedding_dim, padding_idx=None, max_norm=None, 
-#     # norm_type=2.0, scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None)    
 #     def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
-#                  scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None):
-#         super(nn_Embedding, self).__init__()
-#         pass
+#                  scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None, name="nn_Embedding", **kwargs):
+#         """
+#         A TensorFlow wrapper to replicate the functionality of torch.nn.Embedding.
+        
+#         Args:
+#             num_embeddings (int): Size of the embedding dictionary.
+#             embedding_dim (int): Size of each embedding vector.
+#             padding_idx (int, optional): Specifies padding index. Embeddings for this index are always zero.
+#             max_norm (float, optional): If given, will renormalize embeddings to have a norm less than this value.
+#             norm_type (float, optional): The p-norm to compute for the max_norm option. Default is 2.0.
+#             scale_grad_by_freq (bool, optional): If True, scale gradients by inverse of word frequency.
+#             sparse (bool, optional): Not used in TensorFlow, included for API compatibility.
+#             _weight (np.ndarray, optional): Predefined weight matrix for embeddings.
+#             _freeze (bool, optional): If True, the embedding weights are frozen and not updated during training.
+#             device, dtype: Not used, included for API compatibility.
+#         """
+#         super(nn_Embedding, self).__init__(dtype=dtype, name=name, **kwargs)
+        
+#         self.num_embeddings = num_embeddings
+#         self.embedding_dim = embedding_dim
+#         self.padding_idx = padding_idx
+#         self.max_norm = max_norm
+#         self.norm_type = norm_type
+#         self.scale_grad_by_freq = scale_grad_by_freq
+#         self._freeze = _freeze
+
+#         # Initialize embedding weights
+#         if _weight is not None:
+#             self.embeddings = tf.Variable(_weight, trainable=not _freeze, dtype=self.dtype)
+#         else:
+#             initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1.0)
+#             self.embeddings = tf.Variable(
+#                 initializer([num_embeddings, embedding_dim]), trainable=not _freeze, dtype=self.dtype
+#             )
+
+#         # Ensure padding_idx embeddings are always zero
+#         if self.padding_idx is not None:
+#             self.embeddings[self.padding_idx].assign(tf.zeros([embedding_dim], dtype=self.dtype))
+
+
+#     def get_config(self):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Embedding: from_config()")
+
+#         # Get the configuration of the embedding layer
+#         config = super(nn_Embedding, self).get_config()  # Call parent class get_config()
+
+#         # Add custom arguments to config
+#         config.update({
+#             'num_embeddings': self.num_embeddings,
+#             'embedding_dim': self.embedding_dim,
+#             'padding_idx': self.padding_idx,
+#             'max_norm': self.max_norm,
+#             'norm_type': self.norm_type,
+#             'scale_grad_by_freq': self.scale_grad_by_freq,
+#             'sparse': False,  # Sparse is not used in TensorFlow
+#             '_freeze': self._freeze,
+#             # Include _weight if it was initialized with custom weights
+#             '_weight': self.embeddings.numpy() if hasattr(self.embeddings, 'numpy') else None
+#         })
+#         return config
+
+
+#     @classmethod
+#     def from_config(cls, config):
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("nn_Embedding: from_config()")
+#         # result = cls(**config)
+#         result = super(nn_Embedding, cls).from_config(config)
+#         return result
+
+
+#     def call(self, x):
+#         """
+#         Args:
+#             x (Tensor): Indices of the embeddings to retrieve.
+        
+#         Returns:
+#             Tensor: The embedding vectors corresponding to input indices.
+#         """
+#         # Gather embeddings
+#         embedded = tf.nn.embedding_lookup(self.embeddings, x)
+
+#         # Apply max_norm constraint if specified
+#         if self.max_norm is not None:
+#             norms = tf.norm(embedded, ord=self.norm_type, axis=-1, keepdims=True)
+#             embedded = tf.where(
+#                 norms > self.max_norm,
+#                 embedded * (self.max_norm / norms),
+#                 embedded
+#             )
+
+#         return embedded
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# from tensorflow.keras.saving import register_keras_serializable
+# @register_keras_serializable(package="Custom")
+# class nn_LayerNorm(tf.keras.layers.Layer):
+#     # torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
+#     def __init__(self, normalized_shape, eps=1e-5, name="nn_LayerNorm", gamma = None, beta = None, **kwargs):
+#         """
+#         A wrapper for PyTorch's nn.LayerNorm in TensorFlow.
+#         Args:
+#             normalized_shape (int or tuple): Input shape for layer normalization.
+#             epsilon (float): A small value to add to the denominator for numerical stability.
+#         """
+
+#         if isinstance(normalized_shape, int):
+#             normalized_shape = [normalized_shape]
+#         super(nn_LayerNorm, self).__init__(name=name, **kwargs)
+#         self.normalized_shape = normalized_shape
+#         self.epsilon = eps
+
+#         # Define trainable parameters gamma (scale) and beta (offset)
+
+#         if gamma == None:
+#             self.gamma = self.add_weight(
+#                 name="gamma",
+#                 shape=self.normalized_shape,
+#                 initializer="ones",
+#                 trainable=True
+#             )
+#         else:
+#             self.gamma = gamma
+
+#         if beta == None:
+#             self.beta = self.add_weight(
+#                 name="beta",
+#                 shape=self.normalized_shape,
+#                 initializer="zeros",
+#                 trainable=True
+#             )
+#         else:
+#             self.beta = beta
+
+#     def get_config(self):
+#         """
+#         Returns the configuration of the LayerNorm layer.
+#         This method is used to save and restore the layer's state.
+#         """
+#         config = super(nn_LayerNorm, self).get_config()  # 获取基础配置
+#         # 确保将 `gamma` 和 `beta` 的配置信息添加到返回的配置中
+#         config.update({
+#             'normalized_shape': self.normalized_shape,
+#             'eps': self.epsilon,
+#             # 'gamma': self.gamma,
+#             # 'beta': self.beta
+#         })
+
+#         if OUTPUT_VARIABLES:
+#             print("nn_LayerNorm.get_config() = ", config)
+
+#         return config
+
+#     @classmethod
+#     def from_config(cls, config):
+#         """
+#         Returns an instance of the custom layer from its configuration.
+#         """
+#         result = super(nn_LayerNorm, cls).from_config(config)
+#         return result
     
 #     def call(self, x):
-#         pass
+#         """
+#         Forward pass for LayerNorm.
+
+#         Args:
+#             x (tf.Tensor): Input tensor to normalize.
+
+#         Returns:
+#             tf.Tensor: The normalized tensor.
+#         """
+#         # print("type(normalized_shape) = ", type(self.normalized_shape))
+#         if isinstance(self.normalized_shape, int):
+#             dims = 1
+#         else:
+#             dims = len(self.normalized_shape)
+#         dim_list = []
+#         for i in range(-dims, 0, 1):
+#             dim_list.append(i)
+#         mean = tf.reduce_mean(x, axis=dim_list, keepdims=True)
+#         variance = tf.reduce_mean(tf.square(x - mean), axis=dim_list, keepdims=True)
+#         normalized_x = (x - mean) / tf.sqrt(variance + self.epsilon)
+
+#         return self.gamma * normalized_x + self.beta
 
 
 
-class nn_Embedding(tf.keras.layers.Layer):
-    def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
-                 scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None, name="nn_Embedding", **kwargs):
-        """
-        A TensorFlow wrapper to replicate the functionality of torch.nn.Embedding.
+#     # def get_config(self):
+#     #     """
+#     #     Returns the configuration of the LayerNorm layer.
+#     #     This method is used to save and restore the layer's state.
+#     #     """
+#     #     print("nn_LayerNorm: from_config()")
+
+#     #     config = super(nn_LayerNorm, self).get_config()  # Call the parent class get_config
+
+#     #     # Add custom arguments to the config
+#     #     config.update({
+#     #         'normalized_shape': self.normalized_shape,
+#     #         'eps': self.epsilon,
+#     #         # 'gamma': self.gamma,
+#     #         # 'beta': self.beta
+#     #     })
+#     #     return config
+
+#     # @classmethod
+#     # def from_config(cls, config):
+#     #     """
+#     #     Returns an instance of the custom layer from its configuration.
+#     #     """
+#     #     # 直接调用父类的 from_config，TensorFlow 会自动处理变量的恢复（如 gamma 和 beta）
+#     #     result = super(nn_LayerNorm, cls).from_config(config)
+#     #     return result
+
+
+#     # @classmethod
+#     # def from_config(cls, config):
+#     #     print("nn_LayerNorm: from_config()")
+#     #     result = cls(**config)
+#     #     return result
+
+
+
+
+
+
+# class nn_MultiheadAttention(tf.keras.layers.Layer):
+#     def __init__(self, d_model, num_heads, name="nn_MultiheadAttention", **kwargs):
         
-        Args:
-            num_embeddings (int): Size of the embedding dictionary.
-            embedding_dim (int): Size of each embedding vector.
-            padding_idx (int, optional): Specifies padding index. Embeddings for this index are always zero.
-            max_norm (float, optional): If given, will renormalize embeddings to have a norm less than this value.
-            norm_type (float, optional): The p-norm to compute for the max_norm option. Default is 2.0.
-            scale_grad_by_freq (bool, optional): If True, scale gradients by inverse of word frequency.
-            sparse (bool, optional): Not used in TensorFlow, included for API compatibility.
-            _weight (np.ndarray, optional): Predefined weight matrix for embeddings.
-            _freeze (bool, optional): If True, the embedding weights are frozen and not updated during training.
-            device, dtype: Not used, included for API compatibility.
-        """
-        super(nn_Embedding, self).__init__(dtype=dtype, name=name, **kwargs)
-        
-        self.num_embeddings = num_embeddings
-        self.embedding_dim = embedding_dim
-        self.padding_idx = padding_idx
-        self.max_norm = max_norm
-        self.norm_type = norm_type
-        self.scale_grad_by_freq = scale_grad_by_freq
-        self._freeze = _freeze
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("called nn_MultiheadAttention __init__()")
 
-        # Initialize embedding weights
-        if _weight is not None:
-            self.embeddings = tf.Variable(_weight, trainable=not _freeze, dtype=self.dtype)
-        else:
-            initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1.0)
-            self.embeddings = tf.Variable(
-                initializer([num_embeddings, embedding_dim]), trainable=not _freeze, dtype=self.dtype
-            )
+#         super(nn_MultiheadAttention, self).__init__(name=name, **kwargs)
+#         self.num_heads = num_heads
+#         self.d_model = d_model
 
-        # Ensure padding_idx embeddings are always zero
-        if self.padding_idx is not None:
-            self.embeddings[self.padding_idx].assign(tf.zeros([embedding_dim], dtype=self.dtype))
+#         assert d_model % self.num_heads == 0
 
+#         self.depth = d_model // self.num_heads
 
-    def get_config(self):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Embedding: from_config()")
+#         # 线性变换用于 Query, Key 和 Value
+#         self.query_dense = tf.keras.layers.Dense(d_model)
+#         self.key_dense = tf.keras.layers.Dense(d_model)
+#         self.value_dense = tf.keras.layers.Dense(d_model)
 
-        # Get the configuration of the embedding layer
-        config = super(nn_Embedding, self).get_config()  # Call parent class get_config()
+#         # 输出变换
+#         self.output_dense = tf.keras.layers.Dense(d_model)
 
-        # Add custom arguments to config
-        config.update({
-            'num_embeddings': self.num_embeddings,
-            'embedding_dim': self.embedding_dim,
-            'padding_idx': self.padding_idx,
-            'max_norm': self.max_norm,
-            'norm_type': self.norm_type,
-            'scale_grad_by_freq': self.scale_grad_by_freq,
-            'sparse': False,  # Sparse is not used in TensorFlow
-            '_freeze': self._freeze,
-            # Include _weight if it was initialized with custom weights
-            '_weight': self.embeddings.numpy() if hasattr(self.embeddings, 'numpy') else None
-        })
-        return config
+#     def split_heads(self, x, batch_size):
+#         """将最后一个维度切分为多个头"""
+#         x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
+#         return tf.transpose(x, perm=[0, 2, 1, 3])
 
-
-    @classmethod
-    def from_config(cls, config):
-        if OUTPUT_FUNCTION_HEADER:
-            print("nn_Embedding: from_config()")
-        # result = cls(**config)
-        result = super(nn_Embedding, cls).from_config(config)
-        return result
-
-
-    def call(self, x):
-        """
-        Args:
-            x (Tensor): Indices of the embeddings to retrieve.
-        
-        Returns:
-            Tensor: The embedding vectors corresponding to input indices.
-        """
-        # Gather embeddings
-        embedded = tf.nn.embedding_lookup(self.embeddings, x)
-
-        # Apply max_norm constraint if specified
-        if self.max_norm is not None:
-            norms = tf.norm(embedded, ord=self.norm_type, axis=-1, keepdims=True)
-            embedded = tf.where(
-                norms > self.max_norm,
-                embedded * (self.max_norm / norms),
-                embedded
-            )
-
-        return embedded
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-from tensorflow.keras.saving import register_keras_serializable
-@register_keras_serializable(package="Custom")
-class nn_LayerNorm(tf.keras.layers.Layer):
-    # torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
-    def __init__(self, normalized_shape, eps=1e-5, name="nn_LayerNorm", gamma = None, beta = None, **kwargs):
-        """
-        A wrapper for PyTorch's nn.LayerNorm in TensorFlow.
-        Args:
-            normalized_shape (int or tuple): Input shape for layer normalization.
-            epsilon (float): A small value to add to the denominator for numerical stability.
-        """
-
-        if isinstance(normalized_shape, int):
-            normalized_shape = [normalized_shape]
-        super(nn_LayerNorm, self).__init__(name=name, **kwargs)
-        self.normalized_shape = normalized_shape
-        self.epsilon = eps
-
-        # Define trainable parameters gamma (scale) and beta (offset)
-
-        if gamma == None:
-            self.gamma = self.add_weight(
-                name="gamma",
-                shape=self.normalized_shape,
-                initializer="ones",
-                trainable=True
-            )
-        else:
-            self.gamma = gamma
-
-        if beta == None:
-            self.beta = self.add_weight(
-                name="beta",
-                shape=self.normalized_shape,
-                initializer="zeros",
-                trainable=True
-            )
-        else:
-            self.beta = beta
-
-    def get_config(self):
-        """
-        Returns the configuration of the LayerNorm layer.
-        This method is used to save and restore the layer's state.
-        """
-        config = super(nn_LayerNorm, self).get_config()  # 获取基础配置
-        # 确保将 `gamma` 和 `beta` 的配置信息添加到返回的配置中
-        config.update({
-            'normalized_shape': self.normalized_shape,
-            'eps': self.epsilon,
-            # 'gamma': self.gamma,
-            # 'beta': self.beta
-        })
-
-        if OUTPUT_VARIABLES:
-            print("nn_LayerNorm.get_config() = ", config)
-
-        return config
-
-    @classmethod
-    def from_config(cls, config):
-        """
-        Returns an instance of the custom layer from its configuration.
-        """
-        result = super(nn_LayerNorm, cls).from_config(config)
-        return result
-    
-    def call(self, x):
-        """
-        Forward pass for LayerNorm.
-
-        Args:
-            x (tf.Tensor): Input tensor to normalize.
-
-        Returns:
-            tf.Tensor: The normalized tensor.
-        """
-        # print("type(normalized_shape) = ", type(self.normalized_shape))
-        if isinstance(self.normalized_shape, int):
-            dims = 1
-        else:
-            dims = len(self.normalized_shape)
-        dim_list = []
-        for i in range(-dims, 0, 1):
-            dim_list.append(i)
-        mean = tf.reduce_mean(x, axis=dim_list, keepdims=True)
-        variance = tf.reduce_mean(tf.square(x - mean), axis=dim_list, keepdims=True)
-        normalized_x = (x - mean) / tf.sqrt(variance + self.epsilon)
-
-        return self.gamma * normalized_x + self.beta
-
-
-
-    # def get_config(self):
-    #     """
-    #     Returns the configuration of the LayerNorm layer.
-    #     This method is used to save and restore the layer's state.
-    #     """
-    #     print("nn_LayerNorm: from_config()")
-
-    #     config = super(nn_LayerNorm, self).get_config()  # Call the parent class get_config
-
-    #     # Add custom arguments to the config
-    #     config.update({
-    #         'normalized_shape': self.normalized_shape,
-    #         'eps': self.epsilon,
-    #         # 'gamma': self.gamma,
-    #         # 'beta': self.beta
-    #     })
-    #     return config
-
-    # @classmethod
-    # def from_config(cls, config):
-    #     """
-    #     Returns an instance of the custom layer from its configuration.
-    #     """
-    #     # 直接调用父类的 from_config，TensorFlow 会自动处理变量的恢复（如 gamma 和 beta）
-    #     result = super(nn_LayerNorm, cls).from_config(config)
-    #     return result
-
-
-    # @classmethod
-    # def from_config(cls, config):
-    #     print("nn_LayerNorm: from_config()")
-    #     result = cls(**config)
-    #     return result
-
-
-
-
-
-
-class nn_MultiheadAttention(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads, name="nn_MultiheadAttention", **kwargs):
-        
-        if OUTPUT_FUNCTION_HEADER:
-            print("called nn_MultiheadAttention __init__()")
-
-        super(nn_MultiheadAttention, self).__init__(name=name, **kwargs)
-        self.num_heads = num_heads
-        self.d_model = d_model
-
-        assert d_model % self.num_heads == 0
-
-        self.depth = d_model // self.num_heads
-
-        # 线性变换用于 Query, Key 和 Value
-        self.query_dense = tf.keras.layers.Dense(d_model)
-        self.key_dense = tf.keras.layers.Dense(d_model)
-        self.value_dense = tf.keras.layers.Dense(d_model)
-
-        # 输出变换
-        self.output_dense = tf.keras.layers.Dense(d_model)
-
-    def split_heads(self, x, batch_size):
-        """将最后一个维度切分为多个头"""
-        x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
-        return tf.transpose(x, perm=[0, 2, 1, 3])
-
-    def scaled_dot_product_attention(self, query, key, value, mask=None):
-        """计算缩放点积注意力"""
-        matmul_qk = tf.matmul(query, key, transpose_b=True)
-        dk = tf.cast(tf.shape(key)[-1], tf.float32)
-        scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
-
-        if mask is not None:
-            scaled_attention_logits += (mask * -1e9)
-
-        attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
-        output = tf.matmul(attention_weights, value)
-        return output, attention_weights
-
-    def call(self, query, key, value, mask=None):
-        batch_size = tf.shape(query)[0]
-
-        # 对 Q, K, V 进行线性变换并分割成多个头
-        query = self.query_dense(query)
-        key = self.key_dense(key)
-        value = self.value_dense(value)
-
-        query = self.split_heads(query, batch_size)
-        key = self.split_heads(key, batch_size)
-        value = self.split_heads(value, batch_size)
-
-        # 缩放点积注意力
-        output, attention_weights = self.scaled_dot_product_attention(query, key, value, mask)
-
-        # 拼接多个头
-        output = tf.transpose(output, perm=[0, 2, 1, 3])
-        output = tf.reshape(output, (batch_size, -1, self.d_model))
-
-        attention_weights = tf.reduce_mean(attention_weights, axis=1)  # 平均所有头
-
-        # 输出变换
-        output = self.output_dense(output)
-        return output, attention_weights
-
-
-    def get_config(self):
-        """
-        Returns the configuration of the MultiheadAttention layer.
-        This method is used to save and restore the layer's state.
-        """
-        print("nn_MultiheadAttention: get_config()")
-
-        config = super(nn_MultiheadAttention, self).get_config()  # Call the parent class get_config
-
-        # Add custom arguments to the config
-        config.update({
-            'num_heads': self.num_heads,
-            'd_model': self.d_model
-        })
-        return config
-
-
-
-
-
-
-
-
-
-@register_keras_serializable(package="Custom")
-class nn_Conv1d(tf.keras.layers.Layer):
-    """
-    A wrapper for PyTorch's nn.Conv1d in TensorFlow.
-    Args:
-        in_channels (int): Number of channels in the input.
-        out_channels (int): Number of channels produced by the convolution.
-        kernel_size (int): Size of the convolving kernel.
-        stride (int): Stride of the convolution. Default: 1.
-        padding (int): Padding added to both sides of the input. Default: 0.
-        dilation (int): Spacing between kernel elements. Default: 1.
-        groups (int): Number of blocked connections from input to output. Default: 1.
-        bias (bool): If True, adds a learnable bias to the output. Default: True.
-    """
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, name="nn_Conv1d", **kwargs):
-        super(nn_Conv1d, self).__init__(name=name, **kwargs)
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-        self.dilation = dilation
-        self.groups = groups
-        self.bias = bias
-
-
-        # Ensure in_channels is divisible by groups
-        if self.in_channels % self.groups != 0:
-            raise ValueError("in_channels must be divisible by groups")
-
-        self.conv1d = tf.keras.layers.Conv1D(
-            filters=self.out_channels,
-            kernel_size=self.kernel_size,
-            strides=self.stride,
-            # padding='valid',  # 手动处理填充
-            padding='same',  # 手动处理填充
-            dilation_rate=self.dilation,
-            groups=self.groups,
-            use_bias=self.bias,
-            kernel_initializer = tf.keras.initializers.Constant(
-                pytorch_weight_initializer((kernel_size, in_channels, out_channels), in_channels * kernel_size / groups )),
-            bias_initializer = tf.keras.initializers.Constant(
-                pytorch_bias_initializer((out_channels,), in_channels * kernel_size / groups ))
-        )        
+#     def scaled_dot_product_attention(self, query, key, value, mask=None):
+#         """计算缩放点积注意力"""
+#         matmul_qk = tf.matmul(query, key, transpose_b=True)
+#         dk = tf.cast(tf.shape(key)[-1], tf.float32)
+#         scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
+
+#         if mask is not None:
+#             scaled_attention_logits += (mask * -1e9)
+
+#         attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
+#         output = tf.matmul(attention_weights, value)
+#         return output, attention_weights
+
+#     def call(self, query, key, value, mask=None):
+#         batch_size = tf.shape(query)[0]
+
+#         # 对 Q, K, V 进行线性变换并分割成多个头
+#         query = self.query_dense(query)
+#         key = self.key_dense(key)
+#         value = self.value_dense(value)
+
+#         query = self.split_heads(query, batch_size)
+#         key = self.split_heads(key, batch_size)
+#         value = self.split_heads(value, batch_size)
+
+#         # 缩放点积注意力
+#         output, attention_weights = self.scaled_dot_product_attention(query, key, value, mask)
+
+#         # 拼接多个头
+#         output = tf.transpose(output, perm=[0, 2, 1, 3])
+#         output = tf.reshape(output, (batch_size, -1, self.d_model))
+
+#         attention_weights = tf.reduce_mean(attention_weights, axis=1)  # 平均所有头
+
+#         # 输出变换
+#         output = self.output_dense(output)
+#         return output, attention_weights
+
+
+#     def get_config(self):
+#         """
+#         Returns the configuration of the MultiheadAttention layer.
+#         This method is used to save and restore the layer's state.
+#         """
+#         print("nn_MultiheadAttention: get_config()")
+
+#         config = super(nn_MultiheadAttention, self).get_config()  # Call the parent class get_config
+
+#         # Add custom arguments to the config
+#         config.update({
+#             'num_heads': self.num_heads,
+#             'd_model': self.d_model
+#         })
+#         return config
+
+
+
+
+
+
+
+
+
+# @register_keras_serializable(package="Custom")
+# class nn_Conv1d(tf.keras.layers.Layer):
+#     """
+#     A wrapper for PyTorch's nn.Conv1d in TensorFlow.
+#     Args:
+#         in_channels (int): Number of channels in the input.
+#         out_channels (int): Number of channels produced by the convolution.
+#         kernel_size (int): Size of the convolving kernel.
+#         stride (int): Stride of the convolution. Default: 1.
+#         padding (int): Padding added to both sides of the input. Default: 0.
+#         dilation (int): Spacing between kernel elements. Default: 1.
+#         groups (int): Number of blocked connections from input to output. Default: 1.
+#         bias (bool): If True, adds a learnable bias to the output. Default: True.
+#     """
+#     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, name="nn_Conv1d", **kwargs):
+#         super(nn_Conv1d, self).__init__(name=name, **kwargs)
+#         self.in_channels = in_channels
+#         self.out_channels = out_channels
+#         self.kernel_size = kernel_size
+#         self.stride = stride
+#         self.padding = padding
+#         self.dilation = dilation
+#         self.groups = groups
+#         self.bias = bias
+
+
+#         # Ensure in_channels is divisible by groups
+#         if self.in_channels % self.groups != 0:
+#             raise ValueError("in_channels must be divisible by groups")
+
+#         self.conv1d = tf.keras.layers.Conv1D(
+#             filters=self.out_channels,
+#             kernel_size=self.kernel_size,
+#             strides=self.stride,
+#             # padding='valid',  # 手动处理填充
+#             padding='same',  # 手动处理填充
+#             dilation_rate=self.dilation,
+#             groups=self.groups,
+#             use_bias=self.bias,
+#             kernel_initializer = tf.keras.initializers.Constant(
+#                 pytorch_weight_initializer((kernel_size, in_channels, out_channels), in_channels * kernel_size / groups )),
+#             bias_initializer = tf.keras.initializers.Constant(
+#                 pytorch_bias_initializer((out_channels,), in_channels * kernel_size / groups ))
+#         )        
 
                     
-    def get_config(self):
-        """
-        Returns the configuration of the Conv1d layer.
-        This method is used to save and restore the layer's state.
-        """
-        config = super(nn_Conv1d, self).get_config()
-        config.update({
-            'in_channels': self.in_channels,
-            'out_channels': self.out_channels,
-            'kernel_size': self.kernel_size,
-            'stride': self.stride,
-            'padding': self.padding,
-            'dilation': self.dilation,
-            'groups': self.groups,
-            'bias': self.bias,
-        })
-        return config
+#     def get_config(self):
+#         """
+#         Returns the configuration of the Conv1d layer.
+#         This method is used to save and restore the layer's state.
+#         """
+#         config = super(nn_Conv1d, self).get_config()
+#         config.update({
+#             'in_channels': self.in_channels,
+#             'out_channels': self.out_channels,
+#             'kernel_size': self.kernel_size,
+#             'stride': self.stride,
+#             'padding': self.padding,
+#             'dilation': self.dilation,
+#             'groups': self.groups,
+#             'bias': self.bias,
+#         })
+#         return config
 
-    @classmethod
-    def from_config(cls, config):
-        """
-        Returns an instance of the custom layer from its configuration.
-        """
-        return cls(**config)
+#     @classmethod
+#     def from_config(cls, config):
+#         """
+#         Returns an instance of the custom layer from its configuration.
+#         """
+#         return cls(**config)
 
-    # def build(self, input_shape):
-    #     """
-    #     Build the layer and initialize the weights.
-    #     """
-    #     super(nn_Conv1d, self).build(input_shape)
-
-
-
-    def call(self, x):
-        """
-        Forward pass for Conv1d.
-
-        Args:
-            x (tf.Tensor): Input tensor to convolve.
-
-        Returns:
-            tf.Tensor: The convolved tensor.
-        """
-
-        torch_to_tf_input = tf.transpose(x, perm = (0, 2, 1) )
-        # # Apply padding manually
-        # if self.padding > 0:
-        #     x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
-
-        # result = self.conv1d(x)
-        result = self.conv1d(torch_to_tf_input)
-        result = tf.transpose(result, perm = (0, 2, 1) )
-
-        return result
+#     # def build(self, input_shape):
+#     #     """
+#     #     Build the layer and initialize the weights.
+#     #     """
+#     #     super(nn_Conv1d, self).build(input_shape)
 
 
+
+#     def call(self, x):
+#         """
+#         Forward pass for Conv1d.
+
+#         Args:
+#             x (tf.Tensor): Input tensor to convolve.
+
+#         Returns:
+#             tf.Tensor: The convolved tensor.
+#         """
+
+#         torch_to_tf_input = tf.transpose(x, perm = (0, 2, 1) )
+#         # # Apply padding manually
+#         # if self.padding > 0:
+#         #     x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
+
+#         # result = self.conv1d(x)
+#         result = self.conv1d(torch_to_tf_input)
+#         result = tf.transpose(result, perm = (0, 2, 1) )
+
+#         return result
 
 
 
@@ -2774,69 +2772,69 @@ class nn_Conv1d(tf.keras.layers.Layer):
 
 
 
-class nn_Conv2d(tf.keras.layers.Layer):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups = 1):
-        super(nn_Conv2d, self).__init__()
+
+
+# class nn_Conv2d(tf.keras.layers.Layer):
+#     def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups = 1, **kwargs):
+#         super(nn_Conv2d, self).__init__()
         
-        # 解析参数
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
-        self.stride = stride if isinstance(stride, tuple) else (stride, stride)
-        self.bias = bias
+#         # 解析参数
+#         self.in_channels = in_channels
+#         self.out_channels = out_channels
+#         self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
+#         self.stride = stride if isinstance(stride, tuple) else (stride, stride)
+#         self.bias = bias
 
-        # TensorFlow 的 Conv2D 需要 NHWC 格式
-        self.conv2d = tf.keras.layers.Conv2D(
-            filters=self.out_channels,
-            kernel_size=self.kernel_size,
-            strides=self.stride,
-            padding="valid",  # PyTorch padding=0 对应 TensorFlow "valid"
-            use_bias=self.bias,
-            # kernel_initializer=tf.keras.initializers.HeUniform(),  # 采用 PyTorch Kaiming 初始化
-            # bias_initializer="zeros" if self.bias else None
-            kernel_initializer = tf.keras.initializers.Constant(
-                pytorch_weight_initializer( (self.kernel_size[0], self.kernel_size[1], in_channels // groups, out_channels),\
-                                            in_channels * self.kernel_size[0] * self.kernel_size[1] // groups )),
-            bias_initializer = tf.keras.initializers.Constant(
-                pytorch_bias_initializer((out_channels,), in_channels * self.kernel_size[0] * self.kernel_size[1] // groups ))
-        )
+#         # TensorFlow 的 Conv2D 需要 NHWC 格式
+#         self.conv2d = tf.keras.layers.Conv2D(
+#             filters=self.out_channels,
+#             kernel_size=self.kernel_size,
+#             strides=self.stride,
+#             padding="valid",  # PyTorch padding=0 对应 TensorFlow "valid"
+#             use_bias=self.bias,
+#             # kernel_initializer=tf.keras.initializers.HeUniform(),  # 采用 PyTorch Kaiming 初始化
+#             # bias_initializer="zeros" if self.bias else None
+#             kernel_initializer = tf.keras.initializers.Constant(
+#                 pytorch_weight_initializer( (self.kernel_size[0], self.kernel_size[1], in_channels // groups, out_channels),\
+#                                             in_channels * self.kernel_size[0] * self.kernel_size[1] // groups )),
+#             bias_initializer = tf.keras.initializers.Constant(
+#                 pytorch_bias_initializer((out_channels,), in_channels * self.kernel_size[0] * self.kernel_size[1] // groups ))
+#         )
 
-    def call(self, x):
-        # PyTorch input (N, C, H, W) -> TensorFlow (N, H, W, C)
-        x = tf.transpose(x, [0, 2, 3, 1])
+#     def call(self, x):
+#         # PyTorch input (N, C, H, W) -> TensorFlow (N, H, W, C)
+#         x = tf.transpose(x, [0, 2, 3, 1])
 
-        # 进行卷积
-        x = self.conv2d(x)
+#         # 进行卷积
+#         x = self.conv2d(x)
 
-        # Convert back to PyTorch format: (N, C, H, W)
-        x = tf.transpose(x, [0, 3, 1, 2])
-        return x
-
-
-    def get_config(self):
-        """
-        Returns the configuration of the Conv1d layer.
-        This method is used to save and restore the layer's state.
-        """
-        config = super(nn_Conv2d, self).get_config()
-
-        config.update({
-            'in_channels': self.in_channels,
-            'out_channels': self.out_channels,
-            'kernel_size': self.kernel_size,
-            'stride': self.stride,
-            'bias': self.bias,
-        })
-        return config
-
-    @classmethod
-    def from_config(cls, config):
-        """
-        Returns an instance of the custom layer from its configuration.
-        """
-        return cls(**config)
+#         # Convert back to PyTorch format: (N, C, H, W)
+#         x = tf.transpose(x, [0, 3, 1, 2])
+#         return x
 
 
+#     def get_config(self):
+#         """
+#         Returns the configuration of the Conv1d layer.
+#         This method is used to save and restore the layer's state.
+#         """
+#         config = super(nn_Conv2d, self).get_config()
+
+#         config.update({
+#             'in_channels': self.in_channels,
+#             'out_channels': self.out_channels,
+#             'kernel_size': self.kernel_size,
+#             'stride': self.stride,
+#             'bias': self.bias,
+#         })
+#         return config
+
+#     @classmethod
+#     def from_config(cls, config):
+#         """
+#         Returns an instance of the custom layer from its configuration.
+#         """
+#         return cls(**config)
 
 
 
@@ -2853,64 +2851,64 @@ class nn_Conv2d(tf.keras.layers.Layer):
 
 
 
-class nn_ConvTranspose1d(tf.keras.layers.Layer):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, \
-                bias=True, dilation=1, padding_mode='zeros', device=None, dtype=None):
-        super(nn_ConvTranspose1d, self).__init__()
-
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size
-        self.stride = stride 
-        self.padding = padding
-        self.output_padding = output_padding
-        self.groups = groups
-        self.bias = bias
-        self.dilation = dilation
 
 
-        in_features = (out_channels * kernel_size) / groups
+# class nn_ConvTranspose1d(tf.keras.layers.Layer):
+#     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, \
+#                 bias=True, dilation=1, padding_mode='zeros', device=None, dtype=None):
+#         super(nn_ConvTranspose1d, self).__init__()
 
-        # kernel_initializer = tf.keras.initializers.Constant(
-        #     pytorch_weight_initializer((in_channels, out_channels // groups, kernel_size), in_features))
-        kernel_initializer = tf.keras.initializers.Constant(
-            pytorch_weight_initializer((kernel_size, out_channels // groups, in_channels), in_features))
-
-        bias_initializer = tf.keras.initializers.Constant(
-            pytorch_bias_initializer((out_channels,), in_features) )
-
-
-        self.conv1d_transpose = tf.keras.layers.Conv1DTranspose(
-            filters=self.out_channels,
-            kernel_size=self.kernel_size,
-            strides=self.stride,
-            # padding="valid",  # 手动填充
-            padding="same",  # 手动填充
-            use_bias=bias,
-            kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer
-        )
-
-    def build(self, input_shape):
-        self.conv1d_transpose.build((None, None, self.in_channels))
+#         self.in_channels = in_channels
+#         self.out_channels = out_channels
+#         self.kernel_size = kernel_size
+#         self.stride = stride 
+#         self.padding = padding
+#         self.output_padding = output_padding
+#         self.groups = groups
+#         self.bias = bias
+#         self.dilation = dilation
 
 
-    def call(self, x):
+#         in_features = (out_channels * kernel_size) / groups
+
+#         # kernel_initializer = tf.keras.initializers.Constant(
+#         #     pytorch_weight_initializer((in_channels, out_channels // groups, kernel_size), in_features))
+#         kernel_initializer = tf.keras.initializers.Constant(
+#             pytorch_weight_initializer((kernel_size, out_channels // groups, in_channels), in_features))
+
+#         bias_initializer = tf.keras.initializers.Constant(
+#             pytorch_bias_initializer((out_channels,), in_features) )
+
+
+#         self.conv1d_transpose = tf.keras.layers.Conv1DTranspose(
+#             filters=self.out_channels,
+#             kernel_size=self.kernel_size,
+#             strides=self.stride,
+#             # padding="valid",  # 手动填充
+#             padding="same",  # 手动填充
+#             use_bias=bias,
+#             kernel_initializer=kernel_initializer,
+#             bias_initializer=bias_initializer
+#         )
+
+#     def build(self, input_shape):
+#         self.conv1d_transpose.build((None, None, self.in_channels))
+
+
+#     def call(self, x):
     
-        # L_in = x.shape[2]
-        # L_out = (L_in - 1) * self.stride - 2 * self.padding + self.dilation * (self.kernel_size - 1) + self.output_padding + 1
+#         # L_in = x.shape[2]
+#         # L_out = (L_in - 1) * self.stride - 2 * self.padding + self.dilation * (self.kernel_size - 1) + self.output_padding + 1
 
-        # PyTorch (N, C, L) -> TensorFlow (N, L, C)
-        x = tf.transpose(x, [0, 2, 1])
+#         # PyTorch (N, C, L) -> TensorFlow (N, L, C)
+#         x = tf.transpose(x, [0, 2, 1])
 
-        x = self.conv1d_transpose(x)
+#         x = self.conv1d_transpose(x)
 
-        # **转换回 PyTorch 格式 (N, C, L)**
-        x = tf.transpose(x, [0, 2, 1])
+#         # **转换回 PyTorch 格式 (N, C, L)**
+#         x = tf.transpose(x, [0, 2, 1])
 
-        return x
-
-
+#         return x
 
 
 
@@ -2924,181 +2922,99 @@ class nn_ConvTranspose1d(tf.keras.layers.Layer):
 
 
 
-@register_keras_serializable(package="Custom")
-class nn_GroupNorm(tf.keras.layers.Layer):
-    """
-    A wrapper for PyTorch's nn.GroupNorm in TensorFlow.
-    Args:
-        num_groups (int): Number of groups to divide the channels into.
-        num_channels (int): Number of channels in the input tensor.
-        eps (float): A small value to add to the denominator for numerical stability.
-        affine (bool): If True, learnable scaling (gamma) and offset (beta) parameters are applied.
-    """
-    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, name="nn_GroupNorm", **kwargs):
-        super(nn_GroupNorm, self).__init__(name=name, **kwargs)
-        self.num_groups = num_groups
-        self.num_channels = num_channels
-        self.eps = eps
-        self.affine = affine
-
-        # Ensure num_channels is divisible by num_groups
-        if self.num_channels % self.num_groups != 0:
-            raise ValueError("num_channels must be divisible by num_groups")
-
-        # Define trainable parameters gamma (scale) and beta (offset) if affine is True
-        if self.affine:
-            self.gamma = self.add_weight(
-                name="gamma",
-                shape=(self.num_channels,),
-                initializer="ones",
-                trainable=True
-            )
-            self.beta = self.add_weight(
-                name="beta",
-                shape=(self.num_channels,),
-                initializer="zeros",
-                trainable=True
-            )
-        else:
-            self.gamma = None
-            self.beta = None
-
-    def get_config(self):
-        """
-        Returns the configuration of the GroupNorm layer.
-        This method is used to save and restore the layer's state.
-        """
-        config = super(nn_GroupNorm, self).get_config()
-        config.update({
-            'num_groups': self.num_groups,
-            'num_channels': self.num_channels,
-            'eps': self.eps,
-            'affine': self.affine,
-        })
-        return config
-
-    @classmethod
-    def from_config(cls, config):
-        """
-        Returns an instance of the custom layer from its configuration.
-        """
-        return cls(**config)
-
-    def call(self, x):
-        """
-        Forward pass for GroupNorm.
-
-        Args:
-            x (tf.Tensor): Input tensor to normalize.
-
-        Returns:
-            tf.Tensor: The normalized tensor.
-        """
-        # Reshape the input tensor to group the channels
-        batch_size, height, width, channels = tf.unstack(tf.shape(x))
-        group_size = channels // self.num_groups
-        x = tf.reshape(x, [batch_size, height, width, self.num_groups, group_size])
-
-        # Compute mean and variance for each group
-        mean, variance = tf.nn.moments(x, axes=[1, 2, 4], keepdims=True)
-
-        # Normalize the input
-        normalized_x = (x - mean) / tf.sqrt(variance + self.eps)
-
-        # Reshape back to the original shape
-        normalized_x = tf.reshape(normalized_x, [batch_size, height, width, channels])
-
-        # Apply scaling (gamma) and offset (beta) if affine is True
-        if self.affine:
-            normalized_x = self.gamma * normalized_x + self.beta
-
-        return normalized_x
 
 
+# @register_keras_serializable(package="Custom")
+# class nn_GroupNorm(tf.keras.layers.Layer):
+#     """
+#     A wrapper for PyTorch's nn.GroupNorm in TensorFlow.
+#     Args:
+#         num_groups (int): Number of groups to divide the channels into.
+#         num_channels (int): Number of channels in the input tensor.
+#         eps (float): A small value to add to the denominator for numerical stability.
+#         affine (bool): If True, learnable scaling (gamma) and offset (beta) parameters are applied.
+#     """
+#     def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, name="nn_GroupNorm", **kwargs):
+#         super(nn_GroupNorm, self).__init__(name=name, **kwargs)
+#         self.num_groups = num_groups
+#         self.num_channels = num_channels
+#         self.eps = eps
+#         self.affine = affine
+
+#         # Ensure num_channels is divisible by num_groups
+#         if self.num_channels % self.num_groups != 0:
+#             raise ValueError("num_channels must be divisible by num_groups")
+
+#         # Define trainable parameters gamma (scale) and beta (offset) if affine is True
+#         if self.affine:
+#             self.gamma = self.add_weight(
+#                 name="gamma",
+#                 shape=(self.num_channels,),
+#                 initializer="ones",
+#                 trainable=True
+#             )
+#             self.beta = self.add_weight(
+#                 name="beta",
+#                 shape=(self.num_channels,),
+#                 initializer="zeros",
+#                 trainable=True
+#             )
+#         else:
+#             self.gamma = None
+#             self.beta = None
+
+#     def get_config(self):
+#         """
+#         Returns the configuration of the GroupNorm layer.
+#         This method is used to save and restore the layer's state.
+#         """
+#         config = super(nn_GroupNorm, self).get_config()
+#         config.update({
+#             'num_groups': self.num_groups,
+#             'num_channels': self.num_channels,
+#             'eps': self.eps,
+#             'affine': self.affine,
+#         })
+#         return config
+
+#     @classmethod
+#     def from_config(cls, config):
+#         """
+#         Returns an instance of the custom layer from its configuration.
+#         """
+#         return cls(**config)
+
+#     def call(self, x):
+#         """
+#         Forward pass for GroupNorm.
+
+#         Args:
+#             x (tf.Tensor): Input tensor to normalize.
+
+#         Returns:
+#             tf.Tensor: The normalized tensor.
+#         """
+#         # Reshape the input tensor to group the channels
+#         batch_size, height, width, channels = tf.unstack(tf.shape(x))
+#         group_size = channels // self.num_groups
+#         x = tf.reshape(x, [batch_size, height, width, self.num_groups, group_size])
+
+#         # Compute mean and variance for each group
+#         mean, variance = tf.nn.moments(x, axes=[1, 2, 4], keepdims=True)
+
+#         # Normalize the input
+#         normalized_x = (x - mean) / tf.sqrt(variance + self.eps)
+
+#         # Reshape back to the original shape
+#         normalized_x = tf.reshape(normalized_x, [batch_size, height, width, channels])
+
+#         # Apply scaling (gamma) and offset (beta) if affine is True
+#         if self.affine:
+#             normalized_x = self.gamma * normalized_x + self.beta
+
+#         return normalized_x
 
 
-
-
-
-
-
-
-
-
-class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, nhead, dim_feedforward=2048, 
-                #  dropout=0.1, 
-                 dropout = 0,
-                 activation=nn_ReLU, layer_norm_eps=1e-5, batch_first=False,
-                 norm_first=False):
-        super(nn_TransformerDecoderLayer, self).__init__()
-        self.self_attn = nn_MultiheadAttention(d_model, nhead, 
-                                            #    dropout=dropout, 
-                                            #    batch_first=batch_first
-                                               )
-        self.multihead_attn = nn_MultiheadAttention(d_model, nhead, 
-                                                    # dropout=dropout, 
-                                                    # batch_first=batch_first
-                                                    )
-        
-        # 前馈网络 FFN
-        self.linear1 = nn_Linear(d_model, dim_feedforward)
-        self.linear2 = nn_Linear(dim_feedforward, d_model)
-        self.dropout = nn_Dropout(dropout)
-
-        # 归一化
-        self.norm1 = nn_LayerNorm(d_model, eps=layer_norm_eps)
-        self.norm2 = nn_LayerNorm(d_model, eps=layer_norm_eps)
-        self.norm3 = nn_LayerNorm(d_model, eps=layer_norm_eps)
-
-        # Dropout
-        self.dropout1 = nn_Dropout(dropout)
-        self.dropout2 = nn_Dropout(dropout)
-        self.dropout3 = nn_Dropout(dropout)
-
-        self.activation = activation
-        self.norm_first = norm_first  # 控制是否先归一化（Pre-LN vs. Post-LN）
-
-    def forward(self, tgt, memory, 
-                tgt_mask=None, memory_mask=None, 
-                tgt_key_padding_mask=None, memory_key_padding_mask=None):
-        """
-        Args:
-            tgt: 目标序列 (目标的嵌入) (batch, tgt_len, d_model)
-            memory: 编码器输出 (batch, src_len, d_model)
-            tgt_mask: 目标序列的注意力 mask
-            memory_mask: 编码器-解码器注意力 mask
-            tgt_key_padding_mask: 目标序列的 padding mask
-            memory_key_padding_mask: 编码器输出的 padding mask
-        """
-
-        # 1. Self-Attention (Decoder)
-        if self.norm_first:
-            tgt2 = self.self_attn(self.norm1(tgt), self.norm1(tgt), self.norm1(tgt),
-                                  attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
-            tgt = tgt + self.dropout1(tgt2)
-        else:
-            tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
-            tgt = self.norm1(tgt + self.dropout1(tgt2))
-
-        # 2. Cross-Attention (Encoder-Decoder)
-        if self.norm_first:
-            tgt2 = self.multihead_attn(self.norm2(tgt), self.norm2(memory), self.norm2(memory),
-                                       attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
-            tgt = tgt + self.dropout2(tgt2)
-        else:
-            tgt2 = self.multihead_attn(tgt, memory, memory, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
-            tgt = self.norm2(tgt + self.dropout2(tgt2))
-
-        # 3. Feedforward Network (FFN)
-        if self.norm_first:
-            tgt2 = self.linear2(self.dropout(self.activation(self.linear1(self.norm3(tgt)))))
-            tgt = tgt + self.dropout3(tgt2)
-        else:
-            tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
-            tgt = self.norm3(tgt + self.dropout3(tgt2))
-
-        return tgt
 
 
 
@@ -3110,82 +3026,81 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
 
 
 # class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
-#     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, 
-#                  name="nn_TransformerDecoderLayer", **kwargs):
-
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("called nn_TransformerDecoderLayer __init__()")
-
-#         super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
-#         # self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-#         # self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-
-#         self.self_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-#         self.cross_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-
-
-#         self.ffn = nn_Sequential([
-#         # tf.keras.Sequential([
-#             # tf.keras.layers.Dense(dim_feedforward, activation=activation),
-#             nn_Linear(dim_feedforward, activation=activation),
-#             tf.keras.layers.Dropout(dropout),
-#             # tf.keras.layers.Dense(d_model),
-#             nn_Linear(d_model),
-#         ])
-
+#     def __init__(self, d_model, nhead, dim_feedforward=2048, 
+#                 #  dropout=0.1, 
+#                  dropout = 0,
+#                  activation=nn_ReLU, layer_norm_eps=1e-5, batch_first=False,
+#                  norm_first=False):
+#         super(nn_TransformerDecoderLayer, self).__init__()
+#         self.self_attn = nn_MultiheadAttention(d_model, nhead, 
+#                                             #    dropout=dropout, 
+#                                             #    batch_first=batch_first
+#                                                )
+#         self.multihead_attn = nn_MultiheadAttention(d_model, nhead, 
+#                                                     # dropout=dropout, 
+#                                                     # batch_first=batch_first
+#                                                     )
         
-#         # self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-#         # self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-#         # self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+#         # 前馈网络 FFN
+#         self.linear1 = nn_Linear(d_model, dim_feedforward)
+#         self.linear2 = nn_Linear(dim_feedforward, d_model)
+#         self.dropout = nn_Dropout(dropout)
 
-#         self.norm1 = nn_LayerNorm(epsilon=1e-6)
-#         self.norm2 = nn_LayerNorm(epsilon=1e-6)
-#         self.norm3 = nn_LayerNorm(epsilon=1e-6)
+#         # 归一化
+#         self.norm1 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+#         self.norm2 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+#         self.norm3 = nn_LayerNorm(d_model, eps=layer_norm_eps)
 
-#         # self.dropout1 = tf.keras.layers.Dropout(dropout)
-#         # self.dropout2 = tf.keras.layers.Dropout(dropout)
-#         # self.dropout3 = tf.keras.layers.Dropout(dropout)
-
+#         # Dropout
 #         self.dropout1 = nn_Dropout(dropout)
 #         self.dropout2 = nn_Dropout(dropout)
 #         self.dropout3 = nn_Dropout(dropout)
 
-#     def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-#         # Self-attention on target
-#         tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
-#         tgt = tgt + self.dropout1(tgt2, training=training)
-#         tgt = self.norm1(tgt)
+#         self.activation = activation
+#         self.norm_first = norm_first  # 控制是否先归一化（Pre-LN vs. Post-LN）
 
-#         # Cross-attention between target and memory
-#         tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
-#         tgt = tgt + self.dropout2(tgt2, training=training)
-#         tgt = self.norm2(tgt)
+#     def forward(self, tgt, memory, 
+#                 tgt_mask=None, memory_mask=None, 
+#                 tgt_key_padding_mask=None, memory_key_padding_mask=None):
+#         """
+#         Args:
+#             tgt: 目标序列 (目标的嵌入) (batch, tgt_len, d_model)
+#             memory: 编码器输出 (batch, src_len, d_model)
+#             tgt_mask: 目标序列的注意力 mask
+#             memory_mask: 编码器-解码器注意力 mask
+#             tgt_key_padding_mask: 目标序列的 padding mask
+#             memory_key_padding_mask: 编码器输出的 padding mask
+#         """
 
-#         # Feedforward network
-#         tgt2 = self.ffn(tgt, training=training)
-#         tgt = tgt + self.dropout3(tgt2, training=training)
-#         tgt = self.norm3(tgt)
+#         # 1. Self-Attention (Decoder)
+#         if self.norm_first:
+#             tgt2 = self.self_attn(self.norm1(tgt), self.norm1(tgt), self.norm1(tgt),
+#                                   attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
+#             tgt = tgt + self.dropout1(tgt2)
+#         else:
+#             tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
+#             tgt = self.norm1(tgt + self.dropout1(tgt2))
+
+#         # 2. Cross-Attention (Encoder-Decoder)
+#         if self.norm_first:
+#             tgt2 = self.multihead_attn(self.norm2(tgt), self.norm2(memory), self.norm2(memory),
+#                                        attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+#             tgt = tgt + self.dropout2(tgt2)
+#         else:
+#             tgt2 = self.multihead_attn(tgt, memory, memory, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+#             tgt = self.norm2(tgt + self.dropout2(tgt2))
+
+#         # 3. Feedforward Network (FFN)
+#         if self.norm_first:
+#             tgt2 = self.linear2(self.dropout(self.activation(self.linear1(self.norm3(tgt)))))
+#             tgt = tgt + self.dropout3(tgt2)
+#         else:
+#             tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
+#             tgt = self.norm3(tgt + self.dropout3(tgt2))
 
 #         return tgt
 
 
-class nn_TransformerDecoder(tf.keras.layers.Layer):
-    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoder", **kwargs):
-
-        if OUTPUT_FUNCTION_HEADER:
-            print("called nn_TransformerDecoder __init__()")
-
-        super(nn_TransformerDecoder, self).__init__(name=name, **kwargs)
-        self.layers = [
-            nn_TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
-            for _ in range(n_layers)
-        ]
-        self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-
-    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-        for layer in self.layers:
-            tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
-        return self.norm(tgt)
 
 
 
@@ -3194,185 +3109,270 @@ class nn_TransformerDecoder(tf.keras.layers.Layer):
 
 
 
+# # class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
+# #     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, 
+# #                  name="nn_TransformerDecoderLayer", **kwargs):
+
+# #         if OUTPUT_FUNCTION_HEADER:
+# #             print("called nn_TransformerDecoderLayer __init__()")
+
+# #         super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
+# #         # self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+# #         # self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+
+# #         self.self_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+# #         self.cross_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
 
 
+# #         self.ffn = nn_Sequential([
+# #         # tf.keras.Sequential([
+# #             # tf.keras.layers.Dense(dim_feedforward, activation=activation),
+# #             nn_Linear(dim_feedforward, activation=activation),
+# #             tf.keras.layers.Dropout(dropout),
+# #             # tf.keras.layers.Dense(d_model),
+# #             nn_Linear(d_model),
+# #         ])
 
-
-
-
-
-
-
-
-class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoderLayer", **kwargs):
-
-        if OUTPUT_FUNCTION_HEADER:
-            print("called nn_TransformerEncoderLayer __init__()")
-
-        super(nn_TransformerEncoderLayer, self).__init__(name=name, **kwargs)
-        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-        self.ffn = tf.keras.Sequential([
-            tf.keras.layers.Dense(dim_feedforward, activation=activation),
-            tf.keras.layers.Dropout(dropout),
-            tf.keras.layers.Dense(d_model),
-        ])
-        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.dropout1 = tf.keras.layers.Dropout(dropout)
-        self.dropout2 = tf.keras.layers.Dropout(dropout)
-
-    def call(self, x, training):
-        # Self-attention
-        attn_output = self.self_attn(x, x, training=training)
-        x = x + self.dropout1(attn_output, training=training)
-        x = self.norm1(x)
-
-        # Feedforward network
-        ffn_output = self.ffn(x, training=training)
-        x = x + self.dropout2(ffn_output, training=training)
-        x = self.norm2(x)
-        return x
-
-
-
-
-
-class nn_TransformerEncoder(tf.keras.layers.Layer):
-    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoder", **kwargs):
-
-        if OUTPUT_FUNCTION_HEADER:
-            print("called nn_TransformerEncoder __init__()")
-
-        super(nn_TransformerEncoder, self).__init__(name=name, **kwargs)
-        self.layers = [
-            nn_TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
-            for _ in range(n_layers)
-        ]
-
-    def call(self, x, training):
-        for layer in self.layers:
-            x = layer(x, training=training)
-        return x
-
-
-
-
-
-
-
-
-
-
-
-
-# tf.keras.optimizers.Adam(
-#     learning_rate=0.001,
-#     beta_1=0.9,
-#     beta_2=0.999,
-#     epsilon=1e-07,
-#     amsgrad=False,
-#     weight_decay=None,
-#     clipnorm=None,
-#     clipvalue=None,
-#     global_clipnorm=None,
-#     use_ema=False,
-#     ema_momentum=0.99,
-#     ema_overwrite_frequency=None,
-#     loss_scale_factor=None,
-#     gradient_accumulation_steps=None,
-#     name='adam',
-#     **kwargs
-# )
-# torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False, 
-# *, foreach=None, maximize=False, capturable=False, differentiable=False, fused=None)
-class torch_optim_Adam:
-    def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
-        """
-        A TensorFlow implementation of torch.optim.Adam.
-
-        Args:
-            params (list): List of TensorFlow variables to optimize.
-            lr (float): Learning rate.
-            betas (tuple): Coefficients used for computing running averages of gradient and its square.
-            eps (float): Term added to the denominator to improve numerical stability.
-            weight_decay (float): Weight decay (L2 penalty).
-        """
-        self.params = params
-        self.lr = lr
-        self.betas = betas
-        self.eps = eps
-        self.weight_decay = weight_decay
         
-        # TensorFlow Adam optimizer
-        self.optimizer = tf.keras.optimizers.Adam(
-            learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps
-        )
+# #         # self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+# #         # self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+# #         # self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
 
-    def zero_grad(self):
-        """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
-        pass
+# #         self.norm1 = nn_LayerNorm(epsilon=1e-6)
+# #         self.norm2 = nn_LayerNorm(epsilon=1e-6)
+# #         self.norm3 = nn_LayerNorm(epsilon=1e-6)
 
+# #         # self.dropout1 = tf.keras.layers.Dropout(dropout)
+# #         # self.dropout2 = tf.keras.layers.Dropout(dropout)
+# #         # self.dropout3 = tf.keras.layers.Dropout(dropout)
 
-    def step(self, gradients):
-        """Apply gradients to parameters."""
-        self.optimizer.apply_gradients(zip(gradients, self.params))
+# #         self.dropout1 = nn_Dropout(dropout)
+# #         self.dropout2 = nn_Dropout(dropout)
+# #         self.dropout3 = nn_Dropout(dropout)
 
+# #     def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+# #         # Self-attention on target
+# #         tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
+# #         tgt = tgt + self.dropout1(tgt2, training=training)
+# #         tgt = self.norm1(tgt)
 
-    # def apply_gradients(self, gradients):
-    #     self.optimizer.apply_gradients(zip(gradients, self.params))
+# #         # Cross-attention between target and memory
+# #         tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
+# #         tgt = tgt + self.dropout2(tgt2, training=training)
+# #         tgt = self.norm2(tgt)
 
-    def apply_gradients(self, zipped_gradients):
-        self.optimizer.apply_gradients(zipped_gradients)
+# #         # Feedforward network
+# #         tgt2 = self.ffn(tgt, training=training)
+# #         tgt = tgt + self.dropout3(tgt2, training=training)
+# #         tgt = self.norm3(tgt)
 
-
-
-
-
-
-# torch.optim.AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False, 
-# *, maximize=False, foreach=None, capturable=False, differentiable=False, fused=None)
-class torch_optim_AdamW:
-    def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01):
-        """
-        A TensorFlow implementation of torch.optim.AdamW.
-
-        Args:
-            params (list): List of TensorFlow variables to optimize.
-            lr (float): Learning rate.
-            betas (tuple): Coefficients used for computing running averages of gradient and its square.
-            eps (float): Term added to the denominator to improve numerical stability.
-            weight_decay (float): Weight decay (L2 penalty).
-        """
-        self.params = params
-        self.lr = lr
-        self.betas = betas
-        self.eps = eps
-        self.weight_decay = weight_decay
-
-        # # TensorFlow AdamW optimizer
-        # self.optimizer = tf.keras.optimizers.experimental.AdamW(
-        #     learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
-        # )
-        # TensorFlow AdamW optimizer
-        self.optimizer = tf.keras.optimizers.AdamW(
-            learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
-        )
-
-    def zero_grad(self):
-        """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
-        pass
-
-    def step(self, gradients):
-        """Apply gradients to parameters."""
-        self.optimizer.apply_gradients(zip(gradients, self.params))
+# #         return tgt
 
 
-    # def apply_gradients(self, gradients):
-    #     self.optimizer.apply_gradients(zip(gradients, self.params))
+# class nn_TransformerDecoder(tf.keras.layers.Layer):
+#     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoder", **kwargs):
 
-    def apply_gradients(self, zipped_gradients):
-        self.optimizer.apply_gradients(zipped_gradients)
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("called nn_TransformerDecoder __init__()")
+
+#         super(nn_TransformerDecoder, self).__init__(name=name, **kwargs)
+#         self.layers = [
+#             nn_TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+#             for _ in range(n_layers)
+#         ]
+#         self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+
+#     def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+#         for layer in self.layers:
+#             tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
+#         return self.norm(tgt)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
+#     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoderLayer", **kwargs):
+
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("called nn_TransformerEncoderLayer __init__()")
+
+#         super(nn_TransformerEncoderLayer, self).__init__(name=name, **kwargs)
+#         self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+#         self.ffn = tf.keras.Sequential([
+#             tf.keras.layers.Dense(dim_feedforward, activation=activation),
+#             tf.keras.layers.Dropout(dropout),
+#             tf.keras.layers.Dense(d_model),
+#         ])
+#         self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+#         self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+#         self.dropout1 = tf.keras.layers.Dropout(dropout)
+#         self.dropout2 = tf.keras.layers.Dropout(dropout)
+
+#     def call(self, x, training):
+#         # Self-attention
+#         attn_output = self.self_attn(x, x, training=training)
+#         x = x + self.dropout1(attn_output, training=training)
+#         x = self.norm1(x)
+
+#         # Feedforward network
+#         ffn_output = self.ffn(x, training=training)
+#         x = x + self.dropout2(ffn_output, training=training)
+#         x = self.norm2(x)
+#         return x
+
+
+
+
+
+# class nn_TransformerEncoder(tf.keras.layers.Layer):
+#     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoder", **kwargs):
+
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("called nn_TransformerEncoder __init__()")
+
+#         super(nn_TransformerEncoder, self).__init__(name=name, **kwargs)
+#         self.layers = [
+#             nn_TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+#             for _ in range(n_layers)
+#         ]
+
+#     def call(self, x, training):
+#         for layer in self.layers:
+#             x = layer(x, training=training)
+#         return x
+
+
+
+
+
+
+
+
+
+
+
+
+# # tf.keras.optimizers.Adam(
+# #     learning_rate=0.001,
+# #     beta_1=0.9,
+# #     beta_2=0.999,
+# #     epsilon=1e-07,
+# #     amsgrad=False,
+# #     weight_decay=None,
+# #     clipnorm=None,
+# #     clipvalue=None,
+# #     global_clipnorm=None,
+# #     use_ema=False,
+# #     ema_momentum=0.99,
+# #     ema_overwrite_frequency=None,
+# #     loss_scale_factor=None,
+# #     gradient_accumulation_steps=None,
+# #     name='adam',
+# #     **kwargs
+# # )
+# # torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False, 
+# # *, foreach=None, maximize=False, capturable=False, differentiable=False, fused=None)
+# class torch_optim_Adam:
+#     def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
+#         """
+#         A TensorFlow implementation of torch.optim.Adam.
+
+#         Args:
+#             params (list): List of TensorFlow variables to optimize.
+#             lr (float): Learning rate.
+#             betas (tuple): Coefficients used for computing running averages of gradient and its square.
+#             eps (float): Term added to the denominator to improve numerical stability.
+#             weight_decay (float): Weight decay (L2 penalty).
+#         """
+#         self.params = params
+#         self.lr = lr
+#         self.betas = betas
+#         self.eps = eps
+#         self.weight_decay = weight_decay
+        
+#         # TensorFlow Adam optimizer
+#         self.optimizer = tf.keras.optimizers.Adam(
+#             learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps
+#         )
+
+#     def zero_grad(self):
+#         """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
+#         pass
+
+
+#     def step(self, gradients):
+#         """Apply gradients to parameters."""
+#         self.optimizer.apply_gradients(zip(gradients, self.params))
+
+
+#     # def apply_gradients(self, gradients):
+#     #     self.optimizer.apply_gradients(zip(gradients, self.params))
+
+#     def apply_gradients(self, zipped_gradients):
+#         self.optimizer.apply_gradients(zipped_gradients)
+
+
+
+
+
+
+# # torch.optim.AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False, 
+# # *, maximize=False, foreach=None, capturable=False, differentiable=False, fused=None)
+# class torch_optim_AdamW:
+#     def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01):
+#         """
+#         A TensorFlow implementation of torch.optim.AdamW.
+
+#         Args:
+#             params (list): List of TensorFlow variables to optimize.
+#             lr (float): Learning rate.
+#             betas (tuple): Coefficients used for computing running averages of gradient and its square.
+#             eps (float): Term added to the denominator to improve numerical stability.
+#             weight_decay (float): Weight decay (L2 penalty).
+#         """
+#         self.params = params
+#         self.lr = lr
+#         self.betas = betas
+#         self.eps = eps
+#         self.weight_decay = weight_decay
+
+#         # # TensorFlow AdamW optimizer
+#         # self.optimizer = tf.keras.optimizers.experimental.AdamW(
+#         #     learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
+#         # )
+#         # TensorFlow AdamW optimizer
+#         self.optimizer = tf.keras.optimizers.AdamW(
+#             learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
+#         )
+
+#     def zero_grad(self):
+#         """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
+#         pass
+
+#     def step(self, gradients):
+#         """Apply gradients to parameters."""
+#         self.optimizer.apply_gradients(zip(gradients, self.params))
+
+
+#     # def apply_gradients(self, gradients):
+#     #     self.optimizer.apply_gradients(zip(gradients, self.params))
+
+#     def apply_gradients(self, zipped_gradients):
+#         self.optimizer.apply_gradients(zipped_gradients)
 
 
 

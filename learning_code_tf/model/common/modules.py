@@ -68,21 +68,47 @@ class SpatialEmb(tf.keras.layers.Layer):
         
         
         
-
     def get_config(self):
         """Returns the config of the layer for serialization."""
         config = super(SpatialEmb, self).get_config()
+
+
+        print(f"num_patch: {self.num_patch}, type: {type(self.num_patch)}")
+        print(f"patch_dim: {self.patch_dim}, type: {type(self.patch_dim)}")
+        print(f"prop_dim: {self.prop_dim}, type: {type(self.prop_dim)}")
+        print(f"proj_dim: {self.proj_dim}, type: {type(self.proj_dim)}")
+        print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
+
+        if hasattr(self, 'serialized_input_proj'):
+            print(f"serialized_input_proj: {self.serialized_input_proj}, type: {type(self.serialized_input_proj)}")
+
+            config.update({
+            "serialized_input_proj": tf.keras.layers.serialize(self.input_proj),
+            })
+        else:
+            config.update({
+            "serialized_input_proj": None,
+            })
+            
+
+        if hasattr(self, 'serialized_dropout'):
+            print(f"serialized_dropout: {self.serialized_dropout}, type: {type(self.serialized_dropout)}")
+
+            config.update({
+            "serialized_dropout": tf.keras.layers.serialize(self.dropout)
+            })
+        else:
+            config.update({
+            "serialized_dropout": None,
+            })
+
+
         config.update({
                         "num_patch": self.num_patch,
                         "patch_dim": self.patch_dim,
                         "prop_dim": self.prop_dim,
                         "proj_dim": self.proj_dim,
-
                         "dropout": self.initial_dropout,
-
-                       "serialized_input_proj": tf.keras.layers.serialize(self.input_proj),
-
-                       "serialized_dropout": tf.keras.layers.serialize(self.dropout)
                        })
         return config
 
@@ -118,12 +144,19 @@ class SpatialEmb(tf.keras.layers.Layer):
         # Register your custom class with Keras
         get_custom_objects().update(cur_dict)
 
-        serialized_input_proj = tf.keras.layers.deserialize(config.pop("serialized_input_proj") ,  custom_objects=get_custom_objects() )
-
-        serialized_dropout = tf.keras.layers.deserialize(config.pop("serialized_dropout") ,  custom_objects=get_custom_objects() )
+        config_serialized_input_proj = config.pop("serialized_input_proj")
+        if config_serialized_input_proj:
+            serialized_input_proj = tf.keras.layers.deserialize( config_serialized_input_proj,  custom_objects=get_custom_objects() )
+        else:
+            serialized_input_proj = None
+        config_serialized_dropout = config.pop("serialized_dropout")
+        if config_serialized_dropout:
+            serialized_dropout = tf.keras.layers.deserialize( config_serialized_dropout,  custom_objects=get_custom_objects() )
+        else:
+            serialized_dropout = None
 
         return cls(serialized_input_proj=serialized_input_proj, serialized_dropout=serialized_dropout, **config)
-    
+
 
     # def extra_repr(self) -> str:
 

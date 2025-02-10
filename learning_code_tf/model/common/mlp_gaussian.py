@@ -119,7 +119,7 @@ cur_dict = {
 
 
 
-class Gaussian_VisionMLP(tf.keras.Model):
+class Gaussian_VisionMLP(tf.keras.layers.Layer):
     """With ViT backbone"""
 
     def __init__(
@@ -238,6 +238,7 @@ class Gaussian_VisionMLP(tf.keras.Model):
             )
 
 
+
         self.logvar_min = nn_Parameter(
             torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
         )
@@ -245,6 +246,8 @@ class Gaussian_VisionMLP(tf.keras.Model):
             torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
         )
 
+        self.logvar_min = tf.cast(self.logvar_min, tf.float32)
+        self.logvar_max = tf.cast(self.logvar_max, tf.float32)
 
         self.use_fixed_std = fixed_std is not None
         self.fixed_std = fixed_std
@@ -254,50 +257,63 @@ class Gaussian_VisionMLP(tf.keras.Model):
 
     def get_config(self):
 
-        if OUTPUT_FUNCTION_HEADER:
-            print("Gaussian_MLP: get_config()")
+        # if OUTPUT_FUNCTION_HEADER:
+        print("Gaussian_VisionMLP: get_config()")
 
         # config = {}
-        config = super(Gaussian_MLP, self).get_config()
+        config = super(Gaussian_VisionMLP, self).get_config()
 
 
         # 打印每个属性及其类型和值
         if OUTPUT_VARIABLES:
-            print("Checking DiffusionMLP Config elements:")
+            print("Checking Gaussian_VisionMLP Config elements:")
+            print(f"backbone: {self.backbone}, type: {type(self.backbone)}")
             print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
             print(f"horizon_steps: {self.horizon_steps}, type: {type(self.horizon_steps)}")
             print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
+            print(f"img_cond_steps: {self.img_cond_steps}, type: {type(self.img_cond_steps)}")
             print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
             print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
-            print(f"tanh_output: {self.tanh_output}, type: {type(self.tanh_output)}")
             print(f"residual_style: {self.residual_style}, type: {type(self.residual_style)}")
             print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
-            print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
+
             print(f"fixed_std: {self.fixed_std}, type: {type(self.fixed_std)}")
             print(f"learn_fixed_std: {self.learn_fixed_std}, type: {type(self.learn_fixed_std)}")
+
             print(f"std_min: {self.std_min}, type: {type(self.std_min)}")
             print(f"std_max: {self.std_max}, type: {type(self.std_max)}")
+
+            print(f"spatial_emb: {self.spatial_emb}, type: {type(self.spatial_emb)}")
+            print(f"visual_feature_dim: {self.visual_feature_dim}, type: {type(self.visual_feature_dim)}")
+            print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
+            print(f"num_img: {self.num_img}, type: {type(self.num_img)}")
+            print(f"augment: {self.augment}, type: {type(self.augment)}")
         
+
         config.update({
             "action_dim": self.action_dim,
             "horizon_steps": self.horizon_steps,
             "cond_dim": self.cond_dim,
+            "img_cond_steps": self.img_cond_steps,
             "mlp_dims": self.mlp_dims,
             "activation_type": self.activation_type,
-            "tanh_output": self.tanh_output,
             "residual_style": self.residual_style,
             "use_layernorm": self.use_layernorm,
-            "dropout": self.dropout,
             "fixed_std": self.fixed_std,
             "learn_fixed_std": self.learn_fixed_std,
             "std_min": self.std_min,
-            "std_max": self.std_max
+            "std_max": self.std_max,
+
+            "spatial_emb": self.spatial_emb,
+            "visual_feature_dim": self.visual_feature_dim,
+            "dropout": self.dropout,
+            "num_img": self.num_img,
+            "augment": self.augment,
         })
 
 
         if self.fixed_std is None:
             config.update({
-                "mlp_base": tf.keras.layers.serialize(self.mlp_base),
                 "mlp_logvar": tf.keras.layers.serialize(self.mlp_logvar),
             })
             
@@ -306,6 +322,25 @@ class Gaussian_VisionMLP(tf.keras.Model):
             "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
         })
 
+        config.update({
+            "backbone": tf.keras.layers.serialize(self.backbone),
+        })
+
+        if self.spatial_emb > 0:
+            assert self.spatial_emb > 1, "this is the dimension"
+            if self.num_img > 1: 
+                config.update({
+                    "compress1": tf.keras.layers.serialize(self.compress1),
+                    "compress2": tf.keras.layers.serialize(self.compress2),
+                })
+            else:
+                config.update({
+                    "compress": tf.keras.layers.serialize(self.compress),
+                })
+        else:
+            config.update({
+                "compress": tf.keras.layers.serialize(self.compress),
+            })
 
         return config
 
@@ -324,16 +359,35 @@ class Gaussian_VisionMLP(tf.keras.Model):
 
         fixed_std = config.pop("fixed_std")
         if not fixed_std:
-            mlp_base = tf.keras.layers.deserialize(config.pop("mlp_base"),  custom_objects=get_custom_objects() )
             mlp_logvar = tf.keras.layers.deserialize(config.pop("mlp_logvar"),  custom_objects=get_custom_objects() )
         else:
-            mlp_base = None
             mlp_logvar = None
 
         mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean") ,  custom_objects=get_custom_objects() )
 
+        backbone = tf.keras.layers.deserialize(config.pop("backbone") ,  custom_objects=get_custom_objects() )
 
-        result = cls(mlp_base = mlp_base, mlp_logvar = mlp_logvar, mlp_mean = mlp_mean, fixed_std = fixed_std, **config)
+        spatial_emb = config.pop("spatial_emb")
+        num_img = config.pop("num_img")
+
+
+        if spatial_emb > 0:
+            assert spatial_emb > 1, "this is the dimension"
+            if num_img > 1:
+                compress = None
+                compress1 = tf.keras.layers.deserialize(config.pop("compress1"),  custom_objects=get_custom_objects() )
+                compress2 = tf.keras.layers.deserialize(config.pop("compress2"),  custom_objects=get_custom_objects() )
+            else:
+                compress = tf.keras.layers.deserialize(config.pop("compress"),  custom_objects=get_custom_objects() )
+                compress1 = None
+                compress2 = None
+        else:
+            compress = tf.keras.layers.deserialize(config.pop("compress"),  custom_objects=get_custom_objects() )
+            compress1 = None
+            compress2 = None
+
+        result = cls(backbone = backbone, fixed_std = fixed_std, mlp_logvar = mlp_logvar, mlp_mean = mlp_mean, spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1, compress2 = compress2, **config)
+
         return result
 
 
@@ -520,6 +574,10 @@ class Gaussian_MLP(tf.keras.Model):
             torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
         )
 
+        self.logvar_min = tf.cast(self.logvar_min, tf.float32)
+        self.logvar_max = tf.cast(self.logvar_max, tf.float32)
+
+
         self.use_fixed_std = fixed_std is not None
         self.fixed_std = fixed_std
         self.learn_fixed_std = learn_fixed_std
@@ -696,6 +754,22 @@ class Gaussian_MLP(tf.keras.Model):
             out_logvar = self.mlp_logvar(state)
             out_logvar = torch_tensor_view(out_logvar, [B, self.horizon_steps * self.action_dim])
             out_logvar = torch_tanh(out_logvar)
+
+
+            # self.logvar_min = tf.cast(self.logvar_min, tf.float32)
+            # self.logvar_max = tf.cast(self.logvar_max, tf.float32)
+
+            print("self.logvar_min.dtype = ", self.logvar_min.dtype)
+            print("self.logvar_max.dtype = ", self.logvar_max.dtype)
+            print("out_logvar.dtype = ", out_logvar.dtype)
+
+
+            print("type(self.logvar_min) = ", type(self.logvar_min))
+            print("type(self.logvar_max) = ", type(self.logvar_max))
+
+            # print("self.logvar_min.graph = ", self.logvar_min.graph)
+            # print("self.logvar_max.graph = ", self.logvar_max.graph)
+            # print("out_logvar.graph = ", out_logvar.graph)
 
             # Scale to range [logvar_min, logvar_max]
             out_logvar = self.logvar_min + 0.5 * (self.logvar_max - self.logvar_min) * (out_logvar + 1)

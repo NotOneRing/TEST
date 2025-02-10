@@ -137,7 +137,8 @@ class VisionDiffusionMLP(tf.keras.Model):
         compress1 = None,
         compress2 = None,
         time_embedding = None,
-        mlp_mean = None
+        mlp_mean = None,
+        **kwargs
     ):
 
         if OUTPUT_FUNCTION_HEADER:
@@ -275,7 +276,6 @@ class VisionDiffusionMLP(tf.keras.Model):
             print(f"augment: {self.augment}, type: {type(self.augment)}")
         
         config.update({
-            "backbone": self.backbone,
 
             "action_dim": self.action_dim,
             "horizon_steps": self.horizon_steps,
@@ -300,7 +300,7 @@ class VisionDiffusionMLP(tf.keras.Model):
         })
 
 
-        
+
 
         if self.spatial_emb > 0:
             assert self.spatial_emb > 1, "this is the dimension"
@@ -321,6 +321,7 @@ class VisionDiffusionMLP(tf.keras.Model):
         config.update({
             "time_embedding": tf.keras.layers.serialize(self.time_embedding),
             "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
+            "backbone": tf.keras.layers.serialize(self.backbone),
         })
 
 
@@ -358,9 +359,10 @@ class VisionDiffusionMLP(tf.keras.Model):
 
         time_embedding = tf.keras.layers.deserialize(config.pop("time_embedding"),  custom_objects=get_custom_objects() )
         mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean"),  custom_objects=get_custom_objects() )
+        backbone = tf.keras.layers.deserialize(config.pop("backbone"),  custom_objects=get_custom_objects() )
 
 
-        result = cls(spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1, compress2 = compress2, time_embedding = time_embedding, mlp_mean = mlp_mean, **config)
+        result = cls(backbone=backbone, spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1, compress2 = compress2, time_embedding = time_embedding, mlp_mean = mlp_mean, **config)
         return result
 
 

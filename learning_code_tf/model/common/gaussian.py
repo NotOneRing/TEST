@@ -18,7 +18,7 @@ torch_log, torch_tanh, torch_sum, nn_Parameter, torch_tensor, torch_ones
 
 
 
-from util.config import OUTPUT_VARIABLES, OUTPUT_FUNCTION_HEADER, OUTPUT_POSITIONS
+from util.config import OUTPUT_VARIABLES, OUTPUT_FUNCTION_HEADER, OUTPUT_POSITIONS, METHOD_NAME
 
 
 from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, nn_TransformerDecoder,\
@@ -221,7 +221,12 @@ class GaussianModel(tf.keras.Model):
             if OUTPUT_VARIABLES:
                 self.output_weights(self.network)
 
-            self.build_actor(self.network)
+            # self.build_actor(self.network)
+            if "ViT" in METHOD_NAME:            
+                self.build_actor_vision(self.network)
+            else:
+                self.build_actor(self.network)
+
 
 
             # print("GaussianModel: self.network = ", self.network )
@@ -374,6 +379,8 @@ class GaussianModel(tf.keras.Model):
             network = Gaussian_MLP.from_config(network)
         elif name.startswith("unet1d"):
             network = Unet1D.from_config(network)
+        elif name.startswith("gaussian__vision_mlp"):
+            network = Gaussian_VisionMLP.from_config(network)
         else:
             raise RuntimeError("name not recognized")
 
@@ -563,16 +570,14 @@ class GaussianModel(tf.keras.Model):
             network_override=network_override,
         )
 
-        if reparameterize:
-            assert "reparameterize is not implemented right now"
-            # sampled_action = dist.rsample()  # reparameterized sample
-        else:
-            sampled_action = dist.sample()  # standard sample
+        # if reparameterize:
+        #     sampled_action = dist.rsample()  # reparameterized sample
+        # else:
+        sampled_action = dist.sample()  # standard sample
 
 
         # Clipping the sampled action (similar to PyTorch clamp_)
-        sampled_action = torch_clamp(sampled_action, dist.loc - self.randn_clip_value * dist.scale,
-                                          dist.loc + self.randn_clip_value * dist.scale)
+        sampled_action = torch_clamp(sampled_action, dist.loc - self.randn_clip_value * dist.scale, dist.loc + self.randn_clip_value * dist.scale)
 
         if get_logprob:
             log_prob = dist.log_prob(sampled_action)
@@ -627,14 +632,14 @@ class GaussianModel(tf.keras.Model):
         # 'network.mlp_mean.layers.2.weight'
         # 'network.mlp_mean.layers.2.bias'
 
-
-        self.logvar_min = nn_Parameter(
+        self.network.logvar_min = nn_Parameter(
             torch_tensor(params_dict['network.logvar_min']), requires_grad=False
         )
 
-        self.logvar_max = nn_Parameter(
+        self.network.logvar_max = nn_Parameter(
             torch_tensor(params_dict['network.logvar_max']), requires_grad=False
         )
+
 
         if 'network.mlp_mean.layers.0.weight' in params_dict:
             self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
@@ -677,7 +682,7 @@ class GaussianModel(tf.keras.Model):
 
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)
-
+        # Square
         # 'network.logvar_min'
         # 'network.logvar_max'
         # 'network.backbone.vit.pos_embed'
@@ -712,14 +717,55 @@ class GaussianModel(tf.keras.Model):
         # 'network.mlp_mean.layers.1.l2.bias'
         # 'network.mlp_mean.layers.2.weight'
         # 'network.mlp_mean.layers.2.bias'
+        
 
-
-
-        self.logvar_min = nn_Parameter(
+        # Transport
+        # 'network.logvar_min'
+        # 'network.logvar_max'
+        # 'network.backbone.vit.pos_embed'
+        # 'network.backbone.vit.patch_embed.embed.0.weight'
+        # 'network.backbone.vit.patch_embed.embed.0.bias'
+        # 'network.backbone.vit.patch_embed.embed.3.weight'
+        # 'network.backbone.vit.patch_embed.embed.3.bias'
+        # 'network.backbone.vit.net.0.layer_norm1.weight'
+        # 'network.backbone.vit.net.0.layer_norm1.bias'
+        # 'network.backbone.vit.net.0.mha.qkv_proj.weight'
+        # 'network.backbone.vit.net.0.mha.qkv_proj.bias'
+        # 'network.backbone.vit.net.0.mha.out_proj.weight'
+        # 'network.backbone.vit.net.0.mha.out_proj.bias'
+        # 'network.backbone.vit.net.0.layer_norm2.weight'
+        # 'network.backbone.vit.net.0.layer_norm2.bias'
+        # 'network.backbone.vit.net.0.linear1.weight'
+        # 'network.backbone.vit.net.0.linear1.bias'
+        # 'network.backbone.vit.net.0.linear2.weight'
+        # 'network.backbone.vit.net.0.linear2.bias'
+        # 'network.backbone.vit.norm.weight'
+        # 'network.backbone.vit.norm.bias'
+        # 'network.compress1.weight'
+        # 'network.compress1.input_proj.0.weight'
+        # 'network.compress1.input_proj.0.bias'
+        # 'network.compress1.input_proj.1.weight'
+        # 'network.compress1.input_proj.1.bias'
+        # 'network.compress2.weight'
+        # 'network.compress2.input_proj.0.weight'
+        # 'network.compress2.input_proj.0.bias'
+        # 'network.compress2.input_proj.1.weight'
+        # 'network.compress2.input_proj.1.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+        
+        
+        self.network.logvar_min = nn_Parameter(
             torch_tensor(params_dict['network.logvar_min']), requires_grad=False
         )
 
-        self.logvar_max = nn_Parameter(
+        self.network.logvar_max = nn_Parameter(
             torch_tensor(params_dict['network.logvar_max']), requires_grad=False
         )
 
@@ -783,11 +829,17 @@ class GaussianModel(tf.keras.Model):
 
 
 
-        print("self.network.compress = ", self.network.compress)
-        assert 0 == 1, "network.compress check"
+        # print("self.network.compress = ", self.network.compress)
+        # assert 0 == 1, "network.compress check"
         # 'network.compress.weight'
         if 'network.compress.weight' in params_dict:
-            self.network.compress.trainable_weights[0].assign(params_dict['network.compress.weight'])  # kernel
+            if isinstance(self.network.compress.weight, tf.Variable):       
+                self.network.compress.weight = nn_Parameter(
+                    torch_tensor(params_dict['network.compress.weight']), requires_grad=False
+                )
+            else:
+                self.network.compress.weight.trainable_weights[0].assign(params_dict['network.compress.weight'])  # kernel
+
 
         if 'network.compress.input_proj.0.weight' in params_dict:
             self.network.compress.input_proj[0].trainable_weights[0].assign(params_dict['network.compress.input_proj.0.weight'].T)  # kernel
@@ -798,6 +850,58 @@ class GaussianModel(tf.keras.Model):
             self.network.compress.input_proj[1].trainable_weights[0].assign(params_dict['network.compress.input_proj.1.weight'].T)  # kernel
         if 'network.compress.input_proj.1.bias' in params_dict:
             self.network.compress.input_proj[1].trainable_weights[1].assign(params_dict['network.compress.input_proj.1.bias'])  # bias
+
+
+
+
+
+
+
+        if 'network.compress1.weight' in params_dict:
+            if isinstance(self.network.compress1.weight, tf.Variable):       
+                self.network.compress1.weight = nn_Parameter(
+                    torch_tensor(params_dict['network.compress1.weight']), requires_grad=False
+                )
+            else:
+                self.network.compress1.weight.trainable_weights[0].assign(params_dict['network.compress1.weight'])  # kernel
+
+
+        if 'network.compress1.input_proj.0.weight' in params_dict:
+            self.network.compress1.input_proj[0].trainable_weights[0].assign(params_dict['network.compress1.input_proj.0.weight'].T)  # kernel
+        if 'network.compress1.input_proj.0.bias' in params_dict:
+            self.network.compress1.input_proj[0].trainable_weights[1].assign(params_dict['network.compress1.input_proj.0.bias'])  # bias
+
+        if 'network.compress1.input_proj.1.weight' in params_dict:
+            self.network.compress1.input_proj[1].trainable_weights[0].assign(params_dict['network.compress1.input_proj.1.weight'].T)  # kernel
+        if 'network.compress1.input_proj.1.bias' in params_dict:
+            self.network.compress1.input_proj[1].trainable_weights[1].assign(params_dict['network.compress1.input_proj.1.bias'])  # bias
+
+
+
+        if 'network.compress2.weight' in params_dict:
+            if isinstance(self.network.compress2.weight, tf.Variable):       
+                self.network.compress2.weight = nn_Parameter(
+                    torch_tensor(params_dict['network.compress2.weight']), requires_grad=False
+                )
+            else:
+                self.network.compress2.weight.trainable_weights[0].assign(params_dict['network.compress2.weight'])  # kernel
+
+        if 'network.compress2.input_proj.0.weight' in params_dict:
+            self.network.compress2.input_proj[0].trainable_weights[0].assign(params_dict['network.compress2.input_proj.0.weight'].T)  # kernel
+        if 'network.compress2.input_proj.0.bias' in params_dict:
+            self.network.compress2.input_proj[0].trainable_weights[1].assign(params_dict['network.compress2.input_proj.0.bias'])  # bias
+
+        if 'network.compress2.input_proj.1.weight' in params_dict:
+            self.network.compress2.input_proj[1].trainable_weights[0].assign(params_dict['network.compress2.input_proj.1.weight'].T)  # kernel
+        if 'network.compress2.input_proj.1.bias' in params_dict:
+            self.network.compress2.input_proj[1].trainable_weights[1].assign(params_dict['network.compress2.input_proj.1.bias'])  # bias
+
+
+
+
+
+
+
 
 
 
@@ -939,5 +1043,52 @@ class GaussianModel(tf.keras.Model):
         all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict, ent_coef = 0)
 
         print("all_one_build_result = ", all_one_build_result)
+
+
+
+
+
+
+
+
+
+
+    def build_actor_vision(self, actor, shape1=None, shape2=None):
+        # return
+    
+        print("build_actor_vision: self.env_name = ", self.env_name)
+
+        if shape1 != None and shape2 != None:
+            pass
+
+        elif self.env_name == "square":
+            shape1 = (256, 4, 7)
+            shape2 = (256, 1, 9)
+            shape3 = (256, 1, 3, 96, 96)     
+        elif self.env_name == "transport":
+            shape1 =  (256, 8, 14)
+            shape2 =  (256, 1, 18)
+            shape3 =  (256, 1, 6, 96, 96)
+        else:
+            raise RuntimeError("The build shape is not implemented for current dataset")
+
+
+        param1 = torch_ones(*shape1)
+        param2 = torch_ones(*shape2)
+        param3 = torch_ones(*shape3)
+
+        build_dict = {'state': param2}
+        build_dict['rgb'] = param3
+
+
+        all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict, ent_coef = 0)
+
+        print("all_one_build_result = ", all_one_build_result)
+
+
+
+
+
+
 
 

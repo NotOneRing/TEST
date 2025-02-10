@@ -218,7 +218,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             model_config = self.model.get_config()
             
-            print("model_config = ", model_config)
+            # print("model_config = ", model_config)
 
             print("train_diffusion_agent.py: run() 4-1")
 

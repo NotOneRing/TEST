@@ -74,9 +74,11 @@ class TrainSACAgent(TrainAgent):
 
         print("init_temperature = ")
 
-        self.log_alpha = torch_tensor( np.log(np.array([init_temperature])) )
+        # self.log_alpha = torch_tensor( np.log(np.array([init_temperature])) )
         # .to(self.device)
 
+        self.log_alpha = tf.Variable( torch_tensor( np.log(np.array([init_temperature])) ) )
+        
 
         # self.log_alpha.requires_grad = True
         torch_tensor_requires_grad_(self.log_alpha, True)
@@ -297,7 +299,10 @@ class TrainSACAgent(TrainAgent):
 
                 tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
 
-                self.critic_optimizer.step(tf_gradients)
+                zip_gradients_params = zip(tf_gradients, self.model.critic.trainable_variables)
+
+                # self.critic_optimizer.step(tf_gradients)
+                self.critic_optimizer.apply_gradients(zip_gradients_params)
 
 
                 # Update target critic every critic update
@@ -317,7 +322,12 @@ class TrainSACAgent(TrainAgent):
 
 
                         tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
-                        self.actor_optimizer.step(tf_gradients)
+
+                        zip_gradients_params = zip(tf_gradients, self.model.actor.trainable_variables)
+                        # self.actor_optimizer.step(tf_gradients)
+                        self.actor_optimizer.apply_gradients(zip_gradients_params)
+
+
 
                         with tf.GradientTape() as tape:
                             # Update temperature parameter
@@ -328,7 +338,13 @@ class TrainSACAgent(TrainAgent):
                             )
 
                         tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])
-                        self.log_alpha_optimizer.step(tf_gradients)
+
+                        zip_gradients_params = zip(tf_gradients, [self.log_alpha])
+                        # self.log_alpha_optimizer.step(tf_gradients)
+                        self.log_alpha_optimizer.apply_gradients(zip_gradients_params)
+
+
+
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:

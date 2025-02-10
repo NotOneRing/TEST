@@ -42,7 +42,7 @@ torch_flip, torch_randint, torch_ones_like, torch_no_grad
 from util.torch_to_tf import torch_tensor_clone
 
 
-from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER, NP_RANDOM
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER, NP_RANDOM, METHOD_NAME
 
 
 from util.torch_to_tf import nn_Parameter, torch_tensor
@@ -378,7 +378,12 @@ class DiffusionModel(tf.keras.Model):
             if OUTPUT_VARIABLES:
                 self.output_weights(self.network)
 
-            self.build_actor(self.network)
+            # self.build_actor(self.network)
+            if "ViT" in METHOD_NAME:            
+                self.build_actor_vision(self.network)
+            else:
+                self.build_actor(self.network)
+
 
 
             print("DiffusionModel: self.network = ", self.network )
@@ -538,10 +543,10 @@ class DiffusionModel(tf.keras.Model):
             print(f"network_path: {self.network_path}")
 
 
-        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
         from model.diffusion.unet import Unet1D
 
-        if isinstance( self.network, (DiffusionMLP, Unet1D) ):
+        if isinstance( self.network, (DiffusionMLP, Unet1D, VisionDiffusionMLP) ):
             network_repr = self.network.get_config()
             if OUTPUT_VARIABLES:
                 print("network_repr = ", network_repr)
@@ -603,7 +608,7 @@ class DiffusionModel(tf.keras.Model):
     def from_config(cls, config):
         """Creates the layer from its config."""
 
-        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
         # from model.diffusion.diffusion import DiffusionModel
         from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
         from model.diffusion.modules import SinusoidalPosEmb
@@ -660,6 +665,8 @@ class DiffusionModel(tf.keras.Model):
             network = DiffusionMLP.from_config(network)
         elif name.startswith("unet1d"):
             network = Unet1D.from_config(network)
+        elif name.startswith("vision_diffusion_mlp"):
+            network = VisionDiffusionMLP.from_config(network)
         else:
             raise RuntimeError("name not recognized")
 
@@ -1926,7 +1933,7 @@ class DiffusionModel(tf.keras.Model):
         assert 0 == 1, "network.compress check"
         # 'network.compress.weight'
         if 'network.compress.weight' in params_dict:
-            self.network.compress.trainable_weights[0].assign(params_dict['network.compress.weight'])  # kernel
+            self.network.compress.weight.trainable_weights[0].assign(params_dict['network.compress.weight'])  # kernel
 
         if 'network.compress.input_proj.0.weight' in params_dict:
             self.network.compress.input_proj[0].trainable_weights[0].assign(params_dict['network.compress.input_proj.0.weight'].T)  # kernel
@@ -2326,9 +2333,239 @@ class DiffusionModel(tf.keras.Model):
 
 
 
+    def load_pickle_diffusion_mlp_img(self, network_path):
+        pkl_file_path = network_path.replace('.pt', '_ema.pkl')
+
+        print("pkl_file_path = ", pkl_file_path)
+
+        import pickle
+        # load pickle file
+        with open(pkl_file_path, 'rb') as file:
+            params_dict = pickle.load(file)
 
 
 
+        # 打印加载的内容
+
+        if OUTPUT_VARIABLES:
+            print("params_dict = ", params_dict)
+
+        # Square
+        # 'network.backbone.vit.pos_embed'
+        # 'network.backbone.vit.patch_embed.embed.0.weight'
+        # 'network.backbone.vit.patch_embed.embed.0.bias'
+        # 'network.backbone.vit.patch_embed.embed.3.weight'
+        # 'network.backbone.vit.patch_embed.embed.3.bias'
+        # 'network.backbone.vit.net.0.layer_norm1.weight'
+        # 'network.backbone.vit.net.0.layer_norm1.bias'
+        # 'network.backbone.vit.net.0.mha.qkv_proj.weight'
+        # 'network.backbone.vit.net.0.mha.qkv_proj.bias'
+        # 'network.backbone.vit.net.0.mha.out_proj.weight'
+        # 'network.backbone.vit.net.0.mha.out_proj.bias'
+        # 'network.backbone.vit.net.0.layer_norm2.weight'
+        # 'network.backbone.vit.net.0.layer_norm2.bias'
+        # 'network.backbone.vit.net.0.linear1.weight'
+        # 'network.backbone.vit.net.0.linear1.bias'
+        # 'network.backbone.vit.net.0.linear2.weight'
+        # 'network.backbone.vit.net.0.linear2.bias'
+        # 'network.backbone.vit.norm.weight'
+        # 'network.backbone.vit.norm.bias'
+        # 'network.compress.weight'
+        # 'network.compress.input_proj.0.weight'
+        # 'network.compress.input_proj.0.bias'
+        # 'network.compress.input_proj.1.weight'
+        # 'network.compress.input_proj.1.bias'
+        # 'network.time_embedding.1.weight'
+        # 'network.time_embedding.1.bias'
+        # 'network.time_embedding.3.weight'
+        # 'network.time_embedding.3.bias'
+        # 'network.mlp_mean.layers.0.weight'
+        # 'network.mlp_mean.layers.0.bias'
+        # 'network.mlp_mean.layers.1.l1.weight'
+        # 'network.mlp_mean.layers.1.l1.bias'
+        # 'network.mlp_mean.layers.1.l2.weight'
+        # 'network.mlp_mean.layers.1.l2.bias'
+        # 'network.mlp_mean.layers.2.weight'
+        # 'network.mlp_mean.layers.2.bias'
+
+
+
+
+        if 'network.backbone.vit.pos_embed' in params_dict:
+            self.network.backbone.vit.pos_embed = nn_Parameter( torch_tensor(params_dict['network.backbone.vit.pos_embed']) )
+            
+        if 'network.backbone.vit.patch_embed.embed.0.weight' in params_dict:
+            self.network.backbone.vit.patch_embed.embed[0].trainable_weights[0].assign(params_dict['network.backbone.vit.patch_embed.embed.0.weight'].T)  # kernel
+        if 'network.backbone.vit.patch_embed.embed.0.bias' in params_dict:
+            self.network.backbone.vit.patch_embed.embed[0].trainable_weights[1].assign(params_dict['network.backbone.vit.patch_embed.embed.0.bias'])  # bias
+
+        if 'network.backbone.vit.patch_embed.embed.3.weight' in params_dict:
+            self.network.backbone.vit.patch_embed.embed[3].trainable_weights[0].assign(params_dict['network.backbone.vit.patch_embed.embed.3.weight'].T)  # kernel
+        if 'network.backbone.vit.patch_embed.embed.3.bias' in params_dict:
+            self.network.backbone.vit.patch_embed.embed[3].trainable_weights[1].assign(params_dict['network.backbone.vit.patch_embed.embed.3.bias'])  # bias
+
+
+
+
+        if 'network.backbone.vit.net.0.layer_norm1.weight' in params_dict:
+            self.network.backbone.vit.net[0].layer_norm1.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.layer_norm1.weight'].T)  # kernel
+        if 'network.backbone.vit.net.0.layer_norm1.bias' in params_dict:
+            self.network.backbone.vit.net[0].layer_norm1.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.layer_norm1.bias'])  # bias
+
+        if 'network.backbone.vit.net.0.mha.qkv_proj.weight' in params_dict:
+            self.network.backbone.vit.net[0].mha.qkv_proj.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.mha.qkv_proj.weight'].T)  # kernel
+        if 'network.backbone.vit.net.0.mha.qkv_proj.bias' in params_dict:
+            self.network.backbone.vit.net[0].mha.qkv_proj.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.mha.qkv_proj.bias'])  # bias
+
+
+        if 'network.backbone.vit.net.0.mha.out_proj.weight' in params_dict:
+            self.network.backbone.vit.net[0].mha.out_proj.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.mha.out_proj.weight'].T)  # kernel
+        if 'network.backbone.vit.net.0.mha.out_proj.bias' in params_dict:
+            self.network.backbone.vit.net[0].mha.out_proj.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.mha.out_proj.bias'])  # bias
+
+        if 'network.backbone.vit.net.0.layer_norm2.weight' in params_dict:
+            self.network.backbone.vit.net[0].layer_norm2.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.layer_norm2.weight'].T)  # kernel
+        if 'network.backbone.vit.net.0.layer_norm2.bias' in params_dict:
+            self.network.backbone.vit.net[0].layer_norm2.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.layer_norm2.bias'])  # bias
+
+
+        if 'network.backbone.vit.net.0.linear1.weight' in params_dict:
+            self.network.backbone.vit.net[0].linear1.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.linear1.weight'].T)  # kernel
+        if 'network.backbone.vit.net.0.linear1.bias' in params_dict:
+            self.network.backbone.vit.net[0].linear1.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.linear1.bias'])  # bias
+
+
+        if 'network.backbone.vit.net.0.linear2.weight' in params_dict:
+            self.network.backbone.vit.net[0].linear2.trainable_weights[0].assign(params_dict['network.backbone.vit.net.0.linear2.weight'].T)  # kernel
+        if 'network.backbone.vit.net.0.linear2.bias' in params_dict:
+            self.network.backbone.vit.net[0].linear2.trainable_weights[1].assign(params_dict['network.backbone.vit.net.0.linear2.bias'])  # bias
+
+
+        if 'network.backbone.vit.norm.weight' in params_dict:
+            self.network.backbone.vit.norm.trainable_weights[0].assign(params_dict['network.backbone.vit.norm.weight'].T)  # kernel
+        if 'network.backbone.vit.norm.bias' in params_dict:
+            self.network.backbone.vit.norm.trainable_weights[1].assign(params_dict['network.backbone.vit.norm.bias'])  # bias
+
+
+
+
+
+        # print("self.network.compress = ", self.network.compress)
+        # assert 0 == 1, "network.compress check"
+        # 'network.compress.weight'
+        if 'network.compress.weight' in params_dict:
+            if isinstance(self.network.compress.weight, tf.Variable):       
+                self.network.compress.weight = nn_Parameter(
+                    torch_tensor(params_dict['network.compress.weight']), requires_grad=False
+                )
+            else:
+                self.network.compress.weight.trainable_weights[0].assign(params_dict['network.compress.weight'])  # kernel
+
+        if 'network.compress.input_proj.0.weight' in params_dict:
+            self.network.compress.input_proj[0].trainable_weights[0].assign(params_dict['network.compress.input_proj.0.weight'].T)  # kernel
+        if 'network.compress.input_proj.0.bias' in params_dict:
+            self.network.compress.input_proj[0].trainable_weights[1].assign(params_dict['network.compress.input_proj.0.bias'])  # bias
+
+        if 'network.compress.input_proj.1.weight' in params_dict:
+            self.network.compress.input_proj[1].trainable_weights[0].assign(params_dict['network.compress.input_proj.1.weight'].T)  # kernel
+        if 'network.compress.input_proj.1.bias' in params_dict:
+            self.network.compress.input_proj[1].trainable_weights[1].assign(params_dict['network.compress.input_proj.1.bias'])  # bias
+
+
+
+
+
+
+        if 'network.compress1.weight' in params_dict:
+            if isinstance(self.network.compress1.weight, tf.Variable):       
+                self.network.compress1.weight = nn_Parameter(
+                    torch_tensor(params_dict['network.compress1.weight']), requires_grad=False
+                )
+            else:
+                self.network.compress1.weight.trainable_weights[0].assign(params_dict['network.compress1.weight'])  # kernel
+
+        if 'network.compress1.input_proj.0.weight' in params_dict:
+            self.network.compress1.input_proj[0].trainable_weights[0].assign(params_dict['network.compress1.input_proj.0.weight'].T)  # kernel
+        if 'network.compress1.input_proj.0.bias' in params_dict:
+            self.network.compress1.input_proj[0].trainable_weights[1].assign(params_dict['network.compress1.input_proj.0.bias'])  # bias
+
+        if 'network.compress1.input_proj.1.weight' in params_dict:
+            self.network.compress1.input_proj[1].trainable_weights[0].assign(params_dict['network.compress1.input_proj.1.weight'].T)  # kernel
+        if 'network.compress1.input_proj.1.bias' in params_dict:
+            self.network.compress1.input_proj[1].trainable_weights[1].assign(params_dict['network.compress1.input_proj.1.bias'])  # bias
+
+
+
+
+
+
+
+
+        if 'network.compress2.weight' in params_dict:
+            if isinstance(self.network.compress2.weight, tf.Variable):       
+                self.network.compress2.weight = nn_Parameter(
+                    torch_tensor(params_dict['network.compress2.weight']), requires_grad=False
+                )
+            else:
+                self.network.compress2.weight.trainable_weights[0].assign(params_dict['network.compress2.weight'])  # kernel
+
+
+        if 'network.compress2.input_proj.0.weight' in params_dict:
+            self.network.compress2.input_proj[0].trainable_weights[0].assign(params_dict['network.compress2.input_proj.0.weight'].T)  # kernel
+        if 'network.compress2.input_proj.0.bias' in params_dict:
+            self.network.compress2.input_proj[0].trainable_weights[1].assign(params_dict['network.compress2.input_proj.0.bias'])  # bias
+
+        if 'network.compress2.input_proj.1.weight' in params_dict:
+            self.network.compress2.input_proj[1].trainable_weights[0].assign(params_dict['network.compress2.input_proj.1.weight'].T)  # kernel
+        if 'network.compress2.input_proj.1.bias' in params_dict:
+            self.network.compress2.input_proj[1].trainable_weights[1].assign(params_dict['network.compress2.input_proj.1.bias'])  # bias
+
+
+
+
+
+
+
+
+
+
+
+        if 'network.time_embedding.1.weight' in params_dict:
+            self.network.time_embedding[1].trainable_weights[0].assign(params_dict['network.time_embedding.1.weight'].T)  # kernel
+
+        if 'network.time_embedding.1.bias' in params_dict:
+            self.network.time_embedding[1].trainable_weights[1].assign(params_dict['network.time_embedding.1.bias'])     # bias
+
+        if 'network.time_embedding.3.weight' in params_dict:
+            self.network.time_embedding[3].trainable_weights[0].assign(params_dict['network.time_embedding.3.weight'].T)  # kernel
+
+        if 'network.time_embedding.3.bias' in params_dict:
+            self.network.time_embedding[3].trainable_weights[1].assign(params_dict['network.time_embedding.3.bias'])     # bias
+
+
+
+
+
+
+        if 'network.mlp_mean.layers.0.weight' in params_dict:
+            self.network.mlp_mean.my_layers[0].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.0.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.0.bias' in params_dict:
+            self.network.mlp_mean.my_layers[0].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.0.bias'])     # bias
+
+        if 'network.mlp_mean.layers.1.l1.weight' in params_dict:
+            self.network.mlp_mean.my_layers[1].l1.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l1.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.1.l1.bias' in params_dict:
+            self.network.mlp_mean.my_layers[1].l1.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l1.bias'])     # bias
+
+        if 'network.mlp_mean.layers.1.l2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[1].l2.trainable_weights[0].assign(params_dict['network.mlp_mean.layers.1.l2.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.1.l2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[1].l2.trainable_weights[1].assign(params_dict['network.mlp_mean.layers.1.l2.bias'])     # bias
+
+        if 'network.mlp_mean.layers.2.weight' in params_dict:
+            self.network.mlp_mean.my_layers[2].trainable_weights[0].assign(params_dict['network.mlp_mean.layers.2.weight'].T)  # kernel
+        if 'network.mlp_mean.layers.2.bias' in params_dict:
+            self.network.mlp_mean.my_layers[2].trainable_weights[1].assign(params_dict['network.mlp_mean.layers.2.bias'])     # bias
 
 
 
@@ -2814,9 +3051,17 @@ class DiffusionModel(tf.keras.Model):
         if OUTPUT_VARIABLES:
             print("self.network = ", self.network)
 
-        x_recon = network([x_noisy, t, cond["state"]]
-                               , training=training)
-                            #    )
+        # x_recon = network([x_noisy, t, cond["state"]]
+        #                        , training=training)
+        #                     #    )
+        if 'rgb' in cond:
+            x_recon = network([x_noisy, t, cond["state"], cond["rgb"]]
+                                , training=training)
+                                #    )
+        else:
+            x_recon = network([x_noisy, t, cond["state"]]
+                                , training=training)
+                                #    )
 
         # if OUTPUT_VARIABLES:
         # print("x_recon = ", x_recon)
@@ -3350,6 +3595,41 @@ class DiffusionModel(tf.keras.Model):
 
 
 
+
+
+
+
+    def build_actor_vision(self, actor, shape1=None, shape2=None):
+        # return
+    
+        print("build_actor_vision: self.env_name = ", self.env_name)
+
+        if shape1 != None and shape2 != None:
+            pass
+
+        elif self.env_name == "square":
+            shape1 = (256, 4, 7)
+            shape2 = (256, 1, 9)
+            shape3 = (256, 1, 3, 96, 96)     
+        elif self.env_name == "transport":
+            shape1 =  (256, 8, 14)
+            shape2 =  (256, 1, 18)
+            shape3 =  (256, 1, 6, 96, 96)
+        else:
+            raise RuntimeError("The build shape is not implemented for current dataset")
+
+
+        param1 = torch_ones(*shape1)
+        param2 = torch_ones(*shape2)
+        param3 = torch_ones(*shape3)
+
+        build_dict = {'state': param2}
+        build_dict['rgb'] = param3
+
+
+        all_one_build_result = self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
+
+        print("all_one_build_result = ", all_one_build_result)
 
 
 

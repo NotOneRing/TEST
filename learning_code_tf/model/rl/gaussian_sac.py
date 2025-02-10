@@ -37,6 +37,10 @@ class SAC_Gaussian(GaussianModel):
         self.target_critic = deepcopy(self.critic)
         # .to(self.device)
 
+        self.actor = self.network
+
+        
+
     def loss_critic(
         self,
         obs,

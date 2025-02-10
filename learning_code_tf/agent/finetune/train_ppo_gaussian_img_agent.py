@@ -68,7 +68,13 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
             
             # self.model.eval() if eval_mode else self.model.train()
-            training = False if eval_mode else traning = True
+            # training = False if eval_mode else traning = True
+
+            if eval_mode:
+                training = False
+            else:
+                traning = True
+
 
             last_itr_eval = eval_mode
 
@@ -231,14 +237,14 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                             (values_trajs, values.reshape(-1, self.n_envs))
                         )
                     samples_t = einops.rearrange(
-                        torch_from_numpy(samples_trajs).float().to(self.device),
+                        torch_tensor_float(torch_from_numpy(samples_trajs)),
                         "s e h d -> (s e) h d",
                     )
                     samples_ts = torch_split(samples_t, self.logprob_batch_size, dim=0)
                     logprobs_trajs = np.empty((0))
                     for obs_t, samples_t in zip(obs_ts, samples_ts):
                         logprobs = (
-                            self.model.get_logprobs(obs_t, samples_t)[0].cpu().numpy()
+                            self.model.get_logprobs(obs_t, samples_t)[0].numpy()
                         )
                         logprobs_trajs = np.concatenate(
                             (
@@ -327,11 +333,22 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                         end = start + self.batch_size
                         inds_b = inds_k[start:end]  # b for batch
                         obs_b = {k: obs_k[k][inds_b] for k in obs_k}
-                        samples_b = samples_k[inds_b]
-                        returns_b = returns_k[inds_b]
-                        values_b = values_k[inds_b]
-                        advantages_b = advantages_k[inds_b]
-                        logprobs_b = logprobs_k[inds_b]
+
+
+                        # samples_b = samples_k[inds_b]
+                        # returns_b = returns_k[inds_b]
+                        # values_b = values_k[inds_b]
+                        # advantages_b = advantages_k[inds_b]
+                        # logprobs_b = logprobs_k[inds_b]
+
+
+                        samples_b = tf.gather(samples_k, inds_b, axis=0)
+                        returns_b = tf.gather(returns_k, inds_b, axis=0)
+                        values_b = tf.gather(values_k, inds_b, axis=0)
+                        advantages_b = tf.gather(advantages_k, inds_b, axis=0)
+                        logprobs_b = tf.gather(logprobs_k, inds_b, axis=0)
+
+
 
 
                         with tf.GradientTape(persistent=True) as tape:

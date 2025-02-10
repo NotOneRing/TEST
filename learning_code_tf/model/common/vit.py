@@ -39,28 +39,117 @@ class VitEncoder(tf.keras.layers.Layer):
         num_channel=3,
         img_h=96,
         img_w=96,
+        cfg_embed_style = None,
+        cfg_embed_dim = None,
+        cfg_embed_norm = None,
+        cfg_num_heads = None,
+        cfg_depth = None,
+        **kwargs
     ):
 
         print("vit.py: VitEncoder.__init__()")
 
         super().__init__()
-        self.obs_shape = obs_shape
+        
+        self.obs_shape = list(obs_shape)
+
         self.cfg = cfg
-        self.vit = MinVit(
-            embed_style=cfg.embed_style,
-            embed_dim=cfg.embed_dim,
-            embed_norm=cfg.embed_norm,
-            num_head=cfg.num_heads,
-            depth=cfg.depth,
-            num_channel=num_channel,
-            img_h=img_h,
-            img_w=img_w,
-        )
+        self.num_channel = num_channel
+
+
+        if cfg:
+            self.cfg_embed_style = cfg.embed_style
+            self.cfg_embed_dim = cfg.embed_dim
+            self.cfg_embed_norm = cfg.embed_norm
+            self.cfg_num_heads = cfg.num_heads
+            self.cfg_depth = cfg.depth
+
+            self.vit = MinVit(
+                embed_style=cfg.embed_style,
+                embed_dim=cfg.embed_dim,
+                embed_norm=cfg.embed_norm,
+                num_head=cfg.num_heads,
+                depth=cfg.depth,
+                num_channel=num_channel,
+                img_h=img_h,
+                img_w=img_w,
+            )
+        else:
+            self.cfg_embed_style = cfg_embed_style
+            self.cfg_embed_dim = cfg_embed_dim
+            self.cfg_embed_norm = cfg_embed_norm
+            self.cfg_num_heads = cfg_num_heads
+            self.cfg_depth = cfg_depth
+
+            self.vit = MinVit(
+                embed_style=cfg_embed_style,
+                embed_dim=cfg_embed_dim,
+                embed_norm=cfg_embed_norm,
+                num_head=cfg_num_heads,
+                depth=cfg_depth,
+                num_channel=num_channel,
+                img_h=img_h,
+                img_w=img_w,
+            )
+
         self.img_h = img_h
         self.img_w = img_w
         self.num_patch = self.vit.num_patches
-        self.patch_repr_dim = self.cfg.embed_dim
-        self.repr_dim = self.cfg.embed_dim * self.vit.num_patches
+        if self.cfg:
+            self.patch_repr_dim = self.cfg.embed_dim
+            self.repr_dim = self.cfg.embed_dim * self.vit.num_patches
+        else:
+            self.patch_repr_dim = cfg_embed_dim
+            self.repr_dim = self.cfg_embed_dim * self.vit.num_patches
+
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(VitEncoder, self).get_config()
+        
+        print(f"obs_shape: {self.obs_shape}, type: {type(self.obs_shape)}")
+        print(f"cfg: {self.cfg}, type: {type(self.cfg)}")
+        print(f"num_channel: {self.num_channel}, type: {type(self.num_channel)}")
+        print(f"img_h: {self.img_h}, type: {type(self.img_h)}")
+        print(f"img_w: {self.img_w}, type: {type(self.img_w)}")
+
+
+        config.update({
+                        "obs_shape": self.obs_shape,
+                        "cfg": None,
+                        "num_channel": self.num_channel,
+                        "img_h": self.img_h,
+                        "img_w": self.img_w,
+                        "cfg_embed_style" : self.cfg_embed_style,
+                        "cfg_embed_dim" : self.cfg_embed_dim,
+                        "cfg_embed_norm" : self.cfg_embed_norm,
+                        "cfg_num_heads" : self.cfg_num_heads,
+                        "cfg_depth" : self.cfg_depth
+                       })
+
+        config.update({
+            "vit": tf.keras.layers.serialize(self.vit),
+        })
+        
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'MinVit': MinVit, 
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        
+        vit = tf.keras.layers.deserialize( config.pop("vit"),  custom_objects=get_custom_objects() )
+        
+        
+        return cls(vit=vit, **config)
+
 
     def call(self, obs, flatten=False):
         print("vit.py: VitEncoder.call()")
@@ -75,21 +164,69 @@ class VitEncoder(tf.keras.layers.Layer):
         return feats
 
 
+
 # class PatchEmbed1(nn.Module):
 class PatchEmbed1(tf.keras.layers.Layer):
-    def __init__(self, embed_dim, num_channel=3, img_h=96, img_w=96):
+    def __init__(self, embed_dim, num_channel=3, img_h=96, img_w=96, conv = None,
+        **kwargs):
 
         print("vit.py: PatchEmbed1.__init__()")
 
         super().__init__()
-        # self.conv = nn.Conv2d(num_channel, embed_dim, kernel_size=8, stride=8)
-        # 输入维度是num_channel
-        # self.conv = layers.Conv2D(embed_dim, kernel_size=8, strides=8, padding="valid")
 
-        self.conv = nn_Conv2d(num_channel, embed_dim, kernel_size=8, stride=8)
-
+        self.embed_dim = embed_dim
+        self.num_channel = num_channel
+        self.img_h = img_h
+        self.img_w = img_w
+        if conv:
+            self.conv = conv
+        else:
+            self.conv = nn_Conv2d(num_channel, embed_dim, kernel_size=8, stride=8)
         self.num_patch = math.ceil(img_h / 8) * math.ceil(img_w / 8)
         self.patch_dim = embed_dim
+
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(PatchEmbed1, self).get_config()
+
+        print(f"embed_dim: {self.embed_dim}, type: {type(self.embed_dim)}")
+        print(f"num_channel: {self.num_channel}, type: {type(self.num_channel)}")
+        print(f"img_h: {self.img_h}, type: {type(self.img_h)}")
+        print(f"img_w: {self.img_w}, type: {type(self.img_w)}")
+
+        config.update({
+                        "embed_dim": self.embed_dim,
+                        "num_channel": self.num_channel,
+                        "img_h": self.img_h,
+                        "img_w": self.img_w,
+                       })
+
+        config.update({
+            "conv": tf.keras.layers.serialize(self.conv),
+        })
+        
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'nn_Conv2d': nn_Conv2d,
+            'nn_GroupNorm': nn_GroupNorm,
+            'nn_ReLU': nn_ReLU,
+            'nn_Sequential': nn_Sequential,
+            'nn_Linear': nn_Linear,
+         }
+
+        get_custom_objects().update(cur_dict)
+
+        conv = tf.keras.layers.deserialize( config.pop("conv"),  custom_objects=get_custom_objects() )
+
+        return cls(conv=conv, **config)
+
 
     def call(self, x):
 
@@ -102,11 +239,18 @@ class PatchEmbed1(tf.keras.layers.Layer):
 
 
 class PatchEmbed2(tf.keras.layers.Layer):
-    def __init__(self, embed_dim, use_norm, num_channel=3, img_h=96, img_w=96):
+    def __init__(self, embed_dim, use_norm, num_channel=3, img_h=96, img_w=96, embed = None,
+        **kwargs):
 
         print("vit.py: PatchEmbed2.__init__()")
 
         super().__init__()
+
+        self.embed_dim = embed_dim
+        self.use_norm = use_norm
+        self.num_channel = num_channel
+        self.img_h = img_h
+        self.img_w = img_w
 
         #输入是num_channel
         layers = [
@@ -116,7 +260,10 @@ class PatchEmbed2(tf.keras.layers.Layer):
             nn_Conv2d(embed_dim, embed_dim, kernel_size=3, stride=2),
         ]
 
-        self.embed = nn_Sequential(layers)
+        if embed:
+            self.embed = embed
+        else:
+            self.embed = nn_Sequential(layers)
 
         H1 = math.ceil((img_h - 8) / 4) + 1
         W1 = math.ceil((img_w - 8) / 4) + 1
@@ -124,6 +271,51 @@ class PatchEmbed2(tf.keras.layers.Layer):
         W2 = math.ceil((W1 - 3) / 2) + 1
         self.num_patch = H2 * W2
         self.patch_dim = embed_dim
+
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(PatchEmbed2, self).get_config()
+
+        print(f"embed_dim: {self.embed_dim}, type: {type(self.embed_dim)}")
+        print(f"use_norm: {self.use_norm}, type: {type(self.use_norm)}")
+        print(f"num_channel: {self.num_channel}, type: {type(self.num_channel)}")
+        print(f"img_h: {self.img_h}, type: {type(self.img_h)}")
+        print(f"img_w: {self.img_w}, type: {type(self.img_w)}")
+
+        config.update({
+                        "embed_dim": self.embed_dim,
+                        "use_norm": self.use_norm,
+                        "num_channel": self.num_channel,
+                        "img_h": self.img_h,
+                        "img_w": self.img_w,
+                       })
+
+        config.update({
+            "embed": tf.keras.layers.serialize(self.embed),
+        })
+        
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'nn_Conv2d': nn_Conv2d,
+            'nn_GroupNorm': nn_GroupNorm,
+            'nn_ReLU': nn_ReLU,
+            'nn_Sequential': nn_Sequential,
+            'nn_Linear': nn_Linear,
+         }
+
+        get_custom_objects().update(cur_dict)
+
+        embed = tf.keras.layers.deserialize( config.pop("embed"),  custom_objects=get_custom_objects() )
+
+        return cls(embed=embed, **config)
+
 
     def call(self, x):
 
@@ -135,17 +327,61 @@ class PatchEmbed2(tf.keras.layers.Layer):
 
 
 class MultiHeadAttention(tf.keras.layers.Layer):
-    def __init__(self, embed_dim, num_head):
+    def __init__(self, embed_dim, num_head, qkv_proj = None, out_proj = None,
+        **kwargs):
 
         print("vit.py: MultiHeadAttention.__init__()")
 
         super().__init__()
         assert embed_dim % num_head == 0
-
+        self.embed_dim = embed_dim
         self.num_head = num_head
-        #输入维度是embed_dim
-        self.qkv_proj = nn_Linear(embed_dim, 3 * embed_dim)
-        self.out_proj = nn_Linear(embed_dim, embed_dim)
+
+        if qkv_proj:
+            self.qkv_proj = qkv_proj
+        else:
+            self.qkv_proj = nn_Linear(embed_dim, 3 * embed_dim)
+
+        if out_proj:
+            self.out_proj = out_proj
+        else:
+            self.out_proj = nn_Linear(embed_dim, embed_dim)
+
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(MultiHeadAttention, self).get_config()
+
+        print(f"embed_dim: {self.embed_dim}, type: {type(self.embed_dim)}")
+        print(f"num_head: {self.num_head}, type: {type(self.num_head)}")
+
+        config.update({
+                        "embed_dim": self.embed_dim,
+                        "num_head": self.num_head,
+                       })
+
+        config.update({
+            "qkv_proj": tf.keras.layers.serialize(self.qkv_proj),
+            "out_proj": tf.keras.layers.serialize(self.out_proj),
+        })
+        
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'nn_Linear': nn_Linear,
+         }
+
+        get_custom_objects().update(cur_dict)
+
+        qkv_proj = tf.keras.layers.deserialize( config.pop("qkv_proj"),  custom_objects=get_custom_objects() )
+        out_proj = tf.keras.layers.deserialize( config.pop("out_proj"),  custom_objects=get_custom_objects() )
+
+        return cls(qkv_proj=qkv_proj, out_proj = out_proj, **config)
 
 
     def call(self, x, attn_mask):
@@ -192,29 +428,97 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
 
 class TransformerLayer(tf.keras.layers.Layer):
-    def __init__(self, embed_dim, num_head, dropout):
+    def __init__(self, embed_dim, num_head, dropout,
+                    layer_norm1=None, mha = None, layer_norm2 = None, 
+                    linear1=None, linear2 = None, dropout_layer = None,
+                    **kwargs                  
+                ):
 
         print("vit.py: TransformerLayer.__init__()")
 
         super().__init__()
+        self.embed_dim = embed_dim
+        self.num_head = num_head
+        self.initial_dropout = dropout
 
-        # #输入是embed_dim维度的
-        # self.layer_norm1 = layers.LayerNormalization()
-        # self.mha = MultiHeadAttention(embed_dim, num_head)
-        # #输入是embed_dim维度的
-        # self.layer_norm2 = layers.LayerNormalization()
-        # #输入是embed_dim维度的
-        # self.linear1 = layers.Dense(4 * embed_dim)
-        # self.linear2 = layers.Dense(embed_dim)
-        # self.dropout = layers.Dropout(dropout)
+        if layer_norm1:
+            self.layer_norm1 = layer_norm1
+        else:
+            self.layer_norm1 = nn_LayerNorm(embed_dim)
+        if mha:
+            self.mha = mha
+        else:
+            self.mha = MultiHeadAttention(embed_dim, num_head)
+        if layer_norm2:
+            self.layer_norm2 = layer_norm2
+        else:
+            self.layer_norm2 = nn_LayerNorm(embed_dim)
+        if linear1:
+            self.linear1 = linear1
+        else:
+            self.linear1 = nn_Linear(embed_dim, 4 * embed_dim)
+        if linear2:
+            self.linear2 = linear2
+        else:
+            self.linear2 = nn_Linear(4 * embed_dim, embed_dim)
+        if dropout_layer:
+            self.dropout = dropout_layer
+        else:
+            self.dropout = nn_Dropout(dropout)
 
-        self.layer_norm1 = nn_LayerNorm(embed_dim)
-        self.mha = MultiHeadAttention(embed_dim, num_head)
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(TransformerLayer, self).get_config()
 
-        self.layer_norm2 = nn_LayerNorm(embed_dim)
-        self.linear1 = nn_Linear(embed_dim, 4 * embed_dim)
-        self.linear2 = nn_Linear(4 * embed_dim, embed_dim)
-        self.dropout = nn_Dropout(dropout)
+        print(f"embed_dim: {self.embed_dim}, type: {type(self.embed_dim)}")
+        print(f"num_head: {self.num_head}, type: {type(self.num_head)}")
+        print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
+        config.update({
+                        "embed_dim": self.embed_dim,
+                        "num_head": self.num_head,
+                        "dropout": self.initial_dropout
+                       })
+        config.update({
+            "layer_norm1": tf.keras.layers.serialize(self.layer_norm1),
+            "mha": tf.keras.layers.serialize(self.mha),
+            "layer_norm2": tf.keras.layers.serialize(self.layer_norm2),
+            "linear1": tf.keras.layers.serialize(self.linear1),
+            "linear2": tf.keras.layers.serialize(self.linear2),
+            "dropout_layer": tf.keras.layers.serialize(self.dropout),
+        })
+        
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'nn_Sequential': nn_Sequential, 
+            'nn_LayerNorm': nn_LayerNorm,
+            'MultiHeadAttention': MultiHeadAttention, 
+            'nn_Linear': nn_Linear,
+            "nn_Dropout": nn_Dropout
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        
+        layer_norm1 = tf.keras.layers.deserialize( config.pop("layer_norm1"),  custom_objects=get_custom_objects() )
+        mha = tf.keras.layers.deserialize( config.pop("mha"),  custom_objects=get_custom_objects() )
+        layer_norm2 = tf.keras.layers.deserialize( config.pop("layer_norm2"),  custom_objects=get_custom_objects() )
+
+        linear1 = tf.keras.layers.deserialize( config.pop("linear1"),  custom_objects=get_custom_objects() )
+        linear2 = tf.keras.layers.deserialize( config.pop("linear2"),  custom_objects=get_custom_objects() )
+        dropout_layer = tf.keras.layers.deserialize( config.pop("dropout_layer"),  custom_objects=get_custom_objects() )
+
+
+        return cls(layer_norm1=layer_norm1, mha = mha, layer_norm2 = layer_norm2, 
+                   linear1=linear1, linear2 = linear2, dropout_layer = dropout_layer, 
+                   **config)
+
 
     def call(self, x, attn_mask=None):
 
@@ -243,41 +547,48 @@ class MinVit(tf.keras.Model):
         num_channel=3,
         img_h=96,
         img_w=96,
+        patch_embed = None,
+        net = None,
+        norm = None,
+        **kwargs
     ):
 
         print("vit.py: MinVit.__init__()")
 
         super().__init__()
+        
+        self.embed_style = embed_style
+        self.embed_dim = embed_dim
+        self.embed_norm = embed_norm
+        self.num_head = num_head
+        self.depth = depth
+        self.num_channel = num_channel
+        self.img_h = img_h
+        self.img_w = img_w
 
         if embed_style == "embed1":
-            self.patch_embed = PatchEmbed1(
-                embed_dim,
-                num_channel=num_channel,
-                img_h=img_h,
-                img_w=img_w,
-            )
+            if patch_embed:
+                self.patch_embed = patch_embed
+            else:
+                self.patch_embed = PatchEmbed1(
+                    embed_dim,
+                    num_channel=num_channel,
+                    img_h=img_h,
+                    img_w=img_w,
+                )
         elif embed_style == "embed2":
-            self.patch_embed = PatchEmbed2(
-                embed_dim,
-                use_norm=embed_norm,
-                num_channel=num_channel,
-                img_h=img_h,
-                img_w=img_w,
-            )
+            if patch_embed:
+                self.patch_embed = patch_embed
+            else:
+                self.patch_embed = PatchEmbed2(
+                    embed_dim,
+                    use_norm=embed_norm,
+                    num_channel=num_channel,
+                    img_h=img_h,
+                    img_w=img_w,
+                )
         else:
             assert False
-
-
-        # self.pos_embed = tf.Variable(tf.random.truncated_normal([1, self.patch_embed.num_patch, embed_dim], stddev=0.02))
-
-
-        # layers = [TransformerLayer(embed_dim, num_head, dropout=0) for _ in range(depth)]
-        # self.net = tf.keras.Sequential(*layers)
-
-        # #输入维度是embed_dim
-        # self.norm = layers.LayerNormalization()
-
-        # self.num_patches = self.patch_embed.num_patch
 
         self.pos_embed = nn_Parameter(
             torch_zeros(1, self.patch_embed.num_patch, embed_dim)
@@ -294,6 +605,64 @@ class MinVit(tf.keras.Model):
         torch_nn_init_trunc_normal_(self.pos_embed, std=0.02)
 
         named_apply(init_weights_vit_timm, self)
+
+
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(MinVit, self).get_config()
+
+        print(f"embed_style: {self.embed_style}, type: {type(self.embed_style)}")
+        print(f"embed_dim: {self.embed_dim}, type: {type(self.embed_dim)}")
+        print(f"embed_norm: {self.embed_norm}, type: {type(self.embed_norm)}")
+        print(f"num_head: {self.num_head}, type: {type(self.num_head)}")
+        print(f"depth: {self.depth}, type: {type(self.depth)}")
+
+        print(f"num_channel: {self.num_channel}, type: {type(self.num_channel)}")
+        print(f"img_h: {self.img_h}, type: {type(self.img_h)}")
+        print(f"img_w: {self.img_w}, type: {type(self.img_w)}")
+
+
+        config.update({
+                        "embed_style": self.embed_style,
+                        "embed_dim": self.embed_dim,
+                        "embed_norm": self.embed_norm,
+                        "num_head": self.num_head,
+                        "depth" : self.depth,
+                        "num_channel" : self.num_channel,
+                        "img_h" : self.img_h,
+                        "img_w" : self.img_w,
+                       })
+
+
+        config.update({
+            "patch_embed": tf.keras.layers.serialize(self.patch_embed),
+            "net": tf.keras.layers.serialize(self.net),
+            "norm": tf.keras.layers.serialize(self.norm),
+        })
+        
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'nn_Sequential': nn_Sequential, 
+            'nn_LayerNorm': nn_LayerNorm,
+            "TransformerLayer": TransformerLayer
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        
+        patch_embed = tf.keras.layers.deserialize( config.pop("patch_embed"),  custom_objects=get_custom_objects() )
+        net = tf.keras.layers.deserialize( config.pop("net"),  custom_objects=get_custom_objects() )
+        norm = tf.keras.layers.deserialize( config.pop("norm"),  custom_objects=get_custom_objects() )
+        
+
+        return cls(patch_embed=patch_embed, net = net, norm = norm, **config)
 
 
     def call(self, x):

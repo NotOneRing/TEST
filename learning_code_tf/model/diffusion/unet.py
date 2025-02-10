@@ -339,36 +339,7 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         if OUTPUT_FUNCTION_HEADER:
             print("ResidualBlock1D: from_config()")
 
-        # from model.diffusion.mlp_diffusion import DiffusionMLP
-        # from model.diffusion.diffusion import DiffusionModel
-        # from model.common.mlp import MLP, ResidualMLP
-        # from model.diffusion.modules import SinusoidalPosEmb
-        # from model.common.modules import SpatialEmb, RandomShiftsAug
-        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
-
         from tensorflow.keras.utils import get_custom_objects
-
-
-
-        # cur_dict = {
-        #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-        #     'DiffusionMLP': DiffusionMLP,
-        #     # 'VPGDiffusion': VPGDiffusion,
-        #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # 自定义的 MLP 层
-        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-        #     'nn_Linear': nn_Linear,
-        #     'nn_LayerNorm': nn_LayerNorm,
-        #     'nn_Dropout': nn_Dropout,
-        #     'nn_ReLU': nn_ReLU,
-        #     'nn_Mish': nn_Mish,
-        #     'nn_Identity': nn_Identity,
-        #     'nn_Conv1d': nn_Conv1d,
-        #     'SpatialEmb': SpatialEmb,
-        #     'RandomShiftsAug': RandomShiftsAug,
-        #     "einops_layers_torch_Rearrange": einops_layers_torch_Rearrange,
-        #  }
 
         cur_dict["ResidualBlock1D"] = ResidualBlock1D
         cur_dict["Unet1D"] = Unet1D
@@ -769,41 +740,12 @@ class Unet1D(tf.keras.Model):
         if OUTPUT_FUNCTION_HEADER:
             print("Unet1D: from_config()")
 
-
-        # from model.diffusion.mlp_diffusion import DiffusionMLP
-        # from model.diffusion.diffusion import DiffusionModel
-        # from model.common.mlp import MLP, ResidualMLP
-        # from model.diffusion.modules import SinusoidalPosEmb
-        # from model.common.modules import SpatialEmb, RandomShiftsAug
-        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
-
         from tensorflow.keras.utils import get_custom_objects
 
 
         cur_dict["ResidualBlock1D"] = ResidualBlock1D
         cur_dict["Unet1D"] = Unet1D
 
-
-        # cur_dict = {
-        #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-        #     'DiffusionMLP': DiffusionMLP,
-        #     # 'VPGDiffusion': VPGDiffusion,
-        #     'SinusoidalPosEmb': SinusoidalPosEmb,  
-        #     'MLP': MLP,                            # 自定义的 MLP 层
-        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-        #     'nn_Linear': nn_Linear,
-        #     'nn_LayerNorm': nn_LayerNorm,
-        #     'nn_Dropout': nn_Dropout,
-        #     'nn_ReLU': nn_ReLU,
-        #     'nn_Mish': nn_Mish,
-        #     'SpatialEmb': SpatialEmb,
-        #     'RandomShiftsAug': RandomShiftsAug,
-        #     'Downsample1d': Downsample1d,
-        #     'ResidualBlock1D':ResidualBlock1D,
-        #     'Conv1dBlock': Conv1dBlock,
-        #     'nn_Conv1d': nn_Conv1d
-        #  }
         # Register your custom class with Keras
         get_custom_objects().update(cur_dict)
 

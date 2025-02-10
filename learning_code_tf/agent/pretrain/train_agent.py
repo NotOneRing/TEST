@@ -1018,6 +1018,8 @@ class PreTrainAgent:
         elif METHOD_NAME == "Gaussian_ViT_MLP":
             print("self.model.load_pickle_gaussian_mlp_img()")
             self.model.load_pickle_gaussian_mlp_img(self.base_policy_path)
+        elif METHOD_NAME == "Diffusion_ViT_MLP":
+            self.model.load_pickle_diffusion_mlp_img(self.base_policy_path)
         else:
             raise RuntimeError("Method Undefined")
         
@@ -1026,9 +1028,14 @@ class PreTrainAgent:
         savepath = self.base_policy_path.replace(".pt", ".keras")
 
 
-        self.model.build_actor(self.model.network
-                            #    , cur_actions.shape, cond['state'].shape
-                                )
+        # self.model.build_actor(self.model.network
+        #                     #    , cur_actions.shape, cond['state'].shape
+        #                         )
+        if "ViT" in METHOD_NAME:            
+            self.model.build_actor_vision(self.model.network)
+        else:
+            self.model.build_actor(self.model.network)
+
 
         self.save_load_pretrain_model(savepath)
 

@@ -11,6 +11,8 @@ from model.common.gaussian import GaussianModel
 
 from util.torch_to_tf import torch_no_grad, torch_tensor_view, torch_mean
 
+from util.config import METHOD_NAME
+
 
 class VPG_Gaussian(GaussianModel):
 
@@ -41,11 +43,21 @@ class VPG_Gaussian(GaussianModel):
         self.actor_ft = self.network
 
 
-        self.build_actor(self.actor_ft)
+        # self.build_actor(self.actor_ft)
+        if "ViT" in METHOD_NAME:            
+            self.build_actor_vision(self.actor_ft)
+        else:
+            self.build_actor(self.actor_ft)
+
         
         self.actor = tf.keras.models.clone_model(self.actor_ft)
 
-        self.build_actor(self.actor)
+        # self.build_actor(self.actor)
+        if "ViT" in METHOD_NAME:            
+            self.build_actor_vision(self.actor)
+        else:
+            self.build_actor(self.actor)
+
 
         self.actor.set_weights(self.actor_ft.get_weights())
 
@@ -64,7 +76,7 @@ class VPG_Gaussian(GaussianModel):
     # ---------- Sampling ----------#
 
     # @torch.no_grad()
-    @tf.function
+    # @tf.function
     def call(
         self,
         cond,

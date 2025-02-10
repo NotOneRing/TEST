@@ -35,7 +35,7 @@ from util.torch_to_tf import torch_tensor_requires_grad_, torch_tensor_clamp_, t
 from util.torch_to_tf import torch_log, torch_zeros_like, torch_randn_like, torch_clamp, torch_stack, torch_tensor_repeat, torch_exp, torch_clip, torch_sum, torch_reshape, torch_mean, torch_squeeze
 
 
-from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER, NP_RANDOM
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER, NP_RANDOM, METHOD_NAME
 
 
 
@@ -129,7 +129,12 @@ class VPGDiffusion(DiffusionModel):
             self.output_weights(self.network)
 
 
-        self.build_actor(self.actor)
+        # self.build_actor(self.actor)
+        if "ViT" in METHOD_NAME:            
+            self.build_actor_vision(self.actor)
+        else:
+            self.build_actor(self.actor)
+
         
 
         if OUTPUT_VARIABLES:
@@ -143,11 +148,21 @@ class VPGDiffusion(DiffusionModel):
 
 
 
-        self.build_actor(self.actor_ft)
+        # self.build_actor(self.actor_ft)
+        if "ViT" in METHOD_NAME:            
+            self.build_actor_vision(self.actor_ft)
+        else:
+            self.build_actor(self.actor_ft)
+
 
         self.actor_ft.set_weights(self.actor.get_weights())
 
-        self.build_actor(self.actor_ft)
+        # self.build_actor(self.actor_ft)
+        if "ViT" in METHOD_NAME:            
+            self.build_actor_vision(self.actor_ft)
+        else:
+            self.build_actor(self.actor_ft)
+
 
         if OUTPUT_VARIABLES:
             self.output_weights(self.actor_ft)
@@ -361,7 +376,12 @@ class VPGDiffusion(DiffusionModel):
             # self.actor_ft = copy.deepcopy(self.actor)
             self.actor_ft = tf.keras.models.clone_model(self.actor)
 
-            self.build_actor(self.actor_ft)
+            # self.build_actor(self.actor_ft)
+            if "ViT" in METHOD_NAME:            
+                self.build_actor_vision(self.actor_ft)
+            else:
+                self.build_actor(self.actor_ft)
+
 
             self.actor_ft.set_weights(self.actor.get_weights())
 
