@@ -14,7 +14,7 @@ import math
 
 from util.torch_to_tf import nn_GELU, torch_flatten, nn_Conv2d, nn_GroupNorm, \
 nn_Linear, nn_LayerNorm, nn_Dropout, torch_rand, torch_zeros, nn_Sequential, \
-nn_Parameter, nn_ReLU, torch_nn_init_trunc_normal_, nn_Identity, torch_nn_init_zeros_
+nn_Parameter, nn_ReLU, torch_nn_init_trunc_normal_, nn_Identity, torch_nn_init_zeros_, save_tf_Variable, load_tf_Variable
 
 
 @dataclass
@@ -547,9 +547,12 @@ class MinVit(tf.keras.Model):
         num_channel=3,
         img_h=96,
         img_w=96,
+
         patch_embed = None,
         net = None,
         norm = None,
+        pos_embed = None,
+
         **kwargs
     ):
 
@@ -590,15 +593,27 @@ class MinVit(tf.keras.Model):
         else:
             assert False
 
-        self.pos_embed = nn_Parameter(
-            torch_zeros(1, self.patch_embed.num_patch, embed_dim)
-        )
+        if pos_embed:
+            self.pos_embed = pos_embed
+        else:
+            self.pos_embed = nn_Parameter(
+                torch_zeros(1, self.patch_embed.num_patch, embed_dim)
+            )
+
         layers = [
             TransformerLayer(embed_dim, num_head, dropout=0) for _ in range(depth)
         ]
 
-        self.net = nn_Sequential(*layers)
-        self.norm = nn_LayerNorm(embed_dim)
+        if net:
+            self.net = net
+        else:
+            self.net = nn_Sequential(*layers)
+
+        if norm:
+            self.norm = norm
+        else:
+            self.norm = nn_LayerNorm(embed_dim)
+    
         self.num_patches = self.patch_embed.num_patch
 
         # weight init
@@ -639,6 +654,10 @@ class MinVit(tf.keras.Model):
             "net": tf.keras.layers.serialize(self.net),
             "norm": tf.keras.layers.serialize(self.norm),
         })
+
+
+        save_tf_Variable(self.pos_embed, "MinVit_pos_embed")
+        
         
         return config
 
@@ -661,8 +680,9 @@ class MinVit(tf.keras.Model):
         net = tf.keras.layers.deserialize( config.pop("net"),  custom_objects=get_custom_objects() )
         norm = tf.keras.layers.deserialize( config.pop("norm"),  custom_objects=get_custom_objects() )
         
+        pos_embed = load_tf_Variable("MinVit_pos_embed")
 
-        return cls(patch_embed=patch_embed, net = net, norm = norm, **config)
+        return cls(patch_embed=patch_embed, net = net, norm = norm, pos_embed = pos_embed, **config)
 
 
     def call(self, x):

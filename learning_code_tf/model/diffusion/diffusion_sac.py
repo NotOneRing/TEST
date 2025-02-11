@@ -1,13 +1,12 @@
 """
-Soft Actor Critic (SAC) with Gaussian policy.
-
+Soft Actor Critic (SAC) with Diffusion policy.
 """
 
 import logging
 from copy import deepcopy
 
 
-from model.common.gaussian import GaussianModel
+from model.diffusion.diffusion import DiffusionModel
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ from util.torch_to_tf import torch_no_grad, torch_mean
 
 import tensorflow as tf
 
-class SAC_Gaussian(GaussianModel):
+class SAC_Diffusion(DiffusionModel):
     def __init__(
         self,
         actor,
@@ -25,7 +24,7 @@ class SAC_Gaussian(GaussianModel):
         **kwargs,
     ):
 
-        print("gaussian_sac.py: SAC_Gaussian.__init__()")
+        print("diffusion_sac.py: SAC_Diffusion.__init__()")
 
         super().__init__(network=actor, **kwargs)
 
@@ -39,7 +38,7 @@ class SAC_Gaussian(GaussianModel):
 
         self.actor = self.network
 
-
+        
 
     def loss_critic(
         self,
@@ -52,7 +51,7 @@ class SAC_Gaussian(GaussianModel):
         alpha,
     ):
 
-        print("gaussian_sac.py: SAC_Gaussian.loss_critic()")
+        print("diffusion_sac.py: SAC_Diffusion.loss_critic()")
 
         # with torch.no_grad():
         with torch_no_grad() as tape:
@@ -76,11 +75,9 @@ class SAC_Gaussian(GaussianModel):
         )
         return loss_critic
 
-
-
     def loss_actor(self, obs, alpha):
 
-        print("gaussian_sac.py: SAC_Gaussian.loss_actor()")
+        print("diffusion_sac.py: SAC_Diffusion.loss_actor()")
 
         action, logprob = self.call(
             obs,
@@ -92,11 +89,9 @@ class SAC_Gaussian(GaussianModel):
         loss_actor = -torch_min(current_q1, current_q2) + alpha * logprob
         return torch_mean(loss_actor)
     
-
-
     def loss_temperature(self, obs, alpha, target_entropy):
 
-        print("gaussian_sac.py: SAC_Gaussian.loss_temperature()")
+        print("diffusion_sac.py: SAC_Diffusion.loss_temperature()")
 
         # with torch.no_grad():
         with torch_no_grad() as tape:
@@ -113,7 +108,7 @@ class SAC_Gaussian(GaussianModel):
 
     def update_target_critic(self, tau):
 
-        print("gaussian_sac.py: SAC_Gaussian.update_target_critic()")
+        print("diffusion_sac.py: SAC_Diffusion.update_target_critic()")
 
         critic_variables = self.critic.trainable_variables
         target_critic_variables = self.target_critic.trainable_variables

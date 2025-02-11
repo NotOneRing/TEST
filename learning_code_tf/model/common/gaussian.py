@@ -570,10 +570,10 @@ class GaussianModel(tf.keras.Model):
             network_override=network_override,
         )
 
-        # if reparameterize:
-        #     sampled_action = dist.rsample()  # reparameterized sample
-        # else:
-        sampled_action = dist.sample()  # standard sample
+        if reparameterize:
+            sampled_action = dist.rsample()  # reparameterized sample
+        else:
+            sampled_action = dist.sample()  # standard sample
 
 
         # Clipping the sampled action (similar to PyTorch clamp_)
@@ -596,6 +596,160 @@ class GaussianModel(tf.keras.Model):
             
 
 
+
+
+
+
+    def build_actor(self, actor, shape1=None, shape2=None):
+        # return
+    
+        print("build_actor: self.env_name = ", self.env_name)
+
+        if shape1 != None and shape2 != None:
+            pass
+        # Gym - hopper/walker2d/halfcheetah
+        elif self.env_name == "hopper-medium-v2":
+            # hopper_medium
+            # item_actions_copy.shape =  
+            shape1 = (128, 4, 3)
+            # cond_copy['state'].shape =  
+            shape2 = (128, 1, 11)
+        elif self.env_name == "kitchen-complete-v0":
+            shape1 = (128, 4, 9)
+            shape2 = (128, 1, 60)
+        elif self.env_name == "kitchen-mixed-v0":
+            shape1 = (256, 4, 9)
+            shape2 = (256, 1, 60)
+        elif self.env_name == "kitchen-partial-v0":
+            shape1 = (128, 4, 9)
+            shape2 = (128, 1, 60)
+        elif self.env_name == "walker2d-medium-v2":
+            shape1 = (128, 4, 6)
+            shape2 = (128, 1, 17)
+        elif self.env_name == "halfcheetah-medium-v2":
+            shape1 = (128, 4, 6)
+            shape2 = (128, 1, 17)
+        # Robomimic - lift/can/square/transport
+        elif self.env_name == "lift":
+            shape1 = (256, 4, 7)
+            shape2 = (256, 1, 19)
+
+        elif self.env_name == "can":
+            #can 
+            # item_actions_copy.shape =  
+            shape1 = (256, 4, 7)
+            # cond_copy['state'].shape =  
+            shape2 = (256, 1, 23)
+
+        elif self.env_name == "square":
+            shape1 = (256, 4, 7)
+            shape2 = (256, 1, 23)
+
+        elif self.env_name == "transport":
+            shape1 = (256, 8, 14)
+            shape2 = (256, 1, 59)
+
+        # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
+        elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
+            #avoid_m1
+            # item_actions_copy.shape =  
+            shape1 = (16, 4, 2)
+            # cond_copy['state'].shape =  
+            shape2 = (16, 1, 4)
+
+        # Furniture-Bench - one_leg/lamp/round_table_low/med
+        elif self.env_name == "lamp_low_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 44)
+        elif self.env_name == "lamp_med_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 44)
+        elif self.env_name == "one_leg_low_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 58)
+        elif self.env_name == "one_leg_med_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 58)
+        elif self.env_name == "round_table_low_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 44)
+        elif self.env_name == "round_table_med_dim":
+            shape1 = (256, 8, 10)
+            shape2 = (256, 1, 44)
+        
+        else:
+            # #one_leg_low
+            # # item_actions_copy.shape =  
+            # shape1 = (256, 8, 10)
+            # # cond_copy['state'].shape =  
+            # shape2 = (256, 1, 58)
+            raise RuntimeError("The build shape is not implemented for current dataset")
+
+
+        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
+        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
+
+
+        if OUTPUT_VARIABLES:
+            print("type(shape1) = ", type(shape1))
+            print("type(shape2) = ", type(shape2))
+
+            print("shape1 = ", shape1)
+            print("shape2 = ", shape2)
+
+
+        param1 = torch_ones(*shape1)
+        param2 = torch_ones(*shape2)
+
+        build_dict = {'state': param2}
+
+
+        
+        # _ = self.loss_ori(param1, build_dict)
+        all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict, ent_coef = 0)
+
+        print("all_one_build_result = ", all_one_build_result)
+
+
+
+
+
+
+
+
+
+
+    def build_actor_vision(self, actor, shape1=None, shape2=None):
+        # return
+    
+        print("build_actor_vision: self.env_name = ", self.env_name)
+
+        if shape1 != None and shape2 != None:
+            pass
+
+        elif self.env_name == "square":
+            shape1 = (256, 4, 7)
+            shape2 = (256, 1, 9)
+            shape3 = (256, 1, 3, 96, 96)     
+        elif self.env_name == "transport":
+            shape1 =  (256, 8, 14)
+            shape2 =  (256, 1, 18)
+            shape3 =  (256, 1, 6, 96, 96)
+        else:
+            raise RuntimeError("The build shape is not implemented for current dataset")
+
+
+        param1 = torch_ones(*shape1)
+        param2 = torch_ones(*shape2)
+        param3 = torch_ones(*shape3)
+
+        build_dict = {'state': param2}
+        build_dict['rgb'] = param3
+
+
+        all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict, ent_coef = 0)
+
+        print("all_one_build_result = ", all_one_build_result)
 
 
 
@@ -930,160 +1084,6 @@ class GaussianModel(tf.keras.Model):
 
 
 
-
-
-
-
-    def build_actor(self, actor, shape1=None, shape2=None):
-        # return
-    
-        print("build_actor: self.env_name = ", self.env_name)
-
-        if shape1 != None and shape2 != None:
-            pass
-        # Gym - hopper/walker2d/halfcheetah
-        elif self.env_name == "hopper-medium-v2":
-            # hopper_medium
-            # item_actions_copy.shape =  
-            shape1 = (128, 4, 3)
-            # cond_copy['state'].shape =  
-            shape2 = (128, 1, 11)
-        elif self.env_name == "kitchen-complete-v0":
-            shape1 = (128, 4, 9)
-            shape2 = (128, 1, 60)
-        elif self.env_name == "kitchen-mixed-v0":
-            shape1 = (256, 4, 9)
-            shape2 = (256, 1, 60)
-        elif self.env_name == "kitchen-partial-v0":
-            shape1 = (128, 4, 9)
-            shape2 = (128, 1, 60)
-        elif self.env_name == "walker2d-medium-v2":
-            shape1 = (128, 4, 6)
-            shape2 = (128, 1, 17)
-        elif self.env_name == "halfcheetah-medium-v2":
-            shape1 = (128, 4, 6)
-            shape2 = (128, 1, 17)
-        # Robomimic - lift/can/square/transport
-        elif self.env_name == "lift":
-            shape1 = (256, 4, 7)
-            shape2 = (256, 1, 19)
-
-        elif self.env_name == "can":
-            #can 
-            # item_actions_copy.shape =  
-            shape1 = (256, 4, 7)
-            # cond_copy['state'].shape =  
-            shape2 = (256, 1, 23)
-
-        elif self.env_name == "square":
-            shape1 = (256, 4, 7)
-            shape2 = (256, 1, 23)
-
-        elif self.env_name == "transport":
-            shape1 = (256, 8, 14)
-            shape2 = (256, 1, 59)
-
-        # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
-        elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
-            #avoid_m1
-            # item_actions_copy.shape =  
-            shape1 = (16, 4, 2)
-            # cond_copy['state'].shape =  
-            shape2 = (16, 1, 4)
-
-        # Furniture-Bench - one_leg/lamp/round_table_low/med
-        elif self.env_name == "lamp_low_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 44)
-        elif self.env_name == "lamp_med_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 44)
-        elif self.env_name == "one_leg_low_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 58)
-        elif self.env_name == "one_leg_med_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 58)
-        elif self.env_name == "round_table_low_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 44)
-        elif self.env_name == "round_table_med_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 44)
-        
-        else:
-            # #one_leg_low
-            # # item_actions_copy.shape =  
-            # shape1 = (256, 8, 10)
-            # # cond_copy['state'].shape =  
-            # shape2 = (256, 1, 58)
-            raise RuntimeError("The build shape is not implemented for current dataset")
-
-
-        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
-        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
-
-
-        if OUTPUT_VARIABLES:
-            print("type(shape1) = ", type(shape1))
-            print("type(shape2) = ", type(shape2))
-
-            print("shape1 = ", shape1)
-            print("shape2 = ", shape2)
-
-
-        param1 = torch_ones(*shape1)
-        param2 = torch_ones(*shape2)
-
-        build_dict = {'state': param2}
-
-
-        
-        # _ = self.loss_ori(param1, build_dict)
-        all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict, ent_coef = 0)
-
-        print("all_one_build_result = ", all_one_build_result)
-
-
-
-
-
-
-
-
-
-
-    def build_actor_vision(self, actor, shape1=None, shape2=None):
-        # return
-    
-        print("build_actor_vision: self.env_name = ", self.env_name)
-
-        if shape1 != None and shape2 != None:
-            pass
-
-        elif self.env_name == "square":
-            shape1 = (256, 4, 7)
-            shape2 = (256, 1, 9)
-            shape3 = (256, 1, 3, 96, 96)     
-        elif self.env_name == "transport":
-            shape1 =  (256, 8, 14)
-            shape2 =  (256, 1, 18)
-            shape3 =  (256, 1, 6, 96, 96)
-        else:
-            raise RuntimeError("The build shape is not implemented for current dataset")
-
-
-        param1 = torch_ones(*shape1)
-        param2 = torch_ones(*shape2)
-        param3 = torch_ones(*shape3)
-
-        build_dict = {'state': param2}
-        build_dict['rgb'] = param3
-
-
-        all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict, ent_coef = 0)
-
-        print("all_one_build_result = ", all_one_build_result)
 
 
 

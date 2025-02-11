@@ -119,6 +119,7 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                         # .to(self.device)
                         for key in self.obs_dims
                     }
+
                     samples = self.model(
                         cond=cond,
                         deterministic=eval_mode,

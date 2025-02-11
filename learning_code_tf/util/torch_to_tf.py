@@ -1973,14 +1973,80 @@ class nn_Linear(tf.keras.layers.Layer):
 
 
 
+# class nn_Parameter(tf.keras.layers.Layer):
+#     def __init__(self, data=None, requires_grad=True):
+#         super().__init__(trainable=requires_grad)  # 重要！确保 trainable 被正确初始化
+#         if data is None:
+#             raise ValueError("data cannot be None. Please provide a tensor value.")
+#         if requires_grad:
+#             raise ValueError("requires grad version is not implemented right now.")
+#             # self.data = tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+#         else:
+#             self.data =  tf.convert_to_tensor(data)
+
+#     def __tf_tensor__(self):
+#         return self.data
+    
+#     def __array__(self):
+#         return self.data.numpy()
+
+
+#     def numpy(self):
+#         return self.data.numpy()
+    
+
+
 
 def nn_Parameter(data=None, requires_grad=True):
     if data is None:
         raise ValueError("data cannot be None. Please provide a tensor value.")
-    if requires_grad:
-        return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+    # if requires_grad:
+    return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+    # else:
+    #     return tf.convert_to_tensor(data)
+
+
+
+
+def save_tf_Variable(tensor, save_tensor_name):
+    base_path = "/ssddata/qtguo/GENERAL_DATA/"
+    params_dict = {}
+    result = tensor.numpy()
+    params_dict[save_tensor_name] = result
+
+    if isinstance(tensor, tf.Variable):
+        params_dict["trainble"] = tensor.trainable
     else:
-        return tf.convert_to_tensor(data)
+        raise RuntimeError("save_tf_Variable tensor type wrong")
+
+    import pickle
+
+    pkl_file_path = base_path + save_tensor_name + '.pkl'
+    
+    print("pkl_file_path = ", pkl_file_path)
+
+    with open(pkl_file_path, 'wb') as f:
+        pickle.dump(params_dict, f)
+
+
+
+def load_tf_Variable(load_tensor_name):    
+    base_path = "/ssddata/qtguo/GENERAL_DATA/"
+    pkl_file_path = base_path + load_tensor_name + '.pkl'
+
+    print("pkl_file_path = ", pkl_file_path)
+
+    import pickle
+
+    with open(pkl_file_path, 'rb') as file:
+        params_dict = pickle.load(file)
+
+    trainable = params_dict["trainable"]
+    result = tf.Variable( params_dict[load_tensor_name] , trainable = trainable)
+
+    return result
+
+
 
 
 

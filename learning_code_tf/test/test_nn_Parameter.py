@@ -12,11 +12,24 @@ print(f"Requires grad: {param_torch.requires_grad}")
 
 import tensorflow as tf
 
-from util.torch_to_tf import nn_Parameter
+from util.torch_to_tf import nn_Parameter, torch_exp
 
 # Define the data and create a TensorFlow parameter
 data = tf.constant([[1.0, 2.0], [3.0, 4.0]], dtype=tf.float32)
+# param = nn_Parameter(data, requires_grad=True)
+
+# a = torch_exp(param)
+# print("type(a) = ", type(a))
+
 param = nn_Parameter(data, requires_grad=True)
+
+a = torch_exp(param)
+print("type(a) = ", type(a))
+
+if isinstance(a, tf.Variable):
+    print("a.trainable = ", a.trainable)
+
+
 
 # Print param details
 print("\nTensorFlow Parameter:")

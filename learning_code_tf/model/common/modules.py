@@ -10,11 +10,11 @@ import numpy as np
 from util.torch_to_tf import nn_Sequential, nn_Linear,\
 nn_LayerNorm, nn_ReLU, nn_Parameter, torch_zeros, nn_Dropout,\
 torch_tensor_transpose, torch_cat, torch_tensor_repeat, torch_unsqueeze,\
-torch_sum, torch_tensor
+torch_sum, torch_tensor, save_tf_Variable, load_tf_Variable
 
 # class SpatialEmb(nn.Module):
 class SpatialEmb(tf.keras.layers.Layer):
-    def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout, serialized_input_proj = None, serialized_dropout = None, **kwargs):
+    def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout, serialized_input_proj = None, serialized_dropout = None, weight = None, **kwargs):
 
         print("modules.py: SpatialEmb.__init__()")
 
@@ -41,14 +41,14 @@ class SpatialEmb(tf.keras.layers.Layer):
 
         #输入是proj_in_dim维度的
         # Input projection layers
-        if serialized_input_proj == None:
+        if serialized_input_proj:
+            self.input_proj = serialized_input_proj
+        else:
             self.input_proj = nn_Sequential([
                 nn_Linear(proj_in_dim, proj_dim, name_Dense="SpatialEmb_input_proj_1"),
                 nn_LayerNorm(proj_dim),
                 nn_ReLU(inplace=True)
             ])
-        else:
-            self.input_proj = serialized_input_proj
         # # Learnable weights
         # self.weight = self.add_weight(
         #     shape=(1, num_proj, proj_dim),
@@ -56,14 +56,17 @@ class SpatialEmb(tf.keras.layers.Layer):
         #     trainable=True,
         #     name="weight"
         # )
-        
-        self.weight = nn_Parameter(torch_zeros(1, num_proj, proj_dim))
 
-
-        if serialized_dropout == None:
-            self.dropout = nn_Dropout(dropout)
+        if weight:
+            self.weight = weight
         else:
+            self.weight = nn_Parameter(torch_zeros(1, num_proj, proj_dim))
+
+
+        if serialized_dropout:
             self.dropout = serialized_dropout
+        else:
+            self.dropout = nn_Dropout(dropout)
         
         
         
@@ -102,6 +105,7 @@ class SpatialEmb(tf.keras.layers.Layer):
             "serialized_dropout": None,
             })
 
+        save_tf_Variable(self.weight, "SpatialEmb_weight")
 
         config.update({
                         "num_patch": self.num_patch,
@@ -155,7 +159,9 @@ class SpatialEmb(tf.keras.layers.Layer):
         else:
             serialized_dropout = None
 
-        return cls(serialized_input_proj=serialized_input_proj, serialized_dropout=serialized_dropout, **config)
+        weight = load_tf_Variable("SpatialEmb_weight")
+
+        return cls(serialized_input_proj=serialized_input_proj, serialized_dropout=serialized_dropout, weight=weight, **config)
 
 
     # def extra_repr(self) -> str:

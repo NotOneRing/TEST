@@ -16,7 +16,7 @@ from model.common.modules import SpatialEmb, RandomShiftsAug
 from util.torch_to_tf import nn_Linear, nn_Sequential, nn_LayerNorm,\
 nn_Dropout, nn_ReLU, nn_Parameter, torch_log, torch_tensor, torch_tensor_view,\
 torch_reshape, torch_flatten, torch_tensor_float, torch_cat, torch_tensor_repeat, torch_tanh, \
-torch_clamp, torch_exp, torch_ones_like
+torch_clamp, torch_exp, torch_ones_like, load_tf_Variable, save_tf_Variable
 
 
 
@@ -143,9 +143,14 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
         num_img=1,
         augment=False,
 
-        mlp_base = None,
         mlp_logvar = None,
         mlp_mean = None,
+        logvar = None,
+        logvar_min = None,
+        logvar_max = None,
+        compress = None, 
+        compress1 = None,
+        compress2 = None,
         **kwargs
     ):
 
@@ -183,31 +188,43 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
         if spatial_emb > 0:
             assert spatial_emb > 1, "this is the dimension"
             if num_img > 1:
-                self.compress1 = SpatialEmb(
-                    num_patch=self.backbone.num_patch,
-                    patch_dim=self.backbone.patch_repr_dim,
-                    prop_dim=cond_dim,
-                    proj_dim=spatial_emb,
-                    dropout=dropout,
-                )
-                self.compress2 = deepcopy(self.compress1)
+                if compress1:
+                    self.compress1 = compress1
+                else:
+                    self.compress1 = SpatialEmb(
+                        num_patch=self.backbone.num_patch,
+                        patch_dim=self.backbone.patch_repr_dim,
+                        prop_dim=cond_dim,
+                        proj_dim=spatial_emb,
+                        dropout=dropout,
+                    )
+                if compress2:
+                    self.compress2 = compress2
+                else:
+                    self.compress2 = deepcopy(self.compress2)
+
             else:  # TODO: clean up
-                self.compress = SpatialEmb(
-                    num_patch=self.backbone.num_patch,
-                    patch_dim=self.backbone.patch_repr_dim,
-                    prop_dim=cond_dim,
-                    proj_dim=spatial_emb,
-                    dropout=dropout,
-                )
+                if compress:
+                    self.compress = compress
+                else:
+                    self.compress = SpatialEmb(
+                        num_patch=self.backbone.num_patch,
+                        patch_dim=self.backbone.patch_repr_dim,
+                        prop_dim=cond_dim,
+                        proj_dim=spatial_emb,
+                        dropout=dropout,
+                    )
             visual_feature_dim = spatial_emb * num_img
         else:
-
-            self.compress = nn_Sequential([
-                nn_Linear(self.backbone.repr_dim, visual_feature_dim),
-                nn_LayerNorm(visual_feature_dim),
-                nn_Dropout(dropout),
-                nn_ReLU(),
-            ])
+            if compress:
+                self.compress = compress
+            else:
+                self.compress = nn_Sequential([
+                    nn_Linear(self.backbone.repr_dim, visual_feature_dim),
+                    nn_LayerNorm(visual_feature_dim),
+                    nn_Dropout(dropout),
+                    nn_ReLU(),
+                ])
 
         # head
         self.action_dim = action_dim
@@ -218,36 +235,52 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
             model = ResidualMLP
         else:
             model = MLP
-        self.mlp_mean = model(
-            [input_dim] + mlp_dims + [output_dim],
-            activation_type=activation_type,
-            out_activation_type="Identity",
-            use_layernorm=use_layernorm,
-        )
-        if fixed_std is None:
-            self.mlp_logvar = MLP(
-                [input_dim] + mlp_dims[-1:] + [output_dim],
+
+        if mlp_mean:
+            self.mlp_mean = mlp_mean
+        else:
+            self.mlp_mean = model(
+                [input_dim] + mlp_dims + [output_dim],
                 activation_type=activation_type,
                 out_activation_type="Identity",
                 use_layernorm=use_layernorm,
             )
+        if fixed_std is None:
+            if mlp_logvar:
+                self.mlp_logvar = mlp_logvar
+            else:
+                self.mlp_logvar = MLP(
+                    [input_dim] + mlp_dims[-1:] + [output_dim],
+                    activation_type=activation_type,
+                    out_activation_type="Identity",
+                    use_layernorm=use_layernorm,
+                )
         elif learn_fixed_std:  # initialize to fixed_std
-            self.logvar = nn_Parameter(
-                torch_log(torch_tensor( np.array([fixed_std**2 for _ in range(action_dim)]) )),
-                requires_grad=True,
+            if logvar:
+                self.logvar = logvar
+            else:
+                self.logvar = nn_Parameter(
+                    torch_log(torch_tensor( np.array([fixed_std**2 for _ in range(action_dim)]) )),
+                    requires_grad=True,
+                )
+
+
+        if logvar_min:
+            self.logvar_min = logvar_min
+        else:
+            self.logvar_min = nn_Parameter(
+                torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
+            )
+            self.logvar_min = tf.cast(self.logvar_min, tf.float32)
+
+        if logvar_max:
+            self.logvar_max = logvar_max
+            self.logvar_max = tf.cast(self.logvar_max, tf.float32)
+        else:
+            self.logvar_max = nn_Parameter(
+                torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
             )
 
-
-
-        self.logvar_min = nn_Parameter(
-            torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
-        )
-        self.logvar_max = nn_Parameter(
-            torch_log(torch_tensor( np.array( [std_max**2] ) )), requires_grad=False
-        )
-
-        self.logvar_min = tf.cast(self.logvar_min, tf.float32)
-        self.logvar_max = tf.cast(self.logvar_max, tf.float32)
 
         self.use_fixed_std = fixed_std is not None
         self.fixed_std = fixed_std
@@ -316,7 +349,21 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
             config.update({
                 "mlp_logvar": tf.keras.layers.serialize(self.mlp_logvar),
             })
-            
+
+        elif self.learn_fixed_std:  # initialize to fixed_std
+            save_tf_Variable(self.logvar, "Gaussian_VisionMLP_logvar")
+
+
+
+        save_tf_Variable(self.logvar_min, "Gaussian_VisionMLP_logvar_min")
+        save_tf_Variable(self.logvar_max, "Gaussian_VisionMLP_logvar_max")
+        
+        # config.update({
+        #     "logvar_min": "Gaussian_VisionMLP_logvar_min",
+        #     "logvar_max": "Gaussian_VisionMLP_logvar_max",
+        # })
+
+
         # print("self.mlp_mean = ", self.mlp_mean)
         config.update({
             "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
@@ -358,10 +405,24 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
 
 
         fixed_std = config.pop("fixed_std")
+
+        learn_fixed_std = config.pop("learn_fixed_std")
+
         if not fixed_std:
+            logvar = None
             mlp_logvar = tf.keras.layers.deserialize(config.pop("mlp_logvar"),  custom_objects=get_custom_objects() )
-        else:
+        elif learn_fixed_std:
+            logvar = load_tf_Variable("Gaussian_VisionMLP_logvar")
             mlp_logvar = None
+        else:
+            logvar = None
+            mlp_logvar = None
+
+
+
+        logvar_min = load_tf_Variable("Gaussian_VisionMLP_logvar_min")
+        logvar_max = load_tf_Variable("Gaussian_VisionMLP_logvar_max")
+        
 
         mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean") ,  custom_objects=get_custom_objects() )
 
@@ -386,7 +447,9 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
             compress1 = None
             compress2 = None
 
-        result = cls(backbone = backbone, fixed_std = fixed_std, mlp_logvar = mlp_logvar, mlp_mean = mlp_mean, spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1, compress2 = compress2, **config)
+        result = cls(backbone = backbone, fixed_std = fixed_std, mlp_logvar = mlp_logvar, mlp_mean = mlp_mean,\
+                    spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1,\
+                    compress2 = compress2, logvar = logvar, logvar_min = logvar_min, logvar_max = logvar_max, **config)
 
         return result
 

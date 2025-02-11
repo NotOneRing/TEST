@@ -141,6 +141,7 @@ class VisionDiffusionMLP(tf.keras.Model):
         **kwargs
     ):
 
+
         if OUTPUT_FUNCTION_HEADER:
             print("mlp_diffusion.py: VisionDiffusionMLP.__init__()")
 
@@ -175,30 +176,43 @@ class VisionDiffusionMLP(tf.keras.Model):
         if spatial_emb > 0:
             assert spatial_emb > 1, "this is the dimension"
             if num_img > 1:
-                self.compress1 = SpatialEmb(
-                    num_patch=self.backbone.num_patch,
-                    patch_dim=self.backbone.patch_repr_dim,
-                    prop_dim=cond_dim,
-                    proj_dim=spatial_emb,
-                    dropout=dropout,
-                )
-                self.compress2 = deepcopy(self.compress1)
+                if compress1:
+                    self.compress1 = compress1
+                else:
+                    self.compress1 = SpatialEmb(
+                        num_patch=self.backbone.num_patch,
+                        patch_dim=self.backbone.patch_repr_dim,
+                        prop_dim=cond_dim,
+                        proj_dim=spatial_emb,
+                        dropout=dropout,
+                    )
+                if compress2:
+                    self.compress2 = compress2
+                else:
+                    self.compress2 = deepcopy(self.compress1)
+
             else:  # TODO: clean up
-                self.compress = SpatialEmb(
-                    num_patch=self.backbone.num_patch,
-                    patch_dim=self.backbone.patch_repr_dim,
-                    prop_dim=cond_dim,
-                    proj_dim=spatial_emb,
-                    dropout=dropout,
-                )
+                if compress:
+                    self.compress = compress
+                else:
+                    self.compress = SpatialEmb(
+                        num_patch=self.backbone.num_patch,
+                        patch_dim=self.backbone.patch_repr_dim,
+                        prop_dim=cond_dim,
+                        proj_dim=spatial_emb,
+                        dropout=dropout,
+                    )
             visual_feature_dim = spatial_emb * num_img
         else:
-            self.compress = nn_Sequential([
-                nn_Linear(self.backbone.repr_dim, visual_feature_dim, name_Dense = "VisionDiffusionMLP_1"),
-                nn_LayerNorm(),
-                nn_Dropout(dropout),
-                nn_ReLU(),
-            ])
+            if compress:
+                self.compress = compress
+            else:
+                self.compress = nn_Sequential([
+                    nn_Linear(self.backbone.repr_dim, visual_feature_dim, name_Dense = "VisionDiffusionMLP_1"),
+                    nn_LayerNorm(),
+                    nn_Dropout(dropout),
+                    nn_ReLU(),
+                ])
 
         # diffusion
         # input_dim = time_dim + action_dim * horizon_steps + visual_feature_dim + cond_dim
@@ -208,12 +222,15 @@ class VisionDiffusionMLP(tf.keras.Model):
 
         output_dim = action_dim * horizon_steps
         
-        self.time_embedding = nn_Sequential([
-            SinusoidalPosEmb(time_dim),
-            nn_Linear(time_dim, time_dim * 2, name_Dense = "VisionDiffusionMLP_time_embedding1"),
-            nn_Mish(),
-            nn_Linear(time_dim * 2, time_dim, name_Dense = "VisionDiffusionMLP_time_embedding2"),
-        ])
+        if time_embedding:
+            self.time_embedding = time_embedding
+        else:
+            self.time_embedding = nn_Sequential([
+                SinusoidalPosEmb(time_dim),
+                nn_Linear(time_dim, time_dim * 2, name_Dense = "VisionDiffusionMLP_time_embedding1"),
+                nn_Mish(),
+                nn_Linear(time_dim * 2, time_dim, name_Dense = "VisionDiffusionMLP_time_embedding2"),
+            ])
 
         if residual_style:
             model = ResidualMLP
@@ -224,12 +241,16 @@ class VisionDiffusionMLP(tf.keras.Model):
 
         print("dim_list = ", dim_list)
 
-        self.mlp_mean = model(
-            dim_list,
-            activation_type=activation_type,
-            out_activation_type=out_activation_type,
-            use_layernorm=use_layernorm,
-        )
+        if mlp_mean:
+            self.mlp_mean
+        else:
+            self.mlp_mean = model(
+                dim_list,
+                activation_type=activation_type,
+                out_activation_type=out_activation_type,
+                use_layernorm=use_layernorm,
+            )
+
         self.time_dim = time_dim
 
 
@@ -362,7 +383,10 @@ class VisionDiffusionMLP(tf.keras.Model):
         backbone = tf.keras.layers.deserialize(config.pop("backbone"),  custom_objects=get_custom_objects() )
 
 
-        result = cls(backbone=backbone, spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1, compress2 = compress2, time_embedding = time_embedding, mlp_mean = mlp_mean, **config)
+        result = cls(backbone=backbone, spatial_emb = spatial_emb, num_img = num_img, \
+                     compress = compress, compress1 = compress1, compress2 = compress2, \
+                        time_embedding = time_embedding, mlp_mean = mlp_mean, **config)
+
         return result
 
 
