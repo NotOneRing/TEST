@@ -335,48 +335,12 @@ class TrainGaussianAgent(PreTrainAgent):
 
 
 
-    def save_load_params(self, params_name, params):
-
-        print("params_name =", params_name)
-        print("params = ", params)
-
-        for var in params.variables:
-            print(f"1: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
-
-        num_params = sum(np.prod(var.shape) for var in params.trainable_variables)
-        print(f"1:Number of network parameters: {num_params}")
-        print(f"1:Number of network parameters: {sum(var.numpy().size for var in params.trainable_variables)}")
-
-        import os
-
-        savepath = os.path.join("/ssddata/qtguo/GENERAL_DATA/save_load_test_path/", f"state_{1}.keras")
-
-
-        tf.keras.models.save_model(params, savepath)
-
-
-        from tensorflow.keras.utils import get_custom_objects
-
-
-        get_custom_objects().update(cur_dict)
-
-        network = tf.keras.models.load_model(savepath, custom_objects=get_custom_objects() )
-
-        # print(params_name, " = ", network)
-        for var in network.variables:
-            print("2:", params_name, f": Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
-
-
-        num_params = sum(np.prod(var.shape) for var in network.trainable_variables)
-        print(f"2:Number of network parameters: {num_params}")
-        print(f"2:Number of network parameters: {sum(var.numpy().size for var in network.trainable_variables)}")
 
 
 
 
 
-
-    def debug_gaussian_img_save_load(self):
+    def debug_diffusion_img_save_load(self):
 
 
         if hasattr(self.model.network, 'compress'):
@@ -396,9 +360,6 @@ class TrainGaussianAgent(PreTrainAgent):
 
         if hasattr(self.model.network, 'backbone'):
             self.save_load_params("self.model.network.backbone", self.model.network.backbone)
-
-        if hasattr(self.model.network, 'mlp_mean'):
-            self.save_load_params("self.model.network.mlp_mean", self.model.network.mlp_mean)
 
 
 
@@ -479,11 +440,11 @@ class TrainGaussianAgent(PreTrainAgent):
                     # break
                 
 
-                if DEBUG and epoch == 0:
+                if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
                     # self.debug_gmm_save_load()
                     # self.debug_gmm_mlp_save_load()
                     # self.debug_gmm_load_iter()
-                    self.debug_gaussian_img_save_load()
+                    self.debug_diffusion_img_save_load()
                     break
 
                 # print("loss_train = ", loss_train)

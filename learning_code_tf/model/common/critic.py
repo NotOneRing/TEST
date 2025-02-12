@@ -199,20 +199,27 @@ class CriticObsAct(tf.keras.Model):
             model = ResidualMLP
         else:
             model = MLP
-        self.Q1 = model(
-            mlp_dims,
-            activation_type=activation_type,
-            out_activation_type="Identity",
-            use_layernorm=use_layernorm,
-        )
 
-        if double_q:
-            self.Q2 = model(
+        if Q1:
+            self.Q1 = Q1
+        else:
+            self.Q1 = model(
                 mlp_dims,
                 activation_type=activation_type,
                 out_activation_type="Identity",
                 use_layernorm=use_layernorm,
             )
+
+        if double_q:
+            if Q2:
+                self.Q2 = Q2
+            else:
+                self.Q2 = model(
+                    mlp_dims,
+                    activation_type=activation_type,
+                    out_activation_type="Identity",
+                    use_layernorm=use_layernorm,
+                )
 
 
     def get_config(self):
@@ -453,6 +460,189 @@ class ViTCritic(CriticObs):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class CriticObsAct_DACER(tf.keras.Model):
+    """State-action double critic network."""
+
+    def __init__(
+        self,
+        cond_dim,
+        mlp_dims,
+        action_dim,
+        action_steps=1,
+        activation_type="Mish",
+        use_layernorm=False,
+        residual_tyle=False,
+        double_q=True,
+        Q1 = None,
+        Q2 = None,
+        **kwargs,
+    ):
+        self.cond_dim = cond_dim
+        self.mlp_dims = list(mlp_dims)
+        self.action_dim = action_dim
+        self.action_steps = action_steps
+        self.activation_type=activation_type
+        self.use_layernorm=use_layernorm
+        self.residual_tyle=residual_tyle
+        self.double_q=double_q
+
+        print("critic.py: CriticObsAct.__init__()")
+
+        super().__init__()
+        mlp_dims = [cond_dim + action_dim * action_steps] + mlp_dims + [2]
+        if residual_tyle:
+            model = ResidualMLP
+        else:
+            model = MLP
+
+        if Q1:
+            self.Q1 = Q1
+        else:
+            self.Q1 = model(
+                mlp_dims,
+                activation_type=activation_type,
+                out_activation_type="Identity",
+                use_layernorm=use_layernorm,
+            )
+
+        if double_q:
+            if Q2:
+                self.Q2 = Q2
+            else:
+                self.Q2 = model(
+                    mlp_dims,
+                    activation_type=activation_type,
+                    out_activation_type="Identity",
+                    use_layernorm=use_layernorm,
+                )
+
+
+    def get_config(self):
+        # print("CriticObsAct: get_config()")
+        config = super(CriticObsAct, self).get_config()
+
+
+        print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
+        print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
+        print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
+        print(f"action_steps: {self.action_steps}, type: {type(self.action_steps)}")
+        print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
+        print(f"use_layernorm: {self.use_layernorm}, type: {type(self.use_layernorm)}")
+        print(f"residual_tyle: {self.residual_tyle}, type: {type(self.residual_tyle)}")
+        print(f"double_q: {self.double_q}, type: {type(self.double_q)}")
+
+        print(f"Q1: {self.Q1}, type: {type(self.Q1)}")
+        print(f"Q2: {self.Q2}, type: {type(self.Q2)}")
+
+
+        config.update({
+            "cond_dim" : self.cond_dim,
+            "mlp_dims" : self.mlp_dims,
+            "action_dim" : self.action_dim,
+            "action_steps" : self.action_steps,
+            "activation_type" : self.activation_type,
+            "use_layernorm" : self.use_layernorm,
+            "residual_tyle" : self.residual_tyle,
+            "double_q" : self.double_q
+        })
+    
+    
+        config.update({
+            "Q1": 
+            tf.keras.layers.serialize(self.Q1),
+            "Q2": 
+            tf.keras.layers.serialize(self.Q2),
+        })
+
+        return config
+
+
+
+    @classmethod
+    def from_config(cls, config):
+        print("DiffusionMLP: from_config()")
+
+        from tensorflow.keras.utils import get_custom_objects
+
+
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        Q1 = tf.keras.layers.deserialize(config.pop("Q1") ,  custom_objects=get_custom_objects() )
+
+        Q2 = tf.keras.layers.deserialize(config.pop("Q2") ,  custom_objects=get_custom_objects() )
+
+
+        result = cls(Q1 = Q1, Q2 = Q2, **config)
+        return result
+
+
+
+
+
+    def call(self, cond: dict, action):
+        """
+        cond: dict with key state/rgb; more recent obs at the end
+            state: (B, To, Do)
+        action: (B, Ta, Da)
+        """
+
+        print("critic.py: CriticObsAct.call()")
+
+        B = tf.shape(cond["state"])[0]
+
+        # flatten history
+        # state = tf.reshape(cond["state"], [B, -1])
+        state = torch_tensor_view(cond["state"], [B, -1])
+
+        # flatten action
+        # action = tf.reshape(action, [B, -1])
+        action = torch_tensor_view(action, [B, -1])
+
+        # x = tf.concat([state, action], axis=-1)
+        x = torch_cat((state, action), dim=-1)
+        
+        q1 = self.Q1(x)
+        if hasattr(self, 'Q2'):
+            q2 = self.Q2(x)
+
+            q1_mean, q1_std = q1[..., 0], q1[..., 1]
+            q2_mean, q2_std = q2[..., 0], q2[..., 1]
+
+            # return torch_squeeze(q1, 1), torch_squeeze(q2, 1)
+            return torch_squeeze(q1_mean, 1), torch_squeeze(q1_std, 1), torch_squeeze(q2_mean, 1), torch_squeeze(q2_std, 1)
+        else:
+            # return torch_squeeze(q1, 1)
+            return torch_squeeze(q1_mean, 1), torch_squeeze(q1_std, 1)
 
 
 

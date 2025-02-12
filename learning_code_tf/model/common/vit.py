@@ -16,6 +16,7 @@ from util.torch_to_tf import nn_GELU, torch_flatten, nn_Conv2d, nn_GroupNorm, \
 nn_Linear, nn_LayerNorm, nn_Dropout, torch_rand, torch_zeros, nn_Sequential, \
 nn_Parameter, nn_ReLU, torch_nn_init_trunc_normal_, nn_Identity, torch_nn_init_zeros_, save_tf_Variable, load_tf_Variable
 
+from util.config import DATASET_NAME
 
 @dataclass
 class VitEncoderConfig:
@@ -44,6 +45,9 @@ class VitEncoder(tf.keras.layers.Layer):
         cfg_embed_norm = None,
         cfg_num_heads = None,
         cfg_depth = None,
+
+        vit = None,
+
         **kwargs
     ):
 
@@ -64,16 +68,19 @@ class VitEncoder(tf.keras.layers.Layer):
             self.cfg_num_heads = cfg.num_heads
             self.cfg_depth = cfg.depth
 
-            self.vit = MinVit(
-                embed_style=cfg.embed_style,
-                embed_dim=cfg.embed_dim,
-                embed_norm=cfg.embed_norm,
-                num_head=cfg.num_heads,
-                depth=cfg.depth,
-                num_channel=num_channel,
-                img_h=img_h,
-                img_w=img_w,
-            )
+            if vit is not None:
+                self.vit = vit
+            else:
+                self.vit = MinVit(
+                    embed_style=cfg.embed_style,
+                    embed_dim=cfg.embed_dim,
+                    embed_norm=cfg.embed_norm,
+                    num_head=cfg.num_heads,
+                    depth=cfg.depth,
+                    num_channel=num_channel,
+                    img_h=img_h,
+                    img_w=img_w,
+                )
         else:
             self.cfg_embed_style = cfg_embed_style
             self.cfg_embed_dim = cfg_embed_dim
@@ -81,16 +88,19 @@ class VitEncoder(tf.keras.layers.Layer):
             self.cfg_num_heads = cfg_num_heads
             self.cfg_depth = cfg_depth
 
-            self.vit = MinVit(
-                embed_style=cfg_embed_style,
-                embed_dim=cfg_embed_dim,
-                embed_norm=cfg_embed_norm,
-                num_head=cfg_num_heads,
-                depth=cfg_depth,
-                num_channel=num_channel,
-                img_h=img_h,
-                img_w=img_w,
-            )
+            if vit is not None:
+                self.vit = vit
+            else:
+                self.vit = MinVit(
+                    embed_style=cfg_embed_style,
+                    embed_dim=cfg_embed_dim,
+                    embed_norm=cfg_embed_norm,
+                    num_head=cfg_num_heads,
+                    depth=cfg_depth,
+                    num_channel=num_channel,
+                    img_h=img_h,
+                    img_w=img_w,
+                )
 
         self.img_h = img_h
         self.img_w = img_w
@@ -593,7 +603,7 @@ class MinVit(tf.keras.Model):
         else:
             assert False
 
-        if pos_embed:
+        if pos_embed is not None:
             self.pos_embed = pos_embed
         else:
             self.pos_embed = nn_Parameter(
@@ -656,7 +666,7 @@ class MinVit(tf.keras.Model):
         })
 
 
-        save_tf_Variable(self.pos_embed, "MinVit_pos_embed")
+        save_tf_Variable(self.pos_embed, "MinVit_pos_embed" + DATASET_NAME)
         
         
         return config
@@ -680,7 +690,7 @@ class MinVit(tf.keras.Model):
         net = tf.keras.layers.deserialize( config.pop("net"),  custom_objects=get_custom_objects() )
         norm = tf.keras.layers.deserialize( config.pop("norm"),  custom_objects=get_custom_objects() )
         
-        pos_embed = load_tf_Variable("MinVit_pos_embed")
+        pos_embed = load_tf_Variable("MinVit_pos_embed" + DATASET_NAME)
 
         return cls(patch_embed=patch_embed, net = net, norm = norm, pos_embed = pos_embed, **config)
 

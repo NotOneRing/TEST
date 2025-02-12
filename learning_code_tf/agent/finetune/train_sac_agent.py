@@ -40,6 +40,7 @@ class TrainSACAgent(TrainAgent):
             self.model.network.trainable_variables,
             lr=cfg.train.actor_lr,
         )
+        
         self.critic_optimizer = torch_optim_Adam(
             self.model.critic.trainable_variables,
             lr=cfg.train.critic_lr,

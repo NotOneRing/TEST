@@ -40,8 +40,16 @@ class TrainDacerAgent(TrainAgent):
             self.model.network.trainable_variables,
             lr=cfg.train.actor_lr,
         )
-        self.critic_optimizer = torch_optim_Adam(
-            self.model.critic.trainable_variables,
+
+
+
+        self.critic1_optimizer = torch_optim_Adam(
+            self.model.critic.Q1.trainable_variables,
+            lr=cfg.train.critic_lr,
+        )
+
+        self.critic2_optimizer = torch_optim_Adam(
+            self.model.critic.Q2.trainable_variables,
             lr=cfg.train.critic_lr,
         )
 
@@ -282,7 +290,7 @@ class TrainDacerAgent(TrainAgent):
 
 
                 with tf.GradientTape() as tape:
-                    loss_critic = self.model.loss_critic(
+                    loss_critic1, loss_critic2 = self.model.loss_critic(
                         {"state": obs_b},
                         {"state": next_obs_b},
                         actions_b,
@@ -292,9 +300,12 @@ class TrainDacerAgent(TrainAgent):
                         alpha,
                     )
 
-                tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
+                tf_Q1_gradients = tape.gradient(loss_critic1, self.model.critic.Q1.trainable_variables)
 
-                self.critic_optimizer.step(tf_gradients)
+                tf_Q2_gradients = tape.gradient(loss_critic2, self.model.critic.Q2.trainable_variables)
+
+                self.critic1_optimizer.step(tf_Q1_gradients)
+                self.critic2_optimizer.step(tf_Q2_gradients)
 
 
                 # Update target critic every critic update
@@ -302,30 +313,32 @@ class TrainDacerAgent(TrainAgent):
 
                 # Delay update actor
                 loss_actor = 0
-                if self.itr % self.actor_update_freq == 0:
-                    for _ in range(2):
+                # if self.itr % self.actor_update_freq == 0:
+                #     for _ in range(2):
 
 
-                        with tf.GradientTape() as tape:
-                            loss_actor = self.model.loss_actor(
-                                {"state": obs_b},
-                                alpha,
-                            )
+                with tf.GradientTape() as tape:
+                    loss_actor = self.model.loss_actor(
+                        {"state": obs_b},
+                        alpha,
+                    )
 
 
-                        tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
-                        self.actor_optimizer.step(tf_gradients)
+                tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+                self.actor_optimizer.step(tf_gradients)
 
-                        with tf.GradientTape() as tape:
-                            # Update temperature parameter
-                            loss_alpha = self.model.loss_temperature(
-                                {"state": obs_b},
-                                torch_exp( self.log_alpha ),  # with grad
-                                self.target_entropy,
-                            )
+                with tf.GradientTape() as tape:
+                    # Update temperature parameter
+                    loss_alpha = self.model.loss_temperature(
+                        {"state": obs_b},
+                        torch_exp( self.log_alpha ),  # with grad
+                        self.target_entropy,
+                    )
 
-                        tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])
-                        self.log_alpha_optimizer.step(tf_gradients)
+                tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])
+                self.log_alpha_optimizer.step(tf_gradients)
+
+
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:

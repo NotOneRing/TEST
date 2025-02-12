@@ -154,8 +154,15 @@ class VisionDiffusionMLP(tf.keras.Model):
         self.cond_dim = cond_dim
         # self.img_cond_steps
         # self.time_dim = time_dim
+
+
         if not isinstance(mlp_dims, list):
             self.mlp_dims = list(mlp_dims)
+        else:
+            self.mlp_dims = mlp_dims
+
+
+
         self.activation_type = activation_type
         self.out_activation_type = out_activation_type
         self.use_layernorm = use_layernorm
@@ -242,7 +249,7 @@ class VisionDiffusionMLP(tf.keras.Model):
         print("dim_list = ", dim_list)
 
         if mlp_mean:
-            self.mlp_mean
+            self.mlp_mean = mlp_mean
         else:
             self.mlp_mean = model(
                 dim_list,
@@ -383,9 +390,7 @@ class VisionDiffusionMLP(tf.keras.Model):
         backbone = tf.keras.layers.deserialize(config.pop("backbone"),  custom_objects=get_custom_objects() )
 
 
-        result = cls(backbone=backbone, spatial_emb = spatial_emb, num_img = num_img, \
-                     compress = compress, compress1 = compress1, compress2 = compress2, \
-                        time_embedding = time_embedding, mlp_mean = mlp_mean, **config)
+        result = cls(backbone=backbone, spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1, compress2 = compress2, time_embedding = time_embedding, mlp_mean = mlp_mean, **config)
 
         return result
 

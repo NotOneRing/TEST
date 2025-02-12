@@ -12,6 +12,9 @@ nn_LayerNorm, nn_ReLU, nn_Parameter, torch_zeros, nn_Dropout,\
 torch_tensor_transpose, torch_cat, torch_tensor_repeat, torch_unsqueeze,\
 torch_sum, torch_tensor, save_tf_Variable, load_tf_Variable
 
+from util.config import DATASET_NAME
+
+
 # class SpatialEmb(nn.Module):
 class SpatialEmb(tf.keras.layers.Layer):
     def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout, serialized_input_proj = None, serialized_dropout = None, weight = None, **kwargs):
@@ -57,7 +60,7 @@ class SpatialEmb(tf.keras.layers.Layer):
         #     name="weight"
         # )
 
-        if weight:
+        if weight is not None:
             self.weight = weight
         else:
             self.weight = nn_Parameter(torch_zeros(1, num_proj, proj_dim))
@@ -82,30 +85,30 @@ class SpatialEmb(tf.keras.layers.Layer):
         print(f"proj_dim: {self.proj_dim}, type: {type(self.proj_dim)}")
         print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
 
-        if hasattr(self, 'serialized_input_proj'):
-            print(f"serialized_input_proj: {self.serialized_input_proj}, type: {type(self.serialized_input_proj)}")
+        # if hasattr(self, 'serialized_input_proj'):
+        #     print(f"serialized_input_proj: {self.serialized_input_proj}, type: {type(self.serialized_input_proj)}")
 
-            config.update({
-            "serialized_input_proj": tf.keras.layers.serialize(self.input_proj),
-            })
-        else:
-            config.update({
-            "serialized_input_proj": None,
-            })
+        config.update({
+        "serialized_input_proj": tf.keras.layers.serialize(self.input_proj),
+        })
+        # else:
+        #     config.update({
+        #     "serialized_input_proj": None,
+        #     })
             
 
-        if hasattr(self, 'serialized_dropout'):
-            print(f"serialized_dropout: {self.serialized_dropout}, type: {type(self.serialized_dropout)}")
+        # if hasattr(self, 'serialized_dropout'):
+        #     print(f"serialized_dropout: {self.serialized_dropout}, type: {type(self.serialized_dropout)}")
 
-            config.update({
-            "serialized_dropout": tf.keras.layers.serialize(self.dropout)
-            })
-        else:
-            config.update({
-            "serialized_dropout": None,
-            })
+        config.update({
+        "serialized_dropout": tf.keras.layers.serialize(self.dropout)
+        })
+        # else:
+        #     config.update({
+        #     "serialized_dropout": None,
+        #     })
 
-        save_tf_Variable(self.weight, "SpatialEmb_weight")
+        save_tf_Variable(self.weight, "SpatialEmb_weight" + DATASET_NAME)
 
         config.update({
                         "num_patch": self.num_patch,
@@ -159,7 +162,7 @@ class SpatialEmb(tf.keras.layers.Layer):
         else:
             serialized_dropout = None
 
-        weight = load_tf_Variable("SpatialEmb_weight")
+        weight = load_tf_Variable("SpatialEmb_weight" + DATASET_NAME)
 
         return cls(serialized_input_proj=serialized_input_proj, serialized_dropout=serialized_dropout, weight=weight, **config)
 

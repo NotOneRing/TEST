@@ -44,6 +44,92 @@ from util.config import DEBUG, METHOD_NAME
 #     return type(batch)(**vals)
 
 
+from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, nn_TransformerDecoder,\
+nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
+nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
+nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
+# from model.rl.gaussian_calql import CalQL_Gaussian
+from model.diffusion.unet import ResidualBlock1D, Unet1D
+from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
+# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
+# from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
+# from model.diffusion.diffusion import DiffusionModel
+from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
+from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
+from model.common.modules import SpatialEmb, RandomShiftsAug
+from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+# from model.common.mlp_gmm import GMM_MLP
+from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
+# from model.common.gaussian import  GaussianModel
+# from model.common.critic import CriticObs, CriticObsAct
+# from model.common.gmm import GMMModel
+
+
+cur_dict = {
+#part1:
+"nn_TransformerEncoder": nn_TransformerEncoder, 
+"nn_TransformerEncoderLayer": nn_TransformerEncoderLayer, 
+"nn_TransformerDecoder": nn_TransformerDecoder,
+"nn_TransformerDecoderLayer": nn_TransformerDecoderLayer, 
+"einops_layers_torch_Rearrange": einops_layers_torch_Rearrange, 
+"nn_GroupNorm": nn_GroupNorm, 
+"nn_ConvTranspose1d": nn_ConvTranspose1d, 
+"nn_Conv2d": nn_Conv2d, 
+"nn_Conv1d": nn_Conv1d,
+"nn_MultiheadAttention": nn_MultiheadAttention,
+"nn_LayerNorm": nn_LayerNorm, 
+"nn_Embedding": nn_Embedding, 
+"nn_ModuleList": nn_ModuleList, 
+"nn_Sequential": nn_Sequential,
+"nn_Linear": nn_Linear, 
+"nn_Dropout": nn_Dropout, 
+"nn_ReLU": nn_ReLU, 
+"nn_GELU": nn_GELU, 
+"nn_ELU": nn_ELU, 
+"nn_Mish": nn_Mish, 
+"nn_Softplus": nn_Softplus, 
+"nn_Identity": nn_Identity, 
+"nn_Tanh": nn_Tanh,
+#part2:
+# "CalQL_Gaussian": CalQL_Gaussian,
+"ResidualBlock1D": ResidualBlock1D,
+"Unet1D": Unet1D,
+"Conv1dBlock": Conv1dBlock, 
+"Upsample1d": Upsample1d, 
+"Downsample1d": Downsample1d, 
+"SinusoidalPosEmb": SinusoidalPosEmb,
+# "DiffusionMLP": DiffusionMLP, 
+# # "VisionDiffusionMLP": VisionDiffusionMLP,
+# "EtaStateAction": EtaStateAction, 
+# "EtaState": EtaState, 
+# "EtaAction": EtaAction, 
+# "EtaFixed": EtaFixed,
+# # "DiffusionModel": DiffusionModel,
+#part3:
+"VitEncoder": VitEncoder, 
+"PatchEmbed1": PatchEmbed1, 
+"PatchEmbed2": PatchEmbed2,
+"MultiHeadAttention": MultiHeadAttention, 
+"TransformerLayer": TransformerLayer, 
+"MinVit": MinVit,
+"Gaussian_Transformer": Gaussian_Transformer, 
+"GMM_Transformer": GMM_Transformer, 
+"Transformer": Transformer,
+"SpatialEmb": SpatialEmb,
+"RandomShiftsAug": RandomShiftsAug,
+"MLP": MLP,
+"ResidualMLP": ResidualMLP, 
+"TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+# "GMM_MLP": GMM_MLP,
+"Gaussian_MLP": Gaussian_MLP, 
+"Gaussian_VisionMLP": Gaussian_VisionMLP,
+# # "GaussianModel": GaussianModel,
+# "CriticObs": CriticObs, 
+# "CriticObsAct": CriticObsAct,
+# # "GMMModel": GMMModel
+}
+
+
 class EMA:
     """
     Empirical moving average
@@ -1043,6 +1129,42 @@ class PreTrainAgent:
 
 
 
+
+    def save_load_params(self, params_name, params):
+
+        print("params_name =", params_name)
+        print("params = ", params)
+
+        for var in params.variables:
+            print(f"1: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+
+        num_params = sum(np.prod(var.shape) for var in params.trainable_variables)
+        print(f"1:Number of network parameters: {num_params}")
+        print(f"1:Number of network parameters: {sum(var.numpy().size for var in params.trainable_variables)}")
+
+        import os
+
+        savepath = os.path.join("/ssddata/qtguo/GENERAL_DATA/save_load_test_path/", f"state_{1}.keras")
+
+
+        tf.keras.models.save_model(params, savepath)
+
+
+        from tensorflow.keras.utils import get_custom_objects
+
+
+        get_custom_objects().update(cur_dict)
+
+        network = tf.keras.models.load_model(savepath, custom_objects=get_custom_objects() )
+
+        # print(params_name, " = ", network)
+        for var in network.variables:
+            print("2:", params_name, f": Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
+
+
+        num_params = sum(np.prod(var.shape) for var in network.trainable_variables)
+        print(f"2:Number of network parameters: {num_params}")
+        print(f"2:Number of network parameters: {sum(var.numpy().size for var in network.trainable_variables)}")
 
 
 

@@ -2007,15 +2007,18 @@ def nn_Parameter(data=None, requires_grad=True):
 
 
 
-
 def save_tf_Variable(tensor, save_tensor_name):
     base_path = "/ssddata/qtguo/GENERAL_DATA/"
     params_dict = {}
     result = tensor.numpy()
     params_dict[save_tensor_name] = result
 
+    print("save_tf_Variable: type(tensor) = ", type(tensor))
+
     if isinstance(tensor, tf.Variable):
-        params_dict["trainble"] = tensor.trainable
+        params_dict["trainable"] = tensor.trainable
+    elif isinstance(tensor, tf.Tensor):
+        params_dict["trainable"] = False
     else:
         raise RuntimeError("save_tf_Variable tensor type wrong")
 
@@ -2027,6 +2030,9 @@ def save_tf_Variable(tensor, save_tensor_name):
 
     with open(pkl_file_path, 'wb') as f:
         pickle.dump(params_dict, f)
+
+
+
 
 
 

@@ -1,5 +1,11 @@
 DEBUG = True
 
+
+DATASET_NAME = "Square"
+
+DATASET_NAME = "Transport"
+
+
 # DEBUG = False
 
 # METHOD_NAME = "Diffusion_MLP"

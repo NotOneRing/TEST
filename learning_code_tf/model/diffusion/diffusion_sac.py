@@ -34,7 +34,7 @@ class SAC_Diffusion(DiffusionModel):
 
         # initialize double target networks
         self.target_critic = deepcopy(self.critic)
-        # .to(self.device)
+
 
         self.actor = self.network
 

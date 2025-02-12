@@ -282,6 +282,31 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
 
+    def debug_diffusion_img_save_load(self):
+
+
+        if hasattr(self.model.network, 'compress'):
+            self.save_load_params("self.model.network.compress", self.model.network.compress)
+
+        if hasattr(self.model.network, 'compress1'):
+            self.save_load_params("self.model.network.compress1", self.model.network.compress1)
+
+        if hasattr(self.model.network, 'compress2'):
+            self.save_load_params("self.model.network.compress2", self.model.network.compress2)
+
+        if hasattr(self.model.network, 'mlp_logvar'):
+            self.save_load_params("self.model.network.logvar", self.model.network.logvar)
+
+        if hasattr(self.model.network, 'mlp_mean'):
+            self.save_load_params("self.model.network.mlp_mean", self.model.network.mlp_mean)
+
+        if hasattr(self.model.network, 'backbone'):
+            self.save_load_params("self.model.network.backbone", self.model.network.backbone)
+
+
+        if hasattr(self.model.network, 'time_embedding'):
+            self.save_load_params("self.model.network.time_embedding", self.model.network.time_embedding)
+
 
 
 

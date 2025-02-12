@@ -68,7 +68,7 @@ class VPG_Gaussian(GaussianModel):
         # for param in self.actor.parameters():
         #     param.requires_grad = False
 
-        for layer in self.actor.layers:
+        for layer in self.actor._layers:
             layer.trainable = False
 
 

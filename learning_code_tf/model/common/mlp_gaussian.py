@@ -20,7 +20,7 @@ torch_clamp, torch_exp, torch_ones_like, load_tf_Variable, save_tf_Variable
 
 
 
-from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
+from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER, DATASET_NAME
 
 
 
@@ -201,7 +201,7 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
                 if compress2:
                     self.compress2 = compress2
                 else:
-                    self.compress2 = deepcopy(self.compress2)
+                    self.compress2 = deepcopy(self.compress1)
 
             else:  # TODO: clean up
                 if compress:
@@ -351,12 +351,12 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
             })
 
         elif self.learn_fixed_std:  # initialize to fixed_std
-            save_tf_Variable(self.logvar, "Gaussian_VisionMLP_logvar")
+            save_tf_Variable(self.logvar, "Gaussian_VisionMLP_logvar" + DATASET_NAME)
 
 
 
-        save_tf_Variable(self.logvar_min, "Gaussian_VisionMLP_logvar_min")
-        save_tf_Variable(self.logvar_max, "Gaussian_VisionMLP_logvar_max")
+        save_tf_Variable(self.logvar_min, "Gaussian_VisionMLP_logvar_min" + DATASET_NAME)
+        save_tf_Variable(self.logvar_max, "Gaussian_VisionMLP_logvar_max" + DATASET_NAME)
         
         # config.update({
         #     "logvar_min": "Gaussian_VisionMLP_logvar_min",
@@ -412,7 +412,7 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
             logvar = None
             mlp_logvar = tf.keras.layers.deserialize(config.pop("mlp_logvar"),  custom_objects=get_custom_objects() )
         elif learn_fixed_std:
-            logvar = load_tf_Variable("Gaussian_VisionMLP_logvar")
+            logvar = load_tf_Variable("Gaussian_VisionMLP_logvar" + DATASET_NAME)
             mlp_logvar = None
         else:
             logvar = None
@@ -420,8 +420,8 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
 
 
 
-        logvar_min = load_tf_Variable("Gaussian_VisionMLP_logvar_min")
-        logvar_max = load_tf_Variable("Gaussian_VisionMLP_logvar_max")
+        logvar_min = load_tf_Variable("Gaussian_VisionMLP_logvar_min" + DATASET_NAME)
+        logvar_max = load_tf_Variable("Gaussian_VisionMLP_logvar_max" + DATASET_NAME)
         
 
         mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean") ,  custom_objects=get_custom_objects() )
@@ -447,9 +447,7 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
             compress1 = None
             compress2 = None
 
-        result = cls(backbone = backbone, fixed_std = fixed_std, mlp_logvar = mlp_logvar, mlp_mean = mlp_mean,\
-                    spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1,\
-                    compress2 = compress2, logvar = logvar, logvar_min = logvar_min, logvar_max = logvar_max, **config)
+        result = cls(backbone = backbone, fixed_std = fixed_std, mlp_logvar = mlp_logvar, mlp_mean = mlp_mean, spatial_emb = spatial_emb, num_img = num_img, compress = compress, compress1 = compress1, compress2 = compress2, logvar = logvar, logvar_min = logvar_min, logvar_max = logvar_max, **config)
 
         return result
 

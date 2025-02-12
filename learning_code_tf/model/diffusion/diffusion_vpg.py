@@ -436,7 +436,12 @@ class VPGDiffusion(DiffusionModel):
 
 
         # noise = self.actor(x, t, cond=cond)
-        noise = self.actor([x, t, cond['state']])
+        # noise = self.actor([x, t, cond['state']])
+
+        if 'rgb' in cond:
+            noise = self.actor([x, t, cond['state'], cond['rgb']])
+        else:
+            noise = self.actor([x, t, cond['state']])
 
 
         if self.use_ddim:
@@ -539,8 +544,12 @@ class VPGDiffusion(DiffusionModel):
             cur_t = tf.gather(t, ft_indices, axis=0)
 
 
+            if 'rgb' in cond:
+                noise_ft = actor([cur_x, cur_t, cond_ft['state'], cond_ft['rgb']])
+            else:
+                noise_ft = actor([cur_x, cur_t, cond_ft['state']])
 
-            noise_ft = actor([cur_x, cur_t, cond_ft['state']])
+            # noise_ft = actor([cur_x, cur_t, cond_ft['state']])
 
             noise = tf.gather(noise_ft, ft_indices, axis=0)
 
@@ -628,7 +637,8 @@ class VPGDiffusion(DiffusionModel):
             temp_tensor = (1.0 - alpha_prev - sigma**2)
 
             # dir_xt_coef = tf.sqrt( torch_tensor_clamp_(temp_tensor, 0, tf.float32.max) )
-            torch_tensor_clamp_(temp_tensor, 0, tf.float32.max)
+            # torch_tensor_clamp_(temp_tensor, 0, tf.float32.max)
+            temp_tensor = torch_clamp(temp_tensor, 0, tf.float32.max)
             
             dir_xt_coef = temp_tensor ** 0.5
             

@@ -268,8 +268,20 @@ class DiffusionModel(tf.keras.Model):
             if OUTPUT_POSITIONS:
                 print("after ddim_discretize")
 
+
+
+            print("Diffusion: self.ddim_t = ", self.ddim_t)
+            print("Diffusion: type(self.ddim_t) = ", type(self.ddim_t))
+
+
+            temp_result = tf.gather(self.alphas_cumprod, self.ddim_t, axis=0)            
+
+
+            # self.ddim_alphas = (
+            #     torch_tensor_clone(self.alphas_cumprod[self.ddim_t])
+            # )
             self.ddim_alphas = (
-                torch_tensor_clone(self.alphas_cumprod[self.ddim_t])
+                torch_tensor_clone(temp_result)
             )
 
             # self.ddim_alphas = tf.gather(self.alphas_cumprod, self.ddim_t)
@@ -283,7 +295,8 @@ class DiffusionModel(tf.keras.Model):
             self.ddim_alphas_prev = torch_cat(
                 [
                     tf.cast(tf.constant([1.0]), tf.float32),
-                    self.alphas_cumprod[self.ddim_t[:-1]],
+                    # self.alphas_cumprod[self.ddim_t[:-1]],
+                    tf.gather(self.alphas_cumprod, self.ddim_t[:-1], axis=0)
                 ]
             )
 
