@@ -386,6 +386,10 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                         tf_gradients_critic = tape.gradient(loss, self.model.critic.trainable_variables)
 
 
+                        tf_gradients_actor_ft_params = zip(tf_gradients_actor_ft, self.model.actor.trainable_variables)
+
+                        tf_gradients_critic_params = zip(tf_gradients_critic, self.model.actor.trainable_variables)
+
                         # update policy and critic
                         if (batch + 1) % self.grad_accumulate == 0:
                             if self.itr >= self.n_critic_warmup_itr:
@@ -398,9 +402,9 @@ class TrainPPOImgGaussianAgent(TrainPPOGaussianAgent):
                                         tf_gradients_actor_ft
                                     )
                                 else:
-                                    self.actor_optimizer.step(tf_gradients_actor_ft)
+                                    self.actor_optimizer.apply_gradients(tf_gradients_actor_ft_params)
 
-                            self.critic_optimizer.step(tf_gradients_critic)
+                            self.critic_optimizer.apply_gradients(tf_gradients_critic_params)
 
 
                             log.info(f"run grad update at batch {batch}")

@@ -414,6 +414,13 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
 
                         tf_gradients_eta = tape.gradient(loss, self.model.eta.trainable_variables)
 
+
+                        tf_gradients_actor_ft_params = zip(tf_gradients_actor_ft, self.model.actor.trainable_variables)
+
+                        tf_gradients_critic_params = zip(tf_gradients_critic, self.model.actor.trainable_variables)
+
+                        tf_gradients_eta_params = zip(tf_gradients_eta, self.model.eta.trainable_variables)
+
                         # update policy and critic
                         # loss.backward()
 
@@ -428,15 +435,20 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                                         tf_gradients_actor_ft
                                     )
                                 else:
-                                    self.actor_optimizer.step(tf_gradients_actor_ft)
+                                    # self.actor_optimizer.step(tf_gradients_actor_ft)
+                                    self.actor_optimizer.apply_gradients(tf_gradients_actor_ft_params)
 
                                 if (
                                     self.learn_eta
                                     and batch % self.eta_update_interval == 0
                                 ):
-                                    self.eta_optimizer.step(tf_gradients_eta)
+                                    # self.eta_optimizer.step(tf_gradients_eta)
+                                    self.eta_optimizer.apply_gradients(tf_gradients_eta_params)
 
-                            self.critic_optimizer.step(tf_gradients_critic)
+
+                            # self.critic_optimizer.step(tf_gradients_critic)
+                            self.critic_optimizer.apply_gradients(tf_gradients_critic_params)
+
 
                             # self.actor_optimizer.zero_grad()
                             # self.critic_optimizer.zero_grad()

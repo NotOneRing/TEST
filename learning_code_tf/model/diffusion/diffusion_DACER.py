@@ -8,6 +8,8 @@ from copy import deepcopy
 
 from model.diffusion.diffusion import DiffusionModel
 
+from model.diffusion.sampling import make_timesteps
+
 log = logging.getLogger(__name__)
 
 # from util.torch_to_tf import torch_mse_loss, torch_min, torch_mean
@@ -18,22 +20,6 @@ import tensorflow as tf
 
 
 from util.torch_to_tf import *
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -61,7 +47,33 @@ class DACER_Diffusion(DiffusionModel):
 
         self.actor = self.network
 
+
+
         self.step = 0
+
+        self.delay_alpha_update = 10000
+
+        self.delay_update = 2
+        
+        self.tau = 0.005
+
+        self.mean_q1_std = -1.0
+        self.mean_q2_std = -1.0
+        self.entropy = 0.0
+
+
+    
+
+    def get_action(self, obs, alpha):
+    
+        action = self.call(
+            cond=obs,
+            deterministic=False
+        )
+        action = action + tf.random.normal(action.shape) * alpha * 0.15 # other envs 0.1
+        action = tf.clip_by_value(action, -1, 1)
+        return action
+
 
 
     def loss_critic(
@@ -79,66 +91,71 @@ class DACER_Diffusion(DiffusionModel):
 
         self.reward_scale = 0.2
 
-        # with torch.no_grad():
-        with torch_no_grad() as tape:
-            next_actions, next_logprobs = self.call(
-                cond=next_obs,
-                deterministic=False,
-                get_logprob=True,
+        # with torch_no_grad() as tape:
+
+        next_actions = self.get_action(next_obs, alpha)
+
+        next_q1_mean, next_q1_std, next_q2_mean, next_q2_std = self.target_critic(
+            next_obs,
+            next_actions,
+        )
+
+        z1 = tf.random.normal(next_q1_mean.shape)
+        z1 = tf.clip_by_value(z1, -3.0, 3.0)
+
+        z2 = tf.random.normal(next_q2_mean.shape)
+        z2 = tf.clip_by_value(z2, -3.0, 3.0)
+
+        next_q1_sample = next_q1_mean + next_q1_std * z1
+        next_q2_sample = next_q2_mean + next_q2_std * z2
+
+        rewards *= self.reward_scale
+
+        next_q_mean = torch_min(next_q1_mean, other=next_q2_mean)
+        next_q_sample = tf.where(next_q1_mean < next_q2_mean, next_q1_sample, next_q2_sample)
+
+        q_target = next_q_mean
+        q_target_sample = next_q_sample
+
+        q_backup = rewards + (1 - terminated) * gamma * q_target
+        q_backup_sample = rewards + (1 - terminated) * gamma * q_target_sample
+
+
+        B = tf.shape(obs["state"])[0]
+        reshape_state = torch_tensor_view(obs["state"], [B, -1])
+        reshape_actions = torch_tensor_view(actions, [B, -1])
+        x = torch_cat((reshape_state, reshape_actions), dim=-1)
+        
+        def q_loss_fn(q_network, mean_q_std: float):
+            cur_x = deepcopy(x)
+            q_result = q_network(cur_x)
+            q_mean, q_std = q_result[..., 0], q_result[..., 1]
+
+            new_mean_q_std = tf.reduce_mean(q_std)
+            mean_q_std = tf.stop_gradient(
+                int(mean_q_std == -1.0) * new_mean_q_std +
+                int(mean_q_std != -1.0) * (self.tau * new_mean_q_std + (1 - self.tau) * mean_q_std)
             )
-
-            next_q1_mean, next_q1_std, next_q2_mean, next_q2_std = self.target_critic(
-                next_obs,
-                next_actions,
+            q_backup_bounded = tf.stop_gradient(q_mean + tf.clip_by_value(q_backup_sample - q_mean, -3 * mean_q_std, 3 * mean_q_std))
+            # print("q_std = ", q_std)
+            # print("type(q_std) = ", type(q_std))
+            q_std_detach = tf.stop_gradient( torch_max(q_std, other = 0.0))
+            epsilon = 0.1
+            q_loss = -(mean_q_std ** 2 + epsilon) * tf.reduce_mean(
+                q_mean * tf.stop_gradient(q_backup - q_mean) / (q_std_detach ** 2 + epsilon) +
+                q_std * (( tf.stop_gradient(q_mean) - q_backup_bounded) ** 2 
+                - q_std_detach ** 2) / (q_std_detach ** 3 + epsilon)
             )
+            return q_loss, (q_mean, q_std, mean_q_std)
 
-            z1 = tf.random.normal(next_q1_mean.shape)
-            z1 = tf.clip_by_value(z1, -3.0, 3.0)
+        (q1_loss, (q1_mean, q1_std, mean_q1_std)) = q_loss_fn( self.critic.Q1, self.mean_q1_std)
+        (q2_loss, (q2_mean, q2_std, mean_q2_std)) = q_loss_fn( self.critic.Q2, self.mean_q2_std)
 
-            z2 = tf.random.normal(next_q2_mean.shape)
-            z2 = tf.clip_by_value(z2, -3.0, 3.0)
-
-            next_q1_sample = next_q1_mean + next_q1_std * z1
-            next_q2_sample = next_q2_mean + next_q2_std * z2
-
-            rewards *= self.reward_scale
-
-            next_q_mean = torch_min(next_q1_mean, other=next_q2_mean)
-            next_q_sample = tf.where(next_q1_mean < next_q2_mean, next_q1_sample, next_q2_sample)
-
-            q_target = next_q_mean
-            q_target_sample = next_q_sample
-
-            q_backup = rewards + (1 - terminated) * gamma * q_target
-            q_backup_sample = rewards + (1 - terminated) * gamma * q_target_sample
+        self.mean_q1_std = mean_q1_std
+        self.mean_q2_std = mean_q2_std
 
 
-            def q_loss_fn(q_network, mean_q_std: float):
-                q_mean, q_std = q_network(obs, actions)
-                new_mean_q_std = tf.mean(q_std)
-                mean_q_std = tf.stop_gradient(
-                    (mean_q_std == -1.0) * new_mean_q_std +
-                    (mean_q_std != -1.0) * (self.tau * new_mean_q_std + (1 - self.tau) * mean_q_std)
-                )
-                q_backup_bounded = tf.stop_gradient(q_mean + tf.clip_by_value(q_backup_sample - q_mean, -3 * mean_q_std, 3 * mean_q_std))
-                q_std_detach = tf.stop_gradient( tf.max(q_std, 0))
-                epsilon = 0.1
-                q_loss = -(mean_q_std ** 2 + epsilon) * tf.mean(
-                    q_mean * tf.stop_gradient(q_backup - q_mean) / (q_std_detach ** 2 + epsilon) +
-                    q_std * (( tf.stop_gradient(q_mean) - q_backup_bounded) ** 2 
-                    - q_std_detach ** 2) / (q_std_detach ** 3 + epsilon)
-                )
-                return q_loss, (q_mean, q_std, mean_q_std)
-
-            (q1_loss, (q1_mean, q1_std, mean_q1_std)) = q_loss_fn(self.critic.Q1, self.mean_q1_std)
-            (q2_loss, (q2_mean, q2_std, mean_q2_std)) = q_loss_fn(self.critic.Q2, self.mean_q2_std)
-
-            self.mean_q1_std = mean_q1_std
-            self.mean_q2_std = mean_q2_std
-
-            self.step=self.step + 1
-
-            return q1_loss, q2_loss
+        return q1_loss, q2_loss
 
 
 
@@ -149,21 +166,71 @@ class DACER_Diffusion(DiffusionModel):
 
         print("diffusion_sac.py: SAC_Diffusion.loss_actor()")
 
-        action, logprob = self.call(
+        action = self.call(
             obs,
-            deterministic=False,
-            reparameterize=True,
-            get_logprob=True,
+            deterministic=False
         )
+
+        # print("loss_actor: action = ", action)
+
         current_q1, _, current_q2, _ = self.critic(obs, action)
+
+        # print("loss_actor: current_q1 = ", current_q1)
+        # print("loss_actor: current_q2 = ", current_q2)
+
         loss_actor = -torch_min(current_q1, current_q2)
-        # + alpha * logprob
+
+        # print("loss_actor: loss_actor = ", loss_actor)
+
         return torch_mean(loss_actor)
     
 
 
 
 
+
+    # @tf.function
+    def call(self, cond, deterministic=False):
+        """Modifying denoising schedule"""
+
+        # with torch_no_grad() as tape:
+
+        print("diffusion_DACER.py: DACERDiffusion.forward()")
+
+        B = cond["state"].shape[0]
+
+        x = tf.random.normal( (B, self.horizon_steps, self.action_dim) )
+
+        t_all = list(reversed(range(self.denoising_steps)))
+        for i, t in enumerate(t_all):
+            t_b = make_timesteps(B, t)
+            mean, logvar = self.p_mean_var(
+                x=x,
+                t=t_b,
+                # cond=cond,
+                cond_state=cond['state'],
+            )
+
+            std = torch_exp(0.5 * logvar)
+
+            # # Determine noise level
+            # if deterministic and t == 0:
+            #     std = torch_zeros_like(std)
+            # elif deterministic:
+            #     std = torch_clip(std, 1e-3, float('inf'))
+            # else:
+            #     std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
+
+            # Add noise
+            noise = torch_randn_like(x)
+            # noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
+            x = mean + std * noise
+
+            # Clamp action at final step
+            if self.final_action_clip_value is not None and i == len(t_all) - 1:
+                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
+        
+        return x
 
 
 
@@ -187,26 +254,41 @@ class DACER_Diffusion(DiffusionModel):
         return final_entropy
 
 
+    def cal_entropy(self, obs, alpha, num_samples):
+
+        actions = []
+        for i in range(num_samples):
+            cur_actions = self.get_action(obs, alpha)
+            actions.append(cur_actions)
+        
+        # print("cal_entropy(): actions = ", actions)
+        
+        
+        actions = np.stack(actions, axis=0)
+
+        actions = actions.transpose(1, 0)
+
+        entropy = self.estimate_entropy( actions )
+        
+        return entropy
+
+
+
     def loss_temperature(self, obs, alpha, target_entropy):
 
         print("diffusion_sac.py: SAC_Diffusion.loss_temperature()")
 
-        # with torch.no_grad():
-        with torch_no_grad() as tape:
-            _, logprob = self.call(
-                obs,
-                deterministic=False,
-                get_logprob=True,
-            )
+        self.num_samples = 200
 
         prev_entropy = self.entropy if hasattr(self, 'entropy') else tf.float32(0.0)
 
         if self.step % self.delay_alpha_update == 0:
-            self.entropy = self.cal_entropy()
+            self.entropy = self.cal_entropy(obs, alpha, self.num_samples)
         else:
             self.entropy = prev_entropy
 
-        loss_alpha = -torch_mean(alpha * ( -self.entropy + target_entropy ) )
+        loss_alpha = -torch_mean( torch_log(alpha) * ( -self.entropy + target_entropy ) )
+
 
         return loss_alpha
 

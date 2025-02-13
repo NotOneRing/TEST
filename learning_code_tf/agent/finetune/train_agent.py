@@ -590,6 +590,60 @@ class TrainAgent:
         tf.keras.models.save_model(self.model.critic, critic_savepath)
 
 
+
+
+    def save_model_dacer(self):
+        """
+        Saves model to disk.
+        """
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("train_agent.py: TrainAgent.save_model()")
+
+        savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.keras")
+
+        print("save_model savepath = ", savepath)
+
+        print("finetune: train_agent.save_model: savepath = ", savepath)
+
+
+        tf.keras.models.save_model(self.model, savepath)
+        print(f"Saved model to {savepath}")
+
+
+        actor_savepath = savepath.replace(".keras", "_actor.keras")
+        print("network_savepath = ", actor_savepath)
+        print(f"Saved model to {actor_savepath}")
+        tf.keras.models.save_model(self.model.actor, actor_savepath)
+
+        critic_q1_savepath = savepath.replace(".keras", "_critic1.keras")
+        print("critic_q1_savepath = ", critic_q1_savepath)
+        print(f"Saved model to {critic_q1_savepath}")
+        tf.keras.models.save_model(self.model.critic.Q1, critic_q1_savepath)
+
+        critic_q2_savepath = savepath.replace(".keras", "_critic2.keras")
+        print("critic_savepath = ", critic_q2_savepath)
+        print(f"Saved model to {critic_q2_savepath}")
+        tf.keras.models.save_model(self.model.critic.Q2, critic_q2_savepath)
+
+        target_critic_q1_savepath = savepath.replace(".keras", "_critic1.keras")
+        print("target_critic_q1_savepath = ", target_critic_q1_savepath)
+        print(f"Saved model to {target_critic_q1_savepath}")
+        tf.keras.models.save_model(self.model.target_critic.Q1, target_critic_q1_savepath)
+
+        target_critic_q2_savepath = savepath.replace(".keras", "_critic2.keras")
+        print("target_critic_q2_savepath = ", target_critic_q2_savepath)
+        print(f"Saved model to {target_critic_q2_savepath}")
+        tf.keras.models.save_model(self.model.target_critic.Q2, target_critic_q2_savepath)
+
+
+
+
+
+
+
+
+
     # def save_model(self):
     #     """
     #     saves model to disk; no ema

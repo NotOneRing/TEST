@@ -35,9 +35,9 @@ import numpy as np
 
 
 from util.torch_to_tf import torch_cumprod, torch_ones, torch_cat, torch_sqrt,\
-torch_clamp, torch_log, torch_arange, torch_tensor_clamp_, torch_zeros_like, \
+torch_clamp, torch_log, torch_arange, torch_zeros_like, \
 torch_clip, torch_exp, torch_randn_like, torch_randn, torch_full, torch_full_like, \
-torch_flip, torch_randint, torch_ones_like, torch_no_grad
+torch_flip, torch_randint, torch_ones_like, torch_no_grad, torch_clamp
 
 from util.torch_to_tf import torch_tensor_clone
 
@@ -1099,12 +1099,10 @@ class DiffusionModel(tf.keras.Model):
         #                        , training=training)
         #                     #    )
         if 'rgb' in cond:
-            x_recon = network([x_noisy, t, cond["state"], cond["rgb"]]
-                                , training=training)
+            x_recon = network([x_noisy, t, cond["state"], cond["rgb"]], training=training)
                                 #    )
         else:
-            x_recon = network([x_noisy, t, cond["state"]]
-                                , training=training)
+            x_recon = network([x_noisy, t, cond["state"]], training=training)
                                 #    )
 
         # if OUTPUT_VARIABLES:
@@ -1149,8 +1147,8 @@ class DiffusionModel(tf.keras.Model):
     # def p_mean_var(self, x, t, cond, index=None, network_override=None):
     def p_mean_var(self, x, t, cond_state, index=None, network_override=None):
 
-        if OUTPUT_FUNCTION_HEADER:
-            print("diffusion.py: DiffusionModel.p_mean_var()", flush = True)
+        # if OUTPUT_FUNCTION_HEADER:
+        print("diffusion.py: DiffusionModel.p_mean_var()", flush = True)
 
         if network_override is not None:
             # noise = network_override(x, t, cond=cond)
@@ -1204,22 +1202,25 @@ class DiffusionModel(tf.keras.Model):
         if OUTPUT_VARIABLES:
             print("DiffusionModel: p_mean_var(): x_recon = ", x_recon)
 
-        if isinstance(x_recon, tf.Tensor):
-            x_recon_variable = tf.Variable(x_recon)
-        else:
-            x_recon_variable = x_recon
+        # if isinstance(x_recon, tf.Tensor):
+        #     x_recon_variable = tf.Variable(x_recon)
+        # else:
+        #     x_recon_variable = x_recon
 
         if self.denoised_clip_value is not None:
-            torch_tensor_clamp_(x_recon_variable, -self.denoised_clip_value, self.denoised_clip_value)
+            # torch_tensor_clamp_(x_recon_variable, -self.denoised_clip_value, self.denoised_clip_value)
+            x_recon = torch_clamp(x_recon, -self.denoised_clip_value, self.denoised_clip_value)
             if self.use_ddim:
                 # re-calculate noise based on clamped x_recon - default to false in HF, but let's use it here
-                noise = (x - alpha ** (0.5) * x_recon_variable) / sqrt_one_minus_alpha
+                # noise = (x - alpha ** (0.5) * x_recon_variable) / sqrt_one_minus_alpha
+                noise = (x - alpha ** (0.5) * x_recon) / sqrt_one_minus_alpha
 
-        x_recon = x_recon_variable
+        # x_recon = x_recon_variable
 
         # Clip epsilon for numerical stability in policy gradient - not sure if this is helpful yet, but the value can be huge sometimes. This has no effect if DDPM is used
         if self.use_ddim and self.eps_clip_value is not None:
-            torch_tensor_clamp_(noise, -self.eps_clip_value, self.eps_clip_value)
+            # torch_tensor_clamp_(noise, -self.eps_clip_value, self.eps_clip_value)
+            noise = torch_clamp(noise, -self.eps_clip_value, self.eps_clip_value)
 
         # Get mu
         if self.use_ddim:
@@ -1243,6 +1244,8 @@ class DiffusionModel(tf.keras.Model):
             )
             logvar = extract(self.ddpm_logvar_clipped, t, x.shape)
         return mu, logvar
+
+
 
 
 
@@ -1495,7 +1498,7 @@ class DiffusionModel(tf.keras.Model):
 
                     print("Diffusion.call(): noise = ", noise)
 
-                torch_tensor_clamp_(noise, -self.randn_clip_value, self.randn_clip_value)
+                noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
                 x = mean + std * noise
 
                 if OUTPUT_VARIABLES:

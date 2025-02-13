@@ -37,7 +37,7 @@ class TrainDacerAgent(TrainAgent):
         
         # Optimizer
         self.actor_optimizer = torch_optim_Adam(
-            self.model.network.trainable_variables,
+            self.model.actor.trainable_variables,
             lr=cfg.train.actor_lr,
         )
 
@@ -79,7 +79,16 @@ class TrainDacerAgent(TrainAgent):
 
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
-        self.log_alpha = torch_tensor(np.log(init_temperature))
+
+        print("init_temperature = ", init_temperature)
+        print("type(init_temperature) = ", type(init_temperature))
+
+        temp_result = np.log( np.array([init_temperature], dtype=np.float32) )
+
+        print("temp_result = ", temp_result)
+        print("type(temp_result) = ", type(temp_result))
+
+        self.log_alpha = torch_tensor( temp_result )
         # .to(self.device)
 
 
@@ -289,7 +298,7 @@ class TrainDacerAgent(TrainAgent):
 
 
 
-                with tf.GradientTape() as tape:
+                with tf.GradientTape(persistent = True) as tape:
                     loss_critic1, loss_critic2 = self.model.loss_critic(
                         {"state": obs_b},
                         {"state": next_obs_b},
@@ -301,48 +310,80 @@ class TrainDacerAgent(TrainAgent):
                     )
 
                 tf_Q1_gradients = tape.gradient(loss_critic1, self.model.critic.Q1.trainable_variables)
-
                 tf_Q2_gradients = tape.gradient(loss_critic2, self.model.critic.Q2.trainable_variables)
 
-                self.critic1_optimizer.step(tf_Q1_gradients)
-                self.critic2_optimizer.step(tf_Q2_gradients)
+                zip_gradients_Q1_params = zip(tf_Q1_gradients, self.model.critic.Q1.trainable_variables)
+                zip_gradients_Q2_params = zip(tf_Q2_gradients, self.model.critic.Q2.trainable_variables)
+
+                # everytime
+                self.critic1_optimizer.apply_gradients(zip_gradients_Q1_params)
+                self.critic2_optimizer.apply_gradients(zip_gradients_Q2_params)
+
+                
+                if self.model.step % self.model.delay_update == 0:
+                    with tf.GradientTape() as tape:
+                        
+                        loss_actor = self.model.loss_actor(
+                            {"state": obs_b},
+                            alpha,
+                        )
+
+                    tf_gradients_actor = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+
+                    print("tf_gradients_actor = ", tf_gradients_actor)
+
+                    zip_tf_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
 
 
-                # Update target critic every critic update
-                self.model.update_target_critic(self.target_ema_rate)
-
-                # Delay update actor
-                loss_actor = 0
-                # if self.itr % self.actor_update_freq == 0:
-                #     for _ in range(2):
-
-
-                with tf.GradientTape() as tape:
-                    loss_actor = self.model.loss_actor(
-                        {"state": obs_b},
-                        alpha,
-                    )
+                    # # 打印梯度检查
+                    # for grad, var in zip_tf_gradients_actor_params:
+                    #     if grad is None:
+                    #         print(f"Gradient for {var} is None")
+                    #     else:
+                    #         print(f"Gradient for {var}: {grad}")
 
 
-                tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
-                self.actor_optimizer.step(tf_gradients)
+                    # zipped_gradients_list = list(zip_tf_gradients_actor_params)
 
-                with tf.GradientTape() as tape:
-                    # Update temperature parameter
-                    loss_alpha = self.model.loss_temperature(
-                        {"state": obs_b},
-                        torch_exp( self.log_alpha ),  # with grad
-                        self.target_entropy,
-                    )
+                    # assert len(zipped_gradients_list) > 0, "No gradients provided"
 
-                tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])
-                self.log_alpha_optimizer.step(tf_gradients)
+                    self.actor_optimizer.apply_gradients(zip_tf_gradients_actor_params)
+
+
+                if self.model.step % self.model.delay_alpha_update == 0:
+                    with tf.GradientTape() as tape:
+                        # Update temperature parameter
+                        loss_alpha = self.model.loss_temperature(
+                            {"state": obs_b},
+                            torch_exp( self.log_alpha ),  # with grad
+                            self.target_entropy,
+                        )
+
+                    tf_alpha_gradients = tape.gradient(loss_alpha, [self.log_alpha])
+                    zip_tf_gradients_alpha = zip(tf_alpha_gradients, [self.log_alpha])
+                    self.log_alpha_optimizer.apply_gradients(zip_tf_gradients_alpha)
+
+
+                if self.model.step % self.model.delay_update == 0:
+                    self.model.update_target_critic(self.model.tau)
+
+                self.model.step=self.model.step + 1
+
+
+
+
+                # # Delay update actor
+                # loss_actor = 0
+                # # if self.itr % self.actor_update_freq == 0:
+                # #     for _ in range(2):
+
+
 
 
 
             # Save model
             if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model()
+                self.save_model_dacer()
 
             # Log loss and save metrics
             run_results.append(
@@ -377,7 +418,8 @@ class TrainDacerAgent(TrainAgent):
                     # )
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} "
-                        f"| loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} "
+                        f"| loss actor {loss_actor:8.4f} |"
+                        f"| loss critic1 {loss_critic1:8.4f} | loss critic2 {loss_critic2:8.4f} "
                         f"| entropy coeff: {alpha:8.4f} "
                         f"| reward {avg_episode_reward:8.4f} "
                         f"| num episode - train: {num_episode_finished:8.4f} "

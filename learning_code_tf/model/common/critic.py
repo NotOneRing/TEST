@@ -547,8 +547,8 @@ class CriticObsAct_DACER(tf.keras.Model):
 
 
     def get_config(self):
-        # print("CriticObsAct: get_config()")
-        config = super(CriticObsAct, self).get_config()
+        print("CriticObsAct_DACER: get_config()")
+        config = super(CriticObsAct_DACER, self).get_config()
 
 
         print(f"cond_dim: {self.cond_dim}, type: {type(self.cond_dim)}")
@@ -589,7 +589,7 @@ class CriticObsAct_DACER(tf.keras.Model):
 
     @classmethod
     def from_config(cls, config):
-        print("DiffusionMLP: from_config()")
+        print("CriticObsAct_DACER: from_config()")
 
         from tensorflow.keras.utils import get_custom_objects
 
@@ -616,7 +616,7 @@ class CriticObsAct_DACER(tf.keras.Model):
         action: (B, Ta, Da)
         """
 
-        print("critic.py: CriticObsAct.call()")
+        print("critic.py: CriticObsAct_DACER.call()")
 
         B = tf.shape(cond["state"])[0]
 
@@ -638,12 +638,21 @@ class CriticObsAct_DACER(tf.keras.Model):
             q1_mean, q1_std = q1[..., 0], q1[..., 1]
             q2_mean, q2_std = q2[..., 0], q2[..., 1]
 
-            # return torch_squeeze(q1, 1), torch_squeeze(q2, 1)
-            return torch_squeeze(q1_mean, 1), torch_squeeze(q1_std, 1), torch_squeeze(q2_mean, 1), torch_squeeze(q2_std, 1)
+        # print("q1_mean.shape = ", q1_mean.shape)
+        # print("q1_std.shape = ", q1_std.shape)
+        # print("q2_mean.shape = ", q2_mean.shape)
+        # print("q2_std.shape = ", q2_std.shape)
+
+        #     # return torch_squeeze(q1, 1), torch_squeeze(q2, 1)
+        #     return torch_squeeze(q1_mean, 1), torch_squeeze(q1_std, 1), torch_squeeze(q2_mean, 1), torch_squeeze(q2_std, 1)
+        # else:
+        #     # return torch_squeeze(q1, 1)
+        #     return torch_squeeze(q1_mean, 1), torch_squeeze(q1_std, 1)
+
+            return q1_mean, q1_std, q2_mean, q2_std
         else:
             # return torch_squeeze(q1, 1)
-            return torch_squeeze(q1_mean, 1), torch_squeeze(q1_std, 1)
-
+            return q1_mean, q1_std
 
 
 

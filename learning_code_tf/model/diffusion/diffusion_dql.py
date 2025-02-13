@@ -43,21 +43,22 @@ class DQLDiffusion(DiffusionModel):
         self.critic = critic
         
         # # target critic
-        # self.critic_target = copy.deepcopy(self.critic)
+        self.critic_target = copy.deepcopy(self.critic)
 
 
-        self.build_actor(self.critic)
+        # self.build_actor(self.critic)
 
-        self.critic_target = tf.keras.models.clone_model(self.critic)
+        # self.critic_target = tf.keras.models.clone_model(self.critic)
 
-        self.critic_target.set_weights(self.critic.get_weights())
+        # self.critic_target.set_weights(self.critic.get_weights())
 
-        self.build_actor(self.critic_target)
+        # self.build_actor(self.critic_target)
 
 
 
         # reassign actor
         self.actor = self.network
+        self.build_actor(self.actor)
 
         # Minimum std used in denoising process when sampling action - helps exploration
         self.min_sampling_denoising_std = min_sampling_denoising_std
