@@ -1147,8 +1147,8 @@ class DiffusionModel(tf.keras.Model):
     # def p_mean_var(self, x, t, cond, index=None, network_override=None):
     def p_mean_var(self, x, t, cond_state, index=None, network_override=None):
 
-        # if OUTPUT_FUNCTION_HEADER:
-        print("diffusion.py: DiffusionModel.p_mean_var()", flush = True)
+        if OUTPUT_FUNCTION_HEADER:
+            print("diffusion.py: DiffusionModel.p_mean_var()", flush = True)
 
         if network_override is not None:
             # noise = network_override(x, t, cond=cond)

@@ -19,9 +19,11 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
-from util.torch_to_tf import torch_tensor, torch_from_numpy, torch_tensor_float, torch_exp
+# from util.torch_to_tf import torch_tensor, torch_from_numpy, torch_tensor_float, torch_exp
+# from util.torch_to_tf import torch_no_grad, torch_optim_Adam, torch_exp, torch_tensor_item, torch_tensor_requires_grad_
 
-from util.torch_to_tf import torch_no_grad, torch_optim_Adam, torch_exp, torch_tensor_item, torch_tensor_requires_grad_
+from util.torch_to_tf import *
+
 
 
 class TrainDacerAgent(TrainAgent):
@@ -34,24 +36,75 @@ class TrainDacerAgent(TrainAgent):
         # note the discount factor gamma here is applied to reward every act_steps, instead of every env step
         self.gamma = cfg.train.gamma
 
-        
+
+
+        # # Optimizer
+        # self.actor_optimizer = torch_optim_Adam(
+        #     self.model.actor.trainable_variables,
+        #     lr=cfg.train.actor_lr,
+        # )
+
+        # self.critic1_optimizer = torch_optim_Adam(
+        #     self.model.critic.Q1.trainable_variables,
+        #     lr=cfg.train.critic_lr,
+        # )
+
+        # self.critic2_optimizer = torch_optim_Adam(
+        #     self.model.critic.Q2.trainable_variables,
+        #     lr=cfg.train.critic_lr,
+        # )
+
+
         # Optimizer
-        self.actor_optimizer = torch_optim_Adam(
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
+            first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
+            cycle_mult=1.0,
+            max_lr=cfg.train.actor_lr,
+            min_lr=cfg.train.actor_lr_scheduler.min_lr,
+            warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
+            gamma=1.0,
+        )
+        self.critic_q1_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_v_optimizer,
+            first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
+            cycle_mult=1.0,
+            max_lr=cfg.train.critic_lr,
+            min_lr=cfg.train.critic_lr_scheduler.min_lr,
+            warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
+            gamma=1.0,
+        )
+        self.critic_q2_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_q_optimizer,
+            first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
+            cycle_mult=1.0,
+            max_lr=cfg.train.critic_lr,
+            min_lr=cfg.train.critic_lr_scheduler.min_lr,
+            warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
+            gamma=1.0,
+        )
+
+
+        self.actor_optimizer = torch_optim_AdamW(
             self.model.actor.trainable_variables,
-            lr=cfg.train.actor_lr,
+            lr = self.actor_lr_scheduler,
+            weight_decay=cfg.train.actor_weight_decay,
         )
-
-
-
-        self.critic1_optimizer = torch_optim_Adam(
+        self.critic1_optimizer = torch_optim_AdamW(
             self.model.critic.Q1.trainable_variables,
-            lr=cfg.train.critic_lr,
+            lr = self.critic_q1_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
+        )
+        self.critic2_optimizer = torch_optim_AdamW(
+            self.model.critic.Q2.trainable_variables,
+            lr = self.critic_q2_lr_scheduler,
+            weight_decay=cfg.train.critic_weight_decay,
         )
 
-        self.critic2_optimizer = torch_optim_Adam(
-            self.model.critic.Q2.trainable_variables,
-            lr=cfg.train.critic_lr,
-        )
+
+
+
+
 
         # Perturbation scale
         self.target_ema_rate = cfg.train.target_ema_rate
@@ -88,19 +141,30 @@ class TrainDacerAgent(TrainAgent):
         print("temp_result = ", temp_result)
         print("type(temp_result) = ", type(temp_result))
 
-        self.log_alpha = torch_tensor( temp_result )
-        # .to(self.device)
 
-
-        # self.log_alpha.requires_grad = True
-        torch_tensor_requires_grad_(self.log_alpha, True)
+        self.log_alpha = tf.Variable( temp_result , trainable = True)
 
         self.target_entropy = cfg.train.target_entropy
+
+        print("self.target_entropy = ", self.target_entropy)
         
         self.log_alpha_optimizer = torch_optim_Adam(
             [self.log_alpha],
             lr=cfg.train.critic_lr,
         )
+
+
+        # Actor params
+        self.use_expectile_exploration = cfg.train.use_expectile_exploration
+        # Updates
+        self.replay_ratio = cfg.train.replay_ratio
+        self.critic_tau = cfg.train.critic_tau
+        # Whether to use deterministic mode when sampling at eval
+        self.eval_deterministic = cfg.train.get("eval_deterministic", False)
+        # Sampling
+        self.num_sample = cfg.train.eval_sample_num
+
+
 
     def run(self):
 
@@ -119,8 +183,8 @@ class TrainDacerAgent(TrainAgent):
         cnt_train_step = 0
         done_venv = np.zeros((1, self.n_envs))
         while self.itr < self.n_train_itr:
-            if self.itr % 1000 == 0:
-                print(f"Finished training iteration {self.itr} of {self.n_train_itr}")
+            # if self.itr % 1000 == 0:
+            #     print(f"Finished training iteration {self.itr} of {self.n_train_itr}")
 
             # Prepare video paths for each envs --- only applies for the first set of episodes if allowing reset within iteration and each iteration has multiple episodes from one env
             options_venv = [{} for _ in range(self.n_envs)]
@@ -131,63 +195,68 @@ class TrainDacerAgent(TrainAgent):
                     )
 
             # Define train or eval - all envs restart
-            eval_mode = (
-                self.itr % self.val_freq == 0
-                and self.itr > self.n_explore_steps
-                and not self.force_train
-            )
-            n_steps = (
-                self.n_steps if not eval_mode else int(1e5)
-            )  # large number for eval mode
+            print("Different 1 changed: eval_mode = self.itr % self.val_freq == 0 and self.itr > self.n_explore_steps and not self.force_train")
+            # eval_mode = self.itr % self.val_freq == 0 and self.itr > self.n_explore_steps and not self.force_train
+            eval_mode = self.itr % self.val_freq == 0 and not self.force_train
+
+            print("Different 2 removed: n_steps = ( self.n_steps if not eval_mode else int(1e5) )")
+            # n_steps = ( self.n_steps if not eval_mode else int(1e5) )
             
-
-
-
-
-            
-            # self.model.eval() if eval_mode else self.model.train()
 
             if eval_mode:
                 training=False
             else:
                 training=True
 
+            print("Different 3 added: last_itr_eval = eval_mode")
+            last_itr_eval = eval_mode
 
 
 
             # Reset env before iteration starts (1) if specified, (2) at eval mode, or (3) at the beginning
             firsts_trajs = np.zeros((self.n_steps + 1, self.n_envs))
-            if self.reset_at_iteration or eval_mode or self.itr == 0:
+
+            print("Different 4 changed: if self.reset_at_iteration or eval_mode or self.itr == 0:")
+            # if self.reset_at_iteration or eval_mode or self.itr == 0:
+            if self.reset_at_iteration or eval_mode or last_itr_eval:
                 prev_obs_venv = self.reset_env_all(options_venv=options_venv)
                 firsts_trajs[0] = 1
             else:
                 # if done at the end of last iteration, the envs are just reset
                 firsts_trajs[0] = done_venv
+
             reward_trajs = np.zeros((self.n_steps, self.n_envs))
 
             # Collect a set of trajectories from env
-            cnt_episode = 0
-            for step in range(n_steps):
+            print("Different 5 removed: cnt_episode = 0")
+            # cnt_episode = 0
 
-                # Select action
-                if self.itr < self.n_explore_steps:
-                    action_venv = self.venv.action_space.sample()
-                else:
-                    # with torch.no_grad():
-                    with torch_no_grad() as tape:
-                        cond = {
-                            "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                            # .float()
-                            # .to(self.device)
-                        }
-                        samples = (
-                            self.model(
-                                cond=cond,
-                                deterministic=eval_mode,
-                            )
-                            .numpy()
-                        )  # n_env x horizon x act
-                    action_venv = samples[:, : self.act_steps]
+            print("Different 6 changed: for step in range(n_steps)")
+            # for step in range(n_steps):
+            for step in range(self.n_steps):
+                
+                print("Different 7 changed: if self.itr < self.n_explore_steps")
+                # # Select action
+                # if self.itr < self.n_explore_steps:
+                #     print("branch1: self.itr < self.n_explore_steps")
+                #     action_venv = self.venv.action_space.sample()
+                # else:
+                #     print("branch2: self.itr >= self.n_explore_steps")
+                #     # with torch.no_grad():
+                with torch_no_grad() as tape:
+                    cond = {
+                        "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
+                        # .float()
+                        # .to(self.device)
+                    }
+                    samples = (
+                        self.model(
+                            cond=cond,
+                            deterministic=eval_mode,
+                        )
+                        .numpy()
+                    )  # n_env x horizon x act
+                action_venv = samples[:, : self.act_steps]
 
                 # Apply multi-step action
                 obs_venv, reward_venv, terminated_venv, truncated_venv, info_venv = (
@@ -231,7 +300,9 @@ class TrainDacerAgent(TrainAgent):
                     end = env_steps[i + 1]
                     if end - start > 1:
                         episodes_start_end.append((env_ind, start, end - 1))
+
             if len(episodes_start_end) > 0:
+                print("len(episodes_start_end) > 0")
                 reward_trajs_split = [
                     reward_trajs[start : end + 1, env_ind]
                     for env_ind, start, end in episodes_start_end
@@ -252,6 +323,7 @@ class TrainDacerAgent(TrainAgent):
                     episode_best_reward >= self.best_reward_threshold_for_success
                 )
             else:
+                print("len(episodes_start_end) == 0")
                 episode_reward = np.array([])
                 num_episode_finished = 0
                 avg_episode_reward = 0
@@ -381,9 +453,14 @@ class TrainDacerAgent(TrainAgent):
 
 
 
-            # Save model
-            if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-                self.save_model_dacer()
+            # # Save model
+            # if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
+            #     self.save_model_dacer()
+
+
+
+
+
 
             # Log loss and save metrics
             run_results.append(

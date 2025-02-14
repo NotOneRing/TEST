@@ -317,7 +317,8 @@ class TrainDIPODiffusionAgent(TrainAgent):
                         )
 
                         # get Q-perturbed actions by optimizing
-                        actions_flat = torch_reshape( actions_b, len(actions_b), -1)
+                        # actions_flat = torch_reshape( actions_b, actions_b.shape[0], -1)
+                        actions_flat = tf.Variable( torch_reshape( actions_b, actions_b.shape[0], -1) , trainable=True)
 
 
                         actions_optim = torch_optim_Adam(
@@ -326,8 +327,8 @@ class TrainDIPODiffusionAgent(TrainAgent):
 
                         for _ in range(self.action_gradient_steps):
                             
-                            # actions_flat.requires_grad_(True)
-                            actions_flat = torch_tensor_requires_grad_(actions_flat, True)
+                            # # actions_flat.requires_grad_(True)
+                            # actions_flat = torch_tensor_requires_grad_(actions_flat, True)
 
                             with tf.GradientTape() as tape:
                                 
@@ -368,10 +369,10 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             # two into one
                             # actions_optim.step(tf_gradients)
 
-                            # actions_flat.requires_grad_(False)
-                            torch_tensor_requires_grad_(actions_flat, False)
+                            # # actions_flat.requires_grad_(False)
+                            # torch_tensor_requires_grad_(actions_flat, False)
                             
-                            actions_flat = torch_clamp(actions_flat, -1.0, 1.0)
+                        actions_flat = torch_clamp(actions_flat, -1.0, 1.0)
 
                         guided_action = torch_reshape( actions_flat,
                             len(actions_flat), self.horizon_steps, self.action_dim

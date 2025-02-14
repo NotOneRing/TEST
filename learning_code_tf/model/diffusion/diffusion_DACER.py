@@ -201,9 +201,15 @@ class DACER_Diffusion(DiffusionModel):
 
         x = tf.random.normal( (B, self.horizon_steps, self.action_dim) )
 
+        # print("self.horizon_steps = ", self.horizon_steps)
+        # print("self.action_dim = ", self.action_dim)
+
         t_all = list(reversed(range(self.denoising_steps)))
         for i, t in enumerate(t_all):
             t_b = make_timesteps(B, t)
+            
+            # print("t_b.shape = ", t_b.shape)
+
             mean, logvar = self.p_mean_var(
                 x=x,
                 t=t_b,
@@ -238,6 +244,15 @@ class DACER_Diffusion(DiffusionModel):
         import numpy as np
         from sklearn.mixture import GaussianMixture
         total_entropy = []
+        # total_entropy_sum = []
+        # total_entropy_len = []
+        
+
+        shape = actions.shape
+        actions = actions.reshape(shape[0], shape[1], -1)
+
+        # print("estimate_entropy: actions.shape = ", actions.shape)
+
         for action in actions:
             gmm = GaussianMixture(n_components=num_components, covariance_type='full')
             gmm.fit(action)
@@ -250,8 +265,13 @@ class DACER_Diffusion(DiffusionModel):
                 entropies.append(entropy)
             entropy = -np.sum(weights * np.log(weights)) + np.sum(weights * np.array(entropies))
             total_entropy.append(entropy)
-        final_entropy = sum(total_entropy) / len(total_entropy)
-        return final_entropy
+
+        # final_entropy = sum(total_entropy) / len(total_entropy)
+        # return final_entropy
+        total_entropy_sum = sum(total_entropy)
+        total_entropy_len = len(total_entropy)
+
+        return total_entropy_sum, total_entropy_len
 
 
     def cal_entropy(self, obs, alpha, num_samples):
@@ -261,16 +281,21 @@ class DACER_Diffusion(DiffusionModel):
             cur_actions = self.get_action(obs, alpha)
             actions.append(cur_actions)
         
-        # print("cal_entropy(): actions = ", actions)
-        
-        
         actions = np.stack(actions, axis=0)
 
-        actions = actions.transpose(1, 0)
+        shape = actions.shape
+        new_order = [1, 0] + list(range(2, len(shape)))
+        actions = np.transpose(actions, new_order)
 
-        entropy = self.estimate_entropy( actions )
+
+        # print("actions = ", actions)
+        # print("actions.shape = ", actions.shape)
+        # print("type(actions) = ", type(actions))
+
+
+        entropy_sum, entropy_len = self.estimate_entropy( actions )
         
-        return entropy
+        return entropy_sum, entropy_len
 
 
 
@@ -283,7 +308,34 @@ class DACER_Diffusion(DiffusionModel):
         prev_entropy = self.entropy if hasattr(self, 'entropy') else tf.float32(0.0)
 
         if self.step % self.delay_alpha_update == 0:
-            self.entropy = self.cal_entropy(obs, alpha, self.num_samples)
+            entropy_sum_list = []
+            entropy_len_list = []
+            B = obs['state'].shape[0]
+
+            # print("obs['state'].shape = ", obs['state'].shape)
+            # print( "type(obs['state']) = ", type(obs['state']) )
+
+            #one by one
+            # for i in range(B):
+            #     cur_obs = tf.gather(obs['state'], i, axis=0)
+            #     cur_obs = torch_unsqueeze(cur_obs, 0)
+            #     # print("cur_obs.shape = ", cur_obs.shape)
+            #     cur_obs = torch_squeeze(cur_obs, 1)
+            #     # print("cur_obs.shape = ", cur_obs.shape)
+            #     cur_obs_dict = {'state': cur_obs}
+
+            #     entropy_sum, entropy_len = self.cal_entropy(cur_obs_dict, alpha, self.num_samples)
+            #     entropy_sum_list.append(entropy_sum)
+            #     entropy_len_list.append(entropy_len)
+
+            # parallel for batch dim
+            cur_obs_dict = obs
+            entropy_sum, entropy_len = self.cal_entropy(cur_obs_dict, alpha, self.num_samples)
+            entropy_sum_list.append(entropy_sum)
+            entropy_len_list.append(entropy_len)
+
+
+            self.entropy = sum(entropy_sum_list) / sum(entropy_len_list)
         else:
             self.entropy = prev_entropy
 

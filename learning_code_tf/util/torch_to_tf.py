@@ -3717,8 +3717,9 @@ def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grad
             if g is not None and (tf.reduce_any(tf.is_nan(g)) or tf.reduce_any(tf.is_inf(g))):
                 raise ValueError("Gradients contain non-finite values.")
 
+    zip_gradients_params = zip(clipped_grads, parameters)
 
-    optimizer.apply_gradients(clipped_grads)
+    optimizer.apply_gradients(zip_gradients_params)
     
     return clipped_grads
 
@@ -3881,9 +3882,9 @@ class torch_utils_data_DataLoader:
                     # print("value[0] = ", value[0])                   
                     if value[0] is not None:
                         return_dict[key] = tf.convert_to_tensor(value)
-                        # print("return_dict[key].shape = ", return_dict[key].shape)
-                    else:
-                        return_dict[key] = None
+                    #     # print("return_dict[key].shape = ", return_dict[key].shape)
+                    # else:
+                    #     return_dict[key] = None
                 yield return_dict
                 batch_data = {key: [] for key in batch_data}  # 重新初始化
                 batch_count = 0
@@ -3897,8 +3898,8 @@ class torch_utils_data_DataLoader:
                     # print("value = ", value)
                     if value[0] is not None:   
                         return_dict[key] = tf.convert_to_tensor(value)
-                    else:
-                        return_dict[key] = None
+                    # else:
+                    #     return_dict[key] = None
                 yield return_dict
 
 
