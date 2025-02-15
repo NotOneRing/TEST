@@ -22,6 +22,7 @@ cond_steps: 1
 horizon_steps: 4
 act_steps: 4
 
+
 env:
   n_envs: 40
   name: ${env_name}
@@ -47,7 +48,8 @@ train:
   n_train_itr: 1000
   # n_critic_warmup_itr: 0
   n_critic_warmup_itr: 5
-  n_steps: 500
+  # n_steps: 500
+  n_steps: 10
   gamma: 0.99
   actor_lr: 1e-4
   actor_weight_decay: 0

@@ -266,6 +266,15 @@ class StitchedSequenceQLearningDataset:
         # Set up indices for sampling
         self.indices = self.make_indices(traj_lengths, horizon_steps)
 
+        # for key, value in dataset:
+        #     print("dataset_key = ", key)
+        #     print("dataset_value = ", value)
+
+        print("type(dataset) = ", type(dataset))
+        print("dataset = ", dataset)
+
+
+
         # Extract states, actions, rewards, and next_states
         self.states = tf.convert_to_tensor(dataset["states"][:total_num_steps], dtype=tf.float32)  # (total_num_steps, obs_dim)
         self.actions = tf.convert_to_tensor(dataset["actions"][:total_num_steps], dtype=tf.float32)  # (total_num_steps, action_dim)

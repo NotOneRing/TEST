@@ -20,10 +20,14 @@ from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
 
-from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_Adam, torch_optim_AdamW
+# from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_Adam, torch_optim_AdamW
 
-from util.torch_to_tf import torch_from_numpy, torch_tensor, torch_cat,\
-torch_tensor_exp, torch_rand, torch_tensor_float, torch_no_grad, torch_tensor_item
+# from util.torch_to_tf import torch_from_numpy, torch_tensor, torch_cat,\
+# torch_tensor_exp, torch_rand, torch_tensor_float, torch_no_grad, torch_tensor_item
+
+
+from util.torch_to_tf import *
+
 
 import tensorflow as tf
 

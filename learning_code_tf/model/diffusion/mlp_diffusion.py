@@ -1071,6 +1071,10 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         # assert 
         B = x.shape[0]
+        
+        # print("Ta = ", Ta)
+        # print("self.horizon_steps = ", self.horizon_steps)
+
         assert Ta == self.horizon_steps
         assert Da == self.action_dim
         # Ta = self.horizon_steps

@@ -325,16 +325,19 @@ class TrainDiffusionAgent(PreTrainAgent):
             # train
 
             training_flag = True
-            
+
+        
+            if DEBUG and TEST_LOAD_PRETRAIN and _ == 1:
+                break
+
             loss_train_epoch = []
             for batch_train in self.dataloader_train:
-
-
 
                 cond = {}
                 cur_actions = batch_train['actions']
                 cond['state'] = batch_train["states"]
-                cond['rgb'] = batch_train["rgb"]
+                if 'rgb' in batch_train:
+                    cond['rgb'] = batch_train["rgb"]
 
                 item_actions_copy = deepcopy(batch_train['actions'])
                 cond_copy = deepcopy(cond)
@@ -370,6 +373,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
                 if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
                     self.load_pickle_network()
+                    self.debug_diffusion_img_save_load()
                     break
 
 
@@ -407,7 +411,8 @@ class TrainDiffusionAgent(PreTrainAgent):
                     cur_actions = batch_val['actions']
                     cond['state'] = batch_val["states"]
 
-                    cond['rgb'] = batch_val["rgb"]
+                    if 'rgb' in batch_val:
+                        cond['rgb'] = batch_val["rgb"]
 
                     loss_val = self.model.loss_ori(training_flag, 
                         cur_actions, cond)

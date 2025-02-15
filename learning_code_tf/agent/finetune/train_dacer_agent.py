@@ -11,6 +11,10 @@ import numpy as np
 
 import tensorflow as tf
 
+import einops
+from copy import deepcopy
+
+
 import logging
 import wandb
 from collections import deque
@@ -23,6 +27,7 @@ from agent.finetune.train_agent import TrainAgent
 # from util.torch_to_tf import torch_no_grad, torch_optim_Adam, torch_exp, torch_tensor_item, torch_tensor_requires_grad_
 
 from util.torch_to_tf import *
+
 
 
 
@@ -167,6 +172,7 @@ class TrainDacerAgent(TrainAgent):
 
 
     def run(self):
+        import time
 
         print("train_sac_agent.py: TrainSACAgent.run()")
 
@@ -183,8 +189,10 @@ class TrainDacerAgent(TrainAgent):
         cnt_train_step = 0
         done_venv = np.zeros((1, self.n_envs))
         while self.itr < self.n_train_itr:
-            # if self.itr % 1000 == 0:
-            #     print(f"Finished training iteration {self.itr} of {self.n_train_itr}")
+            print("self.itr = ", self.itr)
+
+            if self.itr % 1000 == 0:
+                print(f"Finished training iteration {self.itr} of {self.n_train_itr}")
 
             # Prepare video paths for each envs --- only applies for the first set of episodes if allowing reset within iteration and each iteration has multiple episodes from one env
             options_venv = [{} for _ in range(self.n_envs)]
@@ -235,6 +243,8 @@ class TrainDacerAgent(TrainAgent):
             # for step in range(n_steps):
             for step in range(self.n_steps):
                 
+                time1 = time.time()
+
                 print("Different 7 changed: if self.itr < self.n_explore_steps")
                 # # Select action
                 # if self.itr < self.n_explore_steps:
@@ -256,29 +266,55 @@ class TrainDacerAgent(TrainAgent):
                         )
                         .numpy()
                     )  # n_env x horizon x act
+
+                time2 = time.time()
+                elapsed_time = time2 - time1
+                print(f"Elapsed time: single Samples {elapsed_time:.4f} seconds")
+
+
                 action_venv = samples[:, : self.act_steps]
+
+                print("samples.shape = ", samples.shape)
+                print("action_venv.shape = ", action_venv.shape)
+
 
                 # Apply multi-step action
                 obs_venv, reward_venv, terminated_venv, truncated_venv, info_venv = (
                     self.venv.step(action_venv)
                 )
+                
                 done_venv = terminated_venv | truncated_venv
                 reward_trajs[step] = reward_venv
                 firsts_trajs[step + 1] = done_venv
 
-                # add to buffer in train mode
+
+                print("Different 8 changed: add to buffer")
+                # # add to buffer in train mode
+                # if not eval_mode:
+                #     for i in range(self.n_envs):
+                #         obs_buffer.append(prev_obs_venv["state"][i])
+                #         if "final_obs" in info_venv[i]:  # truncated
+                #             next_obs_buffer.append(info_venv[i]["final_obs"]["state"])
+                #         else:  # first obs in new episode
+                #             next_obs_buffer.append(obs_venv["state"][i])
+                #         action_buffer.append(action_venv[i])
+                #     reward_buffer.extend(
+                #         (reward_venv * self.scale_reward_factor).tolist()
+                #     )
+                #     terminated_buffer.extend(terminated_venv.tolist())
                 if not eval_mode:
+                    obs_venv_copy = obs_venv.copy()
                     for i in range(self.n_envs):
-                        obs_buffer.append(prev_obs_venv["state"][i])
-                        if "final_obs" in info_venv[i]:  # truncated
-                            next_obs_buffer.append(info_venv[i]["final_obs"]["state"])
-                        else:  # first obs in new episode
-                            next_obs_buffer.append(obs_venv["state"][i])
-                        action_buffer.append(action_venv[i])
-                    reward_buffer.extend(
-                        (reward_venv * self.scale_reward_factor).tolist()
-                    )
-                    terminated_buffer.extend(terminated_venv.tolist())
+                        if truncated_venv[i]:
+                            obs_venv_copy["state"][i] = info_venv[i]["final_obs"][
+                                "state"
+                            ]
+                    obs_buffer.append(prev_obs_venv["state"])
+                    next_obs_buffer.append(obs_venv_copy["state"])
+                    action_buffer.append(action_venv)
+                    reward_buffer.append(reward_venv * self.scale_reward_factor)
+                    terminated_buffer.append(terminated_venv)
+
 
                 # update for next step
                 prev_obs_venv = obs_venv
@@ -286,10 +322,13 @@ class TrainDacerAgent(TrainAgent):
                 # count steps --- not acounting for done within action chunk
                 cnt_train_step += self.n_envs * self.act_steps if not eval_mode else 0
 
-                # check if enough eval episodes are done
-                cnt_episode += np.sum(done_venv)
-                if eval_mode and cnt_episode >= self.n_eval_episode:
-                    break
+
+
+                print("Different 9 changed: remove cnt_episode")
+                # # check if enough eval episodes are done
+                # cnt_episode += np.sum(done_venv)
+                # if eval_mode and cnt_episode >= self.n_eval_episode:
+                #     break
 
             # Summarize episode reward --- this needs to be handled differently depending on whether the environment is reset after each iteration. Only count episodes that finish within the iteration.
             episodes_start_end = []
@@ -330,116 +369,187 @@ class TrainDacerAgent(TrainAgent):
                 avg_best_reward = 0
                 success_rate = 0
 
-            # Update models
-            if (
-                not eval_mode
-                and self.itr > self.n_explore_steps
-                and self.itr % self.critic_update_freq == 0
-            ):
-                inds = np.random.choice(len(obs_buffer), self.batch_size, replace=False)
-                obs_b = (
-                    torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
+            print("Different 10 changed: update models condition")
+            # # Update models
+            # if (
+            #     not eval_mode
+            #     and self.itr > self.n_explore_steps
+            #     and self.itr % self.critic_update_freq == 0
+            # ):
+            #     inds = np.random.choice(len(obs_buffer), self.batch_size, replace=False)
+            #     obs_b = (
+            #         torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
+            #         # .float()
+            #         # .to(self.device)
+            #     )
+            #     next_obs_b = (
+            #         torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
+            #         # .float()
+            #         # .to(self.device)
+            #     )
+            #     actions_b = (
+            #         torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
+            #         # .float()
+            #         # .to(self.device)
+            #     )
+            #     rewards_b = (
+            #         torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
+            #         # .float()
+            #         # .to(self.device)
+            #     )
+            #     terminated_b = (
+            #         torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
+            #         # .float()
+            #         # .to(self.device)
+            #     )
+
+            #     # Update critic
+            #     # alpha = self.log_alpha.exp().item()
+            if not eval_mode:
+                num_batch = int(
+                    self.n_steps * self.n_envs / self.batch_size * self.replay_ratio
                 )
-                next_obs_b = (
-                    torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
+
+                obs_trajs = np.array(deepcopy(obs_buffer))
+                action_trajs = np.array(deepcopy(action_buffer))
+                next_obs_trajs = np.array(deepcopy(next_obs_buffer))
+                reward_trajs = np.array(deepcopy(reward_buffer))
+                terminated_trajs = np.array(deepcopy(terminated_buffer))
+
+                # flatten
+                obs_trajs = einops.rearrange(
+                    obs_trajs,
+                    "s e h d -> (s e) h d",
                 )
-                actions_b = (
-                    torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
+                next_obs_trajs = einops.rearrange(
+                    next_obs_trajs,
+                    "s e h d -> (s e) h d",
                 )
-                rewards_b = (
-                    torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
+                action_trajs = einops.rearrange(
+                    action_trajs,
+                    "s e h d -> (s e) h d",
                 )
-                terminated_b = (
-                    torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
-                )
-
-                # Update critic
-                # alpha = self.log_alpha.exp().item()
-
-                alpha = torch_tensor_item( torch_exp(self.log_alpha) )
-
-
-
-                with tf.GradientTape(persistent = True) as tape:
-                    loss_critic1, loss_critic2 = self.model.loss_critic(
-                        {"state": obs_b},
-                        {"state": next_obs_b},
-                        actions_b,
-                        rewards_b,
-                        terminated_b,
-                        self.gamma,
-                        alpha,
-                    )
-
-                tf_Q1_gradients = tape.gradient(loss_critic1, self.model.critic.Q1.trainable_variables)
-                tf_Q2_gradients = tape.gradient(loss_critic2, self.model.critic.Q2.trainable_variables)
-
-                zip_gradients_Q1_params = zip(tf_Q1_gradients, self.model.critic.Q1.trainable_variables)
-                zip_gradients_Q2_params = zip(tf_Q2_gradients, self.model.critic.Q2.trainable_variables)
-
-                # everytime
-                self.critic1_optimizer.apply_gradients(zip_gradients_Q1_params)
-                self.critic2_optimizer.apply_gradients(zip_gradients_Q2_params)
-
+                reward_trajs = reward_trajs.reshape(-1)
+                terminated_trajs = terminated_trajs.reshape(-1)
                 
-                if self.model.step % self.model.delay_update == 0:
-                    with tf.GradientTape() as tape:
+                for _ in range(num_batch):
+
+
+                    time3 = time.time()
+
+                    # Sample batch
+                    inds = np.random.choice(len(obs_trajs), self.batch_size)
+                    obs_b = torch_tensor_float( torch_from_numpy(obs_trajs[inds]) )
+                    next_obs_b = (
+                        torch_tensor_float( torch_from_numpy(next_obs_trajs[inds]) )
+                    )
+                    actions_b = (
+                        torch_tensor_float( torch_from_numpy(action_trajs[inds]) )
+                    )
+                    rewards_b = (
+                        torch_tensor_float( torch_from_numpy(reward_trajs[inds]) )
+                    )
+                    terminated_b = (
+                        torch_tensor_float( torch_from_numpy(terminated_trajs[inds]) )
+                    )
                         
-                        loss_actor = self.model.loss_actor(
+                    alpha = torch_tensor_item( torch_exp(self.log_alpha) )
+
+
+
+                    with tf.GradientTape(persistent = True) as tape:
+                        loss_critic1, loss_critic2 = self.model.loss_critic(
                             {"state": obs_b},
+                            {"state": next_obs_b},
+                            actions_b,
+                            rewards_b,
+                            terminated_b,
+                            self.gamma,
                             alpha,
                         )
 
-                    tf_gradients_actor = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+                    tf_Q1_gradients = tape.gradient(loss_critic1, self.model.critic.Q1.trainable_variables)
+                    tf_Q2_gradients = tape.gradient(loss_critic2, self.model.critic.Q2.trainable_variables)
 
-                    print("tf_gradients_actor = ", tf_gradients_actor)
+                    zip_gradients_Q1_params = zip(tf_Q1_gradients, self.model.critic.Q1.trainable_variables)
+                    zip_gradients_Q2_params = zip(tf_Q2_gradients, self.model.critic.Q2.trainable_variables)
 
-                    zip_tf_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
+                    # everytime
+                    self.critic1_optimizer.apply_gradients(zip_gradients_Q1_params)
+                    self.critic2_optimizer.apply_gradients(zip_gradients_Q2_params)
 
+                    time4 = time.time()
+                    elapsed_time = time4 - time3
+                    print(f"Elapsed time: single loss critic {elapsed_time:.4f} seconds")
 
-                    # # 打印梯度检查
-                    # for grad, var in zip_tf_gradients_actor_params:
-                    #     if grad is None:
-                    #         print(f"Gradient for {var} is None")
-                    #     else:
-                    #         print(f"Gradient for {var}: {grad}")
+                    
+                    if self.model.step % self.model.delay_update == 0:
+                        time5 = time.time()
 
+                        with tf.GradientTape() as tape:
+                            
+                            loss_actor = self.model.loss_actor(
+                                {"state": obs_b},
+                                alpha,
+                            )
 
-                    # zipped_gradients_list = list(zip_tf_gradients_actor_params)
+                        tf_gradients_actor = tape.gradient(loss_actor, self.model.actor.trainable_variables)
 
-                    # assert len(zipped_gradients_list) > 0, "No gradients provided"
+                        # print("tf_gradients_actor = ", tf_gradients_actor)
 
-                    self.actor_optimizer.apply_gradients(zip_tf_gradients_actor_params)
-
-
-                if self.model.step % self.model.delay_alpha_update == 0:
-                    with tf.GradientTape() as tape:
-                        # Update temperature parameter
-                        loss_alpha = self.model.loss_temperature(
-                            {"state": obs_b},
-                            torch_exp( self.log_alpha ),  # with grad
-                            self.target_entropy,
-                        )
-
-                    tf_alpha_gradients = tape.gradient(loss_alpha, [self.log_alpha])
-                    zip_tf_gradients_alpha = zip(tf_alpha_gradients, [self.log_alpha])
-                    self.log_alpha_optimizer.apply_gradients(zip_tf_gradients_alpha)
+                        zip_tf_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
 
 
-                if self.model.step % self.model.delay_update == 0:
-                    self.model.update_target_critic(self.model.tau)
+                        # # 打印梯度检查
+                        # for grad, var in zip_tf_gradients_actor_params:
+                        #     if grad is None:
+                        #         print(f"Gradient for {var} is None")
+                        #     else:
+                        #         print(f"Gradient for {var}: {grad}")
 
-                self.model.step=self.model.step + 1
+
+                        # zipped_gradients_list = list(zip_tf_gradients_actor_params)
+
+                        # assert len(zipped_gradients_list) > 0, "No gradients provided"
+
+                        self.actor_optimizer.apply_gradients(zip_tf_gradients_actor_params)
+
+                        time6 = time.time()
+                        elapsed_time = time6 - time5
+                        print(f"Elapsed time: single loss_actor {elapsed_time:.4f} seconds")
+
+
+                    if self.model.step % self.model.delay_alpha_update == 0:
+                        time7 = time.time()
+
+                        with tf.GradientTape() as tape:
+                            # Update temperature parameter
+                            loss_alpha = self.model.loss_temperature(
+                                {"state": obs_b},
+                                torch_exp( self.log_alpha ),  # with grad
+                                self.target_entropy,
+                            )
+                        
+
+                        tf_alpha_gradients = tape.gradient(loss_alpha, [self.log_alpha])
+                        zip_tf_gradients_alpha = zip(tf_alpha_gradients, [self.log_alpha])
+                        self.log_alpha_optimizer.apply_gradients(zip_tf_gradients_alpha)
+
+                        time8 = time.time()
+                        elapsed_time = time8 - time7
+                        print(f"Elapsed time: single loss_temperature {elapsed_time:.4f} seconds")
+
+
+                    if self.model.step % self.model.delay_update == 0:
+                        time9 = time.time()
+
+                        self.model.update_target_critic(self.model.tau)
+
+                        time10 = time.time()
+                        elapsed_time = time10 - time9
+                        print(f"Elapsed time: update_target_critic {elapsed_time:.4f} seconds")
+
+                    self.model.step=self.model.step + 1
 
 
 
@@ -458,8 +568,11 @@ class TrainDacerAgent(TrainAgent):
             #     self.save_model_dacer()
 
 
-
-
+            print("Different 11 changed: update lr scheduler")
+            # Update lr
+            self.actor_lr_scheduler.step()
+            self.critic_q1_lr_scheduler.step()
+            self.critic_q2_lr_scheduler.step()
 
 
             # Log loss and save metrics
@@ -469,59 +582,81 @@ class TrainDacerAgent(TrainAgent):
                     "step": cnt_train_step,
                 }
             )
-            if self.itr % self.log_freq == 0 and self.itr > self.n_explore_steps:
-                time = timer()
+
+            print("Different 12 changed: output")
+            if self.itr % self.log_freq == 0:
+                end_time = timer()
+                run_results[-1]["time"] = end_time
                 if eval_mode:
                     log.info(
-                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+                        f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
-                    # log.info(
-                    #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t {time:8.4f}"
-                    # )
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} "
-                        f"| loss actor {loss_actor:8.4f} |"
-                        f"| loss critic1 {loss_critic1:8.4f} | loss critic2 {loss_critic2:8.4f} "
-                        f"| entropy coeff: {alpha:8.4f} "
-                        f"| reward {avg_episode_reward:8.4f} "
-                        f"| num episode - train: {num_episode_finished:8.4f} "
-                        f"| t:{time:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic1 {loss_critic1:8.4f} | loss critic2 {loss_critic2:8.4f} | reward {avg_episode_reward:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-
-                    # if self.use_wandb:
-                    #     wandb_log_dict = {
-                    #         "total env step": cnt_train_step,
-                    #         "loss - critic": loss_critic,
-                    #         "entropy coeff": alpha,
-                    #         "avg episode reward - train": avg_episode_reward,
-                    #         "num episode - train":' num_episode_finished,
-                    #     }
-                    #     if loss_actor is not None:
-                    #         wandb_log_dict["loss - actor"] = loss_actor
-                    #     wandb.log(
-                    #         wandb_log_dict,
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
-                    run_results[-1]["train_episode_reward"] = avg_episode_reward
+                    run_results[-1]["train_episode_reward"] = avg_episode_reward            # # if self.itr % self.log_freq == 0 and self.itr > self.n_explore_steps:
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
+
+
+            # if self.itr % self.log_freq == 0:
+            #     time = timer()
+            #     if eval_mode:
+            #         log.info(
+            #             f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
+            #         )
+            #         # if self.use_wandb:
+            #         #     wandb.log(
+            #         #         {
+            #         #             "success rate - eval": success_rate,
+            #         #             "avg episode reward - eval": avg_episode_reward,
+            #         #             "avg best reward - eval": avg_best_reward,
+            #         #             "num episode - eval": num_episode_finished,
+            #         #         },
+            #         #         step=self.itr,
+            #         #         commit=False,
+            #         #     )
+            #         run_results[-1]["eval_success_rate"] = success_rate
+            #         run_results[-1]["eval_episode_reward"] = avg_episode_reward
+            #         run_results[-1]["eval_best_reward"] = avg_best_reward
+            #     else:
+            #         # log.info(
+            #         #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t {time:8.4f}"
+            #         # )
+            #         log.info(
+            #             f"{self.itr}: step {cnt_train_step:8d} "
+            #             f"| loss actor {loss_actor:8.4f} |"
+            #             f"| loss critic1 {loss_critic1:8.4f} | loss critic2 {loss_critic2:8.4f} "
+            #             f"| entropy coeff: {alpha:8.4f} "
+            #             f"| reward {avg_episode_reward:8.4f} "
+            #             f"| num episode - train: {num_episode_finished:8.4f} "
+            #             f"| t:{time:8.4f}"
+            #         )
+
+            #         # if self.use_wandb:
+            #         #     wandb_log_dict = {
+            #         #         "total env step": cnt_train_step,
+            #         #         "loss - critic": loss_critic,
+            #         #         "entropy coeff": alpha,
+            #         #         "avg episode reward - train": avg_episode_reward,
+            #         #         "num episode - train":' num_episode_finished,
+            #         #     }
+            #         #     if loss_actor is not None:
+            #         #         wandb_log_dict["loss - actor"] = loss_actor
+            #         #     wandb.log(
+            #         #         wandb_log_dict,
+            #         #         step=self.itr,
+            #         #         commit=True,
+            #         #     )
+            #         run_results[-1]["train_episode_reward"] = avg_episode_reward
+            #     with open(self.result_path, "wb") as f:
+            #         pickle.dump(run_results, f)
+            # self.itr += 1
 
 
 

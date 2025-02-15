@@ -1,20 +1,22 @@
 DEBUG = True
 
 
-DATASET_NAME = "Square"
+DATASET_NAME = "Halfcheetah"
 
-DATASET_NAME = "Transport"
+# DATASET_NAME = "Square"
+
+# DATASET_NAME = "Transport"
 
 
 # DEBUG = False
 
-# METHOD_NAME = "Diffusion_MLP"
+METHOD_NAME = "Diffusion_MLP"
 
 # METHOD_NAME = "Diffusion_UNet"
 
 # METHOD_NAME = "Gaussian_MLP"
 
-METHOD_NAME = "GMM_MLP"
+# METHOD_NAME = "GMM_MLP"
 
 # METHOD_NAME = "Gaussian_Transformer"
 

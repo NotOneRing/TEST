@@ -19,8 +19,11 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
-from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW,\
-torch_from_numpy, torch_tensor_float, torch_no_grad
+# from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW,\
+# torch_from_numpy, torch_tensor_float, torch_no_grad
+
+from util.torch_to_tf import *
+
 
 import tensorflow as tf
 

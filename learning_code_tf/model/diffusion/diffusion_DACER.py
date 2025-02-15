@@ -166,10 +166,12 @@ class DACER_Diffusion(DiffusionModel):
 
         print("diffusion_sac.py: SAC_Diffusion.loss_actor()")
 
-        action = self.call(
-            obs,
-            deterministic=False
-        )
+        # action = self.call(
+        #     obs,
+        #     deterministic=False
+        # )
+        action = self.get_action(obs, alpha)
+
 
         # print("loss_actor: action = ", action)
 
@@ -193,49 +195,50 @@ class DACER_Diffusion(DiffusionModel):
     def call(self, cond, deterministic=False):
         """Modifying denoising schedule"""
 
-        # with torch_no_grad() as tape:
 
         print("diffusion_DACER.py: DACERDiffusion.forward()")
 
-        B = cond["state"].shape[0]
+        with torch_no_grad() as tape:
 
-        x = tf.random.normal( (B, self.horizon_steps, self.action_dim) )
+            B = cond["state"].shape[0]
 
-        # print("self.horizon_steps = ", self.horizon_steps)
-        # print("self.action_dim = ", self.action_dim)
+            x = tf.random.normal( (B, self.horizon_steps, self.action_dim) )
 
-        t_all = list(reversed(range(self.denoising_steps)))
-        for i, t in enumerate(t_all):
-            t_b = make_timesteps(B, t)
+            # print("self.horizon_steps = ", self.horizon_steps)
+            # print("self.action_dim = ", self.action_dim)
+
+            t_all = list(reversed(range(self.denoising_steps)))
+            for i, t in enumerate(t_all):
+                t_b = make_timesteps(B, t)
+                
+                # print("t_b.shape = ", t_b.shape)
+
+                mean, logvar = self.p_mean_var(
+                    x=x,
+                    t=t_b,
+                    # cond=cond,
+                    cond_state=cond['state'],
+                )
+
+                std = torch_exp(0.5 * logvar)
+
+                # # Determine noise level
+                # if deterministic and t == 0:
+                #     std = torch_zeros_like(std)
+                # elif deterministic:
+                #     std = torch_clip(std, 1e-3, float('inf'))
+                # else:
+                #     std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
+
+                # Add noise
+                noise = torch_randn_like(x)
+                # noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
+                x = mean + std * noise
+
+                # Clamp action at final step
+                if self.final_action_clip_value is not None and i == len(t_all) - 1:
+                    x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
             
-            # print("t_b.shape = ", t_b.shape)
-
-            mean, logvar = self.p_mean_var(
-                x=x,
-                t=t_b,
-                # cond=cond,
-                cond_state=cond['state'],
-            )
-
-            std = torch_exp(0.5 * logvar)
-
-            # # Determine noise level
-            # if deterministic and t == 0:
-            #     std = torch_zeros_like(std)
-            # elif deterministic:
-            #     std = torch_clip(std, 1e-3, float('inf'))
-            # else:
-            #     std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
-
-            # Add noise
-            noise = torch_randn_like(x)
-            # noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
-            x = mean + std * noise
-
-            # Clamp action at final step
-            if self.final_action_clip_value is not None and i == len(t_all) - 1:
-                x = torch_clamp(x, -self.final_action_clip_value, self.final_action_clip_value)
-        
         return x
 
 
@@ -304,6 +307,7 @@ class DACER_Diffusion(DiffusionModel):
         print("diffusion_sac.py: SAC_Diffusion.loss_temperature()")
 
         self.num_samples = 200
+        # self.num_samples = 20
 
         prev_entropy = self.entropy if hasattr(self, 'entropy') else tf.float32(0.0)
 
@@ -338,6 +342,8 @@ class DACER_Diffusion(DiffusionModel):
             self.entropy = sum(entropy_sum_list) / sum(entropy_len_list)
         else:
             self.entropy = prev_entropy
+
+        print("self.entropy = ", self.entropy)
 
         loss_alpha = -torch_mean( torch_log(alpha) * ( -self.entropy + target_entropy ) )
 

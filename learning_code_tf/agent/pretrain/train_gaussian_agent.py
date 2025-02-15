@@ -340,7 +340,7 @@ class TrainGaussianAgent(PreTrainAgent):
 
 
 
-    def debug_diffusion_img_save_load(self):
+    def debug_gaussian_img_save_load(self):
 
 
         if hasattr(self.model.network, 'compress'):
@@ -387,7 +387,7 @@ class TrainGaussianAgent(PreTrainAgent):
             loss_train_epoch = []
             ent_train_epoch = []
 
-            if DEBUG and _ >= 1:
+            if DEBUG and TEST_LOAD_PRETRAIN and _ == 1:
                 break
 
             for batch_train in self.dataloader_train:
@@ -397,7 +397,9 @@ class TrainGaussianAgent(PreTrainAgent):
                 cond = {}
                 cur_actions = batch_train['actions']
                 cond['state'] = batch_train["states"]
-                cond['rgb'] = batch_train["rgb"]
+
+                if 'rgb' in batch_train:
+                    cond['rgb'] = batch_train["rgb"]
 
                 item_actions_copy = deepcopy(batch_train['actions'])
                 cond_copy = deepcopy(cond)
@@ -444,7 +446,7 @@ class TrainGaussianAgent(PreTrainAgent):
                     # self.debug_gmm_save_load()
                     # self.debug_gmm_mlp_save_load()
                     # self.debug_gmm_load_iter()
-                    self.debug_diffusion_img_save_load()
+                    self.debug_gaussian_img_save_load()
                     break
 
                 # print("loss_train = ", loss_train)
@@ -485,7 +487,9 @@ class TrainGaussianAgent(PreTrainAgent):
                     # loss_val, infos_val = self.model.loss(*batch_val)
                     cur_actions = batch_val['actions']
                     cond['state'] = batch_val["states"]
-                    cond['rgb'] = batch_val["rgb"]
+    
+                    if 'rgb' in batch_val:
+                        cond['rgb'] = batch_val["rgb"]
 
                     loss_val, infos_val = self.model.loss_ori(training_flag, 
                         cur_actions, cond,

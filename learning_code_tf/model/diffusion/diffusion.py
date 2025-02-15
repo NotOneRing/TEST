@@ -1549,6 +1549,7 @@ class DiffusionModel(tf.keras.Model):
             shape2 = (128, 1, 17)
         elif self.env_name == "halfcheetah-medium-v2":
             shape1 = (128, 4, 6)
+            # shape1 = (128, 1, 6)
             shape2 = (128, 1, 17)
         # Robomimic - lift/can/square/transport
         elif self.env_name == "lift":

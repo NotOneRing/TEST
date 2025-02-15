@@ -237,7 +237,23 @@ class CriticObsAct(tf.keras.Model):
         print(f"double_q: {self.double_q}, type: {type(self.double_q)}")
 
         print(f"Q1: {self.Q1}, type: {type(self.Q1)}")
-        print(f"Q2: {self.Q2}, type: {type(self.Q2)}")
+    
+        config.update({
+            "Q1": 
+            tf.keras.layers.serialize(self.Q1),
+        })
+
+        if hasattr(self, "Q2"):
+            print(f"Q2: {self.Q2}, type: {type(self.Q2)}")
+
+            config.update({
+                "Q2": 
+                tf.keras.layers.serialize(self.Q2),
+            })
+        else:
+            config.update({
+                "Q2": None
+            })
 
 
         config.update({
@@ -251,13 +267,6 @@ class CriticObsAct(tf.keras.Model):
             "double_q" : self.double_q
         })
     
-    
-        config.update({
-            "Q1": 
-            tf.keras.layers.serialize(self.Q1),
-            "Q2": 
-            tf.keras.layers.serialize(self.Q2),
-        })
 
         return config
 
@@ -297,9 +306,12 @@ class CriticObsAct(tf.keras.Model):
 
         # time_embedding = nn_Sequential.from_config( config.pop("time_embedding") )
         Q1 = tf.keras.layers.deserialize(config.pop("Q1") ,  custom_objects=get_custom_objects() )
-
-        Q2 = tf.keras.layers.deserialize(config.pop("Q2") ,  custom_objects=get_custom_objects() )
-
+        
+        config_Q2 = config.pop("Q2")
+        if config_Q2:
+            Q2 = tf.keras.layers.deserialize(config_Q2 ,  custom_objects=get_custom_objects() )
+        else:
+            Q2 = None
 
         result = cls(Q1 = Q1, Q2 = Q2, **config)
         return result
