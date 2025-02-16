@@ -661,10 +661,10 @@ class CriticObsAct_DACER(tf.keras.Model):
         #     # return torch_squeeze(q1, 1)
         #     return torch_squeeze(q1_mean, 1), torch_squeeze(q1_std, 1)
 
-            return q1_mean, q1_std, q2_mean, q2_std
+            return q1_mean, tf.math.softplus(q1_std), q2_mean, tf.math.softplus(q2_std)
         else:
             # return torch_squeeze(q1, 1)
-            return q1_mean, q1_std
+            return q1_mean, tf.math.softplus(q1_std)
 
 
 

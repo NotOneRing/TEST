@@ -55,12 +55,12 @@ train:
     first_cycle_steps: 1000
     warmup_steps: 10
     min_lr: 1e-4
-  critic_lr: 1e-3
+  critic_lr: 1e-4
   critic_weight_decay: 0
   critic_lr_scheduler:
     first_cycle_steps: 1000
     warmup_steps: 10
-    min_lr: 1e-3
+    min_lr: 1e-4
   # save_model_freq: 100000
   save_model_freq: 100
   # val_freq: 10000
@@ -81,12 +81,12 @@ train:
   n_eval_episode: 10
   n_explore_steps: 5000
   target_entropy: ${eval:'- ${action_dim} * ${act_steps}'}
-  init_temperature: 1
+  init_temperature: 0.272
   eval_sample_num: 20 # how many samples to score during eval
   critic_tau: 0.001  # rate of target q network update
   use_expectile_exploration: True
   replay_ratio: 128
-  batch_size: 1000
+  batch_size: 256
 
 model:
   _target_: model.diffusion.diffusion_DACER.DACER_Diffusion
@@ -106,7 +106,7 @@ model:
   critic: # no layernorm
     _target_: model.common.critic.CriticObsAct_DACER
     mlp_dims: [256, 256, 256]
-    activation_type: ReLU
+    activation_type: GELU
     cond_dim: ${eval:'${obs_dim} * ${cond_steps}'}
     action_dim: ${action_dim}
     action_steps: ${act_steps}

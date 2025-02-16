@@ -2898,6 +2898,11 @@ class nn_Conv1d(tf.keras.layers.Layer):
 
 
 
+    def assign_torch_weights(self, numpy_torch_weights):
+        torch_weight = numpy_torch_weights.transpose(2, 1, 0)  
+        self.conv1d.kernel.assign(torch_weight)
+
+
 
 
 
@@ -3018,6 +3023,9 @@ class nn_Conv2d(tf.keras.layers.Layer):
 
 
 
+    def assign_torch_weights(self, numpy_torch_weights):
+        torch_weights_tf = np.transpose(numpy_torch_weights, (2, 3, 1, 0))  # 转换为 TensorFlow 形状
+        self.conv2d.kernel.assign(torch_weights_tf)
 
 
 
@@ -3091,6 +3099,9 @@ class nn_ConvTranspose1d(tf.keras.layers.Layer):
         return x
 
 
+    def assign_torch_weights(self, numpy_torch_weights):
+        torch_weights_tf = np.transpose(numpy_torch_weights, (2, 1, 0))  # 转换为 TensorFlow 形状
+        self.conv1d_transpose.kernel.assign(torch_weights_tf)
 
 
 

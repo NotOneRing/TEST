@@ -425,18 +425,6 @@ class VPGDiffusion(DiffusionModel):
         print("diffusion_vpg.py: VPGDiffusion.p_mean_var()")
 
 
-        # print("self.actor = ", self.actor)
-
-
-
-        # print("diffusion_ppo.py: VPGDiffusion.p_mean_var(): self.model.actor_ft.trainable_variables = ")
-        # for var in self.actor_ft.trainable_variables:
-        #     print(f"Variable: {var.name}, Trainable: {var.trainable}")
-
-
-
-        # noise = self.actor(x, t, cond=cond)
-        # noise = self.actor([x, t, cond['state']])
 
         if 'rgb' in cond:
             noise = self.actor([x, t, cond['state'], cond['rgb']])
@@ -453,14 +441,9 @@ class VPGDiffusion(DiffusionModel):
             # [0]
             # print("ft_indices = 1: ", ft_indices)
             ft_indices = ft_indices[0]
-            # .numpy()
-            # print("ft_indices = 2: ", ft_indices)
-            # print("type(ft_indices) = ", type(ft_indices))
+            
         else:
-            # print("t = ", t)
-            # print("self.ft_denoising_steps = ", self.ft_denoising_steps)
-            # print("t < self.ft_denoising_steps = ", t < self.ft_denoising_steps)
-            # ft_indices = torch.where(t < self.ft_denoising_steps)[0]
+            
             ft_indices = torch_where(t < self.ft_denoising_steps)
             # [0]
             # print("ft_indices = 3: ", ft_indices)
@@ -472,70 +455,11 @@ class VPGDiffusion(DiffusionModel):
         # Use base policy to query expert model, e.g. for imitation loss
         actor = self.actor if use_base_policy else self.actor_ft
 
-        # print("actor = self.actor if use_base_policy else self.actor_ft: ")
-        # print("use_base_policy = ", use_base_policy)
 
         # overwrite noise for fine-tuning steps
         if len(ft_indices) > 0:            
             print("len(ft_indices) = ", len(ft_indices) )
-            # # print("cond = ", cond)
-            # print("ft_indices = 5: ", ft_indices)
-            # if isinstance(ft_indices, np.ndarray) and ft_indices.size == 1:
-            #     ft_indices = ft_indices.item()
-            # # else:
-            # #     raise ValueError("Array does not contain exactly one element.")
-
-            # # print("ft_indices = ", ft_indices)
-
-            # cond_ft = {}
-            # if isinstance(ft_indices, int) and ft_indices == 0: 
-            #     print("branch 1")
-            #     for key in cond:
-            #         if cond[key].shape[0] == 1:
-            #             cond_ft[key] = cond[key]
-            #         else:
-            #             cond_ft[key] = cond[key][ft_indices, ...]
-            # else:
-            #     print("branch 2")
-            #     for key in cond:
-            #         cond_ft[key] = cond[key][ft_indices, ...]
-
-
-
-            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() cond_ft['state'].shape = ", cond_ft['state'].shape, flush = True)
-
-            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() x[ft_indices].shape = ", x[ft_indices].shape, flush = True)
-
-            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() t[ft_indices].shape = ", t[ft_indices].shape, flush = True)
-
-
-            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() x.shape = ", x.shape, flush = True)
-
-            # print("diffusion_vpg.py: VPGDiffusion.p_mean_var() t.shape = ", t.shape, flush = True)
-
-            # # print("x = ", x)
-            # # print("t = ", t)
-            # # print("type(t) = ", type(t))
-
-            # if isinstance(ft_indices, int) and ft_indices == 0 and x.shape[0] == 1: 
-            #     cur_x = x
-            # else:
-            #     cur_x = x[ft_indices, ...]
             
-            # if isinstance(ft_indices, int) and ft_indices == 0 and t.shape[0] == 1: 
-            #     cur_t = t
-            # else:
-            #     cur_t = t[ft_indices, ...]
-
-            # # print("cur_x = ", cur_x)
-
-            
-            # # print("cur_t = ", cur_t)
-
-            # # print("type(cur_t) = ", type(cur_t))
-
-            # # noise_ft = actor(cur_x, cur_t, cond=cond_ft)
-
             
 
             cond_ft = {key: tf.gather( cond[key], ft_indices, axis=0 ) for key in cond}
@@ -549,25 +473,8 @@ class VPGDiffusion(DiffusionModel):
             else:
                 noise_ft = actor([cur_x, cur_t, cond_ft['state']])
 
-            # noise_ft = actor([cur_x, cur_t, cond_ft['state']])
 
             noise = tf.gather(noise_ft, ft_indices, axis=0)
-
-            # else:
-            #     # print("len(ft_indices) != 1")
-            #     raise RuntimeError("len(ft_indices) != 1")
-
-            # print("noise = ", noise)
-            # print("ft_indices = ", ft_indices)
-            # print("noise_ft = ", noise_ft)
-
-            # print("noise.shape = ", noise.shape)
-            # print("noise_ft.shape = ", noise_ft.shape)
-
-            # if isinstance(ft_indices, int) and ft_indices == 0 and noise.shape[0] == 1: 
-            #     noise = noise_ft
-            # else:
-            #     noise[ft_indices, ...] = noise_ft
 
 
         # Predict x_0
@@ -593,14 +500,6 @@ class VPGDiffusion(DiffusionModel):
         else:  # directly predicting x₀
             x_recon = noise
 
-
-        # print("VPGDiffusion: p_mean_var(): x_recon = ", x_recon)
-
-
-        # if isinstance(x_recon, tf.Tensor):
-        #     x_recon_variable = tf.Variable(x_recon)
-        # else:
-        #     x_recon_variable = x_recon
 
 
         if self.denoised_clip_value is not None:

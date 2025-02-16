@@ -632,7 +632,14 @@ class Unet1D(tf.keras.Model):
         # encode local features
         h_local = []
         h = []
-        for idx, (resnet, resnet2, downsample) in enumerate(self.down_modules):
+        # for idx, (resnet, resnet2, downsample) in enumerate(self.down_modules):
+        for idx in range(len(self.down_modules)):
+            cur_down_modules = self.down_modules[idx]
+            
+            print("cur_down_modules = ", cur_down_modules)
+            print("type(cur_down_modules) = ", type(cur_down_modules))
+
+            resnet, resnet2, downsample = cur_down_modules.layers[0], cur_down_modules.layers[1], cur_down_modules.layers[2]
             
             # print("idx = ", idx)
             # print("resnet = ", resnet)
@@ -649,7 +656,10 @@ class Unet1D(tf.keras.Model):
         for mid_module in self.mid_modules:
             x = mid_module(x, global_feature)
 
-        for idx, (resnet, resnet2, upsample) in enumerate(self.up_modules):
+        # for idx, (resnet, resnet2, upsample) in enumerate(self.up_modules):
+        for idx in range(len(self.up_modules)):
+            cur_up_modules = self.up_modules[idx]
+            resnet, resnet2, upsample = cur_up_modules.layers[0], cur_up_modules.layers[1], cur_up_modules.layers[2]
 
             x = torch_cat([x, h.pop()], dim=1)  # Concatenate along channel dimension
 

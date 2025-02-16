@@ -22,10 +22,164 @@ import tensorflow as tf
 from util.torch_to_tf import *
 
 
+from model.common.mlp import MLP
 
 
 
-class DACER_Diffusion(DiffusionModel):
+
+def is_broadcastable(src, dst):
+    print("fax_utils.py:", "is_broadcastable()")
+    
+    try:
+        # 使用 tf.broadcast_static_shape 判断两个形状是否可以广播
+        return tf.broadcast_static_shape(src, dst) == dst
+    except ValueError:
+        return False
+
+
+
+
+
+# class DistributionalQNet2(tf.keras.Model):
+#     def __init__(self, 
+#     activation = "ReLU",
+#     output_activation = "Identity",
+#     hidden_sizes = [256, 256, 256],
+#     name: str = None):
+#         self.hidden_sizes = hidden_sizes
+#         self.activation_type = activation_type
+#         self.out_activation = out_activation
+
+#         dim_list = list(*self.hidden_sizes) + [2]
+
+#         self.mlp =  MLP(dim_list = dim_list, activation_type=self.activation, out_activation_type=self.output_activation)
+
+#     def call(self, obs, act):
+#         inputs = torch_cat((obs, act), dim=-1)
+#         output = self.mlp(inputs)
+#         value_mean = output[..., 0]
+#         value_std = tf.math.softplus(output[..., 1])
+#         return value_mean, value_std
+
+
+
+@register_keras_serializable(package="Custom")
+class DACER_SinusoidalPosEmb(tf.keras.layers.Layer):
+    def __init__(self, dim, name = "SinusoidalPosEmb", **kwargs):
+
+        print("diffusion_DACER_ORIGINAL.py: SinusoidalPosEmb.__init__()")
+
+        super(DACER_SinusoidalPosEmb, self).__init__(name=name,**kwargs)
+        self.dim = dim
+
+    def get_config(self):
+        """Returns the config of the layer for serialization."""
+        config = super(DACER_SinusoidalPosEmb, self).get_config()
+        config.update({"dim": self.dim})
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Creates the layer from its config."""
+        return cls(**config)
+
+
+    def call(self, t, theta: int = 10000, batch_shape = None)
+    # (t, *, dim: int, theta: int = 10000, batch_shape = None):
+        print("diffusion_DACER_ORIGINAL.py: ", "scaled_sinusoidal_encoding")
+        
+        assert self.dim % 2 == 0
+        if batch_shape is not None:
+            assert is_broadcastable(t.shape, batch_shape)
+
+        scale = 1 / self.dim ** 0.5
+        half_dim = self.dim // 2
+        freq_seq = torch_arange(start = 0, end = half_dim, step=1) / half_dim
+        inv_freq = theta ** -freq_seq
+
+        emb = tf.einsum('..., j -> ... j', t, inv_freq)
+
+        emb = torch_cat([tf.sin(emb), tf.cos(emb)], dim=-1)
+
+        emb *= scale
+
+        if batch_shape is not None:
+            emb = tf.broadcast_to(emb, (*batch_shape, self.dim))
+
+        return emb
+
+
+
+class DACERPolicyNet(tf.keras.Model):
+    def __init__(self, action_dim, env_name, activation = "GELU", hidden_sizes = (256, 256, 256), 
+                 output_activation = "Identity", time_dim = 16, 
+                 name = None):
+        self.time_dim = time_dim
+        
+        if self.env_name == "hopper-medium-v2":
+            # shape1 = (128, 4, 3)
+            shape2 = (128, 1, 11)
+        elif self.env_name == "kitchen-complete-v0":
+            # shape1 = (128, 4, 9)
+            shape2 = (128, 1, 60)
+        elif self.env_name == "kitchen-mixed-v0":
+            # shape1 = (256, 4, 9)
+            shape2 = (256, 1, 60)
+        elif self.env_name == "kitchen-partial-v0":
+            # shape1 = (128, 4, 9)
+            shape2 = (128, 1, 60)
+        elif self.env_name == "walker2d-medium-v2":
+            # shape1 = (128, 4, 6)
+            shape2 = (128, 1, 17)
+        elif self.env_name == "halfcheetah-medium-v2":
+            # shape1 = (128, 4, 6)
+            shape2 = (128, 1, 17)
+        elif self.env_name == "lift":
+            # shape1 = (256, 4, 7)
+            shape2 = (256, 1, 19)
+        elif self.env_name == "can":
+            # shape1 = (256, 4, 7)
+            shape2 = (256, 1, 23)
+        elif self.env_name == "square":
+            # shape1 = (256, 4, 7)
+            shape2 = (256, 1, 23)
+        elif self.env_name == "transport":
+            # shape1 = (256, 8, 14)
+            shape2 = (256, 1, 59)
+
+        self.time_embedding = nn_Sequential([
+                DACER_SinusoidalPosEmb(dim=self.time_dim, batch_shape=obs.shape[:-1]),
+                nn_Linear(time_dim, time_dim * 2, name_Dense = "DiffusionMLP_time_embedding_1"),
+                nn_Mish(),
+                nn_Linear(time_dim * 2, time_dim, name_Dense = "DiffusionMLP_time_embedding_2"),        
+        ], name = "nn_Sequential_time_embedding")
+
+        self.hidden_sizes = hidden_sizes
+        self.action_dim = action_dim
+
+        dim_list = list(*self.hidden_sizes) + [self.action_dim]
+        self.mlp =  MLP(dim_list = dim_list, activation_type=self.activation, out_activation_type=self.output_activation)
+
+
+    def call(self, obs, act, t):
+        # act_dim = act.shape[-1]
+        # te = scaled_sinusoidal_encoding(t, dim=self.time_dim, batch_shape=obs.shape[:-1])
+        # te = hk.Linear(self.time_dim * 2)(te)
+        # te = self.activation(te)
+        # te = hk.Linear(self.time_dim)(te)
+        te = self.time_embedding(t)
+        inputs = torch_cat((obs, act, te), dim=-1)
+        return self.mlp(inputs)
+
+
+
+
+
+
+
+
+
+class DACER_Original_Diffusion(DiffusionModel):
     def __init__(
         self,
         actor,
@@ -33,7 +187,7 @@ class DACER_Diffusion(DiffusionModel):
         **kwargs,
     ):
 
-        print("diffusion_sac.py: SAC_Diffusion.__init__()")
+        print("diffusion_DACER_ORIGINAL.py: DACER_Original_Diffusion.__init__()")
 
         super().__init__(network=actor, **kwargs)
 
@@ -41,17 +195,15 @@ class DACER_Diffusion(DiffusionModel):
         self.critic = critic
         # .to(self.device)
 
-        self.build_critic(self.critic)
+        self.build_actor(self.critic)
 
         # initialize double target networks
-        # self.target_critic = deepcopy(self.critic)
-
-        self.target_critic = tf.keras.models.clone_model(self.critic)
-        self.build_critic(self.target_critic)
-        self.target_critic.set_weights(self.critic.get_weights())
+        self.target_critic = deepcopy(self.critic)
 
 
-        self.actor = self.network
+        self.actor = DACERPolicyNet()
+
+        self.build_actor(self.actor)
 
 
 
@@ -67,10 +219,6 @@ class DACER_Diffusion(DiffusionModel):
         self.mean_q2_std = -1.0
         self.entropy = 0.0
 
-
-        self.output_critic_once_flag = True
-        self.output_actor_once_flag = True
-        self.output_alpha_once_flag = True
 
     
 
@@ -97,7 +245,7 @@ class DACER_Diffusion(DiffusionModel):
         alpha,
     ):
     
-        print("diffusion_sac.py: SAC_Diffusion.loss_critic()")
+        print("diffusion_DACER_ORIGINAL.py: diffusion_DACER_ORIGINAL.loss_critic()")
 
         self.reward_scale = 0.2
 
@@ -105,9 +253,7 @@ class DACER_Diffusion(DiffusionModel):
 
         next_actions = self.get_action(next_obs, alpha)
 
-        print("loss_critic: next_actions = ", next_actions)
-
-        next_q1_mean, next_q1_std, next_q2_mean, next_q2_std = self.critic(
+        next_q1_mean, next_q1_std, next_q2_mean, next_q2_std = self.target_critic(
             next_obs,
             next_actions,
         )
@@ -122,7 +268,6 @@ class DACER_Diffusion(DiffusionModel):
         next_q2_sample = next_q2_mean + next_q2_std * z2
 
         cur_rewards = rewards * self.reward_scale
-
 
         next_q_mean = torch_min(next_q1_mean, other=next_q2_mean)
         next_q_sample = tf.where(next_q1_mean < next_q2_mean, next_q1_sample, next_q2_sample)
@@ -139,68 +284,34 @@ class DACER_Diffusion(DiffusionModel):
         reshape_actions = torch_tensor_view(actions, [B, -1])
         x = torch_cat((reshape_state, reshape_actions), dim=-1)
         
-
         def q_loss_fn(q_network, mean_q_std: float):
             cur_x = deepcopy(x)
             q_result = q_network(cur_x)
-
             q_mean, q_std = q_result[..., 0], q_result[..., 1]
-            
-            if self.output_critic_once_flag:
-                print("q_mean.shape = ", q_mean.shape)
-                print("q_std.shape = ", q_std.shape)
-
-                print("loss_critic: tf.reduce_mean(q_mean) = ", tf.reduce_mean(q_mean))
 
             new_mean_q_std = tf.reduce_mean(q_std)
-
-            if self.output_critic_once_flag:
-                print("loss_critic: new_mean_q_std = ", new_mean_q_std)
-
             mean_q_std = tf.stop_gradient(
                 int(mean_q_std == -1.0) * new_mean_q_std +
                 int(mean_q_std != -1.0) * (self.tau * new_mean_q_std + (1 - self.tau) * mean_q_std)
             )
-
-            if self.output_critic_once_flag:
-                print("loss_critic: mean_q_std = ", mean_q_std)
-
             q_backup_bounded = tf.stop_gradient(q_mean + tf.clip_by_value(q_backup_sample - q_mean, -3 * mean_q_std, 3 * mean_q_std))
-
-            if self.output_critic_once_flag:
-                print("loss_critic: tf.reduce_mean(q_backup_bounded) = ", tf.reduce_mean(q_backup_bounded))
-
+            # print("q_std = ", q_std)
+            # print("type(q_std) = ", type(q_std))
             q_std_detach = tf.stop_gradient( torch_max(q_std, other = 0.0))
-
-            if self.output_critic_once_flag:
-                print("loss_critic: tf.reduce_mean(q_std_detach) = ", tf.reduce_mean(q_std_detach))
-
             epsilon = 0.1
             q_loss = -(mean_q_std ** 2 + epsilon) * tf.reduce_mean(
                 q_mean * tf.stop_gradient(q_backup - q_mean) / (q_std_detach ** 2 + epsilon) +
-                q_std * ( ( tf.stop_gradient(q_mean) - q_backup_bounded) ** 2 
-                - q_std_detach ** 2 ) / (q_std_detach ** 3 + epsilon)
+                q_std * (( tf.stop_gradient(q_mean) - q_backup_bounded) ** 2 
+                - q_std_detach ** 2) / (q_std_detach ** 3 + epsilon)
             )
-
-            if self.output_critic_once_flag:
-                print("loss_critic: q_loss = ", q_loss)
-
             return q_loss, (q_mean, q_std, mean_q_std)
 
         (q1_loss, (q1_mean, q1_std, mean_q1_std)) = q_loss_fn( self.critic.Q1, self.mean_q1_std)
         (q2_loss, (q2_mean, q2_std, mean_q2_std)) = q_loss_fn( self.critic.Q2, self.mean_q2_std)
 
-        if self.output_critic_once_flag:
-            print("loss_critic: q1_loss = ", q1_loss)
-            print("loss_critic: q2_loss = ", q2_loss)
-            print("loss_critic: mean_q1_std = ", mean_q1_std)
-            print("loss_critic: mean_q2_std = ", mean_q2_std)
-
-
         self.mean_q1_std = mean_q1_std
         self.mean_q2_std = mean_q2_std
 
-        # self.output_critic_once_flag = False
 
         return q1_loss, q2_loss
 
@@ -211,7 +322,7 @@ class DACER_Diffusion(DiffusionModel):
 
     def loss_actor(self, obs, alpha):
 
-        print("diffusion_sac.py: SAC_Diffusion.loss_actor()")
+        print("diffusion_DACER_ORIGINAL.py: diffusion_DACER_ORIGINAL.loss_actor()")
 
         # action = self.call(
         #     obs,
@@ -219,25 +330,17 @@ class DACER_Diffusion(DiffusionModel):
         # )
         action = self.get_action(obs, alpha)
 
-        print("loss_actor: action = ", action)
-
 
         # print("loss_actor: action = ", action)
 
         current_q1, _, current_q2, _ = self.critic(obs, action)
 
-        if self.output_actor_once_flag:
-            print("loss_actor: tf.reduce_mean(current_q1) = ", tf.reduce_mean(current_q1) )
-            print("loss_actor: tf.reduce_mean(current_q2) = ", tf.reduce_mean(current_q2) )
+        # print("loss_actor: current_q1 = ", current_q1)
+        # print("loss_actor: current_q2 = ", current_q2)
 
         loss_actor = -torch_min(current_q1, current_q2)
 
-        if self.output_actor_once_flag:
-            print("loss_actor: tf.reduce_mean(loss_actor) = ", tf.reduce_mean(loss_actor) )
-
         # print("loss_actor: loss_actor = ", loss_actor)
-
-        # self.output_actor_once_flag = False
 
         return torch_mean(loss_actor)
     
@@ -251,7 +354,7 @@ class DACER_Diffusion(DiffusionModel):
         """Modifying denoising schedule"""
 
 
-        print("diffusion_DACER.py: DACERDiffusion.forward()")
+        print("diffusion_DACER_ORIGINAL.py: diffusion_DACER_ORIGINAL.forward()")
 
         with torch_no_grad() as tape:
 
@@ -341,8 +444,6 @@ class DACER_Diffusion(DiffusionModel):
         
         actions = np.stack(actions, axis=0)
 
-        print("cal_entropy(): actions = ", actions)
-
         shape = actions.shape
         new_order = [1, 0] + list(range(2, len(shape)))
         actions = np.transpose(actions, new_order)
@@ -361,7 +462,7 @@ class DACER_Diffusion(DiffusionModel):
 
     def loss_temperature(self, obs, alpha, target_entropy):
 
-        print("diffusion_sac.py: SAC_Diffusion.loss_temperature()")
+        print("diffusion_DACER_ORIGINAL.py: diffusion_DACER_ORIGINAL.loss_temperature()")
 
         self.num_samples = 200
         # self.num_samples = 20
@@ -404,10 +505,6 @@ class DACER_Diffusion(DiffusionModel):
 
         loss_alpha = -torch_mean( torch_log(alpha) * ( -self.entropy + target_entropy ) )
 
-        if self.output_alpha_once_flag:
-            print("loss_alpha = ", loss_alpha)
-
-        # self.output_alpha_once_flag = False
 
         return loss_alpha
 
@@ -415,7 +512,7 @@ class DACER_Diffusion(DiffusionModel):
 
     def update_target_critic(self, tau):
 
-        print("diffusion_sac.py: SAC_Diffusion.update_target_critic()")
+        print("diffusion_DACER_ORIGINAL.py: diffusion_DACER_ORIGINAL.update_target_critic()")
 
         critic_variables = self.critic.trainable_variables
         target_critic_variables = self.target_critic.trainable_variables
@@ -426,127 +523,6 @@ class DACER_Diffusion(DiffusionModel):
 
 
 
-
-
-
-    def build_critic(self, critic, shape1=None, shape2=None):
-        # return
-    
-        print("build_critic: self.env_name = ", self.env_name)
-
-        if shape1 != None and shape2 != None:
-            pass
-        # Gym - hopper/walker2d/halfcheetah
-        elif self.env_name == "hopper-medium-v2":
-            # hopper_medium
-            # item_actions_copy.shape =  
-            shape1 = (128, 4, 3)
-            # cond_copy['state'].shape =  
-            shape2 = (128, 1, 11)
-        elif self.env_name == "kitchen-complete-v0":
-            shape1 = (128, 4, 9)
-            shape2 = (128, 1, 60)
-        elif self.env_name == "kitchen-mixed-v0":
-            shape1 = (256, 4, 9)
-            shape2 = (256, 1, 60)
-        elif self.env_name == "kitchen-partial-v0":
-            shape1 = (128, 4, 9)
-            shape2 = (128, 1, 60)
-        elif self.env_name == "walker2d-medium-v2":
-            shape1 = (128, 4, 6)
-            shape2 = (128, 1, 17)
-        elif self.env_name == "halfcheetah-medium-v2":
-            shape1 = (128, 4, 6)
-            # shape1 = (128, 1, 6)
-            shape2 = (128, 1, 17)
-        # Robomimic - lift/can/square/transport
-        elif self.env_name == "lift":
-            shape1 = (256, 4, 7)
-            shape2 = (256, 1, 19)
-
-        elif self.env_name == "can":
-            #can 
-            # item_actions_copy.shape =  
-            shape1 = (256, 4, 7)
-            # cond_copy['state'].shape =  
-            shape2 = (256, 1, 23)
-
-        elif self.env_name == "square":
-            shape1 = (256, 4, 7)
-            shape2 = (256, 1, 23)
-
-        elif self.env_name == "transport":
-            shape1 = (256, 8, 14)
-            shape2 = (256, 1, 59)
-
-        # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
-        elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
-            #avoid_m1
-            # item_actions_copy.shape =  
-            shape1 = (16, 4, 2)
-            # cond_copy['state'].shape =  
-            shape2 = (16, 1, 4)
-
-        # Furniture-Bench - one_leg/lamp/round_table_low/med
-        elif self.env_name == "lamp_low_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 44)
-        elif self.env_name == "lamp_med_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 44)
-        elif self.env_name == "one_leg_low_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 58)
-        elif self.env_name == "one_leg_med_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 58)
-        elif self.env_name == "round_table_low_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 44)
-        elif self.env_name == "round_table_med_dim":
-            shape1 = (256, 8, 10)
-            shape2 = (256, 1, 44)
-        
-        else:
-            # #one_leg_low
-            # # item_actions_copy.shape =  
-            # shape1 = (256, 8, 10)
-            # # cond_copy['state'].shape =  
-            # shape2 = (256, 1, 58)
-            raise RuntimeError("The build shape is not implemented for current dataset")
-
-
-        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
-        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
-
-
-        if OUTPUT_VARIABLES:
-            print("type(shape1) = ", type(shape1))
-            print("type(shape2) = ", type(shape2))
-
-            print("shape1 = ", shape1)
-            print("shape2 = ", shape2)
-
-
-        param1 = torch_ones(*shape1)
-        param2 = torch_ones(*shape2)
-
-        build_dict = {'state': param2}
-
-
-        
-        # _ = self.loss_ori(param1, build_dict)
-        # all_one_build_result = 
-        next_q1_mean, next_q1_std, next_q2_mean, next_q2_std = critic(
-            build_dict,
-            param1,
-        )
-        # self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
-
-        print("all_one_build_result next_q1_mean = ", sum(next_q1_mean))
-        print("all_one_build_result next_q1_std = ", sum(next_q1_mean))
-        print("all_one_build_result next_q2_mean = ", sum(next_q1_mean))
-        print("all_one_build_result next_q2_std = ", sum(next_q1_mean))
 
 
 

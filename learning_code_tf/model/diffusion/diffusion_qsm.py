@@ -60,6 +60,8 @@ class QSMDiffusion(RWRDiffusion):
         # get current value for noisy actions as the code does --- the algorthm block in the paper is wrong, it says using a_t, the final denoised action
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
+
+
         # Compute Q values for noisy actions
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(x_noisy)

@@ -3,19 +3,19 @@ defaults:
 hydra:
   run:
     dir: ${logdir}
-_target_: agent.finetune.train_dacer_agent.TrainDacerAgent
+_target_: agent.finetune.train_dacer_agent_original.TrainOriginalDacerAgent
 
 name: ${env_name}_dacer_mlp_ta${horizon_steps}
 logdir: ${oc.env:DPPO_LOG_DIR}/gym-finetune/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
-base_policy_path: ${oc.env:DPPO_LOG_DIR}/gym-pretrain/walker2d-medium-v2_pre_diffusion_mlp_ta4_td20/2024-06-12_23-06-12/checkpoint/state_3000.pt
+base_policy_path: ${oc.env:DPPO_LOG_DIR}/gym-pretrain/hopper-medium-v2_pre_diffusion_mlp_ta4_td20/2024-06-12_23-10-05/checkpoint/state_3000.pt
 normalization_path: ${oc.env:DPPO_DATA_DIR}/gym/${env_name}/normalization.npz
 # offline_dataset_path: ${oc.env:DPPO_DATA_DIR}/gym/${env_name}/train.npz
 
 seed: 42
 device: cuda:0
-env_name: halfcheetah-medium-v2
-obs_dim: 17
-action_dim: 6
+env_name: hopper-medium-v2
+obs_dim: 11
+action_dim: 3
 denoising_steps: 20
 ft_denoising_steps: 10
 cond_steps: 1
@@ -49,22 +49,18 @@ train:
   n_critic_warmup_itr: 5
   n_steps: 500
   gamma: 0.99
-  # actor_lr: 1e-4
-  actor_lr: 1e-6
+  actor_lr: 1e-4
   actor_weight_decay: 0
   actor_lr_scheduler:
     first_cycle_steps: 1000
     warmup_steps: 10
-    # min_lr: 1e-4
-    min_lr: 1e-6
-  # critic_lr: 1e-3
-  critic_lr: 1e-6
+    min_lr: 1e-4
+  critic_lr: 1e-4
   critic_weight_decay: 0
   critic_lr_scheduler:
     first_cycle_steps: 1000
     warmup_steps: 10
-    # min_lr: 1e-3
-    min_lr: 1e-6
+    min_lr: 1e-4
   # save_model_freq: 100000
   save_model_freq: 100
   # val_freq: 10000
@@ -93,7 +89,7 @@ train:
   batch_size: 256
 
 model:
-  _target_: model.diffusion.diffusion_DACER.DACER_Diffusion
+  _target_: model.diffusion.diffusion_DACER_ORIGINAL.DACER_Original_Diffusion
   randn_clip_value: 10
   tanh_output: True # squash after sampling
 

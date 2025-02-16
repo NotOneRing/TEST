@@ -1,5 +1,5 @@
 """
-Diffusion Actor-Critic with Entropy Regulator(DACER) agent training script.
+Original Diffusion Actor-Critic with Entropy Regulator(DACER) agent training script.
 
 Does not support image observations right now. 
 """
@@ -31,7 +31,7 @@ from util.torch_to_tf import *
 
 
 
-class TrainDacerAgent(TrainAgent):
+class TrainOriginalDacerAgent(TrainAgent):
     def __init__(self, cfg):
         print("train_sac_agent.py: TrainSACAgent.__init__()")
 
@@ -60,69 +60,52 @@ class TrainDacerAgent(TrainAgent):
         # )
 
 
-        # # Optimizer
-        # self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
-        #     # self.actor_optimizer,
-        #     first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
-        #     cycle_mult=1.0,
-        #     max_lr=cfg.train.actor_lr,
-        #     min_lr=cfg.train.actor_lr_scheduler.min_lr,
-        #     warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
-        #     gamma=1.0,
-        # )
-        # self.critic_q1_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
-        #     # self.critic_v_optimizer,
-        #     first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
-        #     cycle_mult=1.0,
-        #     max_lr=cfg.train.critic_lr,
-        #     min_lr=cfg.train.critic_lr_scheduler.min_lr,
-        #     warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
-        #     gamma=1.0,
-        # )
-        # self.critic_q2_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
-        #     # self.critic_q_optimizer,
-        #     first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
-        #     cycle_mult=1.0,
-        #     max_lr=cfg.train.critic_lr,
-        #     min_lr=cfg.train.critic_lr_scheduler.min_lr,
-        #     warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
-        #     gamma=1.0,
-        # )
+        # Optimizer
+        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.actor_optimizer,
+            first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
+            cycle_mult=1.0,
+            max_lr=cfg.train.actor_lr,
+            min_lr=cfg.train.actor_lr_scheduler.min_lr,
+            warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
+            gamma=1.0,
+        )
+        self.critic_q1_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_v_optimizer,
+            first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
+            cycle_mult=1.0,
+            max_lr=cfg.train.critic_lr,
+            min_lr=cfg.train.critic_lr_scheduler.min_lr,
+            warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
+            gamma=1.0,
+        )
+        self.critic_q2_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            # self.critic_q_optimizer,
+            first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
+            cycle_mult=1.0,
+            max_lr=cfg.train.critic_lr,
+            min_lr=cfg.train.critic_lr_scheduler.min_lr,
+            warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
+            gamma=1.0,
+        )
 
 
-        # self.actor_optimizer = torch_optim_AdamW(
-        #     self.model.actor.trainable_variables,
-        #     lr = self.actor_lr_scheduler,
-        #     weight_decay=cfg.train.actor_weight_decay,
-        # )
-        # self.critic1_optimizer = torch_optim_AdamW(
-        #     self.model.critic.Q1.trainable_variables,
-        #     lr = self.critic_q1_lr_scheduler,
-        #     weight_decay=cfg.train.critic_weight_decay,
-        # )
-        # self.critic2_optimizer = torch_optim_AdamW(
-        #     self.model.critic.Q2.trainable_variables,
-        #     lr = self.critic_q2_lr_scheduler,
-        #     weight_decay=cfg.train.critic_weight_decay,
-        # )
-
-
-
-        self.actor_optimizer = torch_optim_Adam(
+        self.actor_optimizer = torch_optim_AdamW(
             self.model.actor.trainable_variables,
-            lr = cfg.train.actor_lr,
+            lr = self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
         )
-        self.critic1_optimizer = torch_optim_Adam(
+        self.critic1_optimizer = torch_optim_AdamW(
             self.model.critic.Q1.trainable_variables,
-            lr = cfg.train.critic_lr,
+            lr = self.critic_q1_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
-        self.critic2_optimizer = torch_optim_Adam(
+        self.critic2_optimizer = torch_optim_AdamW(
             self.model.critic.Q2.trainable_variables,
-            lr = cfg.train.critic_lr,
+            lr = self.critic_q2_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
+
 
 
 
@@ -172,7 +155,7 @@ class TrainDacerAgent(TrainAgent):
         
         self.log_alpha_optimizer = torch_optim_Adam(
             [self.log_alpha],
-            lr=3e-4,
+            lr=cfg.train.critic_lr,
         )
 
 
@@ -473,7 +456,7 @@ class TrainDacerAgent(TrainAgent):
                     alpha = torch_tensor_item( torch_exp(self.log_alpha) )
 
 
-                    print("Enter loss critic")
+
                     with tf.GradientTape(persistent = True) as tape:
                         loss_critic1, loss_critic2 = self.model.loss_critic(
                             {"state": obs_b},
@@ -488,28 +471,12 @@ class TrainDacerAgent(TrainAgent):
                     tf_Q1_gradients = tape.gradient(loss_critic1, self.model.critic.Q1.trainable_variables)
                     tf_Q2_gradients = tape.gradient(loss_critic2, self.model.critic.Q2.trainable_variables)
 
-                    # zip_gradients_Q1_params = zip(tf_Q1_gradients, self.model.critic.Q1.trainable_variables)
-                    # zip_gradients_Q2_params = zip(tf_Q2_gradients, self.model.critic.Q2.trainable_variables)
+                    zip_gradients_Q1_params = zip(tf_Q1_gradients, self.model.critic.Q1.trainable_variables)
+                    zip_gradients_Q2_params = zip(tf_Q2_gradients, self.model.critic.Q2.trainable_variables)
 
-                    # # everytime
-                    # self.critic1_optimizer.apply_gradients(zip_gradients_Q1_params)
-                    # self.critic2_optimizer.apply_gradients(zip_gradients_Q2_params)
-
-                    torch_nn_utils_clip_grad_norm_and_step(
-                        self.model.critic.Q1.trainable_variables,
-                        self.critic1_optimizer,
-                        max_norm=1.0,
-                        grads = tf_Q1_gradients,
-                        norm_type=2,
-                    )
-
-                    torch_nn_utils_clip_grad_norm_and_step(
-                        self.model.critic.Q2.trainable_variables,
-                        self.critic2_optimizer,
-                        max_norm=1.0,
-                        grads = tf_Q2_gradients,
-                        norm_type=2,
-                    )
+                    # everytime
+                    self.critic1_optimizer.apply_gradients(zip_gradients_Q1_params)
+                    self.critic2_optimizer.apply_gradients(zip_gradients_Q2_params)
 
                     time4 = time.time()
                     elapsed_time = time4 - time3
@@ -519,7 +486,6 @@ class TrainDacerAgent(TrainAgent):
                     if self.model.step % self.model.delay_update == 0:
                         time5 = time.time()
 
-                        print("Enter loss actor")
                         with tf.GradientTape() as tape:
                             
                             loss_actor = self.model.loss_actor(
@@ -529,17 +495,24 @@ class TrainDacerAgent(TrainAgent):
 
                         tf_gradients_actor = tape.gradient(loss_actor, self.model.actor.trainable_variables)
 
-                        # zip_tf_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
-                        # self.actor_optimizer.apply_gradients(zip_tf_gradients_actor_params)
+                        # print("tf_gradients_actor = ", tf_gradients_actor)
 
-                        torch_nn_utils_clip_grad_norm_and_step(
-                            self.model.actor.trainable_variables,
-                            self.actor_optimizer,
-                            max_norm=1.0,
-                            grads = tf_gradients_actor,
-                            norm_type=2,
-                        )
+                        zip_tf_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
 
+
+                        # # 打印梯度检查
+                        # for grad, var in zip_tf_gradients_actor_params:
+                        #     if grad is None:
+                        #         print(f"Gradient for {var} is None")
+                        #     else:
+                        #         print(f"Gradient for {var}: {grad}")
+
+
+                        # zipped_gradients_list = list(zip_tf_gradients_actor_params)
+
+                        # assert len(zipped_gradients_list) > 0, "No gradients provided"
+
+                        self.actor_optimizer.apply_gradients(zip_tf_gradients_actor_params)
 
                         time6 = time.time()
                         elapsed_time = time6 - time5
@@ -548,9 +521,6 @@ class TrainDacerAgent(TrainAgent):
 
                     if self.model.step % self.model.delay_alpha_update == 0:
                         time7 = time.time()
-
-
-                        print("Enter loss temperature")
 
                         with tf.GradientTape() as tape:
                             # Update temperature parameter
@@ -562,16 +532,8 @@ class TrainDacerAgent(TrainAgent):
                         
 
                         tf_alpha_gradients = tape.gradient(loss_alpha, [self.log_alpha])
-                        # zip_tf_gradients_alpha = zip(tf_alpha_gradients, [self.log_alpha])
-                        # self.log_alpha_optimizer.apply_gradients(zip_tf_gradients_alpha)
-
-                        torch_nn_utils_clip_grad_norm_and_step(
-                            [self.log_alpha],
-                            self.log_alpha_optimizer,
-                            max_norm=1.0,
-                            grads = tf_alpha_gradients,
-                            norm_type=2,
-                        )
+                        zip_tf_gradients_alpha = zip(tf_alpha_gradients, [self.log_alpha])
+                        self.log_alpha_optimizer.apply_gradients(zip_tf_gradients_alpha)
 
                         time8 = time.time()
                         elapsed_time = time8 - time7
@@ -606,11 +568,11 @@ class TrainDacerAgent(TrainAgent):
             #     self.save_model_dacer()
 
 
-            # print("Different 11 changed: update lr scheduler")
-            # # Update lr
-            # self.actor_lr_scheduler.step()
-            # self.critic_q1_lr_scheduler.step()
-            # self.critic_q2_lr_scheduler.step()
+            print("Different 11 changed: update lr scheduler")
+            # Update lr
+            self.actor_lr_scheduler.step()
+            self.critic_q1_lr_scheduler.step()
+            self.critic_q2_lr_scheduler.step()
 
 
             # Log loss and save metrics
@@ -634,7 +596,7 @@ class TrainDacerAgent(TrainAgent):
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {torch_tensor_item(loss_actor):8.4f} | loss critic1 {torch_tensor_item(loss_critic1):8.4f} | loss critic2 {torch_tensor_item(loss_critic2):8.4f} | reward {avg_episode_reward:8.4f} | num episode - train: {num_episode_finished:8.4f}"
+                        f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic1 {loss_critic1:8.4f} | loss critic2 {loss_critic2:8.4f} | reward {avg_episode_reward:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward            # # if self.itr % self.log_freq == 0 and self.itr > self.n_explore_steps:
                 with open(self.result_path, "wb") as f:
