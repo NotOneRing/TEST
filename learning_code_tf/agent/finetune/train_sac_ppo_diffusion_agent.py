@@ -354,7 +354,6 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         print("type(self.model.critic) = ", type(self.model.critic))
 
                         # values = self.model.critic(obs).cpu().numpy().flatten()
-                        #这里的是obs，不是obs_next
                         values = self.model.critic(obs).numpy().flatten()
                         
                         values_trajs = np.vstack(
@@ -411,7 +410,6 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         # .float()
                         # .to(self.device)
                     }
-                    
                     advantages_trajs = np.zeros_like(reward_trajs)
                     lastgaelam = 0
                     for t in reversed(range(self.n_steps)):

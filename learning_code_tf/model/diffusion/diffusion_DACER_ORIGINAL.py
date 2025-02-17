@@ -84,7 +84,7 @@ class DACER_SinusoidalPosEmb(tf.keras.layers.Layer):
         return cls(**config)
 
 
-    def call(self, t, theta: int = 10000, batch_shape = None)
+    def call(self, t, theta: int = 10000, batch_shape = None):
     # (t, *, dim: int, theta: int = 10000, batch_shape = None):
         print("diffusion_DACER_ORIGINAL.py: ", "scaled_sinusoidal_encoding")
         

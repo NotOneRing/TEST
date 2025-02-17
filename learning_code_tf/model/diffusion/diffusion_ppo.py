@@ -178,6 +178,8 @@ class PPODiffusion(VPGDiffusion):
         # print("diffusion_ppo.py: PPODiffusion.loss(): 2")
 
         entropy_loss = -torch_mean(eta)
+
+        
         newlogprobs = torch_clamp(newlogprobs, -5, 2)
         oldlogprobs = torch_clamp(oldlogprobs, -5, 2)
 

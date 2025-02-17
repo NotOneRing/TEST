@@ -5112,3 +5112,33 @@ class MixtureSameFamily:
 
 
 
+
+
+
+# class MultivariateNormal:
+#     def __init__(self, loc, covariance_matrix=None, precision_matrix=None, scale_tril=None, validate_args=None):
+
+#         import tensorflow_probability as tfp
+
+
+#         self.distribution = tfp.distributions.Independent(loc, covariance_matrix)  
+
+
+#     def log_prob(self, value):
+#         # log_prob = self.base_dist.log_prob(value)
+#         # # print("log_prob before = ", log_prob)
+#         # return _sum_rightmost(log_prob, self.reinterpreted_batch_ndims)
+
+#         return self.distribution.log_prob(value)
+
+#     def entropy(self):
+#         # entropy = self.base_dist.entropy()
+#         # return _sum_rightmost(entropy, self.reinterpreted_batch_ndims)
+#         return self.distribution.entropy()
+    
+#     def sample(self, sample_shape=tf.TensorShape([])):
+#         # sample_result = self.base_dist.sample(sample_shape)
+#         # print("Independent: sample_result = ", sample_result)
+#         # return sample_result
+#         return self.distribution.sample(sample_shape)
+    
