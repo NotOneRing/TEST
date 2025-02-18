@@ -30,7 +30,7 @@ from util.torch_to_tf import torch_flatten, torch_arange, Normal
 
 from util.torch_to_tf import torch_no_grad, torch_where, torch_ones_like, torch_randn
 
-from util.torch_to_tf import torch_tensor_requires_grad_, torch_tensor_clamp_, torch_zeros, torch_unsqueeze, torch_ones
+from util.torch_to_tf import torch_tensor_requires_grad_, torch_zeros, torch_unsqueeze, torch_ones
 
 from util.torch_to_tf import torch_log, torch_zeros_like, torch_randn_like, torch_clamp, torch_stack, torch_tensor_repeat, torch_exp, torch_clip, torch_sum, torch_reshape, torch_mean, torch_squeeze
 

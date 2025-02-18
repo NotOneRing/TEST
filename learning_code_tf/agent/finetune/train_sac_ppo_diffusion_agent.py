@@ -26,7 +26,7 @@ from agent.finetune.train_ppo_agent import TrainPPOAgent
 
 from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts
 
-from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, tf_CosineAnnealingWarmupRestarts, torch_from_numpy, torch_tensor_float, \
+from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, torch_optim_Adam, tf_CosineAnnealingWarmupRestarts, torch_from_numpy, torch_tensor_float, \
 torch_tensor, torch_split, torch_reshape, torch_randperm, torch_unravel_index, torch_nn_utils_clip_grad_norm_and_step, torch_reshape
 
 
@@ -34,7 +34,7 @@ from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSI
 
 
 
-class TrainPPODiffusionAgent(TrainPPOAgent):
+class TrainSACPPODiffusionAgent(TrainPPOAgent):
     def __init__(self, cfg):
 
         if OUTPUT_FUNCTION_HEADER:
@@ -77,7 +77,12 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
             )
 
 
+        self.log_alpha_optimizer = torch_optim_Adam(
+            [self.model.alpha],
+            lr=3e-4,
+        )
 
+        self.ent_coef: float = cfg.train.get("ent_coef", 1)
 
 
 
@@ -103,7 +108,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                     )
 
             # Define train or eval - all envs restart
-            eval_mode = self.itr % self.val_freq == 0 and not self.force_train
+            # eval_mode = self.itr % (self.val_freq // 5) == 0 and not self.force_train
+            eval_mode = (self.itr == 2 or self.itr == 4 or self.itr == 6 or self.itr % (self.val_freq) == 0 and not self.force_train)
             
             
             print("eval_mode = ", eval_mode)
@@ -575,7 +581,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
 
                             loss = (
                                 pg_loss
-                                + entropy_loss * self.ent_coef
+                                # + entropy_loss * self.ent_coef
                                 + v_loss * self.vf_coef
                                 + bc_loss * self.bc_loss_coeff
                             )
@@ -665,6 +671,11 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         
                         # self.critic_optimizer.step(tf_gradients_critic)
                         self.critic_optimizer.apply_gradients(zip_gradients_critic_params)
+
+
+                        tf_alpha_gradients = tape.gradient(entropy_loss, [self.model.alpha])
+                        zip_tf_gradients_alpha = zip(tf_alpha_gradients, [self.model.alpha])
+                        self.log_alpha_optimizer.apply_gradients(zip_tf_gradients_alpha)
 
 
                         log.info(

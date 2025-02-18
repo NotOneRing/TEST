@@ -80,17 +80,17 @@ class SAC_PPODiffusion(VPGDiffusion):
         self.clip_advantage_upper_quantile = clip_advantage_upper_quantile
 
 
-        self.build_critic(self.critic)
+        # self.build_critic(self.critic)
 
-        self.target_critic = tf.keras.models.clone_model(self.critic)
-        self.build_critic(self.target_critic)
-        self.target_critic.set_weights(self.critic.get_weights())
-
-
+        # self.target_critic = tf.keras.models.clone_model(self.critic)
+        # self.build_critic(self.target_critic)
+        # self.target_critic.set_weights(self.critic.get_weights())
 
 
 
-        self.step = 0
+
+
+        self.step_count = 0
 
         self.delay_alpha_update = 10000
 
@@ -102,7 +102,7 @@ class SAC_PPODiffusion(VPGDiffusion):
         self.mean_q2_std = -1.0
         self.entropy = 0.0
 
-        self.alpha = tf.Variable(np.array([0.272]))
+        self.alpha = tf.Variable(np.array([0.272]), dtype=tf.float32)
 
 
         if self.env_name == "hopper-medium-v2":
@@ -244,63 +244,79 @@ class SAC_PPODiffusion(VPGDiffusion):
 
 
 
-    def estimate_entropy(self, actions, num_components=3):
-        import numpy as np
-        from sklearn.mixture import GaussianMixture
-        total_entropy = []
+    # def estimate_entropy(self, actions, num_components=3):
+    #     import numpy as np
+    #     from sklearn.mixture import GaussianMixture
+    #     import tensorflow_probability as tfp
 
-        actions_np = actions.numpy()
-        shape = actions_np.shape
+    #     total_entropy = []
 
-        # actions_np = actions_np.reshape(shape[0], shape[1], -1)
+    #     actions_np = actions.numpy()
+    #     shape = actions_np.shape
 
-        actions_np = actions_np.reshape(shape[0], -1)
+    #     # reshaped_actions = tf.reshape(actions, (shape[0], -1))
 
-        # for action in actions_np:
-        action = actions_np
-        means_list = []
-        covariances_list = []
+    #     actions_np = actions_np.reshape(shape[0], -1)
 
-        gmm = GaussianMixture(n_components=num_components, covariance_type='full')
-        gmm.fit(action)
-        weights = gmm.weights_
+    #     # for action in actions_np:
+    #     action = actions_np
+    #     means_list = []
+    #     covariances_list = []
 
-        entropies = []
-        for i in range(gmm.n_components):
-            means_list.append(gmm.means_[i])
-            covariances_list.append(gmm.covariances_[i])
+    #     gmm = GaussianMixture(n_components=num_components, covariance_type='full')
+    #     gmm.fit(action)
+    #     weights = gmm.weights_
 
-            cov_matrix = gmm.covariances_[i]
-            d = cov_matrix.shape[0]
-            entropy = 0.5 * d * (1 + np.log(2 * np.pi)) + 0.5 * np.linalg.slogdet(cov_matrix)[1]
-            entropies.append(entropy)
+    #     entropies = []
+    #     for i in range(gmm.n_components):
+    #         means_list.append(gmm.means_[i])
+    #         covariances_list.append(gmm.covariances_[i])
+
+    #         cov_matrix = gmm.covariances_[i]
+    #         d = cov_matrix.shape[0]
+    #         entropy = 0.5 * d * (1 + np.log(2 * np.pi)) + 0.5 * np.linalg.slogdet(cov_matrix)[1]
+    #         entropies.append(entropy)
+
+    #     entropy = -np.sum(weights * np.log(weights)) + np.sum(weights * np.array(entropies))
+    #     total_entropy.append(entropy)
+
+    #     # log_prob = torch_zeros_like(reshaped_actions)
+
+    #     # print("reshaped_actions.shape = ", reshaped_actions.shape)
+    #     # print("log_prob.shape = ", log_prob.shape)
+    #     # print("weights = ", weights)
+
+    #     # for k in range(num_components):
+    #     #     tf_means = tf.convert_to_tensor(means_list[k], dtype=tf.float32)
+    #     #     tf_covariances = tf.convert_to_tensor(covariances_list[k], dtype=tf.float32)
+    #     #     # dist = tfp.distributions.MultivariateNormalFullCovariance(loc = tf_means, covariance_matrix = tf_covariances)
+
+    #     #     print("tf_means.shape = ", tf_means.shape)
+    #     #     print("tf_covariances.shape = ", tf_covariances.shape)
+
+    #     #     dist = tfp.distributions.MultivariateNormalTriL(
+    #     #         loc=tf_means,
+    #     #         scale_tril=tf.linalg.cholesky(tf_covariances)
+    #     #     )
+
+    #     #     cur_log_probs = dist.log_prob(reshaped_actions)
+    #     #     log_prob += weights[k] * cur_log_probs
 
 
-        log_prob = torch_zeros_like(actions)
 
 
-        print("weights = ", weights)
+    #     total_entropy_sum = sum(total_entropy)
+    #     total_entropy_len = len(total_entropy)
 
-        for k in range(num_components):
-            tf_means = tf.convert_to_tensor(means_list[k], dtype=tf.float32)
-            tf_covariances = tf.convert_to_tensor(covariances_list[k], dtype=tf.float32)
-            dist = tfp.distributions.MultivariateNormalFullCovariance(loc = tf_means, covariance_matrix = tf_covariances)
-            cur_log_probs = dist.log_prob(actions)
-            log_prob += weights[k] * cur_log_probs
+    #     # log_prob = log_prob.reshape(shape)
 
-
-        entropy = -np.sum(weights * np.log(weights)) + np.sum(weights * np.array(entropies))
-        total_entropy.append(entropy)
+    #     print("estimate_entropy(): total_entropy_sum = ", total_entropy_sum)
+    #     # print("estimate_entropy(): log_prob = ", log_prob)
+        
 
 
-        total_entropy_sum = sum(total_entropy)
-        total_entropy_len = len(total_entropy)
-
-
-        import tensorflow_probability as tfp
-
-
-        return total_entropy_sum, total_entropy_len, log_prob
+    #     return total_entropy_sum, total_entropy_len
+    # # , log_prob
 
 
 
@@ -451,8 +467,30 @@ class SAC_PPODiffusion(VPGDiffusion):
 
 
 
-        total_entropy_sum, total_entropy_len, log_prob = self.estimate_entropy(chains_prev_next)
-        entropy = total_entropy_sum / total_entropy_len
+        # total_entropy_sum, total_entropy_len, log_prob = self.estimate_entropy(chains_prev_next)
+
+        import time
+
+        time1 = time.time()
+
+        if self.step_count % self.delay_alpha_update == 0:
+            total_entropy_sum, total_entropy_len = self.estimate_entropy(chains_prev_next.numpy())
+            entropy = total_entropy_sum / total_entropy_len
+        else:
+            entropy = self.entropy        
+
+        time2 = time.time()
+        elapsed_time = time2 - time1
+        print(f"Elapsed time: single estimate_entropy {elapsed_time:.4f} seconds")
+
+        self.step_count += 1
+
+
+
+        dist = Normal(mean, std)
+
+        # Get logprobs with gaussian
+        log_prob = torch_tensor_float( dist.log_prob(chains_next) )
 
 
         if get_ent:
@@ -516,6 +554,11 @@ class SAC_PPODiffusion(VPGDiffusion):
         )
 
         self.entropy = entropy
+
+        if self.entropy > self.target_entropy / 2:
+            self.entropy = self.target_entropy / 2
+        elif self.entropy < self.target_entropy * 2:
+            self.entropy = self.target_entropy * 2
 
         entropy_loss = -torch_mean( torch_log(self.alpha) * ( -self.entropy + self.target_entropy ) )
 
@@ -654,7 +697,9 @@ class SAC_PPODiffusion(VPGDiffusion):
         # print("ratio = ", ratio)
         
         # Policy loss with clipping
-        pg_loss1 = -advantages * ratio
+
+        # pg_loss1 = -advantages * ratio
+        pg_loss1 = -advantages * ratio + self.alpha * newlogprobs / 10
         pg_loss2 = -advantages * torch_clamp(ratio, 1 - clip_ploss_coef, 1 + clip_ploss_coef)
 
         # print("pg_loss1 = ", pg_loss1)
@@ -665,7 +710,7 @@ class SAC_PPODiffusion(VPGDiffusion):
         pg_loss = torch_mean( torch_max(pg_loss1, pg_loss2) )
 
         # actor_loss = (self.alpha * log_prob - torch.min(q1_value, q2_value)).mean()
-        pg_loss = torch_mean(self.alpha * newlogprobs + torch_max(pg_loss1, pg_loss2))
+        # pg_loss = torch_mean(self.alpha * newlogprobs + torch_max(pg_loss1, pg_loss2))
 
 
         # Value loss optionally with clipping
@@ -825,16 +870,17 @@ class SAC_PPODiffusion(VPGDiffusion):
         
         # _ = self.loss_ori(param1, build_dict)
         # all_one_build_result = 
-        next_q1_mean, next_q1_std, next_q2_mean, next_q2_std = critic(
-            build_dict,
-            param1,
-        )
+        # next_q1_mean, next_q1_std, next_q2_mean, next_q2_std = critic(
+        #     build_dict,
+        #     param1,
+        # )
+
         # self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
 
-        print("all_one_build_result next_q1_mean = ", sum(next_q1_mean))
-        print("all_one_build_result next_q1_std = ", sum(next_q1_mean))
-        print("all_one_build_result next_q2_mean = ", sum(next_q1_mean))
-        print("all_one_build_result next_q2_std = ", sum(next_q1_mean))
+        # print("all_one_build_result next_q1_mean = ", sum(next_q1_mean))
+        # print("all_one_build_result next_q1_std = ", sum(next_q1_mean))
+        # print("all_one_build_result next_q2_mean = ", sum(next_q1_mean))
+        # print("all_one_build_result next_q2_std = ", sum(next_q1_mean))
 
 
 
