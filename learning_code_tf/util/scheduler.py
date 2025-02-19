@@ -24,7 +24,7 @@ SOFTWARE.
 
 
 
-#Move to util.torch_to_tf.tf_CosineAnnealingWarmupRestarts
+#Move to util.torch_to_tf.CosineAWR
 
 
 

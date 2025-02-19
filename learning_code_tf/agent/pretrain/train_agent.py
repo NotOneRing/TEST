@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 
 from copy import deepcopy
 
-from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts,\
+from util.torch_to_tf import CosineAWR,\
       torch_optim_AdamW, torch_utils_data_DataLoader
 
 
@@ -515,7 +515,7 @@ class PreTrainAgent:
 
         print("after build dataset")
 
-        self.lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.lr_scheduler = CosineAWR(
             first_cycle_steps=cfg.train.lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.learning_rate,

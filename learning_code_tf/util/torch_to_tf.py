@@ -4045,11 +4045,11 @@ def torch_tensor_cpu(tensor):
 
 
 
-class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRateSchedule):
+class CosineAWR(tf.keras.optimizers.schedules.LearningRateSchedule):
     def __init__(self, first_cycle_steps, cycle_mult=1.0, max_lr=0.1, min_lr=0.001, warmup_steps=0, gamma=1.0, last_epoch = -1):
         assert warmup_steps < first_cycle_steps
 
-        super(tf_CosineAnnealingWarmupRestarts, self).__init__()
+        super(CosineAWR, self).__init__()
         self.first_cycle_steps = first_cycle_steps
         self.cycle_mult = cycle_mult
         self.max_lr = max_lr
@@ -4078,7 +4078,7 @@ class tf_CosineAnnealingWarmupRestarts(tf.keras.optimizers.schedules.LearningRat
     # def __call__(self, epoch = None):
     def step(self, epoch = None):
         import math
-        # print("tf_CosineAnnealingWarmupRestarts.__call__()")
+        # print("CosineAWR.__call__()")
         # print("tf: epoch = ", epoch)
 
         # print("tf: type(epoch) = ", type(epoch))

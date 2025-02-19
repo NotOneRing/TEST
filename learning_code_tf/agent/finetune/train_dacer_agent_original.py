@@ -61,7 +61,7 @@ class TrainOriginalDacerAgent(TrainAgent):
 
 
         # Optimizer
-        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.actor_lr_scheduler = CosineAWR(
             # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
@@ -70,7 +70,7 @@ class TrainOriginalDacerAgent(TrainAgent):
             warmup_steps=cfg.train.actor_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_q1_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.critic_q1_lr_scheduler = CosineAWR(
             # self.critic_v_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
@@ -79,7 +79,7 @@ class TrainOriginalDacerAgent(TrainAgent):
             warmup_steps=cfg.train.critic_lr_scheduler.warmup_steps,
             gamma=1.0,
         )
-        self.critic_q2_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.critic_q2_lr_scheduler = CosineAWR(
             # self.critic_q_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,

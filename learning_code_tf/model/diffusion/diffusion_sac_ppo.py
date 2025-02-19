@@ -699,7 +699,7 @@ class SAC_PPODiffusion(VPGDiffusion):
         # Policy loss with clipping
 
         # pg_loss1 = -advantages * ratio
-        pg_loss1 = -advantages * ratio + self.alpha * newlogprobs / 10
+        pg_loss1 = -advantages * ratio + self.alpha * newlogprobs / 100
         pg_loss2 = -advantages * torch_clamp(ratio, 1 - clip_ploss_coef, 1 + clip_ploss_coef)
 
         # print("pg_loss1 = ", pg_loss1)

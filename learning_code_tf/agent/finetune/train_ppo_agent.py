@@ -9,7 +9,7 @@ from typing import Optional
 
 import logging
 
-from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW
+from util.torch_to_tf import CosineAWR, torch_optim_AdamW
 
 log = logging.getLogger(__name__)
 from agent.finetune.train_agent import TrainAgent
@@ -49,7 +49,7 @@ class TrainPPOAgent(TrainAgent):
         self.n_critic_warmup_itr = cfg.train.n_critic_warmup_itr
 
         # use cosine scheduler with linear warmup
-        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.actor_lr_scheduler = CosineAWR(
             # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
@@ -82,7 +82,7 @@ class TrainPPOAgent(TrainAgent):
 
 
 
-        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.critic_lr_scheduler = CosineAWR(
             # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
@@ -162,7 +162,7 @@ class TrainPPOAgent(TrainAgent):
         assert 1 == 0, "assume Not used anywhere currently"
 
 
-        new_scheduler = tf_CosineAnnealingWarmupRestarts(
+        new_scheduler = CosineAWR(
             # self.actor_optimizer,
             first_cycle_steps=self.cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,

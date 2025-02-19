@@ -24,9 +24,9 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_ppo_agent import TrainPPOAgent
 
-from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts
+from util.torch_to_tf import CosineAWR
 
-from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, torch_optim_Adam, tf_CosineAnnealingWarmupRestarts, torch_from_numpy, torch_tensor_float, \
+from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, torch_optim_Adam, CosineAWR, torch_from_numpy, torch_tensor_float, \
 torch_tensor, torch_split, torch_reshape, torch_randperm, torch_unravel_index, torch_nn_utils_clip_grad_norm_and_step, torch_reshape
 
 
@@ -58,7 +58,7 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
         if self.learn_eta:
             self.eta_update_interval = cfg.train.eta_update_interval
 
-            self.eta_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+            self.eta_lr_scheduler = CosineAWR(
                 # self.eta_optimizer,
                 first_cycle_steps=cfg.train.eta_lr_scheduler.first_cycle_steps,
                 cycle_mult=1.0,
@@ -109,7 +109,8 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
 
             # Define train or eval - all envs restart
             # eval_mode = self.itr % (self.val_freq // 5) == 0 and not self.force_train
-            eval_mode = (self.itr == 2 or self.itr == 4 or self.itr == 6 or self.itr % (self.val_freq) == 0 and not self.force_train)
+            # eval_mode = (self.itr == 2 or self.itr == 4 or self.itr == 6 or self.itr % (self.val_freq) == 0 and not self.force_train)
+            eval_mode = self.itr % (self.val_freq) == 0 and not self.force_train
             
             
             print("eval_mode = ", eval_mode)

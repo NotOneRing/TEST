@@ -22,7 +22,7 @@ from agent.finetune.train_agent import TrainAgent
 
 from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_tensor, torch_nn_utils_clip_grad_norm_and_step, torch_exp, torch_clamp
 
-from util.torch_to_tf import torch_no_grad, tf_CosineAnnealingWarmupRestarts, torch_optim_AdamW, torch_std, torch_reshape
+from util.torch_to_tf import torch_no_grad, CosineAWR, torch_optim_AdamW, torch_std, torch_reshape
 
 import tensorflow as tf
 
@@ -36,7 +36,7 @@ class TrainRWRDiffusionAgent(TrainAgent):
         # note the discount factor gamma here is applied to reward every act_steps, instead of every env step
         self.gamma = cfg.train.gamma
 
-        self.lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.lr_scheduler = CosineAWR(
             # self.optimizer,
             first_cycle_steps=cfg.train.lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,

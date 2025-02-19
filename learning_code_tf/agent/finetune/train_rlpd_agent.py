@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
-# from util.torch_to_tf import tf_CosineAnnealingWarmupRestarts
+# from util.torch_to_tf import CosineAWR
 
 
 # from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, \
@@ -52,7 +52,7 @@ class TrainRLPDAgent(TrainAgent):
 
         # Optimizer
 
-        self.actor_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.actor_lr_scheduler = CosineAWR(
             # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
@@ -71,7 +71,7 @@ class TrainRLPDAgent(TrainAgent):
         )
 
 
-        self.critic_lr_scheduler = tf_CosineAnnealingWarmupRestarts(
+        self.critic_lr_scheduler = CosineAWR(
             # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
