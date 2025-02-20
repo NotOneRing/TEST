@@ -10,6 +10,7 @@ logdir: ${oc.env:DPPO_LOG_DIR}/d3il-eval/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}
 
 base_policy_path: ${oc.env:DPPO_LOG_DIR}/d3il-pretrain/avoid_m2_pre_gaussian_mlp_ta4/2025-02-07_20-51-50_42/checkpoint/state_1000.keras
 
+# base_policy_path: ${oc.env:DPPO_LOG_DIR}/d3il-pretrain/avoid_m2_pre_gaussian_mlp_ta4/2025-02-07_20-51-50_42/checkpoint/state_5000.keras
 
 
 
