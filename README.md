@@ -1,3 +1,7 @@
+# Tensorflow implementation of the paper DPPO
+
+
+
 ## Replicated results
 
 ### 1. Comparison between replicated results and Figure 4 (comparing to other diffusion-based RL algorithms)
@@ -145,22 +149,47 @@ Their configuration .yaml file is absent in the ./cfg folders, with the exceptio
 
 1. Clone the repository
 ```console
-git clone git@github.com:irom-lab/dppo.git
-cd dppo
+https://github.com/NotOneRing/TEST.git
+cd code
 ```
 
-2. Install core dependencies with a conda environment (if you do not plan to use Furniture-Bench, a higher Python version such as 3.10 can be installed instead) on a Linux machine with a Nvidia GPU.
+2. Install core dependencies with a conda environment on a Linux machine with a Nvidia GPU.
 ```console
-conda create -n dppo python=3.8 -y
-conda activate dppo
+conda create -n tf218_kr2 python=3.11
+conda activate tf218_kr2
+pip install tensorflow[and-cuda]==2.18.0 --no-cache-dir
+pip install tf-keras --no-cache-dir
+pip install -e .[d3il] --no-cache-dir
+pip install tensorflow-probability --no-cache-dir
+pip install opencv-python --no-cache-dir
+pip install scikit-learn --no-cache-dir
+pip uninstall torch
 pip install -e .
 ```
 
 3. Install specific environment dependencies (Gym / Kitchen / Robomimic / D3IL / Furniture-Bench) or all dependencies (except for Kitchen, which has dependency conflicts with other tasks).
 ```console
-pip install -e .[gym] # or [kitchen], [robomimic], [d3il], [furniture]
-pip install -e .[all] # except for Kitchen
+pip install -e .[gym] # or, [robomimic], [d3il],
+pip install -e .[all]
 ```
+
+For Robomimic: please find the anaconda path:
+'''
+conda env list
+'''
+This env list gives the root path of anaconda as ANACONDA_PATH
+Then take out the path of the tf218_kr2
+path = ANACONDA_PATH/envs/tf218_kr2/lib/python3.11/site-packages/robomimic/utils/
+
+'''
+cd path
+'''
+
+Manually put the files inside the project: ./code/changed_robomimic/utils/ inside the ANACONDA_PATH/envs/tf218_kr2/lib/python3.11/site-packages/robomimic/utils/
+'''
+cp ./code/changed_robomimic/utils/*  ANACONDA_PATH/envs/tf218_kr2/lib/python3.11/site-packages/robomimic/utils/
+'''
+This files and command help the conversion of the robomimic environment to the Tensorflow version
 
 4. [Install MuJoCo for Gym and/or Robomimic](installation/install_mujoco.md). [Install D3IL](installation/install_d3il.md). [Install IsaacGym and Furniture-Bench](installation/install_furniture.md)
 
@@ -169,6 +198,22 @@ pip install -e .[all] # except for Kitchen
 source script/set_path.sh
 ```
 
+For my case, I also use:
+```
+export WANDB_MODE=disabled
+export HYDRA_FULL_ERROR=1
+export DPPO_WANDB_ENTITY=""
+export MUJOCO_PY_MUJOCO_PATH=YOUR_MUJOCO_PATH/mujoco210
+export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so
+export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+export PYTHONPATH=THE_ROOT_PATH_OF_THIS_PROJECT/code:$PYTHONPATH
+export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6
+```
+
+You could control which GPUs to use by:
+```
+CUDA_VISIBLE_DEVICES=0,1
+```
 ## Usage - Pre-training
 
 **Note**: You may skip pre-training if you would like to use the default checkpoint (available for download) for fine-tuning.
@@ -200,9 +245,6 @@ python script/run.py --config-name=pre_diffusion_mlp \
 # D3IL - avoid_m1/m2/m3
 python script/run.py --config-name=pre_diffusion_mlp \
     --config-dir=cfg/d3il/pretrain/avoid_m1
-# Furniture-Bench - one_leg/lamp/round_table_low/med
-python script/run.py --config-name=pre_diffusion_mlp \
-    --config-dir=cfg/furniture/pretrain/one_leg_low
 ```
 
 See [here](cfg/pretraining.md) for details of the experiments in the paper.
@@ -243,9 +285,6 @@ python script/run.py --config-name=ft_ppo_diffusion_mlp \
 # D3IL - avoid_m1/m2/m3
 python script/run.py --config-name=ft_ppo_diffusion_mlp \
     --config-dir=cfg/d3il/finetune/avoid_m1
-# Furniture-Bench - one_leg/lamp/round_table_low/med
-python script/run.py --config-name=ft_ppo_diffusion_mlp \
-    --config-dir=cfg/furniture/finetune/one_leg_low
 ```
 
 **Note**: In Gym, Robomimic, and D3IL tasks, we run 40, 50, and 50 parallelized MuJoCo environments on CPU, respectively. If you would like to use fewer environments (given limited CPU threads, or GPU memory for rendering), you can reduce `env.n_envs` and increase `train.n_steps`, so the total number of environment steps collected in each iteration (n_envs x n_steps x act_steps) remains roughly the same. Try to set `train.n_steps` a multiple of `env.max_episode_steps / act_steps`, and be aware that we only count episodes finished within an iteration for eval. Furniture-Bench tasks run IsaacGym on a single GPU.
@@ -303,10 +342,9 @@ Pre-training script is at [`agent/pretrain/train_diffusion_agent.py`](agent/pret
 In our experiments we did not use any observation from previous timesteps (state or pixel), but it is implemented. You can set `cond_steps=<num_state_obs_step>` (and `img_cond_steps=<num_img_obs_step>`, no larger than `cond_steps`) in pre-training, and set the same when fine-tuning the newly pre-trained policy.
 
 ### Fine-tuning environment
-We follow the Gym format for interacting with the environments. The vectorized environments are initialized at [make_async](env/gym_utils/__init__.py#L10) (called in the parent fine-tuning agent class [here](agent/finetune/train_agent.py#L38-L39)). The current implementation is not the cleanest as we tried to make it compatible with Gym, Robomimic, Furniture-Bench, and D3IL environments, but it should be easy to modify and allow using other environments. We use [multi_step](env/gym_utils/wrapper/multi_step.py) wrapper for history observations and multi-environment-step action execution. We also use environment-specific wrappers such as [robomimic_lowdim](env/gym_utils/wrapper/robomimic_lowdim.py) and [furniture](env/gym_utils/wrapper/furniture.py) for observation/action normalization, etc. You can implement a new environment wrapper if needed.
+We follow the Gym format for interacting with the environments. The vectorized environments are initialized at [make_async](env/gym_utils/__init__.py#L10) (called in the parent fine-tuning agent class [here](agent/finetune/train_agent.py#L38-L39)). The current implementation is not the cleanest as we tried to make it compatible with Gym, Robomimic, and D3IL environments, but it should be easy to modify and allow using other environments. We use [multi_step](env/gym_utils/wrapper/multi_step.py) wrapper for history observations and multi-environment-step action execution. We also use environment-specific wrappers such as [robomimic_lowdim](env/gym_utils/wrapper/robomimic_lowdim.py) and [furniture](env/gym_utils/wrapper/furniture.py) for observation/action normalization, etc. You can implement a new environment wrapper if needed.
 
-## Known issues
-* IsaacGym simulation can become unstable at times and lead to NaN observations in Furniture-Bench. The current env wrapper does not handle NaN observations.
+
 
 ## Acknowledgement
 * [Diffuser, Janner et al.](https://github.com/jannerm/diffuser): general code base and DDPM implementation
