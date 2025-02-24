@@ -174,21 +174,20 @@ pip install -e .[all]
 ```
 
 For Robomimic: please find the anaconda path:
-'''
+```
 conda env list
-'''
-This env list gives the root path of anaconda as ANACONDA_PATH
+```
+This env list gives the root path of anaconda as ANACONDA_PATH.
 Then take out the path of the tf218_kr2
 path = ANACONDA_PATH/envs/tf218_kr2/lib/python3.11/site-packages/robomimic/utils/
-
-'''
+```
 cd path
-'''
+```
 
 Manually put the files inside the project: ./code/changed_robomimic/utils/ inside the ANACONDA_PATH/envs/tf218_kr2/lib/python3.11/site-packages/robomimic/utils/
-'''
+```
 cp ./code/changed_robomimic/utils/*  ANACONDA_PATH/envs/tf218_kr2/lib/python3.11/site-packages/robomimic/utils/
-'''
+```
 This files and command help the conversion of the robomimic environment to the Tensorflow version
 
 4. [Install MuJoCo for Gym and/or Robomimic](installation/install_mujoco.md). [Install D3IL](installation/install_d3il.md). [Install IsaacGym and Furniture-Bench](installation/install_furniture.md)
@@ -277,14 +276,22 @@ All the configs can be found under `cfg/<env>/finetune/`. A new WandB project ma
 <!-- Running the script will download the default pre-trained policy checkpoint specified in the config (`base_policy_path`) automatically, as well as the normalization statistics, to `DPPO_LOG_DIR`.  -->
 ```console
 # Gym - hopper/walker2d/halfcheetah
-python script/run.py --config-name=ft_ppo_diffusion_mlp \
-    --config-dir=cfg/gym/finetune/hopper-v2
+‘’‘
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/gym/finetune/halfcheetah-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
+’‘’
 # Robomimic - lift/can/square/transport
-python script/run.py --config-name=ft_ppo_diffusion_mlp \
-    --config-dir=cfg/robomimic/finetune/can
+’‘‘
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/robomimic/finetune/can +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/robomimic/finetune/lift +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+‘’‘
 # D3IL - avoid_m1/m2/m3
-python script/run.py --config-name=ft_ppo_diffusion_mlp \
-    --config-dir=cfg/d3il/finetune/avoid_m1
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/d3il/finetune/avoid_m1 +wandb.mode=disabled ++env.render=False ++env.n_envs=1 ++train.render.num=1
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/d3il/finetune/avoid_m2 +wandb.mode=disabled ++env.render=False ++env.n_envs=1 ++train.render.num=1
+python script/run.py --config-name=ft_ppo_diffusion_mlp --config-dir=cfg/d3il/finetune/avoid_m3 +wandb.mode=disabled ++env.render=False ++env.n_envs=1 ++train.render.num=1
 ```
 
 **Note**: In Gym, Robomimic, and D3IL tasks, we run 40, 50, and 50 parallelized MuJoCo environments on CPU, respectively. If you would like to use fewer environments (given limited CPU threads, or GPU memory for rendering), you can reduce `env.n_envs` and increase `train.n_steps`, so the total number of environment steps collected in each iteration (n_envs x n_steps x act_steps) remains roughly the same. Try to set `train.n_steps` a multiple of `env.max_episode_steps / act_steps`, and be aware that we only count episodes finished within an iteration for eval. Furniture-Bench tasks run IsaacGym on a single GPU.
@@ -311,6 +318,11 @@ python script/run.py --config-name=eval_{diffusion/gaussian}_mlp_{?img} \
 python script/run.py --config-name=eval_diffusion_mlp \
     --config-dir=cfg/furniture/eval/one_leg_low ft_denoising_steps=?
 ```
+
+
+
+
+
 
 ## DPPO implementation
 
@@ -346,7 +358,11 @@ We follow the Gym format for interacting with the environments. The vectorized e
 
 
 
+
+
+
 ## Acknowledgement
+* [DPPO, Ren et al.](https://github.com/jannerm/diffuser): PyTorch code of DPPO
 * [Diffuser, Janner et al.](https://github.com/jannerm/diffuser): general code base and DDPM implementation
 * [Diffusion Policy, Chi et al.](https://github.com/real-stanford/diffusion_policy): general code base especially the env wrappers
 * [CleanRL, Huang et al.](https://github.com/vwxyzjn/cleanrl): PPO implementation
@@ -360,3 +376,34 @@ We follow the Gym format for interacting with the environments. The vectorized e
 * [DQL, Wang et al.](https://github.com/Zhendong-Wang/Diffusion-Policies-for-Offline-RL): DQL baseline
 * [QSM, Psenka et al.](https://www.michaelpsenka.io/qsm/): QSM baseline
 * [Score SDE, Song et al.](https://github.com/yang-song/score_sde_pytorch/): diffusion exact likelihood
+
+
+
+
+
+
+
+
+## Improved Version
+#### Improved Version of Part2
+Here is the general plot of the current DPOER result:
+<center class="third">
+    <div style="display: flex; justify-content: space-around; text-align: center;">
+        <div>
+            <b>DPOER on Square and Transport</b><br>
+            <img src="figure/Square_clip.png" height="150"/><br>
+            <img src="figure/Transport_clip.png" height="150"/><br>
+        </div>
+    </div>
+</center>
+As shown above, DPOER is slightly better than DPPO. Other results are still being cleared up. Furthermore, I'm also trying to improve the efficiency and try the variants of DPOER.
+
+
+
+
+If needed, please contact me, and I will upload the logs, checkpoints, and any other necessary materials to a cloud drive help reproduce the results.
+
+
+
+
+

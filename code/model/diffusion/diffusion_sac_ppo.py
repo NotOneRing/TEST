@@ -87,8 +87,15 @@ class SAC_PPODiffusion(VPGDiffusion):
         # self.target_critic.set_weights(self.critic.get_weights())
 
 
+        self.clip_entropy = kwargs.get("clip_entropy", None)
 
+        self.lambda_alpha_entropy = kwargs.get("lambda_alpha_entropy", 10000)
 
+        print("type(self.clip_entropy) = ", type(self.clip_entropy))
+        print("self.clip_entropy = ", self.clip_entropy)
+
+        print("type(self.lambda_alpha_entropy) = ", type(self.lambda_alpha_entropy))
+        print("self.lambda_alpha_entropy = ", self.lambda_alpha_entropy)
 
         self.step_count = 0
 
@@ -476,12 +483,13 @@ class SAC_PPODiffusion(VPGDiffusion):
         if self.step_count % self.delay_alpha_update == 0:
             total_entropy_sum, total_entropy_len = self.estimate_entropy(chains_prev_next.numpy())
             entropy = total_entropy_sum / total_entropy_len
+            # print("estimated entropy = ", entropy)
         else:
             entropy = self.entropy        
 
         time2 = time.time()
         elapsed_time = time2 - time1
-        print(f"Elapsed time: single estimate_entropy {elapsed_time:.4f} seconds")
+        # print(f"Elapsed time: single estimate_entropy {elapsed_time:.4f} seconds")
 
         self.step_count += 1
 
@@ -555,10 +563,11 @@ class SAC_PPODiffusion(VPGDiffusion):
 
         self.entropy = entropy
 
-        if self.entropy > self.target_entropy / 2:
-            self.entropy = self.target_entropy / 2
-        elif self.entropy < self.target_entropy * 2:
-            self.entropy = self.target_entropy * 2
+        if self.clip_entropy:
+            if self.entropy > self.target_entropy / 2:
+                self.entropy = self.target_entropy / 2
+            elif self.entropy < self.target_entropy * 2:
+                self.entropy = self.target_entropy * 2
 
         entropy_loss = -torch_mean( torch_log(self.alpha) * ( -self.entropy + self.target_entropy ) )
 
@@ -699,7 +708,7 @@ class SAC_PPODiffusion(VPGDiffusion):
         # Policy loss with clipping
 
         # pg_loss1 = -advantages * ratio
-        pg_loss1 = -advantages * ratio + self.alpha * newlogprobs / 100
+        pg_loss1 = -advantages * ratio + self.alpha * newlogprobs / self.lambda_alpha_entropy
         pg_loss2 = -advantages * torch_clamp(ratio, 1 - clip_ploss_coef, 1 + clip_ploss_coef)
 
         # print("pg_loss1 = ", pg_loss1)
