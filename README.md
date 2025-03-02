@@ -478,6 +478,7 @@ Here is the general plot of the current DPOER result:
 </center>
 As shown above, DPOER is slightly better than DPPO. 
 DPOER results are running with
+
 ```
 python script/run.py --config-name=ft_sac_ppo_diffusion_mlp_C1000 --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
 python script/run.py --config-name=ft_sac_ppo_diffusion_mlp_C10000 --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
@@ -487,6 +488,7 @@ python script/run.py --config-name=ft_sac_ppo_diffusion_mlp --config-dir=cfg/gym
 python script/run.py --config-name=ft_sac_ppo_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
 python script/run.py --config-name=ft_sac_ppo_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
 ```
+
 Other results are still being cleared up. I am also having the parameter analysis experiment.
 Furthermore, I try to further improve the efficiency and attempt different variants of DPOER.
 
