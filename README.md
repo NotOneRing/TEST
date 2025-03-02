@@ -228,7 +228,7 @@ Pre-training data for all tasks are pre-processed and can be found at [here](htt
 <!-- The data path follows `${DPPO_DATA_DIR}/<benchmark>/<task>/train.npz`, e.g., `${DPPO_DATA_DIR}/gym/hopper-medium-v2/train.npz`. -->
 
 ### Run pre-training with data
-All the configs can be found under `cfg/<env>/pretrain/`. A new WandB project may be created based on `wandb.project` in the config file; set `wandb=null` in the command line to test without WandB logging.
+All the configs can be found under `cfg/<env>/pretrain/`.
 <!-- To run pre-training, first set your WandB entity (username or team name) and the parent directory for logging as environment variables. -->
 <!-- ```console
 export DPPO_WANDB_ENTITY=<your_wandb_entity>
@@ -245,8 +245,6 @@ python script/run.py --config-name=pre_diffusion_mlp \
 python script/run.py --config-name=pre_diffusion_mlp \
     --config-dir=cfg/d3il/pretrain/avoid_m1
 ```
-
-See [here](cfg/pretraining.md) for details of the experiments in the paper.
 
 ## Usage - Fine-tuning
 
@@ -320,7 +318,89 @@ python script/run.py --config-name=eval_diffusion_mlp \
 ```
 
 
+## Examples of Main Baselines in original Figure 4 (User can extend to every baseline to every datasets):
+```
+python script/run.py --config-name=ft_dql_diffusion_mlp --config-dir=cfg/gym/finetune/halfcheetah-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_dql_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_dql_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_dql_diffusion_mlp --config-dir=cfg/robomimic/finetune/can +wandb.mode=disabled
+python script/run.py --config-name=ft_dql_diffusion_mlp --config-dir=cfg/robomimic/finetune/lift +wandb.mode=disabled
+python script/run.py --config-name=ft_dql_diffusion_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_dql_diffusion_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
 
+python script/run.py --config-name=ft_qsm_diffusion_mlp --config-dir=cfg/gym/finetune/halfcheetah-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_qsm_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_qsm_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_qsm_diffusion_mlp --config-dir=cfg/robomimic/finetune/can +wandb.mode=disabled
+python script/run.py --config-name=ft_qsm_diffusion_mlp --config-dir=cfg/robomimic/finetune/lift +wandb.mode=disabled
+python script/run.py --config-name=ft_qsm_diffusion_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_qsm_diffusion_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+
+python script/run.py --config-name=ft_dipo_diffusion_mlp --config-dir=cfg/gym/finetune/halfcheetah-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_dipo_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_dipo_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_dipo_diffusion_mlp --config-dir=cfg/robomimic/finetune/can +wandb.mode=disabled
+python script/run.py --config-name=ft_dipo_diffusion_mlp --config-dir=cfg/robomimic/finetune/lift +wandb.mode=disabled
+python script/run.py --config-name=ft_dipo_diffusion_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_dipo_diffusion_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+
+python script/run.py --config-name=ft_idql_diffusion_mlp --config-dir=cfg/gym/finetune/halfcheetah-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_idql_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_idql_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_idql_diffusion_mlp --config-dir=cfg/robomimic/finetune/can +wandb.mode=disabled
+python script/run.py --config-name=ft_idql_diffusion_mlp --config-dir=cfg/robomimic/finetune/lift +wandb.mode=disabled
+python script/run.py --config-name=ft_idql_diffusion_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_idql_diffusion_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+
+python script/run.py --config-name=ft_rwr_diffusion_mlp --config-dir=cfg/gym/finetune/halfcheetah-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_rwr_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_rwr_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_rwr_diffusion_mlp --config-dir=cfg/robomimic/finetune/can +wandb.mode=disabled
+python script/run.py --config-name=ft_rwr_diffusion_mlp --config-dir=cfg/robomimic/finetune/lift +wandb.mode=disabled
+python script/run.py --config-name=ft_rwr_diffusion_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_rwr_diffusion_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+
+python script/run.py --config-name=ft_awr_diffusion_mlp --config-dir=cfg/gym/finetune/halfcheetah-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_awr_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_awr_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_awr_diffusion_mlp --config-dir=cfg/robomimic/finetune/can +wandb.mode=disabled
+python script/run.py --config-name=ft_awr_diffusion_mlp --config-dir=cfg/robomimic/finetune/lift +wandb.mode=disabled
+python script/run.py --config-name=ft_awr_diffusion_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_awr_diffusion_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+```
+
+
+## Examples of Main Baselines in original Figure 5:
+```
+python script/run.py --config-name=ft_ppo_gaussian_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gaussian_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gmm_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gmm_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_unet --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_unet --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gmm_transformer --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gmm_transformer --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gaussian_transformer --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gaussian_transformer --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+
+python script/run.py --config-name=ft_ppo_gaussian_mlp_img --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gaussian_mlp_img --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_unet_img --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_diffusion_unet_img --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gaussian_mlp --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_ppo_gaussian_mlp --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+```
+
+
+## Examples of Main Baselines in original Figure 7:
+```
+python script/run.py --config-name=pre_gaussian_mlp --config-dir=cfg/d3il/pretrain/avoid_m1 +wandb.mode=disabled
+python script/run.py --config-name=pre_gaussian_mlp --config-dir=cfg/d3il/pretrain/avoid_m2 +wandb.mode=disabled
+python script/run.py --config-name=pre_gaussian_mlp --config-dir=cfg/d3il/pretrain/avoid_m3 +wandb.mode=disabled
+python script/run.py --config-name=pre_gmm_mlp --config-dir=cfg/d3il/pretrain/avoid_m1 +wandb.mode=disabled
+python script/run.py --config-name=pre_gmm_mlp --config-dir=cfg/d3il/pretrain/avoid_m2 +wandb.mode=disabled
+python script/run.py --config-name=pre_gmm_mlp --config-dir=cfg/d3il/pretrain/avoid_m3 +wandb.mode=disabled
+```
 
 
 
@@ -396,12 +476,22 @@ Here is the general plot of the current DPOER result:
         </div>
     </div>
 </center>
-As shown above, DPOER is slightly better than DPPO. Other results are still being cleared up. Furthermore, I'm also trying to improve the efficiency and try the variants of DPOER.
+As shown above, DPOER is slightly better than DPPO. 
+DPOER results are running with
+```
+python script/run.py --config-name=ft_sac_ppo_diffusion_mlp_C1000 --config-dir=cfg/robomimic/finetune/square +wandb.mode=disabled
+python script/run.py --config-name=ft_sac_ppo_diffusion_mlp_C10000 --config-dir=cfg/robomimic/finetune/transport +wandb.mode=disabled
+python script/run.py --config-name=ft_sac_ppo_diffusion_mlp --config-dir=cfg/robomimic/finetune/can +wandb.mode=disabled
+python script/run.py --config-name=ft_sac_ppo_diffusion_mlp --config-dir=cfg/robomimic/finetune/lift +wandb.mode=disabled
+python script/run.py --config-name=ft_sac_ppo_diffusion_mlp --config-dir=cfg/gym/finetune/halfcheetah-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_sac_ppo_diffusion_mlp --config-dir=cfg/gym/finetune/hopper-v2 +wandb.mode=disabled
+python script/run.py --config-name=ft_sac_ppo_diffusion_mlp --config-dir=cfg/gym/finetune/walker2d-v2 +wandb.mode=disabled
+```
+Other results are still being cleared up. I am also having the parameter analysis experiment.
+Furthermore, I try to further improve the efficiency and attempt different variants of DPOER.
 
 
 
-
-If needed, please contact me, and I will upload the logs, checkpoints, and any other necessary materials to a cloud drive help reproduce the results.
 
 
 
