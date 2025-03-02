@@ -262,7 +262,7 @@ export DPPO_LOG_DIR=<your_prefered_logging_directory>
 export DPPO_LOG_DIR=/path/to/checkpoint
 ``` -->
 
-Pre-trained policies used in the paper can be found [here](https://drive.google.com/drive/folders/1ZlFqmhxC4S8Xh1pzZ-fXYzS5-P8sfpiP?usp=drive_link). Fine-tuning script will download the default checkpoint automatically to the logging directory.
+Pre-trained policies used in the paper can be found [here](https://drive.google.com/drive/folders/1b4eylHX3E9hKpMlKXwxjTDepNBanaI5R?usp=drive_link). Fine-tuning script will download the default checkpoint automatically to the logging directory.
  <!-- or you may manually download other ones (different epochs) or use your own pre-trained policy if you like. -->
 
  <!-- e.g., `${DPPO_LOG_DIR}/gym-pretrain/hopper-medium-v2_pre_diffusion_mlp_ta4_td20/2024-08-26_22-31-03_42/checkpoint/state_0.pt`. -->
@@ -391,8 +391,8 @@ Here is the general plot of the current DPOER result:
     <div style="display: flex; justify-content: space-around; text-align: center;">
         <div>
             <b>DPOER on Square and Transport</b><br>
-            <img src="figure/Square_clip.png" height="150"/><br>
-            <img src="figure/Transport_clip.png" height="150"/><br>
+            <img src="figure/Square_SAC.png" height="150"/><br>
+            <img src="figure/Transport_SAC.png" height="150"/><br>
         </div>
     </div>
 </center>

@@ -99,7 +99,8 @@ class SAC_PPODiffusion(VPGDiffusion):
 
         self.step_count = 0
 
-        self.delay_alpha_update = 10000
+        # self.delay_alpha_update = 10000
+        self.delay_alpha_update = 50
 
         self.delay_update = 2
         
@@ -483,13 +484,15 @@ class SAC_PPODiffusion(VPGDiffusion):
         if self.step_count % self.delay_alpha_update == 0:
             total_entropy_sum, total_entropy_len = self.estimate_entropy(chains_prev_next.numpy())
             entropy = total_entropy_sum / total_entropy_len
-            # print("estimated entropy = ", entropy)
+            print("estimated entropy = ", entropy)
+
+            time2 = time.time()
+            elapsed_time = time2 - time1
+            print(f"Elapsed time: single estimate_entropy {elapsed_time:.4f} seconds")
+            
         else:
             entropy = self.entropy        
 
-        time2 = time.time()
-        elapsed_time = time2 - time1
-        # print(f"Elapsed time: single estimate_entropy {elapsed_time:.4f} seconds")
 
         self.step_count += 1
 
@@ -563,11 +566,12 @@ class SAC_PPODiffusion(VPGDiffusion):
 
         self.entropy = entropy
 
-        if self.clip_entropy:
-            if self.entropy > self.target_entropy / 2:
-                self.entropy = self.target_entropy / 2
-            elif self.entropy < self.target_entropy * 2:
-                self.entropy = self.target_entropy * 2
+        # if self.clip_entropy:
+        #     if self.entropy > self.target_entropy / 2:
+        #         self.entropy = self.target_entropy / 2
+        #     elif self.entropy < self.target_entropy * 2:
+        #         self.entropy = self.target_entropy * 2
+
 
         entropy_loss = -torch_mean( torch_log(self.alpha) * ( -self.entropy + self.target_entropy ) )
 
