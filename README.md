@@ -224,7 +224,7 @@ First create a directory as the parent directory of the pre-training data and se
 export DPPO_DATA_DIR=/path/to/data -->
 <!-- ``` -->
 
-Pre-training data for all tasks are pre-processed and can be found at [here](https://drive.google.com/drive/folders/1AXZvNQEKOrp0_jk1VLepKh_oHCg_9e3r?usp=drive_link). Pre-training script will download the data (including normalization statistics) automatically to the data directory.
+Pre-training data for all tasks are pre-processed and can be found at [here](https://drive.google.com/drive/folders/1b4eylHX3E9hKpMlKXwxjTDepNBanaI5R?usp=drive_link). Pre-training script will download the data (including normalization statistics) automatically to the data directory.
 <!-- The data path follows `${DPPO_DATA_DIR}/<benchmark>/<task>/train.npz`, e.g., `${DPPO_DATA_DIR}/gym/hopper-medium-v2/train.npz`. -->
 
 ### Run pre-training with data
