@@ -477,6 +477,7 @@ Here is the general plot of the current DPOER result:
     </div>
 </center>
 As shown above, DPOER is slightly better than DPPO. 
+I increased the update frequency of the Transport to every 50 batches. As shown in the figure, DPOER_50 significantly outperforms both DPOER (updated every 10000 batches) and DPPO. The results on Square and other datasets are still pending.
 DPOER results are running with
 
 ```
