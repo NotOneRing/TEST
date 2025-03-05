@@ -471,8 +471,10 @@ Here is the general plot of the current DPOER result:
     <div style="display: flex; justify-content: space-around; text-align: center;">
         <div>
             <b>DPOER on Square and Transport</b><br>
-            <img src="figure/Square_SAC.png" height="150"/><br>
-            <img src="figure/Transport_SAC.png" height="150"/><br>
+            <img src="figure/Square_SAC.png" height="150" width="250"/><br>
+            <img src="figure/Transport_SAC.png" height="150" width="250"/><br>
+            <img src="figure/Halfcheetah_SAC.png" height="150" width="250"/><br>
+            <img src="figure/Hopper_SAC.png" height="150" width="250"/><br>
         </div>
     </div>
 </center>
