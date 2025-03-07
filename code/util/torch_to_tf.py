@@ -865,21 +865,23 @@ def torch_tensor_detach(tensor):
 
 
 
-# 定义自定义 torch_std 函数
+# Define custom torch_std function
 def torch_std(input, dim=None, *, correction=1, keepdim=False, out=None):
     assert out == None, "Tensor is immutable in TensorFlow, but mutable in PyTorch"
 
-    # 计算均值
+    # Calculate mean
     mean = tf.reduce_mean(input, axis=dim, keepdims=True)
 
-    # 计算方差
+    # Calculate variance
     variance = tf.reduce_mean(tf.square(input - mean), axis=dim, keepdims=keepdim)
 
-    # 应用 Bessel's 修正
+    # Apply Bessel's correction
     if correction != 0:
         count = tf.shape(input)[dim] if dim is not None else tf.size(input)
         count = tf.cast(count, tf.float32)
         variance *= count / (count - correction)
+
+    # Calculate standard deviation
     result = tf.sqrt(variance)
     result = tf.cast(result, tf.float32)
     return result
@@ -1137,7 +1139,7 @@ def torch_vmap(func, *inputs, in_dims=0, out_dims=0):
 
 
 def torch_func_stack_module_state(models):
-    # # # 堆叠所有模型的参数和缓冲区
+    # Stack all model parameters and buffers
     # trainable = [tf.stack([var for var in model.trainable_variables])
     #              for model in models]
     # non_trainable = [tf.stack([var for var in model.non_trainable_variables])
@@ -1372,15 +1374,15 @@ def torch_nn_init_xavier_normal_(tensor, gain):
     # # Assign ones to the variable
     # tensor.assign(normal_values.astype(np.float32))
 
-    # 使用 TensorFlow 随机数生成
+    # Use TensorFlow random number generator
     normal_values = tf.random.normal(
         shape=tensor.shape,
         mean=0.0,
         stddev=std,
-        dtype=tensor.dtype  # 自动匹配变量数据类型 (e.g. float32)
+        dtype=tensor.dtype  # Automatically match the variable's data type (e.g., float32)
     )
 
-    # 直接赋值 TensorFlow 张量
+    # Directly assign the generated TensorFlow tensor
     tensor.assign(normal_values)
 
 
@@ -1399,7 +1401,7 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
     shape = input_tensor.shape
 
-    a = (a - mean) / std  # 归一化截断边界
+    a = (a - mean) / std  # Normalize truncation boundaries
     b = (b - mean) / std
 
     tensor = tf.TensorArray(dtype=tf.float32, size=tf.reduce_prod(shape))
@@ -1621,7 +1623,7 @@ class nn_GELU(tf.keras.layers.Layer):
         super(nn_GELU, self).__init__(name=name,**kwargs)
 
     def call(self, inputs):
-        # GELU 激活函数公式
+        # GELU activation function formula
         return tf.nn.gelu(inputs)
 
 
@@ -1874,8 +1876,8 @@ class nn_Linear(tf.keras.layers.Layer):
         if OUTPUT_VARIABLES and DEBUG and self.model.built:
             # print("nn_Linear.call() self.kernel = ", self.model.kernel)
             # print("nn_Linear.call() self.bias = ", self.model.bias)
-        #     # print("nn_Linear.call() self.kernel = ", self.model.kernel.numpy())  # 输出 kernel 的值
-        #     # print("nn_Linear.call() self.bias = ", self.model.bias.numpy())      # 输出 bias 的值
+        #     # print("nn_Linear.call() self.kernel = ", self.model.kernel.numpy())  # output kernel value
+        #     # print("nn_Linear.call() self.bias = ", self.model.bias.numpy())      # output bias value
 
             weights = self.model.kernel
             bias = self.model.bias
@@ -1884,7 +1886,7 @@ class nn_Linear(tf.keras.layers.Layer):
         #     # print("bias.shape = ", bias.shape)
         #     # print("x.shape = ", x.shape)
 
-            result1 = tf.matmul(x, weights) + bias  # 广播加法
+            result1 = tf.matmul(x, weights) + bias  # broadcast addition
 
         #     # result1 = weights * x.numpy() + bias
 
@@ -1933,30 +1935,30 @@ class nn_Linear(tf.keras.layers.Layer):
     #         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     # def __getattr__(self, name):
-    #     # 先检查当前对象的属性，避免无限递归
+    #     # First check the current object's attributes to avoid infinite recursion
     #     if name in self.__dict__:
     #         return self.__dict__[name]
-    #     # 再检查 model 的属性
+    #     # Then check the model's attributes
     #     if hasattr(self.model, name):
     #         return getattr(self.model, name)
-    #     # 如果都没有，抛出 AttributeError
+    #     # Raise AttributeError if the attribute is not found
     #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
 
     # def __getattr__(self, name):
-    #     # 避免递归调用：直接访问 __dict__ 或 object.__getattribute__
+    #     # Avoid recursive calls: directly access __dict__ or object.__getattribute__
     #     try:
     #         return object.__getattribute__(self, name)
     #     except AttributeError:
     #         pass
 
-    #     # 检查是否为 model 的属性
+    #     # Check if the attribute exists in the model
     #     model = object.__getattribute__(self, "model")
 
     #     if hasattr(model, name):
     #         return getattr(model, name)
 
-    #     # 如果仍然找不到，抛出异常
+    #     # Raise exception if the attribute is still not found
     #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
 
@@ -1975,7 +1977,7 @@ class nn_Linear(tf.keras.layers.Layer):
 
 # class nn_Parameter(tf.keras.layers.Layer):
 #     def __init__(self, data=None, requires_grad=True):
-#         super().__init__(trainable=requires_grad)  # 重要！确保 trainable 被正确初始化
+#         super().__init__(trainable=requires_grad)  # Important! Ensure trainable is properly initialized
 #         if data is None:
 #             raise ValueError("data cannot be None. Please provide a tensor value.")
 #         if requires_grad:
@@ -2198,10 +2200,10 @@ class nn_Sequential(tf.keras.layers.Layer):
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
+            'MLP': MLP,                            # Custom MLP (Multi-Layer Perceptron) layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
             'nn_Identity': nn_Identity,
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,
             'nn_Dropout': nn_Dropout,
@@ -2362,9 +2364,9 @@ class nn_ModuleList(tf.keras.layers.Layer):
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'MLP': MLP,                            # Custom MLP (Multi-Layer Perceptron) layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             "nn_Identity": nn_Identity,
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,
@@ -2593,8 +2595,8 @@ class nn_LayerNorm(tf.keras.layers.Layer):
         Returns the configuration of the LayerNorm layer.
         This method is used to save and restore the layer's state.
         """
-        config = super(nn_LayerNorm, self).get_config()  # 获取基础配置
-        # 确保将 `gamma` 和 `beta` 的配置信息添加到返回的配置中
+        config = super(nn_LayerNorm, self).get_config()  # Get the base configuration
+        # Ensure that `gamma` and `beta` configuration information is added to the returned config
         config.update({
             'normalized_shape': self.normalized_shape,
             'eps': self.epsilon,
@@ -2664,7 +2666,10 @@ class nn_LayerNorm(tf.keras.layers.Layer):
     #     """
     #     Returns an instance of the custom layer from its configuration.
     #     """
-    #     # 直接调用父类的 from_config，TensorFlow 会自动处理变量的恢复（如 gamma 和 beta）
+
+    #     # Directly call the parent class's `from_config` method.
+    #     # TensorFlow will automatically handle the restoration of variables (e.g., gamma and beta).
+
     #     result = super(nn_LayerNorm, cls).from_config(config)
     #     return result
 
@@ -2694,21 +2699,21 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
         self.depth = d_model // self.num_heads
 
-        # 线性变换用于 Query, Key 和 Value
+        # Linear transformations for Query, Key, and Value
         self.query_dense = tf.keras.layers.Dense(d_model)
         self.key_dense = tf.keras.layers.Dense(d_model)
         self.value_dense = tf.keras.layers.Dense(d_model)
 
-        # 输出变换
+        # Output transformation
         self.output_dense = tf.keras.layers.Dense(d_model)
 
     def split_heads(self, x, batch_size):
-        """将最后一个维度切分为多个头"""
+        """Split the last dimension into multiple heads"""
         x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
     def scaled_dot_product_attention(self, query, key, value, mask=None):
-        """计算缩放点积注意力"""
+        """Compute scaled dot-product attention"""
         matmul_qk = tf.matmul(query, key, transpose_b=True)
         dk = tf.cast(tf.shape(key)[-1], tf.float32)
         scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
@@ -2723,7 +2728,7 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
     def call(self, query, key, value, mask=None):
         batch_size = tf.shape(query)[0]
 
-        # 对 Q, K, V 进行线性变换并分割成多个头
+        # Apply linear transformation to Q, K, V and split into multiple heads
         query = self.query_dense(query)
         key = self.key_dense(key)
         value = self.value_dense(value)
@@ -2732,16 +2737,16 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
         key = self.split_heads(key, batch_size)
         value = self.split_heads(value, batch_size)
 
-        # 缩放点积注意力
+        # Scaled dot-product attention
         output, attention_weights = self.scaled_dot_product_attention(query, key, value, mask)
 
-        # 拼接多个头
+        # Concatenate the multiple heads
         output = tf.transpose(output, perm=[0, 2, 1, 3])
         output = tf.reshape(output, (batch_size, -1, self.d_model))
 
-        attention_weights = tf.reduce_mean(attention_weights, axis=1)  # 平均所有头
+        attention_weights = tf.reduce_mean(attention_weights, axis=1)  # take the average of all heads
 
-        # 输出变换
+        # Output transformation
         output = self.output_dense(output)
         return output, attention_weights
 
@@ -2806,7 +2811,7 @@ class nn_Conv1d(tf.keras.layers.Layer):
             filters=self.out_channels,
             kernel_size=self.kernel_size,
             strides=self.stride,
-            # padding='valid',  # 手动处理填充
+            # padding='valid',  # handle the padding manually
             padding='same',
             dilation_rate=self.dilation,
             groups=self.groups,
@@ -2850,7 +2855,7 @@ class nn_Conv1d(tf.keras.layers.Layer):
     #     super(nn_Conv1d, self).build(input_shape)
 
     # def build(self, input_shape):
-    #     # 显式构建 Conv1D 层
+    #     # Explicitly build the Conv1D layer
     #     self.conv1d.build(input_shape)
     #     super(nn_Conv1d, self).build(input_shape)
 
@@ -2916,7 +2921,7 @@ class nn_Conv2d(tf.keras.layers.Layer):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups = 1, conv2d = None, **kwargs):
         super(nn_Conv2d, self).__init__()
         
-        # 解析参数
+        # Parse parameters
         self.in_channels = in_channels
         self.out_channels = out_channels
         # self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
@@ -2927,7 +2932,7 @@ class nn_Conv2d(tf.keras.layers.Layer):
 
         self.bias = bias
 
-        # TensorFlow 的 Conv2D 需要 NHWC 格式
+        # TensorFlow's Conv2D requires NHWC format
 
         if conv2d:
             self.conv2d = conv2d
@@ -2936,9 +2941,9 @@ class nn_Conv2d(tf.keras.layers.Layer):
                 filters=self.out_channels,
                 kernel_size=self.kernel_size,
                 strides=self.stride,
-                padding="valid",  # PyTorch padding=0 对应 TensorFlow "valid"
+                padding="valid",  # PyTorch padding=0 corresponds to TensorFlow "valid"
                 use_bias=self.bias,
-                # kernel_initializer=tf.keras.initializers.HeUniform(),  # 采用 PyTorch Kaiming 初始化
+                # kernel_initializer=tf.keras.initializers.HeUniform(),  # Use PyTorch Kaiming initialization
                 # bias_initializer="zeros" if self.bias else None
                 kernel_initializer = tf.keras.initializers.Constant(
                     pytorch_weight_initializer( (self.kernel_size[0], self.kernel_size[1], in_channels // groups, out_channels),\
@@ -2946,6 +2951,7 @@ class nn_Conv2d(tf.keras.layers.Layer):
                 bias_initializer = tf.keras.initializers.Constant(
                     pytorch_bias_initializer((out_channels,), in_channels * self.kernel_size[0] * self.kernel_size[1] // groups ))
             )
+
 
     def call(self, x):
         # PyTorch input (N, C, H, W) -> TensorFlow (N, H, W, C)
@@ -3002,9 +3008,9 @@ class nn_Conv2d(tf.keras.layers.Layer):
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'MLP': MLP,                            # Custom MLP (Multi-Layer Perceptron) layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,
             'nn_Dropout': nn_Dropout,
@@ -3024,7 +3030,7 @@ class nn_Conv2d(tf.keras.layers.Layer):
 
 
     def assign_torch_weights(self, numpy_torch_weights):
-        torch_weights_tf = np.transpose(numpy_torch_weights, (2, 3, 1, 0))  # 转换为 TensorFlow 形状
+        torch_weights_tf = np.transpose(numpy_torch_weights, (2, 3, 1, 0))  # Convert to TensorFlow shape
         self.conv2d.kernel.assign(torch_weights_tf)
 
 
@@ -3072,8 +3078,8 @@ class nn_ConvTranspose1d(tf.keras.layers.Layer):
             filters=self.out_channels,
             kernel_size=self.kernel_size,
             strides=self.stride,
-            # padding="valid",  # 手动填充
-            padding="same",  # 手动填充
+            # padding="valid",  # padding manually
+            padding="same",
             use_bias=bias,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer
@@ -3093,14 +3099,14 @@ class nn_ConvTranspose1d(tf.keras.layers.Layer):
 
         x = self.conv1d_transpose(x)
 
-        # **转换回 PyTorch 格式 (N, C, L)**
+        # **Convert back to PyTorch format (N, C, L)**
         x = tf.transpose(x, [0, 2, 1])
 
         return x
 
 
     def assign_torch_weights(self, numpy_torch_weights):
-        torch_weights_tf = np.transpose(numpy_torch_weights, (2, 1, 0))  # 转换为 TensorFlow 形状
+        torch_weights_tf = np.transpose(numpy_torch_weights, (2, 1, 0))  # Convert to TensorFlow shape
         self.conv1d_transpose.kernel.assign(torch_weights_tf)
 
 
@@ -3315,12 +3321,12 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
                                                     # batch_first=batch_first
                                                     )
         
-        # 前馈网络 FFN
+        # Feed-Forward Network (FFN)
         self.linear1 = nn_Linear(d_model, dim_feedforward)
         self.linear2 = nn_Linear(dim_feedforward, d_model)
         self.dropout = nn_Dropout(dropout)
 
-        # 归一化
+        # Normalization
         self.norm1 = nn_LayerNorm(d_model, eps=layer_norm_eps)
         self.norm2 = nn_LayerNorm(d_model, eps=layer_norm_eps)
         self.norm3 = nn_LayerNorm(d_model, eps=layer_norm_eps)
@@ -3331,19 +3337,20 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
         self.dropout3 = nn_Dropout(dropout)
 
         self.activation = activation
-        self.norm_first = norm_first  # 控制是否先归一化（Pre-LN vs. Post-LN）
+        self.norm_first = norm_first  # Control whether normalization is applied first (Pre-LN vs. Post-LN)
+
 
     def forward(self, tgt, memory, 
                 tgt_mask=None, memory_mask=None, 
                 tgt_key_padding_mask=None, memory_key_padding_mask=None):
         """
-        Args:
-            tgt: 目标序列 (目标的嵌入) (batch, tgt_len, d_model)
-            memory: 编码器输出 (batch, src_len, d_model)
-            tgt_mask: 目标序列的注意力 mask
-            memory_mask: 编码器-解码器注意力 mask
-            tgt_key_padding_mask: 目标序列的 padding mask
-            memory_key_padding_mask: 编码器输出的 padding mask
+        Args:            
+            tgt: Target sequence (embeddings of the target) (batch, tgt_len, d_model)
+            memory: Encoder output (batch, src_len, d_model)
+            tgt_mask: Attention mask for the target sequence
+            memory_mask: Attention mask for encoder-decoder attention
+            tgt_key_padding_mask: Padding mask for the target sequence
+            memory_key_padding_mask: Padding mask for the encoder output            
         """
 
         # 1. Self-Attention (Decoder)
@@ -3694,18 +3701,19 @@ def model_forward_backward_gradients(input_features, target_label, loss_func, mo
 def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grads, norm_type=2.0, error_if_nonfinite=False):
     # torch.nn.utils.clip_grad_norm_
     """
-    这里多了一个grads参数，因为tensorflow的grads要紧跟着tf.GradientTape
-    模仿 PyTorch 中的 clip_grad_norm_ 函数，裁剪 TensorFlow 模型参数的梯度
-    :param grads: 梯度列表
-    :param max_norm: 梯度的最大范数
-    :param norm_type: 范数类型，默认为 2 范数
-    :param error_if_nonfinite: 如果梯度包含非有限值（如 NaN 或 Inf），是否抛出错误
-    :return: 裁剪后的梯度
+    This function has an additional `grads` parameter because TensorFlow gradients need to be right after tf.GradientTape.
+    Mimicking PyTorch's clip_grad_norm_ function, it clips the gradients of TensorFlow model parameters.
+    
+    :param grads: List of gradients
+    :param max_norm: Maximum norm of the gradients
+    :param norm_type: Type of norm, default is L2 norm
+    :param error_if_nonfinite: Whether to raise an error if gradients contain non-finite values (e.g., NaN or Inf)
+    :return: Clipped gradients
     """
     if norm_type != 2.0:
         raise NotImplementedError("Only L2 norm is currently supported")
 
-    # 计算所有梯度的范数
+    # Compute the norm of all gradients
     grads_finite = [tf.clip_by_value(g, -1e7, 1e7) if g is not None else tf.zeros_like(parameters[i]) for i, g in enumerate(grads)]
     # print("grads_finite = ", grads_finite)
 
@@ -3713,7 +3721,7 @@ def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grad
 
     # print("global_norm = ", global_norm)
 
-    # 如果范数超过最大值，进行裁剪
+    # Clip if the norm exceeds the maximum value
     clip_coef = max_norm / (global_norm + 1e-6)
     # print("clip_coef = ", clip_coef)
     clip_coef_bf = tf.where(global_norm < max_norm, tf.ones_like(clip_coef), clip_coef)
@@ -3722,7 +3730,7 @@ def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grad
 
     # print("clipped_grads = ", clipped_grads)
 
-    # 如果 error_if_nonfinite 为 True，检查非有限值
+    # If error_if_nonfinite is True, check for non-finite values
     if error_if_nonfinite:
         for g in grads:
             if g is not None and (tf.reduce_any(tf.is_nan(g)) or tf.reduce_any(tf.is_inf(g))):
@@ -3794,13 +3802,13 @@ def torch_tensor_requires_grad_(tensor, requires_grad=True):
 
 
 # class torch_utils_data_DataLoader:
-#     # dataset,          # 数据集
-#     # batch_size=32,    # 批量大小
-#     # shuffle=True,     # 训练时打乱数据
-#     # num_workers=4,    # 4 个子进程加载
-#     # pin_memory=True,  # GPU 训练时开启
-#     # drop_last=False,  # 保留最后不完整批次
-#     # prefetch_factor=2 # 每个 worker 预加载 2 个批次
+#     # dataset,          # The dataset
+#     # batch_size=32,    # Batch size
+#     # shuffle=True,     # Shuffle the data during training
+#     # num_workers=4,    # 4 subprocesses for loading data
+#     # pin_memory=True,  # Enable when training on GPU
+#     # drop_last=False,  # Retain the last incomplete batch
+#     # prefetch_factor=2 # Preload 2 batches per worker
 #     def __init__(self,
 #         dataset, 
 #         batch_size=1, 
@@ -3836,13 +3844,13 @@ class torch_utils_data_DataLoader:
     def __init__(self, dataset, batch_size=1, shuffle=False, 
             num_workers=0, pin_memory=False, drop_last=False, prefetch_factor=2):
         """
-        PyTorch 风格的 DataLoader 实现，支持 TensorFlow 兼容的数据加载方式
-        :param dataset: 数据集，必须是 list[dict] 或者实现了 __getitem__ 和 __len__
-        :param batch_size: 每个批次的大小
-        :param shuffle: 是否打乱数据
-        :param drop_last: 是否丢弃最后一个不完整批次
-        :param n_epochs: 训练的总轮数
-        :param seed: 随机种子
+        PyTorch-style DataLoader implementation, supports TensorFlow-compatible data loading.
+        :param dataset: The dataset, must be a list[dict] or implement __getitem__ and __len__
+        :param batch_size: The size of each batch
+        :param shuffle: Whether to shuffle the data
+        :param drop_last: Whether to drop the last incomplete batch
+        :param n_epochs: Total number of training epochs
+        :param seed: Random seed
         """
         self.dataset = dataset
         self.batch_size = batch_size
@@ -3855,15 +3863,15 @@ class torch_utils_data_DataLoader:
 
     def __iter__(self):
         """
-        迭代器方法，允许 `for batch in dataloader` 这样的方式遍历数据
+        Iterator method, allows traversal of data using `for batch in dataloader`
         """
         # self.seed
-        rng = np.random.default_rng()  # 保持可复现性
+        rng = np.random.default_rng()  # Maintain reproducibility
         indices = list(range(self.data_size))
 
         # for epoch in range(self.n_epochs):
         if self.shuffle:
-            rng.shuffle(indices)  # 打乱索引顺序
+            rng.shuffle(indices)  # Shuffle the index order
         
         
         batch_data = {
@@ -3876,7 +3884,7 @@ class torch_utils_data_DataLoader:
         batch_count = 0
 
         for i in indices:
-            sample = self.dataset[i]  # 取样本
+            sample = self.dataset[i]  # Get a sample
             batch_data["actions"].append(sample.get("actions", None))
             batch_data["states"].append(sample.get("states", None))
             batch_data["rewards"].append(sample.get("rewards", None))
@@ -3885,7 +3893,7 @@ class torch_utils_data_DataLoader:
 
             batch_count += 1
 
-            if batch_count == self.batch_size:  # 满足 batch_size 时 yield
+            if batch_count == self.batch_size:  # yield when batch_size is met
                 return_dict = {}
                 for key, value in batch_data.items():
                     # print("key = ", key)
@@ -3897,11 +3905,11 @@ class torch_utils_data_DataLoader:
                     # else:
                     #     return_dict[key] = None
                 yield return_dict
-                batch_data = {key: [] for key in batch_data}  # 重新初始化
+                batch_data = {key: [] for key in batch_data}  # Reinitialize
                 batch_count = 0
 
         if not self.drop_last and batch_count > 0:
-            # 处理最后一个 batch（如果 drop_last=False）
+            # Handle the last batch (if drop_last=False)
             # yield {key: tf.convert_to_tensor(value) for key, value in batch_data.items()}
                 return_dict = {}
                 for key, value in batch_data.items():
@@ -3916,11 +3924,11 @@ class torch_utils_data_DataLoader:
 
     def __len__(self):
         """
-        计算总批次数量
+        Calculate the total number of batches
         """
         if self.drop_last:
             return self.data_size // self.batch_size
-        return (self.data_size + self.batch_size - 1) // self.batch_size  # 向上取整
+        return (self.data_size + self.batch_size - 1) // self.batch_size  # Round up
 
 
 
@@ -4088,7 +4096,7 @@ class CosineAWR(tf.keras.optimizers.schedules.LearningRateSchedule):
 
         #Because tensorflow automatically set epoch for each epoch，to achieve the same optimizer as the pytorch version, we choose to fix epoch=None manually
         if epoch is not None:
-            epoch = int(epoch)  # 强制转换为整数
+            epoch = int(epoch)  # Force conversion to integer
 
         # print("tf: 2epoch = ", epoch)
         epoch = None
@@ -4174,7 +4182,7 @@ class CosineAWR(tf.keras.optimizers.schedules.LearningRateSchedule):
                     )
                 ) / 2
 
-        # 更新学习率
+        # update learning rate
         # tf.keras.backend.set_value(self.optimizer.lr, lr)
 
         # print("tf: lr = ", self.lr)
@@ -4278,13 +4286,13 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
 
         # print("tensor = ", tensor)
         # print("indices = ", indices)
-        # 获取 tensor 形状
+        # Get tensor shape
         tensor_shape = tf.shape(tensor)
-        max_indices = tensor_shape[:tf.shape(indices)[-1]]  # 计算各维度最大索引
+        max_indices = tensor_shape[:tf.shape(indices)[-1]]  # Calculate maximum index for each dimension
 
         # print("max_indices = ", max_indices)
 
-        # 检查索引是否越界
+        # Check if indices are out of bounds
         is_out_of_bounds = tf.reduce_any(indices < 0, axis=-1) | tf.reduce_any(indices >= max_indices, axis=-1)
 
         match_dim_is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)  # (3, 1)
@@ -4293,12 +4301,13 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
         # print("match_dim_is_out_of_bounds = ", match_dim_is_out_of_bounds)
         # print("tf.zeros_like(indices) = ", tf.zeros_like(indices))
         # print("indices = ", indices)
-        # 创建合法索引，将非法索引替换为 (0,0,...) 确保不会报错
+
+        # Create valid indices by replacing out-of-bounds indices with (0, 0, ...) to avoid errors
         safe_indices = tf.where(match_dim_is_out_of_bounds, tf.zeros_like(indices), indices)
 
         # print("safe_indices = ", safe_indices)
 
-        # 获取 gather_nd 结果
+        # Get gather_nd result
         gathered_values = tf.gather_nd(tensor, safe_indices)
 
         # print("gathered_values = ", gathered_values)
@@ -4309,7 +4318,7 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
 
         # print("is_out_of_bounds = ", is_out_of_bounds)
 
-        # 替换越界索引的部分为 default_value
+        # Replace out-of-bounds indices with default_value
         result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values),  tf.cast(default_value, gathered_values.dtype) ), gathered_values)
 
         # print("result = ", result)
@@ -4326,7 +4335,7 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
 
     H_out, W_out = grid.shape[1:3]
 
-    # 归一化网格 [-1, 1] → [0, H-1] or [0, W-1]
+    # Normalize grid [-1, 1] → [0, H-1] or [0, W-1]
     def grid_sampler_unnormalize(coord, size, align_corners):
         # if align_corners:
         #     return 0.5 * ((coord + 1) * (size - 1))
@@ -4344,7 +4353,7 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
     # dim4 = tf.reshape( tf.range(2), [1, 1, 1, -1])
 
     # batch_idx = tf.reshape(tf.range(N), [-1, 1, 1])  # [N, 1, 1]
-    # batch_idx = tf.broadcast_to(batch_idx, [N, y.shape[1], y.shape[2]])  # 扩展为 [N, H_out, W_out]
+    # batch_idx = tf.broadcast_to(batch_idx, [N, y.shape[1], y.shape[2]])  # Expand to [N, H_out, W_out]
     
     # indices_x = tf.stack([dim1, dim3, dim3, dim4], axis=-1)
     
@@ -4378,13 +4387,13 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
     # print("y0.shape = ", y0.shape)
     # print("y1.shape = ", y1.shape)
 
-    # # 限制索引范围 (padding_mode="zeros" 处理边界)
+    # # Limit index range (padding_mode="zeros" handles the boundaries)
     # x0 = tf.clip_by_value(x0, 0, W_in - 1)
     # x1 = tf.clip_by_value(x1, 0, W_in - 1)
     # y0 = tf.clip_by_value(y0, 0, H_in - 1)
     # y1 = tf.clip_by_value(y1, 0, H_in - 1)
 
-    # 计算权重
+    # Compute weights
     wa = (x1 - ix) * (y1 - iy)
     wb = (x1 - ix) * (iy - y0)
     wc = (ix - x0) * (y1 - iy)
@@ -4392,9 +4401,9 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
 
 
     def gather_nd(image, x, y, N):
-        """ 使用 tf.gather_nd 进行索引，确保 batch_idx 的形状匹配 """
+        """ Use tf.gather_nd for indexing, ensuring batch_idx matches the shape """
         batch_idx = tf.reshape(tf.range(N), [-1, 1, 1])  # [N, 1, 1]
-        batch_idx = tf.broadcast_to(batch_idx, [N, y.shape[1], y.shape[2]])  # 扩展为 [N, H_out, W_out]
+        batch_idx = tf.broadcast_to(batch_idx, [N, y.shape[1], y.shape[2]])  # Expand to [N, H_out, W_out]
         
         indices = tf.stack([batch_idx, x, y], axis=-1)  # [N, H_out, W_out, 3]
         return safe_gather_nd(image, indices)
@@ -4421,13 +4430,13 @@ def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="
     # print("Ic = ", Ic)
     # print("Id = ", Id)
 
-    wa = tf.expand_dims(wa, axis=1)  # 变成 [N, 1, H_out, W_out]
+    wa = tf.expand_dims(wa, axis=1)  # Change to [N, 1, H_out, W_out]
     wa = tf.broadcast_to(wa, [N, C, H_out, W_out])
-    wb = tf.expand_dims(wb, axis=1)  # 变成 [N, 1, H_out, W_out]
+    wb = tf.expand_dims(wb, axis=1)  # Change to [N, 1, H_out, W_out]
     wb = tf.broadcast_to(wb, [N, C, H_out, W_out])
-    wc = tf.expand_dims(wc, axis=1)  # 变成 [N, 1, H_out, W_out]
+    wc = tf.expand_dims(wc, axis=1)  # Change to [N, 1, H_out, W_out]
     wc = tf.broadcast_to(wc, [N, C, H_out, W_out])
-    wd = tf.expand_dims(wd, axis=1)  # 变成 [N, 1, H_out, W_out]
+    wd = tf.expand_dims(wd, axis=1)  # Change to [N, 1, H_out, W_out]
     wd = tf.broadcast_to(wd, [N, C, H_out, W_out])
 
     # print("wa = ",  wa)
@@ -4668,15 +4677,15 @@ class Normal:
 
     def log_prob(self, x):
         """
-        计算正态分布的对数概率密度函数
+        Computes the log of the probability density function of a normal distribution.
 
         Args:
-            x: 需要计算概率密度的点
-            mean: 正态分布的均值
-            std: 正态分布的标准差
+            x: The point at which to compute the probability density.
+            mean: The mean of the normal distribution.
+            std: The standard deviation of the normal distribution.
 
         Returns:
-            对数概率密度
+            Log of the probability density.
         """
         # # var = self.scale**2
         # log_pdf = -tf.math.log(self.scale * tf.math.sqrt(2 * tf.constant(np.pi))) - 0.5 * ((x - self.loc) ** 2) / (self.scale ** 2)
@@ -4690,7 +4699,7 @@ class Normal:
 
     def sample(self, sample_shape = tf.TensorShape([])):
         """
-        从正态分布中采样
+        Sample from a normal distribution.
         """
 
         # if OUTPUT_VARIABLES:
@@ -4727,12 +4736,12 @@ class Normal:
 
     def entropy(self):
         """
-        计算正态分布的熵
+        Computes the entropy of the normal distribution.
 
         Returns:
-            正态分布的熵
+            The entropy of the normal distribution.
         """
-        # # 使用公式 H(X) = 0.5 * log(2 * pi * e * std^2)
+        # Using the formula H(X) = 0.5 * log(2 * pi * e * std^2)
         # entropy = 0.5 * tf.math.log(2 * tf.constant(np.pi) * tf.constant(np.e) * self.scale ** 2)
         
         # # entropy = torch.tensor(entropy.numpy())
@@ -4746,22 +4755,21 @@ class Normal:
 
 def _sum_rightmost(x, n):
     """
-    对张量的最后 n 个维度进行求和。
+    Sum the last n dimensions of a tensor.
     
     Args:
-        x: 输入的张量。
-        n: 需要求和的最后 n 个维度的数量。
-        
-    Returns:
-        求和后的张量。
+        x: The input tensor.
+        n: The number of last n dimensions to sum over.
+        Returns:
+            The tensor after summing.
     """
-    # 获取张量的总维度数
+    # Get the total number of dimensions of the tensor
     num_dims = len(x.shape)
     
-    # 求和的维度是从最后一个维度向前数 n 个维度
+    # The dimensions to sum over are the last n dimensions
     axes = list(range(num_dims - n, num_dims))
     
-    # 使用 tf.reduce_sum 对指定维度进行求和
+    # Use tf.reduce_sum to sum over the specified dimensions
     return tf.reduce_sum(x, axis=axes)
 
 
@@ -4934,14 +4942,14 @@ class Categorical:
         #     all_tensors = []
 
         #     for i in range(batch_dim):
-        #         index = int(value[i, ...].numpy())  # 获取索引
+        #         index = int(value[i, ...].numpy())  # Get the index
 
-        #         log_prob_value = tf.gather(self.probs, index, axis=-1)  # 从 probs 中收集数据
+        #         log_prob_value = tf.gather(self.probs, index, axis=-1)  # Gather data from probs
 
-        #         # 然后计算 log
+        #         # Then compute the log
         #         log_prob_value = tf.math.log(log_prob_value)
 
-        #         # 将结果重新形状化
+        #         # Reshape the result
         #         all_tensors.append(tf.reshape(log_prob_value, [1, -1]))
                 
         #     if batch_dim == 1:

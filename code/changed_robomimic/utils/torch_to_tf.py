@@ -8,6 +8,8 @@ from collections import OrderedDict
 from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
 
 
+
+
 def torch_tensor_permute(input, *dims):
     "A wrapper for torch.Tensor.permute() function"
     if isinstance(dims[0], (tuple, list)):
@@ -49,10 +51,18 @@ def torch_gather(input_tensor, dim, index_tensor):
     input_array = input_tensor.numpy()
 
 
-    input_dim_list = input_tensor.shape.as_list()
-    dim_list = index_tensor.shape.as_list()
+    # input_dim_list = input_tensor.shape.as_list()
+    # dim_list = index_tensor.shape.as_list()
+
+    input_dim_list = list(input_tensor.shape)
+    dim_list = list(index_tensor.shape)
+
+    # print("list(input_tensor.shape) = ", list(input_tensor.shape) )
+    # print("list(index_tensor.shape) = ", list(index_tensor.shape) )
 
     #transfer negative index to positive one
+    # print("dim = ", dim)
+    # print("input_dim_list = ")
     dim = list(range(len( input_dim_list )))[dim]
 
     for i in range(len( input_dim_list )):
@@ -315,22 +325,22 @@ def torch_log(input):
 
 
 
-def torch_tensor_clamp_(input, min = float('-inf'), max = float('inf')):
-    if isinstance(input, tf.Variable):
-        temp_variable = tf.clip_by_value(input, min, max)
-        # print("temp_variable = ", temp_variable)
-        # print("input = ", input)
-        input.assign( temp_variable )
-        # print("after input.assign input= ", input)
-    # wrong path
-    # elif isinstance(input, tf.Tensor):
-    #     variable = tf.Variable(input)
-    #     variable = tf.clip_by_value(variable, min, max)
-    #     tensor_from_variable = tf.convert_to_tensor(variable)
-    #     input = None
-    #     input = tensor_from_variable
-    else:
-        raise RuntimeError("Input must be tf.Variable to be able to changed")
+# def torch_tensor_clamp_(input, min = float('-inf'), max = float('inf')):
+#     if isinstance(input, tf.Variable):
+#         temp_variable = tf.clip_by_value(input, min, max)
+#         # print("temp_variable = ", temp_variable)
+#         # print("input = ", input)
+#         input.assign( temp_variable )
+#         # print("after input.assign input= ", input)
+#     # wrong path
+#     # elif isinstance(input, tf.Tensor):
+#     #     variable = tf.Variable(input)
+#     #     variable = tf.clip_by_value(variable, min, max)
+#     #     tensor_from_variable = tf.convert_to_tensor(variable)
+#     #     input = None
+#     #     input = tensor_from_variable
+#     else:
+#         raise RuntimeError("Input must be tf.Variable to be able to changed")
 
 
 
@@ -759,9 +769,8 @@ def nn_functional_pad(x, pad, mode='replicate'):
     # batch, height, width, channels = x.shape
     from copy import deepcopy
  
-    # result = deepcopy(x)
-    result = x
-    
+    result = deepcopy(x)
+ 
     total_dim = len(x.shape)
     assert len(pad) % 2 == 0
     pad_dim = len(pad) / 2
@@ -856,21 +865,23 @@ def torch_tensor_detach(tensor):
 
 
 
-# 定义自定义 torch_std 函数
+# Define custom torch_std function
 def torch_std(input, dim=None, *, correction=1, keepdim=False, out=None):
     assert out == None, "Tensor is immutable in TensorFlow, but mutable in PyTorch"
 
-    # 计算均值
+    # Calculate mean
     mean = tf.reduce_mean(input, axis=dim, keepdims=True)
 
-    # 计算方差
+    # Calculate variance
     variance = tf.reduce_mean(tf.square(input - mean), axis=dim, keepdims=keepdim)
 
-    # 应用 Bessel's 修正
+    # Apply Bessel's correction
     if correction != 0:
         count = tf.shape(input)[dim] if dim is not None else tf.size(input)
         count = tf.cast(count, tf.float32)
         variance *= count / (count - correction)
+
+    # Calculate standard deviation
     result = tf.sqrt(variance)
     result = tf.cast(result, tf.float32)
     return result
@@ -903,6 +914,8 @@ def torch_tensor_repeat(tensor, *repeats):
     if not repeats:
         raise ValueError("At least one repeat value must be provided.")
 
+    print("torch_tensor_repeat: 1")
+
     # processed_repeats = []
     if isinstance(repeats[0], (tuple, list)):
         repeat_shape = [ *repeats[0] ]
@@ -911,6 +924,10 @@ def torch_tensor_repeat(tensor, *repeats):
         repeat_shape = [*repeats]
         repeats_tensor = tf.constant(repeats, dtype=tf.int32)
 
+    repeats_tensor = torch_reshape( repeats_tensor, -1)
+
+    print("torch_tensor_repeat: 2")
+
     # Compute the target shape for tiling
     tensor_shape = tf.shape(tensor)
 
@@ -918,14 +935,24 @@ def torch_tensor_repeat(tensor, *repeats):
     tensor_dim = len(tensor_shape)
     repeat_dim = len(repeat_shape)
 
+    print("torch_tensor_repeat: 3")
+
     temp_tensor = tensor
 
     if repeat_dim > tensor_dim:
         tensor_shape = [1] * (repeat_dim - tensor_dim) + tensor_shape.numpy().tolist()
         temp_tensor = tf.reshape(tensor, tensor_shape)
 
+    print("torch_tensor_repeat: 4")
+
+    print("temp_tensor = ", temp_tensor)
+    print("repeats_tensor = ", repeats_tensor)
+
     # Perform tiling
     repeated_tensor = tf.tile(temp_tensor, repeats_tensor)
+
+    print("torch_tensor_repeat: 5")
+
     return repeated_tensor
 
 
@@ -1112,7 +1139,7 @@ def torch_vmap(func, *inputs, in_dims=0, out_dims=0):
 
 
 def torch_func_stack_module_state(models):
-    # # # 堆叠所有模型的参数和缓冲区
+    # Stack all model parameters and buffers
     # trainable = [tf.stack([var for var in model.trainable_variables])
     #              for model in models]
     # non_trainable = [tf.stack([var for var in model.non_trainable_variables])
@@ -1347,15 +1374,15 @@ def torch_nn_init_xavier_normal_(tensor, gain):
     # # Assign ones to the variable
     # tensor.assign(normal_values.astype(np.float32))
 
-    # 使用 TensorFlow 随机数生成
+    # Use TensorFlow random number generator
     normal_values = tf.random.normal(
         shape=tensor.shape,
         mean=0.0,
         stddev=std,
-        dtype=tensor.dtype  # 自动匹配变量数据类型 (e.g. float32)
+        dtype=tensor.dtype  # Automatically match the variable's data type (e.g., float32)
     )
 
-    # 直接赋值 TensorFlow 张量
+    # Directly assign the generated TensorFlow tensor
     tensor.assign(normal_values)
 
 
@@ -1374,7 +1401,7 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
     shape = input_tensor.shape
 
-    a = (a - mean) / std  # 归一化截断边界
+    a = (a - mean) / std  # Normalize truncation boundaries
     b = (b - mean) / std
 
     tensor = tf.TensorArray(dtype=tf.float32, size=tf.reduce_prod(shape))
@@ -1425,278 +1452,233 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 
-# import math
-# def pytorch_weight_initializer(shape, in_features, dtype=None):
-#     limit = math.sqrt(1.0 / in_features)
-#     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+import math
+def pytorch_weight_initializer(shape, in_features, dtype=None):
+    limit = math.sqrt(1.0 / in_features)
+    return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
-# def pytorch_bias_initializer(shape, in_features, dtype=None):
-#     limit = math.sqrt(1.0 / in_features)
-#     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
-
-
+def pytorch_bias_initializer(shape, in_features, dtype=None):
+    limit = math.sqrt(1.0 / in_features)
+    return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
 
 
 
 
 
-# class nn_Tanh(tf.keras.layers.Layer):
-#     def __init__(self, name = "nn_Tanh", **kwargs):
-#         super(nn_Tanh, self).__init__(name=name, **kwargs)
-
-#     def call(self, x):
-#         return tf.math.tanh(x)
 
 
-#     def get_config(self):
-#         config = super(nn_Tanh, self).get_config()  # Call the parent layer's get_config()
-#         return config
+class nn_Tanh(tf.keras.layers.Layer):
+    def __init__(self, name = "nn_Tanh", **kwargs):
+        super(nn_Tanh, self).__init__(name=name, **kwargs)
+
+    def call(self, x):
+        return tf.math.tanh(x)
+
+
+    def get_config(self):
+        config = super(nn_Tanh, self).get_config()  # Call the parent layer's get_config()
+        return config
     
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Tanh: from_config()")
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Tanh: from_config()")
         
-#         result = cls(**config)
-#         return result
+        result = cls(**config)
+        return result
 
 
 
 
-# class nn_Identity(tf.keras.layers.Layer):
-#     def __init__(self, name = "nn_Identity", **kwargs):
-#         super(nn_Identity, self).__init__(name = name, **kwargs)
+class nn_Identity(tf.keras.layers.Layer):
+    def __init__(self, name = "nn_Identity", **kwargs):
+        super(nn_Identity, self).__init__(name = name, **kwargs)
 
-#     def call(self, x):
-#         # print("nn_Identity: call()")
-#         return tf.identity(x)
+    def call(self, x):
+        # print("nn_Identity: call()")
+        return tf.identity(x)
 
 
 
-#     def get_config(self):
-#         config = super(nn_Identity, self).get_config()  # Call the parent layer's get_config()
-#         return config
+    def get_config(self):
+        config = super(nn_Identity, self).get_config()  # Call the parent layer's get_config()
+        return config
     
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Identity: from_config()")
-#         result = cls(**config)
-#         return result
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Identity: from_config()")
+        result = cls(**config)
+        return result
 
 
 
 
-# class nn_Softplus(tf.keras.layers.Layer):
-#     def __init__(self, name = "nn_Softplus", **kwargs):
-#         super(nn_Softplus, self).__init__(name = name, **kwargs)
+class nn_Softplus(tf.keras.layers.Layer):
+    def __init__(self, name = "nn_Softplus", **kwargs):
+        super(nn_Softplus, self).__init__(name = name, **kwargs)
 
-#     def call(self, x):
-#         return tf.math.softplus(x)
+    def call(self, x):
+        return tf.math.softplus(x)
 
 
 
-#     def get_config(self):
-#         config = super(nn_Softplus, self).get_config()  # Call the parent layer's get_config()
-#         return config
+    def get_config(self):
+        config = super(nn_Softplus, self).get_config()  # Call the parent layer's get_config()
+        return config
     
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Softplus: from_config()")
-#         result = cls(**config)
-#         return result
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Softplus: from_config()")
+        result = cls(**config)
+        return result
 
 
 
 
 
-# class nn_Mish(tf.keras.layers.Layer):
-#     def __init__(self, name = "nn_Mish", **kwargs):
-#         super(nn_Mish, self).__init__(name=name, **kwargs)
+class nn_Mish(tf.keras.layers.Layer):
+    def __init__(self, name = "nn_Mish", **kwargs):
+        super(nn_Mish, self).__init__(name=name, **kwargs)
 
-#     def call(self, x):
-#         # print("nn_Mish.call()")
-#         result = tf.clip_by_value(x, float('-inf'), 20)
+    def call(self, x):
+        # print("nn_Mish.call()")
+        result = tf.clip_by_value(x, float('-inf'), 20)
 
-#         beta = 1
-#         result = beta * result
+        beta = 1
+        result = beta * result
 
-#         result = tf.math.softplus(result)
+        result = tf.math.softplus(result)
 
-#         return x * tf.math.tanh(result)
+        return x * tf.math.tanh(result)
 
     
-#     def get_config(self):
-#         config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
-#         # config.update({
-#         #     "inplace": self.inplace,
-#         #     "relu": tf.keras.layers.serialize(self.relu),
-#         # })
-#         return config
+    def get_config(self):
+        config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
+        # config.update({
+        #     "inplace": self.inplace,
+        #     "relu": tf.keras.layers.serialize(self.relu),
+        # })
+        return config
     
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Mish: from_config()")
-#         # relu = tf.keras.layers.deserialize(config.pop("relu"))
-#         result = cls(**config)
-#         # result.relu=relu
-#         return result
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Mish: from_config()")
+        # relu = tf.keras.layers.deserialize(config.pop("relu"))
+        result = cls(**config)
+        # result.relu=relu
+        return result
 
 
 
-# # Define TensorFlow nn.ELU wrapper
-# class nn_ELU(tf.keras.layers.Layer):
-#     def __init__(self, alpha=1.0, name = "nn_ELU", elu = None, **kwargs):
-#         self.alpha = alpha
-#         super(nn_ELU, self).__init__(name=name, **kwargs)
-#         if elu == None:
-#             self.elu = tf.keras.layers.ELU(alpha=alpha)
-#         else:
-#             self.elu = elu
-#     def call(self, x):
-#         return self.elu(x)
+# Define TensorFlow nn.ELU wrapper
+class nn_ELU(tf.keras.layers.Layer):
+    def __init__(self, alpha=1.0, name = "nn_ELU", elu = None, **kwargs):
+        self.alpha = alpha
+        super(nn_ELU, self).__init__(name=name, **kwargs)
+        if elu == None:
+            self.elu = tf.keras.layers.ELU(alpha=alpha)
+        else:
+            self.elu = elu
+    def call(self, x):
+        return self.elu(x)
 
 
-#     def get_config(self):
-#         config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
-#         config.update({
-#             "alpha": self.alpha,
-#             "elu": tf.keras.layers.serialize(self.elu),
-#         })
-#         return config
+    def get_config(self):
+        config = super(nn_Mish, self).get_config()  # Call the parent layer's get_config()
+        config.update({
+            "alpha": self.alpha,
+            "elu": tf.keras.layers.serialize(self.elu),
+        })
+        return config
     
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_ELU: from_config()")
-#         elu = tf.keras.layers.deserialize(config.pop("elu"))
-#         result = cls(elu=elu, **config)
-#         return result
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_ELU: from_config()")
+        elu = tf.keras.layers.deserialize(config.pop("elu"))
+        result = cls(elu=elu, **config)
+        return result
 
 
 
 
-# # # Define TensorFlow nn.GELU wrapper
-# # class nn_GELU(tf.keras.layers.Layer):
-# #     def __init__(self):
-# #         super(nn_GELU, self).__init__()
-# #         self.gelu = 
-# #         # tf.nn.gelu()
-# #         # tf.keras.layers.GELU()
-
-# #     def call(self, x):
-# #         return self.gelu(x)
-
-
-
+# # Define TensorFlow nn.GELU wrapper
 # class nn_GELU(tf.keras.layers.Layer):
-#     def __init__(self, name = "nn_GELU", **kwargs):
-#         super(nn_GELU, self).__init__(name=name,**kwargs)
-
-#     def call(self, inputs):
-#         # GELU 激活函数公式
-#         return tf.nn.gelu(inputs)
-
-
-#     def get_config(self):
-#         config = super(nn_GELU, self).get_config()  # Call the parent layer's get_config()
-#         return config
-    
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_GELU: from_config()")
-#         result = cls(**config)
-#         return result
-
-
-
-# # Define TensorFlow nn.ReLU wrapper
-# class nn_ReLU(tf.keras.layers.Layer):
-#     def __init__(self, inplace=False, name = "nn_ReLU", relu = None, **kwargs):
-
-
-#         super(nn_ReLU, self).__init__(name=name, **kwargs)
-
-#         if relu == None:
-#             self.relu = tf.keras.layers.ReLU()
-#         else:
-#             self.relu = relu
-
-#         self.inplace = inplace
-
+#     def __init__(self):
+#         super(nn_GELU, self).__init__()
+#         self.gelu = 
+#         # tf.nn.gelu()
+#         # tf.keras.layers.GELU()
 
 #     def call(self, x):
-#         if self.inplace:
-#             x = self.relu(x)
-#             return x
-#         else:
-#             return self.relu(x)
+#         return self.gelu(x)
 
 
-#     def get_config(self):
-#         config = super(nn_ReLU, self).get_config()  # Call the parent layer's get_config()
-#         config.update({
-#             "inplace": self.inplace,
-#             "relu": tf.keras.layers.serialize(self.relu),
-#         })
-#         return config
+
+class nn_GELU(tf.keras.layers.Layer):
+    def __init__(self, name = "nn_GELU", **kwargs):
+        super(nn_GELU, self).__init__(name=name,**kwargs)
+
+    def call(self, inputs):
+        # GELU activation function formula
+        return tf.nn.gelu(inputs)
+
+
+    def get_config(self):
+        config = super(nn_GELU, self).get_config()  # Call the parent layer's get_config()
+        return config
     
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_ReLU: from_config()")
-#         relu = tf.keras.layers.deserialize(config.pop("relu"))
-#         result = cls(**config)
-#         result.relu=relu
-#         return result
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_GELU: from_config()")
+        result = cls(**config)
+        return result
 
 
 
+# Define TensorFlow nn.ReLU wrapper
+class nn_ReLU(tf.keras.layers.Layer):
+    def __init__(self, inplace=False, name = "nn_ReLU", relu = None, **kwargs):
 
 
+        super(nn_ReLU, self).__init__(name=name, **kwargs)
+
+        if relu == None:
+            self.relu = tf.keras.layers.ReLU()
+        else:
+            self.relu = relu
+
+        self.inplace = inplace
 
 
-
-# class nn_Dropout(tf.keras.layers.Layer):
-#     def __init__(self, p=0.5, name = "nn_Dropout", model = None, **kwargs):
-#         super(nn_Dropout, self).__init__(name=name, **kwargs)
-#         self.p = p
-#         if model == None:
-#             self.model = tf.keras.layers.Dropout(rate = p)
-#         else:
-#             self.model = model
-
-#     # torch.nn.Dropout(p=0.5, inplace=False)
-#     # tf.keras.layers.Dropout(
-#     #     rate, noise_shape=None, seed=None, **kwargs
-#     # )
-
-#     def call(self, net_params):
-#         return self.model(net_params)
+    def call(self, x):
+        if self.inplace:
+            x = self.relu(x)
+            return x
+        else:
+            return self.relu(x)
 
 
-
-#     def get_config(self):
-#         config = super(nn_Dropout, self).get_config()  # Call the parent layer's get_config()
-#         config.update({
-#             "p": self.p,
-#             "model": tf.keras.layers.serialize(self.model),
-#         })
-#         return config
+    def get_config(self):
+        config = super(nn_ReLU, self).get_config()  # Call the parent layer's get_config()
+        config.update({
+            "inplace": self.inplace,
+            "relu": tf.keras.layers.serialize(self.relu),
+        })
+        return config
     
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Dropout: from_config()")
-
-#         model = tf.keras.layers.deserialize(config.pop("model"))
-#         result = cls(model=model, **config)
-#         return result
-
-
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_ReLU: from_config()")
+        relu = tf.keras.layers.deserialize(config.pop("relu"))
+        result = cls(**config)
+        result.relu=relu
+        return result
 
 
 
@@ -1705,234 +1687,372 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 
+class nn_Dropout(tf.keras.layers.Layer):
+    def __init__(self, p=0.5, name = "nn_Dropout", model = None, **kwargs):
+        super(nn_Dropout, self).__init__(name=name, **kwargs)
+        self.p = p
+        if model == None:
+            self.model = tf.keras.layers.Dropout(rate = p)
+        else:
+            self.model = model
+
+    # torch.nn.Dropout(p=0.5, inplace=False)
+    # tf.keras.layers.Dropout(
+    #     rate, noise_shape=None, seed=None, **kwargs
+    # )
+
+    def call(self, net_params):
+        return self.model(net_params)
 
 
-# class nn_Linear(tf.keras.layers.Layer):
-#     """
-#     torch.nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
-#     tf.keras.layers.Dense(
-#         units,
-#         activation=None,
-#         use_bias=True,
-#         kernel_initializer='glorot_uniform',
-#         bias_initializer='zeros',
-#         kernel_regularizer=None,
-#         bias_regularizer=None,
-#         activity_regularizer=None,
-#         kernel_constraint=None,
-#         bias_constraint=None,
-#         lora_rank=None,
-#         **kwargs
-#     )
-#     """
-#     def __init__(self, in_features, out_features, 
-#                 #  bias=True, 
-#                  device=None, dtype=None, 
-#                 #  name="nn_Linear", 
-#                  name_Dense = None, model=None, **kwargs):
+
+    def get_config(self):
+        config = super(nn_Dropout, self).get_config()  # Call the parent layer's get_config()
+        config.update({
+            "p": self.p,
+            "model": tf.keras.layers.serialize(self.model),
+        })
+        return config
+    
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Dropout: from_config()")
+
+        model = tf.keras.layers.deserialize(config.pop("model"))
+        result = cls(model=model, **config)
+        return result
+
+
+
+
+
+
+
+
+
+
+
+
+class nn_Linear(tf.keras.layers.Layer):
+    """
+    torch.nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
+    tf.keras.layers.Dense(
+        units,
+        activation=None,
+        use_bias=True,
+        kernel_initializer='glorot_uniform',
+        bias_initializer='zeros',
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        activity_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+        lora_rank=None,
+        **kwargs
+    )
+    """
+    def __init__(self, in_features, out_features, 
+                #  bias=True, 
+                 device=None, dtype=None, 
+                #  name="nn_Linear", 
+                 name_Dense = None, model=None, **kwargs):
         
 
-#         # super(nn_Linear, self).__init__(name=name, **kwargs)
-#         super(nn_Linear, self).__init__(**kwargs)
+        # super(nn_Linear, self).__init__(name=name, **kwargs)
+        super(nn_Linear, self).__init__(**kwargs)
 
-#         self.in_features = in_features
-#         self.out_features = out_features
-#         # self.bias = bias
-#         self.device = device
-#         # self.dtype=dtype
-
-
-
-#         if model == None:
-
-#             import math
-#             # # PyTorch-style initialization for weights
-#             # def pytorch_weight_initializer(shape, dtype=None):
-#             #     limit = math.sqrt(1.0 / in_features)
-#             #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
-
-#             # # PyTorch-style initialization for bias
-#             # def pytorch_bias_initializer(shape, dtype=None):
-#             #     # if not bias:
-#             #     #     return None
-#             #     limit = math.sqrt(1.0 / in_features)
-#             #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
-
-#             # def pytorch_weight_initializer(shape, dtype=None):
-#             #     limit = math.sqrt(1.0 / in_features)
-#             #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
-
-#             # def pytorch_bias_initializer(shape, dtype=None):
-#             #     limit = math.sqrt(1.0 / in_features)
-#             #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+        self.in_features = in_features
+        self.out_features = out_features
+        # self.bias = bias
+        self.device = device
+        # self.dtype=dtype
 
 
 
-#             self.model = tf.keras.layers.Dense(
-#                 out_features,
-#                 activation=None,
-#                 use_bias=True,
-#                 kernel_initializer = tf.keras.initializers.Constant(
-#                     pytorch_weight_initializer((in_features, out_features), in_features)),
-#                 # 'glorot_uniform',
-#                 bias_initializer = tf.keras.initializers.Constant(
-#                     pytorch_bias_initializer((out_features,), in_features)),
-#                     # 'zeros',
-#                 dtype=dtype,
-#                 name = name_Dense
-#                 # kernel_regularizer=None,
-#                 # bias_regularizer=None,
-#                 # activity_regularizer=None,
-#                 # kernel_constraint=None,
-#                 # bias_constraint=None,
-#                 # ,**kwargs
-#             )
+        if model == None:
+
+            import math
+            # # PyTorch-style initialization for weights
+            # def pytorch_weight_initializer(shape, dtype=None):
+            #     limit = math.sqrt(1.0 / in_features)
+            #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+
+            # # PyTorch-style initialization for bias
+            # def pytorch_bias_initializer(shape, dtype=None):
+            #     # if not bias:
+            #     #     return None
+            #     limit = math.sqrt(1.0 / in_features)
+            #     return np.random.uniform(-limit, limit, size=shape).astype(np.float32)
+
+            # def pytorch_weight_initializer(shape, dtype=None):
+            #     limit = math.sqrt(1.0 / in_features)
+            #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+
+            # def pytorch_bias_initializer(shape, dtype=None):
+            #     limit = math.sqrt(1.0 / in_features)
+            #     return tf.random.uniform(shape, minval=-limit, maxval=limit, dtype=dtype or tf.float32)
+
+
+
+            self.model = tf.keras.layers.Dense(
+                out_features,
+                activation=None,
+                use_bias=True,
+                kernel_initializer = tf.keras.initializers.Constant(
+                    pytorch_weight_initializer((in_features, out_features), in_features)),
+                # 'glorot_uniform',
+                bias_initializer = tf.keras.initializers.Constant(
+                    pytorch_bias_initializer((out_features,), in_features)),
+                    # 'zeros',
+                dtype=dtype,
+                name = name_Dense
+                # kernel_regularizer=None,
+                # bias_regularizer=None,
+                # activity_regularizer=None,
+                # kernel_constraint=None,
+                # bias_constraint=None,
+                # ,**kwargs
+            )
 
             
+        else:
+            self.model = model
+            # print("self.model.trainable_variables = ", self.model.trainable_variables)
+            # print("self.model.non_trainable_variables = ", self.model.non_trainable_variables)
+
+
+
+
+
+
+        # print("nn_Linear: self.model = ", self.model)
+
+        if OUTPUT_VARIABLES:
+            print("nn_Linear: name_Dense = ", name_Dense)
+            print("nn_Linear: self.model.name = ", self.model.name)
+
+    def get_config(self):
+        # Get the configuration of the layer and return it as a dictionary
+        config = super(nn_Linear, self).get_config()  # Call the parent layer's get_config()
+        config.update({
+            "in_features": self.in_features,
+            "out_features": self.out_features,
+            # "bias": self.bias,
+            # "device": self.device,
+            # "dtype": self.dtype,
+            "dense_layer": tf.keras.layers.serialize(self.model),
+        })
+        
+        if OUTPUT_VARIABLES:
+            print("nn_Linear.config() = ", config)
+
+        return config
+    
+    @classmethod
+    def from_config(cls, config):
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Linear: from_config()")
+
+        model = tf.keras.layers.deserialize(config.pop("dense_layer"))
+        result = cls(model = model, **config)
+        # result = cls(**config)
+        return result
+
+
+    def call(self, x):
+
+        # print("self.model.kernel = ", self.model.kernel)
+        # print("self.model.bias = ", self.model.bias)
+        # print("x = ", x)
+
+        result = self.model(x)
+
+        # print("nn_Linear.call() result = ", result)
+
+        # print("nn_Linear.call() result.shape = ", result.shape)
+
+        if OUTPUT_VARIABLES and DEBUG and self.model.built:
+            # print("nn_Linear.call() self.kernel = ", self.model.kernel)
+            # print("nn_Linear.call() self.bias = ", self.model.bias)
+        #     # print("nn_Linear.call() self.kernel = ", self.model.kernel.numpy())  # output kernel value
+        #     # print("nn_Linear.call() self.bias = ", self.model.bias.numpy())      # output bias value
+
+            weights = self.model.kernel
+            bias = self.model.bias
+
+        #     # print("weights.shape = ", weights.shape)
+        #     # print("bias.shape = ", bias.shape)
+        #     # print("x.shape = ", x.shape)
+
+            result1 = tf.matmul(x, weights) + bias  # broadcast addition
+
+        #     # result1 = weights * x.numpy() + bias
+
+            print("nn_Linear.call() result1 = ", result1)
+
+        #     assert np.allclose(result1.numpy(), result.numpy())
+
+        return result
+
+    
+    # def build(self, input_shape):
+    #     self.model.build(input_shape = input_shape)
+
+
+    @property
+    def trainable_variables(self):
+        # Return the trainable variables of the inner Dense layer
+        return self.model.trainable_variables
+
+    @property
+    def non_trainable_variables(self):
+        # Return the non-trainable variables of the inner Dense layer
+        return self.model.non_trainable_variables
+
+    @property
+    def kernel(self):
+        return self.model.kernel
+
+    @kernel.setter
+    def kernel(self, value):
+        self.model.kernel.assign(value)
+    
+    @property
+    def bias(self):
+        return self.model.bias
+
+    @bias.setter
+    def bias(self, value):
+        self.model.bias.assign(value)
+
+
+    # def __getattr__(self, name):
+    #     if hasattr(self.model, name):
+    #         return getattr(self.model, name)
+    #     else:
+    #         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    # def __getattr__(self, name):
+    #     # First check the current object's attributes to avoid infinite recursion
+    #     if name in self.__dict__:
+    #         return self.__dict__[name]
+    #     # Then check the model's attributes
+    #     if hasattr(self.model, name):
+    #         return getattr(self.model, name)
+    #     # Raise AttributeError if the attribute is not found
+    #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+
+    # def __getattr__(self, name):
+    #     # Avoid recursive calls: directly access __dict__ or object.__getattribute__
+    #     try:
+    #         return object.__getattribute__(self, name)
+    #     except AttributeError:
+    #         pass
+
+    #     # Check if the attribute exists in the model
+    #     model = object.__getattribute__(self, "model")
+
+    #     if hasattr(model, name):
+    #         return getattr(model, name)
+
+    #     # Raise exception if the attribute is still not found
+    #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# class nn_Parameter(tf.keras.layers.Layer):
+#     def __init__(self, data=None, requires_grad=True):
+#         super().__init__(trainable=requires_grad)  # Important! Ensure trainable is properly initialized
+#         if data is None:
+#             raise ValueError("data cannot be None. Please provide a tensor value.")
+#         if requires_grad:
+#             raise ValueError("requires grad version is not implemented right now.")
+#             # self.data = tf.Variable(data, trainable=requires_grad, name="nn_parameter")
 #         else:
-#             self.model = model
-#             # print("self.model.trainable_variables = ", self.model.trainable_variables)
-#             # print("self.model.non_trainable_variables = ", self.model.non_trainable_variables)
+#             self.data =  tf.convert_to_tensor(data)
 
-
-
-
-
-
-#         # print("nn_Linear: self.model = ", self.model)
-
-#         if OUTPUT_VARIABLES:
-#             print("nn_Linear: name_Dense = ", name_Dense)
-#             print("nn_Linear: self.model.name = ", self.model.name)
-
-#     def get_config(self):
-#         # Get the configuration of the layer and return it as a dictionary
-#         config = super(nn_Linear, self).get_config()  # Call the parent layer's get_config()
-#         config.update({
-#             "in_features": self.in_features,
-#             "out_features": self.out_features,
-#             # "bias": self.bias,
-#             # "device": self.device,
-#             # "dtype": self.dtype,
-#             "dense_layer": tf.keras.layers.serialize(self.model),
-#         })
-        
-#         if OUTPUT_VARIABLES:
-#             print("nn_Linear.config() = ", config)
-
-#         return config
+#     def __tf_tensor__(self):
+#         return self.data
     
-#     @classmethod
-#     def from_config(cls, config):
-
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Linear: from_config()")
-
-#         model = tf.keras.layers.deserialize(config.pop("dense_layer"))
-#         result = cls(model = model, **config)
-#         # result = cls(**config)
-#         return result
+#     def __array__(self):
+#         return self.data.numpy()
 
 
-#     def call(self, x):
-
-#         # print("self.model.kernel = ", self.model.kernel)
-#         # print("self.model.bias = ", self.model.bias)
-#         # print("x = ", x)
-
-#         result = self.model(x)
-
-#         # print("nn_Linear.call() result = ", result)
-
-#         # print("nn_Linear.call() result.shape = ", result.shape)
-
-#         if OUTPUT_VARIABLES and DEBUG and self.model.built:
-#             # print("nn_Linear.call() self.kernel = ", self.model.kernel)
-#             # print("nn_Linear.call() self.bias = ", self.model.bias)
-#         #     # print("nn_Linear.call() self.kernel = ", self.model.kernel.numpy())  # 输出 kernel 的值
-#         #     # print("nn_Linear.call() self.bias = ", self.model.bias.numpy())      # 输出 bias 的值
-
-#             weights = self.model.kernel
-#             bias = self.model.bias
-
-#         #     # print("weights.shape = ", weights.shape)
-#         #     # print("bias.shape = ", bias.shape)
-#         #     # print("x.shape = ", x.shape)
-
-#             result1 = tf.matmul(x, weights) + bias  # 广播加法
-
-#         #     # result1 = weights * x.numpy() + bias
-
-#             print("nn_Linear.call() result1 = ", result1)
-
-#         #     assert np.allclose(result1.numpy(), result.numpy())
-
-#         return result
-
+#     def numpy(self):
+#         return self.data.numpy()
     
-#     # def build(self, input_shape):
-#     #     self.model.build(input_shape = input_shape)
 
 
-#     @property
-#     def trainable_variables(self):
-#         # Return the trainable variables of the inner Dense layer
-#         return self.model.trainable_variables
 
-#     @property
-#     def non_trainable_variables(self):
-#         # Return the non-trainable variables of the inner Dense layer
-#         return self.model.non_trainable_variables
+def nn_Parameter(data=None, requires_grad=True):
+    if data is None:
+        raise ValueError("data cannot be None. Please provide a tensor value.")
+    # if requires_grad:
+    return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+    # else:
+    #     return tf.convert_to_tensor(data)
 
-#     @property
-#     def kernel(self):
-#         return self.model.kernel
 
-#     @kernel.setter
-#     def kernel(self, value):
-#         self.model.kernel.assign(value)
+
+def save_tf_Variable(tensor, save_tensor_name):
+    base_path = "/ssddata/qtguo/GENERAL_DATA/"
+    params_dict = {}
+    result = tensor.numpy()
+    params_dict[save_tensor_name] = result
+
+    print("save_tf_Variable: type(tensor) = ", type(tensor))
+
+    if isinstance(tensor, tf.Variable):
+        params_dict["trainable"] = tensor.trainable
+    elif isinstance(tensor, tf.Tensor):
+        params_dict["trainable"] = False
+    else:
+        raise RuntimeError("save_tf_Variable tensor type wrong")
+
+    import pickle
+
+    pkl_file_path = base_path + save_tensor_name + '.pkl'
     
-#     @property
-#     def bias(self):
-#         return self.model.bias
+    print("pkl_file_path = ", pkl_file_path)
 
-#     @bias.setter
-#     def bias(self, value):
-#         self.model.bias.assign(value)
+    with open(pkl_file_path, 'wb') as f:
+        pickle.dump(params_dict, f)
 
 
-#     # def __getattr__(self, name):
-#     #     if hasattr(self.model, name):
-#     #         return getattr(self.model, name)
-#     #     else:
-#     #         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-
-#     # def __getattr__(self, name):
-#     #     # 先检查当前对象的属性，避免无限递归
-#     #     if name in self.__dict__:
-#     #         return self.__dict__[name]
-#     #     # 再检查 model 的属性
-#     #     if hasattr(self.model, name):
-#     #         return getattr(self.model, name)
-#     #     # 如果都没有，抛出 AttributeError
-#     #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
 
-#     # def __getattr__(self, name):
-#     #     # 避免递归调用：直接访问 __dict__ 或 object.__getattribute__
-#     #     try:
-#     #         return object.__getattribute__(self, name)
-#     #     except AttributeError:
-#     #         pass
 
-#     #     # 检查是否为 model 的属性
-#     #     model = object.__getattribute__(self, "model")
 
-#     #     if hasattr(model, name):
-#     #         return getattr(model, name)
+def load_tf_Variable(load_tensor_name):    
+    base_path = "/ssddata/qtguo/GENERAL_DATA/"
+    pkl_file_path = base_path + load_tensor_name + '.pkl'
 
-#     #     # 如果仍然找不到，抛出异常
-#     #     raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+    print("pkl_file_path = ", pkl_file_path)
+
+    import pickle
+
+    with open(pkl_file_path, 'rb') as file:
+        params_dict = pickle.load(file)
+
+    trainable = params_dict["trainable"]
+    result = tf.Variable( params_dict[load_tensor_name] , trainable = trainable)
+
+    return result
 
 
 
@@ -1944,897 +2064,848 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 
+# Define TensorFlow nn.Sequential wrapper
+class nn_Sequential(tf.keras.layers.Layer):
+    def __init__(self, *args, 
+                #  name = "nn_Sequential", 
+                 model_list = None, 
+                 model = None, 
+                 **kwargs):
+        super(nn_Sequential, self).__init__(
+            # name=name, 
+            **kwargs)
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Sequential: __init__()")
+
+        if OUTPUT_VARIABLES:
+            print("len(args) = ", len(args))
+            print("args = ", args)
+            print("model_list = ", model_list)
+            print("model = ", model)
+            print("**kwargs = ", kwargs)
 
 
+        if model == None:
+            self.model_list = []
 
+            if isinstance(args[0], (tuple, list)):
+                for module in args[0]:
+                    self.model_list.append(module)
+            elif isinstance(args[0], (dict, OrderedDict)):
+                if OUTPUT_VARIABLES:
+                    print("OrderedDict")
+                for name, module in args[0].items():
+                    if OUTPUT_VARIABLES:
+                        print("name = ", name)
+                        print("module = ", module)
 
+                    self.model_list.append(module)
+            else:
+                for module in args:
+                    self.model_list.append(module)
 
-# def nn_Parameter(data=None, requires_grad=True):
-#     if data is None:
-#         raise ValueError("data cannot be None. Please provide a tensor value.")
-#     return tf.Variable(data, trainable=requires_grad, name="nn_parameter")
+            if OUTPUT_VARIABLES:
+                print("branch1")
+                print("self.model_list = ")
 
+            for i in range(len(self.model_list)):
+                if isinstance(self.model_list[i], nn_Sequential):
+                    self.model_list[i] = tf.keras.Sequential(self.model_list[i].model_list)
 
-
-
-
-
-
-
-
-
-# # Define TensorFlow nn.Sequential wrapper
-# class nn_Sequential(tf.keras.layers.Layer):
-#     def __init__(self, *args, 
-#                 #  name = "nn_Sequential", 
-#                  model_list = None, 
-#                  model = None, 
-#                  **kwargs):
-#         super(nn_Sequential, self).__init__(
-#             # name=name, 
-#             **kwargs)
-
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Sequential: __init__()")
-
-#         if OUTPUT_VARIABLES:
-#             print("len(args) = ", len(args))
-#             print("args = ", args)
-#             print("model_list = ", model_list)
-#             print("model = ", model)
-#             print("**kwargs = ", kwargs)
-
-
-#         if model == None:
-#             self.model_list = []
-
-#             if isinstance(args[0], (tuple, list)):
-#                 for module in args[0]:
-#                     self.model_list.append(module)
-#             elif isinstance(args[0], (dict, OrderedDict)):
-#                 if OUTPUT_VARIABLES:
-#                     print("OrderedDict")
-#                 for name, module in args[0].items():
-#                     if OUTPUT_VARIABLES:
-#                         print("name = ", name)
-#                         print("module = ", module)
-#                     self.model_list.append(module)
-#             else:
-#                 for module in args:
-#                     self.model_list.append(module)
-
-#             if OUTPUT_VARIABLES:
-#                 print("branch1")
-#                 print("self.model_list = ")
-
-#             self.model = tf.keras.Sequential(self.model_list)
-#         else:
-#             self.model = model
+            self.model = tf.keras.Sequential(self.model_list)
+        else:
+            self.model = model
 
     
-#         # if model_list != None:
+        # if model_list != None:
 
-#         # else:
-#         #     self.model_list = model_list
+        # else:
+        #     self.model_list = model_list
 
 
-#         # tf.keras.Sequential(
-#         #     layers=None, trainable=True, name=None
-#         # )
+        # tf.keras.Sequential(
+        #     layers=None, trainable=True, name=None
+        # )
 
-#     def call(self, x):
-#         output = x
-#         # if self.model_list:
-#         #     for module in self.model_list:
-#         #         print("module = ", module)
-#         #         output = module(output)
-#         output = self.model(output)
+    def call(self, x):
+        output = x
+        # if self.model_list:
+        #     for module in self.model_list:
+        #         print("module = ", module)
+        #         output = module(output)
+        output = self.model(output)
         
-#         return output
+        return output
     
-#     def __getitem__(self, id):
-#         # print("getitem: len(self.model_list) = ", len(self.model_list))
-#         # return self.model_list[id]
-#         return self.model.layers[id]
-
-#     def __iter__(self):
-#         # return iter(self.model_list)\
-#         print("iter: self.model.layers = ", self.model.layers)
-#         return iter(self.model.layers)
-
-
-
-#     def get_config(self):
-#         # Get the configuration of all layers in the model_list
-#         config = super(nn_Sequential, self).get_config()  # Call the parent class get_config()
-        
-#         # # Create a list of layer configurations
-#         # layer_configs = []
-
-
-#         # for layer in self.model_list:
-#         #     print("layer = ", layer)
-#         #     layer_configs.append( layer.get_config() )
-        
-#         # Add the list of layer configurations to the config dictionary
-#         config.update({
-#             'model': tf.keras.layers.serialize(self.model)
-#             # layer_configs
-#         })
-
-#         if OUTPUT_VARIABLES:
-#             print("nn_Sequential: config = ", config)
-
-#         return config
-
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Sequential: from_config()")
-
-#         if OUTPUT_VARIABLES:
-#             print("config = ", config)
-        
-
-#         from model.diffusion.mlp_diffusion import DiffusionMLP
-#         from model.diffusion.diffusion import DiffusionModel
-#         from model.common.mlp import MLP, ResidualMLP
-#         from model.diffusion.modules import SinusoidalPosEmb
-#         from model.common.modules import SpatialEmb, RandomShiftsAug
-#         # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
-
-#         from tensorflow.keras.utils import get_custom_objects
-
-#         cur_dict = {
-#             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-#             'DiffusionMLP': DiffusionMLP,
-#             # 'VPGDiffusion': VPGDiffusion,
-#             'SinusoidalPosEmb': SinusoidalPosEmb,   
-#             'MLP': MLP,                            # 自定义的 MLP 层
-#             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-#             'nn_Identity': nn_Identity,
-#             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-#             'nn_Linear': nn_Linear,
-#             'nn_LayerNorm': nn_LayerNorm,
-#             'nn_Dropout': nn_Dropout,
-#             'nn_ReLU': nn_ReLU,
-#             'nn_Mish': nn_Mish,
-#             'SpatialEmb': SpatialEmb,
-#             'RandomShiftsAug': RandomShiftsAug,
-#          }
-#         # Register your custom class with Keras
-#         get_custom_objects().update(cur_dict)
-
-#         # print('get_custom_objects() = ', get_custom_objects())
-
-#         # print("Custom objects:", get_custom_objects())
-#         # assert 'SinusoidalPosEmb' in get_custom_objects()
-
-#         # model_list = config.pop("model_list")
-
-#         # models = []
-#         # for model in model_list:
-#         #     # print("model = ", model)
-#         #     name = model["name"]
-#         #     if name in cur_dict:
-#         #         models.append( cur_dict[name].from_config(model) )
-#         #     else:
-#         #         models.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
-
-#         model = tf.keras.layers.deserialize( config.pop("model") ,  custom_objects=get_custom_objects() )
-        
-#         return cls(model = model, **config)
-
-
-
-# class nn_ModuleList(tf.keras.layers.Layer):
-#     def __init__(self, modules=None, serialized_modules = None, name="nn_ModuleList", **kwargs):
-#         super(nn_ModuleList, self).__init__(name=name, **kwargs)
-#         self.modules = []
-#         if serialized_modules is None:
-#             if modules is not None:
-#                 for module in modules:
-#                     self.append(module)
-#         else:
-#             self.modules = serialized_modules
-
-
-
-#     # def get_config(self):
-#     #     from tensorflow.python.keras.utils import generic_utils
-#     #     import copy
-#     #     layer_configs = []
-#     #     for layer in self.modules:
-#     #         # `super().layers` include the InputLayer if available (it is filtered out
-#     #         # of `self.layers`). Note that `self._self_tracked_trackables` is managed
-#     #         # by the tracking infrastructure and should not be used.
-#     #         layer_configs.append(generic_utils.serialize_keras_object(layer))
-#     #     config = {
-#     #         'name': self.name,
-#     #         'layers': copy.deepcopy(layer_configs)
-#     #     }
-#     #     if not self._is_graph_network and self._build_input_shape is not None:
-#     #         config['build_input_shape'] = self._build_input_shape
-#     #     return config
-
-
-#     # @classmethod
-#     # def from_config(cls, config, custom_objects=None):
-#     #     if 'name' in config:
-#     #         name = config['name']
-#     #         build_input_shape = config.get('build_input_shape')
-#     #         layer_configs = config['layers']
-#     #     else:
-#     #         name = None
-#     #         build_input_shape = None
-#     #         layer_configs = config
-#     #         model = cls(name=name)
-
-#     #     from tensorflow.python.keras import layers as layer_module
-
-#     #     for layer_config in layer_configs:
-#     #         layer = layer_module.deserialize(layer_config,
-#     #                                         custom_objects=custom_objects)
-#     #         model.add(layer)
-#     #     if (not model.inputs and build_input_shape and
-#     #         isinstance(build_input_shape, (tuple, list))):
-#     #         model.build(build_input_shape)
-#     #     return model
-
-
-
-
-#     def append(self, module):
-#         if not isinstance(module, tf.keras.layers.Layer):
-#             raise ValueError("All modules must be instances of tf.keras.layers.Layer")
-#         self.modules.append(module)
-#         # Automatically track the layer by assigning it to an attribute
-#         setattr(self, f"module_{len(self.modules) - 1}", module)
-
-#     def extend(self, modules):
-#         for module in modules:
-#             self.append(module)
-
-#     def call(self, x):
-#         outputs = []
-#         output = x
-#         for module in self.modules:
-#             output = module(output)
-#             outputs.append(output)
-#         return outputs
-
-
-#     def __getitem__(self, idx):
-#         return self.modules[idx]
-
-#     def __len__(self):
-#         return len(self.modules)
-
-#     def __repr__(self):
-#         return f"nn_ModuleList({self.modules})"
-
-
-#     def get_config(self):
-
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_ModuleList: get_config()")
-
-#         # Get the configuration of all layers in the modules list
-#         config = super(nn_ModuleList, self).get_config()  # Call the parent class get_config()
-
-#         # Create a list of module configurations
-#         module_configs = [module.get_config() for module in self.modules]
-        
-#         # Add the list of module configurations to the config dictionary
-#         config.update({
-#             'modules': module_configs
-#         })
-#         return config
-
-
-
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_ModuleList: from_config()")
-
-#         model_list = config.pop("modules")
-
-#         from model.diffusion.mlp_diffusion import DiffusionMLP
-#         from model.diffusion.diffusion import DiffusionModel
-#         from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-#         from model.diffusion.modules import SinusoidalPosEmb
-#         from model.common.modules import SpatialEmb, RandomShiftsAug
-#         # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
-
-#         from tensorflow.keras.utils import get_custom_objects
-
-#         cur_dict = {
-#             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-#             'DiffusionMLP': DiffusionMLP,
-#             # 'VPGDiffusion': VPGDiffusion,
-#             'SinusoidalPosEmb': SinusoidalPosEmb,   
-#             'MLP': MLP,                            # 自定义的 MLP 层
-#             'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-#             'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
-#             "nn_Identity": nn_Identity,
-#             'nn_Linear': nn_Linear,
-#             'nn_LayerNorm': nn_LayerNorm,
-#             'nn_Dropout': nn_Dropout,
-#             'nn_ReLU': nn_ReLU,
-#             'nn_Mish': nn_Mish,
-#             'SpatialEmb': SpatialEmb,
-#             'RandomShiftsAug': RandomShiftsAug,
-#             "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-#          }
-#         # Register your custom class with Keras
-#         get_custom_objects().update(cur_dict)
-
-#         # print('get_custom_objects() = ', get_custom_objects())
-
-
-#         modules = []
-
-#         if OUTPUT_VARIABLES:
-#             print("type(model_list) = ", type(model_list))
-#             print("model_list = ", model_list)
-
-
-
-#         for model in model_list:
-#             if OUTPUT_VARIABLES:
-#                 print("model = ", model)
-#             name = model["name"]
-#             if OUTPUT_VARIABLES:
-#                 print("name = ", name)
-#             if name in cur_dict:
-#                 modules.append( cur_dict[name].from_config(model) )
-#             else:
-#                 if OUTPUT_VARIABLES:
-#                     print("nn_ModuleList: name = ", name)
-#                 modules.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
-
-
-
-#         return cls(serialized_modules = modules, **config)
-
-
-
-
-
-
-# # class nn_Embedding(tf.keras.layers.Layer):
-# #     # torch.nn.Embedding(num_embeddings, embedding_dim, padding_idx=None, max_norm=None, 
-# #     # norm_type=2.0, scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None)    
-# #     def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
-# #                  scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None):
-# #         super(nn_Embedding, self).__init__()
-# #         pass
+    def __getitem__(self, id):
+        # print("getitem: len(self.model_list) = ", len(self.model_list))
+        # return self.model_list[id]
+        return self.model.layers[id]
+
+    def __iter__(self):
+        # return iter(self.model_list)\
+        # print("iter: self.model.layers = ", self.model.layers)
+        return iter(self.model.layers)
+
+    def __len__(self):
+            nn_Sequential_len = len(self.model.layers)
+            # print("nn_Sequential_len = ", nn_Sequential_len)
+            return nn_Sequential_len
     
-# #     def call(self, x):
-# #         pass
+
+    def get_config(self):
+        # Get the configuration of all layers in the model_list
+        config = super(nn_Sequential, self).get_config()  # Call the parent class get_config()
+        
+        # # Create a list of layer configurations
+        # layer_configs = []
+
+
+        # for layer in self.model_list:
+        #     print("layer = ", layer)
+        #     layer_configs.append( layer.get_config() )
+        
+        # Add the list of layer configurations to the config dictionary
+        config.update({
+            'model': tf.keras.layers.serialize(self.model)
+            # layer_configs
+        })
+
+        if OUTPUT_VARIABLES:
+            print("nn_Sequential: config = ", config)
+
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Sequential: from_config()")
+
+        if OUTPUT_VARIABLES:
+            print("config = ", config)
+        
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
+            'MLP': MLP,                            # Custom MLP (Multi-Layer Perceptron) layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Identity': nn_Identity,
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        # print('get_custom_objects() = ', get_custom_objects())
+
+        # print("Custom objects:", get_custom_objects())
+        # assert 'SinusoidalPosEmb' in get_custom_objects()
+
+        # model_list = config.pop("model_list")
+
+        # models = []
+        # for model in model_list:
+        #     # print("model = ", model)
+        #     name = model["name"]
+        #     if name in cur_dict:
+        #         models.append( cur_dict[name].from_config(model) )
+        #     else:
+        #         models.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
+
+        model = tf.keras.layers.deserialize( config.pop("model") ,  custom_objects=get_custom_objects() )
+        
+        return cls(model = model, **config)
+
+
+
+class nn_ModuleList(tf.keras.layers.Layer):
+    def __init__(self, modules=None, serialized_modules = None, name="nn_ModuleList", **kwargs):
+        super(nn_ModuleList, self).__init__(name=name, **kwargs)
+        self.modules = []
+        if serialized_modules is None:
+            if modules is not None:
+                for module in modules:
+                    self.append(module)
+        else:
+            self.modules = serialized_modules
+
+
+
+    # def get_config(self):
+    #     from tensorflow.python.keras.utils import generic_utils
+    #     import copy
+    #     layer_configs = []
+    #     for layer in self.modules:
+    #         # `super().layers` include the InputLayer if available (it is filtered out
+    #         # of `self.layers`). Note that `self._self_tracked_trackables` is managed
+    #         # by the tracking infrastructure and should not be used.
+    #         layer_configs.append(generic_utils.serialize_keras_object(layer))
+    #     config = {
+    #         'name': self.name,
+    #         'layers': copy.deepcopy(layer_configs)
+    #     }
+    #     if not self._is_graph_network and self._build_input_shape is not None:
+    #         config['build_input_shape'] = self._build_input_shape
+    #     return config
+
+
+    # @classmethod
+    # def from_config(cls, config, custom_objects=None):
+    #     if 'name' in config:
+    #         name = config['name']
+    #         build_input_shape = config.get('build_input_shape')
+    #         layer_configs = config['layers']
+    #     else:
+    #         name = None
+    #         build_input_shape = None
+    #         layer_configs = config
+    #         model = cls(name=name)
+
+    #     from tensorflow.python.keras import layers as layer_module
+
+    #     for layer_config in layer_configs:
+    #         layer = layer_module.deserialize(layer_config,
+    #                                         custom_objects=custom_objects)
+    #         model.add(layer)
+    #     if (not model.inputs and build_input_shape and
+    #         isinstance(build_input_shape, (tuple, list))):
+    #         model.build(build_input_shape)
+    #     return model
+
+
+
+
+    def append(self, module):
+        if not isinstance(module, tf.keras.layers.Layer):
+            raise ValueError("All modules must be instances of tf.keras.layers.Layer")
+        self.modules.append(module)
+        # Automatically track the layer by assigning it to an attribute
+        setattr(self, f"module_{len(self.modules) - 1}", module)
+
+    def extend(self, modules):
+        for module in modules:
+            self.append(module)
+
+    def call(self, x):
+        outputs = []
+        output = x
+        for module in self.modules:
+            output = module(output)
+            outputs.append(output)
+        return outputs
+
+
+    def __getitem__(self, idx):
+        return self.modules[idx]
+
+    def __len__(self):
+        return len(self.modules)
+
+    def __repr__(self):
+        return f"nn_ModuleList({self.modules})"
+
+
+    def get_config(self):
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_ModuleList: get_config()")
+
+        # Get the configuration of all layers in the modules list
+        config = super(nn_ModuleList, self).get_config()  # Call the parent class get_config()
+
+        # Create a list of module configurations
+        module_configs = [module.get_config() for module in self.modules]
+        
+        # Add the list of module configurations to the config dictionary
+        config.update({
+            'modules': module_configs
+        })
+        return config
+
+
+
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_ModuleList: from_config()")
+
+        model_list = config.pop("modules")
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
+            'MLP': MLP,                            # Custom MLP (Multi-Layer Perceptron) layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
+            "nn_Identity": nn_Identity,
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+            "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        # print('get_custom_objects() = ', get_custom_objects())
+
+
+        modules = []
+
+        if OUTPUT_VARIABLES:
+            print("type(model_list) = ", type(model_list))
+            print("model_list = ", model_list)
+
+
+
+        for model in model_list:
+            if OUTPUT_VARIABLES:
+                print("model = ", model)
+            name = model["name"]
+            if OUTPUT_VARIABLES:
+                print("name = ", name)
+            if name in cur_dict:
+                modules.append( cur_dict[name].from_config(model) )
+            else:
+                if OUTPUT_VARIABLES:
+                    print("nn_ModuleList: name = ", name)
+                modules.append( tf.keras.layers.deserialize( model ,  custom_objects=get_custom_objects() ) )
+
+
+
+        return cls(serialized_modules = modules, **config)
+
+
+
 
 
 
 # class nn_Embedding(tf.keras.layers.Layer):
+#     # torch.nn.Embedding(num_embeddings, embedding_dim, padding_idx=None, max_norm=None, 
+#     # norm_type=2.0, scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None)    
 #     def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
-#                  scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None, name="nn_Embedding", **kwargs):
-#         """
-#         A TensorFlow wrapper to replicate the functionality of torch.nn.Embedding.
-        
-#         Args:
-#             num_embeddings (int): Size of the embedding dictionary.
-#             embedding_dim (int): Size of each embedding vector.
-#             padding_idx (int, optional): Specifies padding index. Embeddings for this index are always zero.
-#             max_norm (float, optional): If given, will renormalize embeddings to have a norm less than this value.
-#             norm_type (float, optional): The p-norm to compute for the max_norm option. Default is 2.0.
-#             scale_grad_by_freq (bool, optional): If True, scale gradients by inverse of word frequency.
-#             sparse (bool, optional): Not used in TensorFlow, included for API compatibility.
-#             _weight (np.ndarray, optional): Predefined weight matrix for embeddings.
-#             _freeze (bool, optional): If True, the embedding weights are frozen and not updated during training.
-#             device, dtype: Not used, included for API compatibility.
-#         """
-#         super(nn_Embedding, self).__init__(dtype=dtype, name=name, **kwargs)
-        
-#         self.num_embeddings = num_embeddings
-#         self.embedding_dim = embedding_dim
-#         self.padding_idx = padding_idx
-#         self.max_norm = max_norm
-#         self.norm_type = norm_type
-#         self.scale_grad_by_freq = scale_grad_by_freq
-#         self._freeze = _freeze
-
-#         # Initialize embedding weights
-#         if _weight is not None:
-#             self.embeddings = tf.Variable(_weight, trainable=not _freeze, dtype=self.dtype)
-#         else:
-#             initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1.0)
-#             self.embeddings = tf.Variable(
-#                 initializer([num_embeddings, embedding_dim]), trainable=not _freeze, dtype=self.dtype
-#             )
-
-#         # Ensure padding_idx embeddings are always zero
-#         if self.padding_idx is not None:
-#             self.embeddings[self.padding_idx].assign(tf.zeros([embedding_dim], dtype=self.dtype))
-
-
-#     def get_config(self):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Embedding: from_config()")
-
-#         # Get the configuration of the embedding layer
-#         config = super(nn_Embedding, self).get_config()  # Call parent class get_config()
-
-#         # Add custom arguments to config
-#         config.update({
-#             'num_embeddings': self.num_embeddings,
-#             'embedding_dim': self.embedding_dim,
-#             'padding_idx': self.padding_idx,
-#             'max_norm': self.max_norm,
-#             'norm_type': self.norm_type,
-#             'scale_grad_by_freq': self.scale_grad_by_freq,
-#             'sparse': False,  # Sparse is not used in TensorFlow
-#             '_freeze': self._freeze,
-#             # Include _weight if it was initialized with custom weights
-#             '_weight': self.embeddings.numpy() if hasattr(self.embeddings, 'numpy') else None
-#         })
-#         return config
-
-
-#     @classmethod
-#     def from_config(cls, config):
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("nn_Embedding: from_config()")
-#         # result = cls(**config)
-#         result = super(nn_Embedding, cls).from_config(config)
-#         return result
-
-
-#     def call(self, x):
-#         """
-#         Args:
-#             x (Tensor): Indices of the embeddings to retrieve.
-        
-#         Returns:
-#             Tensor: The embedding vectors corresponding to input indices.
-#         """
-#         # Gather embeddings
-#         embedded = tf.nn.embedding_lookup(self.embeddings, x)
-
-#         # Apply max_norm constraint if specified
-#         if self.max_norm is not None:
-#             norms = tf.norm(embedded, ord=self.norm_type, axis=-1, keepdims=True)
-#             embedded = tf.where(
-#                 norms > self.max_norm,
-#                 embedded * (self.max_norm / norms),
-#                 embedded
-#             )
-
-#         return embedded
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# from tensorflow.keras.saving import register_keras_serializable
-# @register_keras_serializable(package="Custom")
-# class nn_LayerNorm(tf.keras.layers.Layer):
-#     # torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
-#     def __init__(self, normalized_shape, eps=1e-5, name="nn_LayerNorm", gamma = None, beta = None, **kwargs):
-#         """
-#         A wrapper for PyTorch's nn.LayerNorm in TensorFlow.
-#         Args:
-#             normalized_shape (int or tuple): Input shape for layer normalization.
-#             epsilon (float): A small value to add to the denominator for numerical stability.
-#         """
-
-#         if isinstance(normalized_shape, int):
-#             normalized_shape = [normalized_shape]
-#         super(nn_LayerNorm, self).__init__(name=name, **kwargs)
-#         self.normalized_shape = normalized_shape
-#         self.epsilon = eps
-
-#         # Define trainable parameters gamma (scale) and beta (offset)
-
-#         if gamma == None:
-#             self.gamma = self.add_weight(
-#                 name="gamma",
-#                 shape=self.normalized_shape,
-#                 initializer="ones",
-#                 trainable=True
-#             )
-#         else:
-#             self.gamma = gamma
-
-#         if beta == None:
-#             self.beta = self.add_weight(
-#                 name="beta",
-#                 shape=self.normalized_shape,
-#                 initializer="zeros",
-#                 trainable=True
-#             )
-#         else:
-#             self.beta = beta
-
-#     def get_config(self):
-#         """
-#         Returns the configuration of the LayerNorm layer.
-#         This method is used to save and restore the layer's state.
-#         """
-#         config = super(nn_LayerNorm, self).get_config()  # 获取基础配置
-#         # 确保将 `gamma` 和 `beta` 的配置信息添加到返回的配置中
-#         config.update({
-#             'normalized_shape': self.normalized_shape,
-#             'eps': self.epsilon,
-#             # 'gamma': self.gamma,
-#             # 'beta': self.beta
-#         })
-
-#         if OUTPUT_VARIABLES:
-#             print("nn_LayerNorm.get_config() = ", config)
-
-#         return config
-
-#     @classmethod
-#     def from_config(cls, config):
-#         """
-#         Returns an instance of the custom layer from its configuration.
-#         """
-#         result = super(nn_LayerNorm, cls).from_config(config)
-#         return result
+#                  scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None):
+#         super(nn_Embedding, self).__init__()
+#         pass
     
 #     def call(self, x):
-#         """
-#         Forward pass for LayerNorm.
-
-#         Args:
-#             x (tf.Tensor): Input tensor to normalize.
-
-#         Returns:
-#             tf.Tensor: The normalized tensor.
-#         """
-#         # print("type(normalized_shape) = ", type(self.normalized_shape))
-#         if isinstance(self.normalized_shape, int):
-#             dims = 1
-#         else:
-#             dims = len(self.normalized_shape)
-#         dim_list = []
-#         for i in range(-dims, 0, 1):
-#             dim_list.append(i)
-#         mean = tf.reduce_mean(x, axis=dim_list, keepdims=True)
-#         variance = tf.reduce_mean(tf.square(x - mean), axis=dim_list, keepdims=True)
-#         normalized_x = (x - mean) / tf.sqrt(variance + self.epsilon)
-
-#         return self.gamma * normalized_x + self.beta
+#         pass
 
 
 
-#     # def get_config(self):
-#     #     """
-#     #     Returns the configuration of the LayerNorm layer.
-#     #     This method is used to save and restore the layer's state.
-#     #     """
-#     #     print("nn_LayerNorm: from_config()")
-
-#     #     config = super(nn_LayerNorm, self).get_config()  # Call the parent class get_config
-
-#     #     # Add custom arguments to the config
-#     #     config.update({
-#     #         'normalized_shape': self.normalized_shape,
-#     #         'eps': self.epsilon,
-#     #         # 'gamma': self.gamma,
-#     #         # 'beta': self.beta
-#     #     })
-#     #     return config
-
-#     # @classmethod
-#     # def from_config(cls, config):
-#     #     """
-#     #     Returns an instance of the custom layer from its configuration.
-#     #     """
-#     #     # 直接调用父类的 from_config，TensorFlow 会自动处理变量的恢复（如 gamma 和 beta）
-#     #     result = super(nn_LayerNorm, cls).from_config(config)
-#     #     return result
-
-
-#     # @classmethod
-#     # def from_config(cls, config):
-#     #     print("nn_LayerNorm: from_config()")
-#     #     result = cls(**config)
-#     #     return result
-
-
-
-
-
-
-# class nn_MultiheadAttention(tf.keras.layers.Layer):
-#     def __init__(self, d_model, num_heads, name="nn_MultiheadAttention", **kwargs):
+class nn_Embedding(tf.keras.layers.Layer):
+    def __init__(self, num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, 
+                 scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None, name="nn_Embedding", **kwargs):
+        """
+        A TensorFlow wrapper to replicate the functionality of torch.nn.Embedding.
         
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("called nn_MultiheadAttention __init__()")
+        Args:
+            num_embeddings (int): Size of the embedding dictionary.
+            embedding_dim (int): Size of each embedding vector.
+            padding_idx (int, optional): Specifies padding index. Embeddings for this index are always zero.
+            max_norm (float, optional): If given, will renormalize embeddings to have a norm less than this value.
+            norm_type (float, optional): The p-norm to compute for the max_norm option. Default is 2.0.
+            scale_grad_by_freq (bool, optional): If True, scale gradients by inverse of word frequency.
+            sparse (bool, optional): Not used in TensorFlow, included for API compatibility.
+            _weight (np.ndarray, optional): Predefined weight matrix for embeddings.
+            _freeze (bool, optional): If True, the embedding weights are frozen and not updated during training.
+            device, dtype: Not used, included for API compatibility.
+        """
+        super(nn_Embedding, self).__init__(dtype=dtype, name=name, **kwargs)
+        
+        self.num_embeddings = num_embeddings
+        self.embedding_dim = embedding_dim
+        self.padding_idx = padding_idx
+        self.max_norm = max_norm
+        self.norm_type = norm_type
+        self.scale_grad_by_freq = scale_grad_by_freq
+        self._freeze = _freeze
 
-#         super(nn_MultiheadAttention, self).__init__(name=name, **kwargs)
-#         self.num_heads = num_heads
-#         self.d_model = d_model
+        # Initialize embedding weights
+        if _weight is not None:
+            self.embeddings = tf.Variable(_weight, trainable=not _freeze, dtype=self.dtype)
+        else:
+            initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1.0)
+            self.embeddings = tf.Variable(
+                initializer([num_embeddings, embedding_dim]), trainable=not _freeze, dtype=self.dtype
+            )
 
-#         assert d_model % self.num_heads == 0
-
-#         self.depth = d_model // self.num_heads
-
-#         # 线性变换用于 Query, Key 和 Value
-#         self.query_dense = tf.keras.layers.Dense(d_model)
-#         self.key_dense = tf.keras.layers.Dense(d_model)
-#         self.value_dense = tf.keras.layers.Dense(d_model)
-
-#         # 输出变换
-#         self.output_dense = tf.keras.layers.Dense(d_model)
-
-#     def split_heads(self, x, batch_size):
-#         """将最后一个维度切分为多个头"""
-#         x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
-#         return tf.transpose(x, perm=[0, 2, 1, 3])
-
-#     def scaled_dot_product_attention(self, query, key, value, mask=None):
-#         """计算缩放点积注意力"""
-#         matmul_qk = tf.matmul(query, key, transpose_b=True)
-#         dk = tf.cast(tf.shape(key)[-1], tf.float32)
-#         scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
-
-#         if mask is not None:
-#             scaled_attention_logits += (mask * -1e9)
-
-#         attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
-#         output = tf.matmul(attention_weights, value)
-#         return output, attention_weights
-
-#     def call(self, query, key, value, mask=None):
-#         batch_size = tf.shape(query)[0]
-
-#         # 对 Q, K, V 进行线性变换并分割成多个头
-#         query = self.query_dense(query)
-#         key = self.key_dense(key)
-#         value = self.value_dense(value)
-
-#         query = self.split_heads(query, batch_size)
-#         key = self.split_heads(key, batch_size)
-#         value = self.split_heads(value, batch_size)
-
-#         # 缩放点积注意力
-#         output, attention_weights = self.scaled_dot_product_attention(query, key, value, mask)
-
-#         # 拼接多个头
-#         output = tf.transpose(output, perm=[0, 2, 1, 3])
-#         output = tf.reshape(output, (batch_size, -1, self.d_model))
-
-#         attention_weights = tf.reduce_mean(attention_weights, axis=1)  # 平均所有头
-
-#         # 输出变换
-#         output = self.output_dense(output)
-#         return output, attention_weights
+        # Ensure padding_idx embeddings are always zero
+        if self.padding_idx is not None:
+            self.embeddings[self.padding_idx].assign(tf.zeros([embedding_dim], dtype=self.dtype))
 
 
-#     def get_config(self):
-#         """
-#         Returns the configuration of the MultiheadAttention layer.
-#         This method is used to save and restore the layer's state.
-#         """
-#         print("nn_MultiheadAttention: get_config()")
+    def get_config(self):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Embedding: from_config()")
 
-#         config = super(nn_MultiheadAttention, self).get_config()  # Call the parent class get_config
+        # Get the configuration of the embedding layer
+        config = super(nn_Embedding, self).get_config()  # Call parent class get_config()
 
-#         # Add custom arguments to the config
-#         config.update({
-#             'num_heads': self.num_heads,
-#             'd_model': self.d_model
-#         })
-#         return config
-
-
-
-
-
-
-
-
-
-# @register_keras_serializable(package="Custom")
-# class nn_Conv1d(tf.keras.layers.Layer):
-#     """
-#     A wrapper for PyTorch's nn.Conv1d in TensorFlow.
-#     Args:
-#         in_channels (int): Number of channels in the input.
-#         out_channels (int): Number of channels produced by the convolution.
-#         kernel_size (int): Size of the convolving kernel.
-#         stride (int): Stride of the convolution. Default: 1.
-#         padding (int): Padding added to both sides of the input. Default: 0.
-#         dilation (int): Spacing between kernel elements. Default: 1.
-#         groups (int): Number of blocked connections from input to output. Default: 1.
-#         bias (bool): If True, adds a learnable bias to the output. Default: True.
-#     """
-#     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, name="nn_Conv1d", **kwargs):
-#         super(nn_Conv1d, self).__init__(name=name, **kwargs)
-#         self.in_channels = in_channels
-#         self.out_channels = out_channels
-#         self.kernel_size = kernel_size
-#         self.stride = stride
-#         self.padding = padding
-#         self.dilation = dilation
-#         self.groups = groups
-#         self.bias = bias
+        # Add custom arguments to config
+        config.update({
+            'num_embeddings': self.num_embeddings,
+            'embedding_dim': self.embedding_dim,
+            'padding_idx': self.padding_idx,
+            'max_norm': self.max_norm,
+            'norm_type': self.norm_type,
+            'scale_grad_by_freq': self.scale_grad_by_freq,
+            'sparse': False,  # Sparse is not used in TensorFlow
+            '_freeze': self._freeze,
+            # Include _weight if it was initialized with custom weights
+            '_weight': self.embeddings.numpy() if hasattr(self.embeddings, 'numpy') else None
+        })
+        return config
 
 
-#         # Ensure in_channels is divisible by groups
-#         if self.in_channels % self.groups != 0:
-#             raise ValueError("in_channels must be divisible by groups")
+    @classmethod
+    def from_config(cls, config):
+        if OUTPUT_FUNCTION_HEADER:
+            print("nn_Embedding: from_config()")
+        # result = cls(**config)
+        result = super(nn_Embedding, cls).from_config(config)
+        return result
 
-#         self.conv1d = tf.keras.layers.Conv1D(
-#             filters=self.out_channels,
-#             kernel_size=self.kernel_size,
-#             strides=self.stride,
-#             # padding='valid',  # 手动处理填充
-#             padding='same',  # 手动处理填充
-#             dilation_rate=self.dilation,
-#             groups=self.groups,
-#             use_bias=self.bias,
-#             kernel_initializer = tf.keras.initializers.Constant(
-#                 pytorch_weight_initializer((kernel_size, in_channels, out_channels), in_channels * kernel_size / groups )),
-#             bias_initializer = tf.keras.initializers.Constant(
-#                 pytorch_bias_initializer((out_channels,), in_channels * kernel_size / groups ))
-#         )        
+
+    def call(self, x):
+        """
+        Args:
+            x (Tensor): Indices of the embeddings to retrieve.
+        
+        Returns:
+            Tensor: The embedding vectors corresponding to input indices.
+        """
+        # Gather embeddings
+        embedded = tf.nn.embedding_lookup(self.embeddings, x)
+
+        # Apply max_norm constraint if specified
+        if self.max_norm is not None:
+            norms = tf.norm(embedded, ord=self.norm_type, axis=-1, keepdims=True)
+            embedded = tf.where(
+                norms > self.max_norm,
+                embedded * (self.max_norm / norms),
+                embedded
+            )
+
+        return embedded
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from tensorflow.keras.saving import register_keras_serializable
+@register_keras_serializable(package="Custom")
+class nn_LayerNorm(tf.keras.layers.Layer):
+    # torch.nn.LayerNorm(normalized_shape, eps=1e-05, elementwise_affine=True, bias=True, device=None, dtype=None)
+    def __init__(self, normalized_shape, eps=1e-5, name="nn_LayerNorm", gamma = None, beta = None, **kwargs):
+        """
+        A wrapper for PyTorch's nn.LayerNorm in TensorFlow.
+        Args:
+            normalized_shape (int or tuple): Input shape for layer normalization.
+            epsilon (float): A small value to add to the denominator for numerical stability.
+        """
+
+        if isinstance(normalized_shape, int):
+            normalized_shape = [normalized_shape]
+        super(nn_LayerNorm, self).__init__(name=name, **kwargs)
+        self.normalized_shape = normalized_shape
+        self.epsilon = eps
+
+        # Define trainable parameters gamma (scale) and beta (offset)
+
+        if gamma == None:
+            self.gamma = self.add_weight(
+                name="gamma",
+                shape=self.normalized_shape,
+                initializer="ones",
+                trainable=True
+            )
+        else:
+            self.gamma = gamma
+
+        if beta == None:
+            self.beta = self.add_weight(
+                name="beta",
+                shape=self.normalized_shape,
+                initializer="zeros",
+                trainable=True
+            )
+        else:
+            self.beta = beta
+
+    def get_config(self):
+        """
+        Returns the configuration of the LayerNorm layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_LayerNorm, self).get_config()  # Get the base configuration
+        # Ensure that `gamma` and `beta` configuration information is added to the returned config
+        config.update({
+            'normalized_shape': self.normalized_shape,
+            'eps': self.epsilon,
+            # 'gamma': self.gamma,
+            # 'beta': self.beta
+        })
+
+        if OUTPUT_VARIABLES:
+            print("nn_LayerNorm.get_config() = ", config)
+
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+        result = super(nn_LayerNorm, cls).from_config(config)
+        return result
+    
+    def call(self, x):
+        """
+        Forward pass for LayerNorm.
+
+        Args:
+            x (tf.Tensor): Input tensor to normalize.
+
+        Returns:
+            tf.Tensor: The normalized tensor.
+        """
+        # print("type(normalized_shape) = ", type(self.normalized_shape))
+        if isinstance(self.normalized_shape, int):
+            dims = 1
+        else:
+            dims = len(self.normalized_shape)
+        dim_list = []
+        for i in range(-dims, 0, 1):
+            dim_list.append(i)
+        mean = tf.reduce_mean(x, axis=dim_list, keepdims=True)
+        variance = tf.reduce_mean(tf.square(x - mean), axis=dim_list, keepdims=True)
+        normalized_x = (x - mean) / tf.sqrt(variance + self.epsilon)
+
+        return self.gamma * normalized_x + self.beta
+
+
+
+    # def get_config(self):
+    #     """
+    #     Returns the configuration of the LayerNorm layer.
+    #     This method is used to save and restore the layer's state.
+    #     """
+    #     print("nn_LayerNorm: from_config()")
+
+    #     config = super(nn_LayerNorm, self).get_config()  # Call the parent class get_config
+
+    #     # Add custom arguments to the config
+    #     config.update({
+    #         'normalized_shape': self.normalized_shape,
+    #         'eps': self.epsilon,
+    #         # 'gamma': self.gamma,
+    #         # 'beta': self.beta
+    #     })
+    #     return config
+
+    # @classmethod
+    # def from_config(cls, config):
+    #     """
+    #     Returns an instance of the custom layer from its configuration.
+    #     """
+
+    #     # Directly call the parent class's `from_config` method.
+    #     # TensorFlow will automatically handle the restoration of variables (e.g., gamma and beta).
+
+    #     result = super(nn_LayerNorm, cls).from_config(config)
+    #     return result
+
+
+    # @classmethod
+    # def from_config(cls, config):
+    #     print("nn_LayerNorm: from_config()")
+    #     result = cls(**config)
+    #     return result
+
+
+
+
+
+
+class nn_MultiheadAttention(tf.keras.layers.Layer):
+    def __init__(self, d_model, num_heads, name="nn_MultiheadAttention", **kwargs):
+        
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_MultiheadAttention __init__()")
+
+        super(nn_MultiheadAttention, self).__init__(name=name, **kwargs)
+        self.num_heads = num_heads
+        self.d_model = d_model
+
+        assert d_model % self.num_heads == 0
+
+        self.depth = d_model // self.num_heads
+
+        # Linear transformations for Query, Key, and Value
+        self.query_dense = tf.keras.layers.Dense(d_model)
+        self.key_dense = tf.keras.layers.Dense(d_model)
+        self.value_dense = tf.keras.layers.Dense(d_model)
+
+        # Output transformation
+        self.output_dense = tf.keras.layers.Dense(d_model)
+
+    def split_heads(self, x, batch_size):
+        """Split the last dimension into multiple heads"""
+        x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
+        return tf.transpose(x, perm=[0, 2, 1, 3])
+
+    def scaled_dot_product_attention(self, query, key, value, mask=None):
+        """Compute scaled dot-product attention"""
+        matmul_qk = tf.matmul(query, key, transpose_b=True)
+        dk = tf.cast(tf.shape(key)[-1], tf.float32)
+        scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
+
+        if mask is not None:
+            scaled_attention_logits += (mask * -1e9)
+
+        attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
+        output = tf.matmul(attention_weights, value)
+        return output, attention_weights
+
+    def call(self, query, key, value, mask=None):
+        batch_size = tf.shape(query)[0]
+
+        # Apply linear transformation to Q, K, V and split into multiple heads
+        query = self.query_dense(query)
+        key = self.key_dense(key)
+        value = self.value_dense(value)
+
+        query = self.split_heads(query, batch_size)
+        key = self.split_heads(key, batch_size)
+        value = self.split_heads(value, batch_size)
+
+        # Scaled dot-product attention
+        output, attention_weights = self.scaled_dot_product_attention(query, key, value, mask)
+
+        # Concatenate the multiple heads
+        output = tf.transpose(output, perm=[0, 2, 1, 3])
+        output = tf.reshape(output, (batch_size, -1, self.d_model))
+
+        attention_weights = tf.reduce_mean(attention_weights, axis=1)  # take the average of all heads
+
+        # Output transformation
+        output = self.output_dense(output)
+        return output, attention_weights
+
+
+    def get_config(self):
+        """
+        Returns the configuration of the MultiheadAttention layer.
+        This method is used to save and restore the layer's state.
+        """
+        print("nn_MultiheadAttention: get_config()")
+
+        config = super(nn_MultiheadAttention, self).get_config()  # Call the parent class get_config
+
+        # Add custom arguments to the config
+        config.update({
+            'num_heads': self.num_heads,
+            'd_model': self.d_model
+        })
+        return config
+
+
+
+
+
+
+
+
+
+@register_keras_serializable(package="Custom")
+class nn_Conv1d(tf.keras.layers.Layer):
+    """
+    A wrapper for PyTorch's nn.Conv1d in TensorFlow.
+    Args:
+        in_channels (int): Number of channels in the input.
+        out_channels (int): Number of channels produced by the convolution.
+        kernel_size (int): Size of the convolving kernel.
+        stride (int): Stride of the convolution. Default: 1.
+        padding (int): Padding added to both sides of the input. Default: 0.
+        dilation (int): Spacing between kernel elements. Default: 1.
+        groups (int): Number of blocked connections from input to output. Default: 1.
+        bias (bool): If True, adds a learnable bias to the output. Default: True.
+    """
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, name="nn_Conv1d", **kwargs):
+        super(nn_Conv1d, self).__init__(name=name, **kwargs)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+        self.groups = groups
+        self.bias = bias
+
+
+        assert (kernel_size - 1) // 2 == padding, "padding mode is 'same'"
+
+        # Ensure in_channels is divisible by groups
+        if self.in_channels % self.groups != 0:
+            raise ValueError("in_channels must be divisible by groups")
+
+        self.conv1d = tf.keras.layers.Conv1D(
+            filters=self.out_channels,
+            kernel_size=self.kernel_size,
+            strides=self.stride,
+            # padding='valid',  # handle the padding manually
+            padding='same',
+            dilation_rate=self.dilation,
+            groups=self.groups,
+            use_bias=self.bias,
+            kernel_initializer = tf.keras.initializers.Constant(
+                pytorch_weight_initializer((kernel_size, in_channels, out_channels), in_channels * kernel_size / groups )),
+            bias_initializer = tf.keras.initializers.Constant(
+                pytorch_bias_initializer((out_channels,), in_channels * kernel_size / groups ))
+        )        
 
                     
-#     def get_config(self):
-#         """
-#         Returns the configuration of the Conv1d layer.
-#         This method is used to save and restore the layer's state.
-#         """
-#         config = super(nn_Conv1d, self).get_config()
-#         config.update({
-#             'in_channels': self.in_channels,
-#             'out_channels': self.out_channels,
-#             'kernel_size': self.kernel_size,
-#             'stride': self.stride,
-#             'padding': self.padding,
-#             'dilation': self.dilation,
-#             'groups': self.groups,
-#             'bias': self.bias,
-#         })
-#         return config
+    def get_config(self):
+        """
+        Returns the configuration of the Conv1d layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_Conv1d, self).get_config()
+        config.update({
+            'in_channels': self.in_channels,
+            'out_channels': self.out_channels,
+            'kernel_size': self.kernel_size,
+            'stride': self.stride,
+            'padding': self.padding,
+            'dilation': self.dilation,
+            'groups': self.groups,
+            'bias': self.bias,
+        })
+        return config
 
-#     @classmethod
-#     def from_config(cls, config):
-#         """
-#         Returns an instance of the custom layer from its configuration.
-#         """
-#         return cls(**config)
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+        return cls(**config)
 
-#     # def build(self, input_shape):
-#     #     """
-#     #     Build the layer and initialize the weights.
-#     #     """
-#     #     super(nn_Conv1d, self).build(input_shape)
+    # def build(self, input_shape):
+    #     """
+    #     Build the layer and initialize the weights.
+    #     """
+    #     super(nn_Conv1d, self).build(input_shape)
 
-
-
-#     def call(self, x):
-#         """
-#         Forward pass for Conv1d.
-
-#         Args:
-#             x (tf.Tensor): Input tensor to convolve.
-
-#         Returns:
-#             tf.Tensor: The convolved tensor.
-#         """
-
-#         torch_to_tf_input = tf.transpose(x, perm = (0, 2, 1) )
-#         # # Apply padding manually
-#         # if self.padding > 0:
-#         #     x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
-
-#         # result = self.conv1d(x)
-#         result = self.conv1d(torch_to_tf_input)
-#         result = tf.transpose(result, perm = (0, 2, 1) )
-
-#         return result
+    # def build(self, input_shape):
+    #     # Explicitly build the Conv1D layer
+    #     self.conv1d.build(input_shape)
+    #     super(nn_Conv1d, self).build(input_shape)
 
 
+    def call(self, x):
+        """
+        Forward pass for Conv1d.
+
+        Args:
+            x (tf.Tensor): Input tensor to convolve.
+
+        Returns:
+            tf.Tensor: The convolved tensor.
+        """
+
+        # print("nn_Conv1d: self.in_channels = ", self.in_channels)
+
+        # print("nn_Conv1d: self.out_channels = ", self.out_channels)
+
+        # print("nn_Conv1d: self.kernel_size = ", self.kernel_size)
+
+        # print("nn_Conv1d: self.stride = ", self.stride)
+
+        # print("nn_Conv1d: x.shape = ", x.shape)
+
+        # print("nn_Conv1d: self.padding = ", self.padding)
+        # print("nn_Conv1d: self.dilation = ", self.dilation)
+        # print("nn_Conv1d: self.groups = ", self.groups)
+        # print("nn_Conv1d: self.bias = ", self.bias)
 
 
-
-
-
-
-
-
-
-
-# class nn_Conv2d(tf.keras.layers.Layer):
-#     def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups = 1, **kwargs):
-#         super(nn_Conv2d, self).__init__()
+        torch_to_tf_input = tf.transpose(x, perm = (0, 2, 1) )
         
-#         # 解析参数
-#         self.in_channels = in_channels
-#         self.out_channels = out_channels
-#         self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
-#         self.stride = stride if isinstance(stride, tuple) else (stride, stride)
-#         self.bias = bias
+        # # Apply padding manually
+        # if self.padding > 0:
+        #     x = tf.pad(torch_to_tf_input, [[0, 0], [self.padding, self.padding], [0, 0]])
 
-#         # TensorFlow 的 Conv2D 需要 NHWC 格式
-#         self.conv2d = tf.keras.layers.Conv2D(
-#             filters=self.out_channels,
-#             kernel_size=self.kernel_size,
-#             strides=self.stride,
-#             padding="valid",  # PyTorch padding=0 对应 TensorFlow "valid"
-#             use_bias=self.bias,
-#             # kernel_initializer=tf.keras.initializers.HeUniform(),  # 采用 PyTorch Kaiming 初始化
-#             # bias_initializer="zeros" if self.bias else None
-#             kernel_initializer = tf.keras.initializers.Constant(
-#                 pytorch_weight_initializer( (self.kernel_size[0], self.kernel_size[1], in_channels // groups, out_channels),\
-#                                             in_channels * self.kernel_size[0] * self.kernel_size[1] // groups )),
-#             bias_initializer = tf.keras.initializers.Constant(
-#                 pytorch_bias_initializer((out_channels,), in_channels * self.kernel_size[0] * self.kernel_size[1] // groups ))
-#         )
+        # result = self.conv1d(x)
 
-#     def call(self, x):
-#         # PyTorch input (N, C, H, W) -> TensorFlow (N, H, W, C)
-#         x = tf.transpose(x, [0, 2, 3, 1])
+        result = self.conv1d(torch_to_tf_input)
 
-#         # 进行卷积
-#         x = self.conv2d(x)
+        result = tf.transpose(result, perm = (0, 2, 1) )
 
-#         # Convert back to PyTorch format: (N, C, H, W)
-#         x = tf.transpose(x, [0, 3, 1, 2])
-#         return x
+        return result
 
 
-#     def get_config(self):
-#         """
-#         Returns the configuration of the Conv1d layer.
-#         This method is used to save and restore the layer's state.
-#         """
-#         config = super(nn_Conv2d, self).get_config()
 
-#         config.update({
-#             'in_channels': self.in_channels,
-#             'out_channels': self.out_channels,
-#             'kernel_size': self.kernel_size,
-#             'stride': self.stride,
-#             'bias': self.bias,
-#         })
-#         return config
-
-#     @classmethod
-#     def from_config(cls, config):
-#         """
-#         Returns an instance of the custom layer from its configuration.
-#         """
-#         return cls(**config)
+    def assign_torch_weights(self, numpy_torch_weights):
+        torch_weight = numpy_torch_weights.transpose(2, 1, 0)  
+        self.conv1d.kernel.assign(torch_weight)
 
 
 
@@ -2846,6 +2917,121 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 
+class nn_Conv2d(tf.keras.layers.Layer):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups = 1, conv2d = None, **kwargs):
+        super(nn_Conv2d, self).__init__()
+        
+        # Parse parameters
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        # self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
+        self.kernel_size = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
+
+        # self.stride = stride if isinstance(stride, tuple) else (stride, stride)
+        self.stride = (stride, stride) if isinstance(stride, int) else stride
+
+        self.bias = bias
+
+        # TensorFlow's Conv2D requires NHWC format
+
+        if conv2d:
+            self.conv2d = conv2d
+        else:
+            self.conv2d = tf.keras.layers.Conv2D(
+                filters=self.out_channels,
+                kernel_size=self.kernel_size,
+                strides=self.stride,
+                padding="valid",  # PyTorch padding=0 corresponds to TensorFlow "valid"
+                use_bias=self.bias,
+                # kernel_initializer=tf.keras.initializers.HeUniform(),  # Use PyTorch Kaiming initialization
+                # bias_initializer="zeros" if self.bias else None
+                kernel_initializer = tf.keras.initializers.Constant(
+                    pytorch_weight_initializer( (self.kernel_size[0], self.kernel_size[1], in_channels // groups, out_channels),\
+                                                in_channels * self.kernel_size[0] * self.kernel_size[1] // groups )),
+                bias_initializer = tf.keras.initializers.Constant(
+                    pytorch_bias_initializer((out_channels,), in_channels * self.kernel_size[0] * self.kernel_size[1] // groups ))
+            )
+
+
+    def call(self, x):
+        # PyTorch input (N, C, H, W) -> TensorFlow (N, H, W, C)
+        x = tf.transpose(x, [0, 2, 3, 1])
+
+        # 进行卷积
+        x = self.conv2d(x)
+
+        # Convert back to PyTorch format: (N, C, H, W)
+        x = tf.transpose(x, [0, 3, 1, 2])
+        return x
+
+
+    def get_config(self):
+        """
+        Returns the configuration of the Conv1d layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_Conv2d, self).get_config()
+
+        config.update({
+            'in_channels': self.in_channels,
+            'out_channels': self.out_channels,
+            'kernel_size': self.kernel_size,
+            'stride': self.stride,
+            'bias': self.bias,
+        })
+
+        config.update({
+            "conv2d": tf.keras.layers.serialize(self.conv2d)
+        })
+
+
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+
+
+        from model.diffusion.mlp_diffusion import DiffusionMLP
+        from model.diffusion.diffusion import DiffusionModel
+        from model.common.mlp import MLP, ResidualMLP
+        from model.diffusion.modules import SinusoidalPosEmb
+        from model.common.modules import SpatialEmb, RandomShiftsAug
+        from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
+            'DiffusionMLP': DiffusionMLP,
+            # 'VPGDiffusion': VPGDiffusion,
+            'SinusoidalPosEmb': SinusoidalPosEmb,   
+            'MLP': MLP,                            # Custom MLP (Multi-Layer Perceptron) layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
+            'nn_Linear': nn_Linear,
+            'nn_LayerNorm': nn_LayerNorm,
+            'nn_Dropout': nn_Dropout,
+            'nn_ReLU': nn_ReLU,
+            'nn_Mish': nn_Mish,
+            'SpatialEmb': SpatialEmb,
+            'RandomShiftsAug': RandomShiftsAug,
+         }
+        # Register your custom class with Keras
+        get_custom_objects().update(cur_dict)
+
+        conv2d = config.pop("conv2d")
+        conv2d = tf.keras.layers.deserialize( conv2d,  custom_objects=get_custom_objects() )
+
+        return cls(conv2d = conv2d, **config)
+
+
+
+    def assign_torch_weights(self, numpy_torch_weights):
+        torch_weights_tf = np.transpose(numpy_torch_weights, (2, 3, 1, 0))  # Convert to TensorFlow shape
+        self.conv2d.kernel.assign(torch_weights_tf)
 
 
 
@@ -2853,69 +3039,75 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 
-# class nn_ConvTranspose1d(tf.keras.layers.Layer):
-#     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, \
-#                 bias=True, dilation=1, padding_mode='zeros', device=None, dtype=None):
-#         super(nn_ConvTranspose1d, self).__init__()
-
-#         self.in_channels = in_channels
-#         self.out_channels = out_channels
-#         self.kernel_size = kernel_size
-#         self.stride = stride 
-#         self.padding = padding
-#         self.output_padding = output_padding
-#         self.groups = groups
-#         self.bias = bias
-#         self.dilation = dilation
 
 
-#         in_features = (out_channels * kernel_size) / groups
-
-#         # kernel_initializer = tf.keras.initializers.Constant(
-#         #     pytorch_weight_initializer((in_channels, out_channels // groups, kernel_size), in_features))
-#         kernel_initializer = tf.keras.initializers.Constant(
-#             pytorch_weight_initializer((kernel_size, out_channels // groups, in_channels), in_features))
-
-#         bias_initializer = tf.keras.initializers.Constant(
-#             pytorch_bias_initializer((out_channels,), in_features) )
 
 
-#         self.conv1d_transpose = tf.keras.layers.Conv1DTranspose(
-#             filters=self.out_channels,
-#             kernel_size=self.kernel_size,
-#             strides=self.stride,
-#             # padding="valid",  # 手动填充
-#             padding="same",  # 手动填充
-#             use_bias=bias,
-#             kernel_initializer=kernel_initializer,
-#             bias_initializer=bias_initializer
-#         )
-
-#     def build(self, input_shape):
-#         self.conv1d_transpose.build((None, None, self.in_channels))
 
 
-#     def call(self, x):
+
+
+class nn_ConvTranspose1d(tf.keras.layers.Layer):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, \
+                bias=True, dilation=1, padding_mode='zeros', device=None, dtype=None):
+        super(nn_ConvTranspose1d, self).__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride 
+        self.padding = padding
+        self.output_padding = output_padding
+        self.groups = groups
+        self.bias = bias
+        self.dilation = dilation
+
+
+        in_features = (out_channels * kernel_size) / groups
+
+        # kernel_initializer = tf.keras.initializers.Constant(
+        #     pytorch_weight_initializer((in_channels, out_channels // groups, kernel_size), in_features))
+        kernel_initializer = tf.keras.initializers.Constant(
+            pytorch_weight_initializer((kernel_size, out_channels // groups, in_channels), in_features))
+
+        bias_initializer = tf.keras.initializers.Constant(
+            pytorch_bias_initializer((out_channels,), in_features) )
+
+
+        self.conv1d_transpose = tf.keras.layers.Conv1DTranspose(
+            filters=self.out_channels,
+            kernel_size=self.kernel_size,
+            strides=self.stride,
+            # padding="valid",  # padding manually
+            padding="same",
+            use_bias=bias,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer
+        )
+
+    def build(self, input_shape):
+        self.conv1d_transpose.build((None, None, self.in_channels))
+
+
+    def call(self, x):
     
-#         # L_in = x.shape[2]
-#         # L_out = (L_in - 1) * self.stride - 2 * self.padding + self.dilation * (self.kernel_size - 1) + self.output_padding + 1
+        # L_in = x.shape[2]
+        # L_out = (L_in - 1) * self.stride - 2 * self.padding + self.dilation * (self.kernel_size - 1) + self.output_padding + 1
 
-#         # PyTorch (N, C, L) -> TensorFlow (N, L, C)
-#         x = tf.transpose(x, [0, 2, 1])
+        # PyTorch (N, C, L) -> TensorFlow (N, L, C)
+        x = tf.transpose(x, [0, 2, 1])
 
-#         x = self.conv1d_transpose(x)
+        x = self.conv1d_transpose(x)
 
-#         # **转换回 PyTorch 格式 (N, C, L)**
-#         x = tf.transpose(x, [0, 2, 1])
+        # **Convert back to PyTorch format (N, C, L)**
+        x = tf.transpose(x, [0, 2, 1])
 
-#         return x
-
-
+        return x
 
 
-
-
-
+    def assign_torch_weights(self, numpy_torch_weights):
+        torch_weights_tf = np.transpose(numpy_torch_weights, (2, 1, 0))  # Convert to TensorFlow shape
+        self.conv1d_transpose.kernel.assign(torch_weights_tf)
 
 
 
@@ -2924,97 +3116,270 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 
-# @register_keras_serializable(package="Custom")
-# class nn_GroupNorm(tf.keras.layers.Layer):
-#     """
-#     A wrapper for PyTorch's nn.GroupNorm in TensorFlow.
-#     Args:
-#         num_groups (int): Number of groups to divide the channels into.
-#         num_channels (int): Number of channels in the input tensor.
-#         eps (float): A small value to add to the denominator for numerical stability.
-#         affine (bool): If True, learnable scaling (gamma) and offset (beta) parameters are applied.
-#     """
-#     def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, name="nn_GroupNorm", **kwargs):
-#         super(nn_GroupNorm, self).__init__(name=name, **kwargs)
-#         self.num_groups = num_groups
-#         self.num_channels = num_channels
-#         self.eps = eps
-#         self.affine = affine
-
-#         # Ensure num_channels is divisible by num_groups
-#         if self.num_channels % self.num_groups != 0:
-#             raise ValueError("num_channels must be divisible by num_groups")
-
-#         # Define trainable parameters gamma (scale) and beta (offset) if affine is True
-#         if self.affine:
-#             self.gamma = self.add_weight(
-#                 name="gamma",
-#                 shape=(self.num_channels,),
-#                 initializer="ones",
-#                 trainable=True
-#             )
-#             self.beta = self.add_weight(
-#                 name="beta",
-#                 shape=(self.num_channels,),
-#                 initializer="zeros",
-#                 trainable=True
-#             )
-#         else:
-#             self.gamma = None
-#             self.beta = None
-
-#     def get_config(self):
-#         """
-#         Returns the configuration of the GroupNorm layer.
-#         This method is used to save and restore the layer's state.
-#         """
-#         config = super(nn_GroupNorm, self).get_config()
-#         config.update({
-#             'num_groups': self.num_groups,
-#             'num_channels': self.num_channels,
-#             'eps': self.eps,
-#             'affine': self.affine,
-#         })
-#         return config
-
-#     @classmethod
-#     def from_config(cls, config):
-#         """
-#         Returns an instance of the custom layer from its configuration.
-#         """
-#         return cls(**config)
-
-#     def call(self, x):
-#         """
-#         Forward pass for GroupNorm.
-
-#         Args:
-#             x (tf.Tensor): Input tensor to normalize.
-
-#         Returns:
-#             tf.Tensor: The normalized tensor.
-#         """
-#         # Reshape the input tensor to group the channels
-#         batch_size, height, width, channels = tf.unstack(tf.shape(x))
-#         group_size = channels // self.num_groups
-#         x = tf.reshape(x, [batch_size, height, width, self.num_groups, group_size])
-
-#         # Compute mean and variance for each group
-#         mean, variance = tf.nn.moments(x, axes=[1, 2, 4], keepdims=True)
-
-#         # Normalize the input
-#         normalized_x = (x - mean) / tf.sqrt(variance + self.eps)
-
-#         # Reshape back to the original shape
-#         normalized_x = tf.reshape(normalized_x, [batch_size, height, width, channels])
-
-#         # Apply scaling (gamma) and offset (beta) if affine is True
-#         if self.affine:
-#             normalized_x = self.gamma * normalized_x + self.beta
-
-#         return normalized_x
 
 
+
+
+
+@register_keras_serializable(package="Custom")
+class nn_GroupNorm(tf.keras.layers.Layer):
+    """
+    A wrapper for PyTorch's nn.GroupNorm in TensorFlow.
+    Args:
+        num_groups (int): Number of groups to divide the channels into.
+        num_channels (int): Number of channels in the input tensor.
+        eps (float): A small value to add to the denominator for numerical stability.
+        affine (bool): If True, learnable scaling (gamma) and offset (beta) parameters are applied.
+    """
+    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, name="nn_GroupNorm", **kwargs):
+        super(nn_GroupNorm, self).__init__(name=name, **kwargs)
+        self.num_groups = num_groups
+        self.num_channels = num_channels
+        self.eps = eps
+        self.affine = affine
+
+        # Ensure num_channels is divisible by num_groups
+        if self.num_channels % self.num_groups != 0:
+            raise ValueError("num_channels must be divisible by num_groups")
+
+        # Define trainable parameters gamma (scale) and beta (offset) if affine is True
+        if self.affine:
+            self.gamma = self.add_weight(
+                name="gamma",
+                shape=(self.num_channels,),
+                initializer="ones",
+                trainable=True
+            )
+            self.beta = self.add_weight(
+                name="beta",
+                shape=(self.num_channels,),
+                initializer="zeros",
+                trainable=True
+            )
+        else:
+            self.gamma = None
+            self.beta = None
+
+    def get_config(self):
+        """
+        Returns the configuration of the GroupNorm layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(nn_GroupNorm, self).get_config()
+        config.update({
+            'num_groups': self.num_groups,
+            'num_channels': self.num_channels,
+            'eps': self.eps,
+            'affine': self.affine,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+        return cls(**config)
+
+    def call(self, x):
+        """
+        Forward pass for GroupNorm.
+
+        Args:
+            x (tf.Tensor): Input tensor to normalize.
+
+        Returns:
+            tf.Tensor: The normalized tensor.
+        """
+        x = torch_tensor_permute(x, [0, 2, 3, 1])
+
+        print("x.shape = ", x.shape)
+
+        # Reshape the input tensor to group the channels
+        batch_size, height, width, channels = tf.unstack(tf.shape(x))
+        # batch_size, channels, height, width = tf.unstack(tf.shape(x))
+
+        group_size = channels // self.num_groups
+
+        # print("nn_GroupNorm: self.num_groups = ", self.num_groups)
+        # print("nn_GroupNorm: self.num_channels = ", self.num_channels)
+        # print("nn_GroupNorm: batch_size = ", batch_size)
+        # print("nn_GroupNorm: height = ", height)
+        # print("nn_GroupNorm: width = ", width)
+        # print("nn_GroupNorm: channels = ", channels)
+        # print("nn_GroupNorm: self.num_groups = ", self.num_groups)
+        # print("nn_GroupNorm: group_size  = ", group_size )
+
+        x = tf.reshape(x, [batch_size, height, width, self.num_groups, group_size])
+
+        # Compute mean and variance for each group
+        mean, variance = tf.nn.moments(x, axes=[1, 2, 4], keepdims=True)
+
+        # Normalize the input
+        normalized_x = (x - mean) / tf.sqrt(variance + self.eps)
+
+        # Reshape back to the original shape
+        normalized_x = tf.reshape(normalized_x, [batch_size, height, width, channels])
+
+        # Apply scaling (gamma) and offset (beta) if affine is True
+        if self.affine:
+            normalized_x = self.gamma * normalized_x + self.beta
+
+        normalized_x = torch_tensor_permute(normalized_x, [0,3,1,2])
+        return normalized_x
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@register_keras_serializable(package="Custom")
+class einops_layers_torch_Rearrange(tf.keras.layers.Layer):
+    """
+    A wrapper for PyTorch's nn.GroupNorm in TensorFlow.
+    Args:
+        num_groups (int): Number of groups to divide the channels into.
+        num_channels (int): Number of channels in the input tensor.
+        eps (float): A small value to add to the denominator for numerical stability.
+        affine (bool): If True, learnable scaling (gamma) and offset (beta) parameters are applied.
+    """
+    def __init__(self, dimension_str, name="einops_layers_torch_Rearrange", **kwargs):
+        super(einops_layers_torch_Rearrange, self).__init__(name=name, **kwargs)
+        self.dimension_str = dimension_str
+
+    def get_config(self):
+        """
+        Returns the configuration of the einops_layers_torch_Rearrange layer.
+        This method is used to save and restore the layer's state.
+        """
+        config = super(einops_layers_torch_Rearrange, self).get_config()
+        config.update({
+            'dimension_str': self.dimension_str,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """
+        Returns an instance of the custom layer from its configuration.
+        """
+        return cls(**config)
+
+    def call(self, x):
+        from einops.layers.tensorflow import Rearrange
+        layer = Rearrange(self.dimension_str)
+        return layer(x)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, nhead, dim_feedforward=2048, 
+                #  dropout=0.1, 
+                 dropout = 0,
+                 activation=nn_ReLU, layer_norm_eps=1e-5, batch_first=False,
+                 norm_first=False):
+        super(nn_TransformerDecoderLayer, self).__init__()
+        self.self_attn = nn_MultiheadAttention(d_model, nhead, 
+                                            #    dropout=dropout, 
+                                            #    batch_first=batch_first
+                                               )
+        self.multihead_attn = nn_MultiheadAttention(d_model, nhead, 
+                                                    # dropout=dropout, 
+                                                    # batch_first=batch_first
+                                                    )
+        
+        # Feed-Forward Network (FFN)
+        self.linear1 = nn_Linear(d_model, dim_feedforward)
+        self.linear2 = nn_Linear(dim_feedforward, d_model)
+        self.dropout = nn_Dropout(dropout)
+
+        # Normalization
+        self.norm1 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm2 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm3 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+
+        # Dropout
+        self.dropout1 = nn_Dropout(dropout)
+        self.dropout2 = nn_Dropout(dropout)
+        self.dropout3 = nn_Dropout(dropout)
+
+        self.activation = activation
+        self.norm_first = norm_first  # Control whether normalization is applied first (Pre-LN vs. Post-LN)
+
+
+    def forward(self, tgt, memory, 
+                tgt_mask=None, memory_mask=None, 
+                tgt_key_padding_mask=None, memory_key_padding_mask=None):
+        """
+        Args:            
+            tgt: Target sequence (embeddings of the target) (batch, tgt_len, d_model)
+            memory: Encoder output (batch, src_len, d_model)
+            tgt_mask: Attention mask for the target sequence
+            memory_mask: Attention mask for encoder-decoder attention
+            tgt_key_padding_mask: Padding mask for the target sequence
+            memory_key_padding_mask: Padding mask for the encoder output            
+        """
+
+        # 1. Self-Attention (Decoder)
+        if self.norm_first:
+            tgt2 = self.self_attn(self.norm1(tgt), self.norm1(tgt), self.norm1(tgt),
+                                  attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
+            tgt = tgt + self.dropout1(tgt2)
+        else:
+            tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
+            tgt = self.norm1(tgt + self.dropout1(tgt2))
+
+        # 2. Cross-Attention (Encoder-Decoder)
+        if self.norm_first:
+            tgt2 = self.multihead_attn(self.norm2(tgt), self.norm2(memory), self.norm2(memory),
+                                       attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+            tgt = tgt + self.dropout2(tgt2)
+        else:
+            tgt2 = self.multihead_attn(tgt, memory, memory, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+            tgt = self.norm2(tgt + self.dropout2(tgt2))
+
+        # 3. Feedforward Network (FFN)
+        if self.norm_first:
+            tgt2 = self.linear2(self.dropout(self.activation(self.linear1(self.norm3(tgt)))))
+            tgt = tgt + self.dropout3(tgt2)
+        else:
+            tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
+            tgt = self.norm3(tgt + self.dropout3(tgt2))
+
+        return tgt
 
 
 
@@ -3026,81 +3391,82 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 # class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
-#     def __init__(self, d_model, nhead, dim_feedforward=2048, 
-#                 #  dropout=0.1, 
-#                  dropout = 0,
-#                  activation=nn_ReLU, layer_norm_eps=1e-5, batch_first=False,
-#                  norm_first=False):
-#         super(nn_TransformerDecoderLayer, self).__init__()
-#         self.self_attn = nn_MultiheadAttention(d_model, nhead, 
-#                                             #    dropout=dropout, 
-#                                             #    batch_first=batch_first
-#                                                )
-#         self.multihead_attn = nn_MultiheadAttention(d_model, nhead, 
-#                                                     # dropout=dropout, 
-#                                                     # batch_first=batch_first
-#                                                     )
+#     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, 
+#                  name="nn_TransformerDecoderLayer", **kwargs):
+
+#         if OUTPUT_FUNCTION_HEADER:
+#             print("called nn_TransformerDecoderLayer __init__()")
+
+#         super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
+#         # self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+#         # self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+
+#         self.self_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+#         self.cross_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+
+
+#         self.ffn = nn_Sequential([
+#         # tf.keras.Sequential([
+#             # tf.keras.layers.Dense(dim_feedforward, activation=activation),
+#             nn_Linear(dim_feedforward, activation=activation),
+#             tf.keras.layers.Dropout(dropout),
+#             # tf.keras.layers.Dense(d_model),
+#             nn_Linear(d_model),
+#         ])
+
         
-#         # 前馈网络 FFN
-#         self.linear1 = nn_Linear(d_model, dim_feedforward)
-#         self.linear2 = nn_Linear(dim_feedforward, d_model)
-#         self.dropout = nn_Dropout(dropout)
+#         # self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+#         # self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+#         # self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
 
-#         # 归一化
-#         self.norm1 = nn_LayerNorm(d_model, eps=layer_norm_eps)
-#         self.norm2 = nn_LayerNorm(d_model, eps=layer_norm_eps)
-#         self.norm3 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+#         self.norm1 = nn_LayerNorm(epsilon=1e-6)
+#         self.norm2 = nn_LayerNorm(epsilon=1e-6)
+#         self.norm3 = nn_LayerNorm(epsilon=1e-6)
 
-#         # Dropout
+#         # self.dropout1 = tf.keras.layers.Dropout(dropout)
+#         # self.dropout2 = tf.keras.layers.Dropout(dropout)
+#         # self.dropout3 = tf.keras.layers.Dropout(dropout)
+
 #         self.dropout1 = nn_Dropout(dropout)
 #         self.dropout2 = nn_Dropout(dropout)
 #         self.dropout3 = nn_Dropout(dropout)
 
-#         self.activation = activation
-#         self.norm_first = norm_first  # 控制是否先归一化（Pre-LN vs. Post-LN）
+#     def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+#         # Self-attention on target
+#         tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
+#         tgt = tgt + self.dropout1(tgt2, training=training)
+#         tgt = self.norm1(tgt)
 
-#     def forward(self, tgt, memory, 
-#                 tgt_mask=None, memory_mask=None, 
-#                 tgt_key_padding_mask=None, memory_key_padding_mask=None):
-#         """
-#         Args:
-#             tgt: 目标序列 (目标的嵌入) (batch, tgt_len, d_model)
-#             memory: 编码器输出 (batch, src_len, d_model)
-#             tgt_mask: 目标序列的注意力 mask
-#             memory_mask: 编码器-解码器注意力 mask
-#             tgt_key_padding_mask: 目标序列的 padding mask
-#             memory_key_padding_mask: 编码器输出的 padding mask
-#         """
+#         # Cross-attention between target and memory
+#         tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
+#         tgt = tgt + self.dropout2(tgt2, training=training)
+#         tgt = self.norm2(tgt)
 
-#         # 1. Self-Attention (Decoder)
-#         if self.norm_first:
-#             tgt2 = self.self_attn(self.norm1(tgt), self.norm1(tgt), self.norm1(tgt),
-#                                   attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
-#             tgt = tgt + self.dropout1(tgt2)
-#         else:
-#             tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
-#             tgt = self.norm1(tgt + self.dropout1(tgt2))
-
-#         # 2. Cross-Attention (Encoder-Decoder)
-#         if self.norm_first:
-#             tgt2 = self.multihead_attn(self.norm2(tgt), self.norm2(memory), self.norm2(memory),
-#                                        attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
-#             tgt = tgt + self.dropout2(tgt2)
-#         else:
-#             tgt2 = self.multihead_attn(tgt, memory, memory, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
-#             tgt = self.norm2(tgt + self.dropout2(tgt2))
-
-#         # 3. Feedforward Network (FFN)
-#         if self.norm_first:
-#             tgt2 = self.linear2(self.dropout(self.activation(self.linear1(self.norm3(tgt)))))
-#             tgt = tgt + self.dropout3(tgt2)
-#         else:
-#             tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
-#             tgt = self.norm3(tgt + self.dropout3(tgt2))
+#         # Feedforward network
+#         tgt2 = self.ffn(tgt, training=training)
+#         tgt = tgt + self.dropout3(tgt2, training=training)
+#         tgt = self.norm3(tgt)
 
 #         return tgt
 
 
+class nn_TransformerDecoder(tf.keras.layers.Layer):
+    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoder", **kwargs):
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_TransformerDecoder __init__()")
+
+        super(nn_TransformerDecoder, self).__init__(name=name, **kwargs)
+        self.layers = [
+            nn_TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+            for _ in range(n_layers)
+        ]
+        self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+
+    def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
+        for layer in self.layers:
+            tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
+        return self.norm(tgt)
 
 
 
@@ -3109,270 +3475,185 @@ def torch_nn_init_trunc_normal_(input_tensor, mean=0.0, std=1.0, a=-2.0, b=2.0, 
 
 
 
-# # class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
-# #     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, 
-# #                  name="nn_TransformerDecoderLayer", **kwargs):
-
-# #         if OUTPUT_FUNCTION_HEADER:
-# #             print("called nn_TransformerDecoderLayer __init__()")
-
-# #         super(nn_TransformerDecoderLayer, self).__init__(name=name, **kwargs)
-# #         # self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-# #         # self.cross_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-
-# #         self.self_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-# #         self.cross_attn = nn_MultiheadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
 
 
-# #         self.ffn = nn_Sequential([
-# #         # tf.keras.Sequential([
-# #             # tf.keras.layers.Dense(dim_feedforward, activation=activation),
-# #             nn_Linear(dim_feedforward, activation=activation),
-# #             tf.keras.layers.Dropout(dropout),
-# #             # tf.keras.layers.Dense(d_model),
-# #             nn_Linear(d_model),
-# #         ])
 
+
+
+
+
+
+
+
+class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoderLayer", **kwargs):
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_TransformerEncoderLayer __init__()")
+
+        super(nn_TransformerEncoderLayer, self).__init__(name=name, **kwargs)
+        self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
+        self.ffn = tf.keras.Sequential([
+            tf.keras.layers.Dense(dim_feedforward, activation=activation),
+            tf.keras.layers.Dropout(dropout),
+            tf.keras.layers.Dense(d_model),
+        ])
+        self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+
+    def call(self, x, training):
+        # Self-attention
+        attn_output = self.self_attn(x, x, training=training)
+        x = x + self.dropout1(attn_output, training=training)
+        x = self.norm1(x)
+
+        # Feedforward network
+        ffn_output = self.ffn(x, training=training)
+        x = x + self.dropout2(ffn_output, training=training)
+        x = self.norm2(x)
+        return x
+
+
+
+
+
+class nn_TransformerEncoder(tf.keras.layers.Layer):
+    def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoder", **kwargs):
+
+        if OUTPUT_FUNCTION_HEADER:
+            print("called nn_TransformerEncoder __init__()")
+
+        super(nn_TransformerEncoder, self).__init__(name=name, **kwargs)
+        self.layers = [
+            nn_TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
+            for _ in range(n_layers)
+        ]
+
+    def call(self, x, training):
+        for layer in self.layers:
+            x = layer(x, training=training)
+        return x
+
+
+
+
+
+
+
+
+
+
+
+
+# tf.keras.optimizers.Adam(
+#     learning_rate=0.001,
+#     beta_1=0.9,
+#     beta_2=0.999,
+#     epsilon=1e-07,
+#     amsgrad=False,
+#     weight_decay=None,
+#     clipnorm=None,
+#     clipvalue=None,
+#     global_clipnorm=None,
+#     use_ema=False,
+#     ema_momentum=0.99,
+#     ema_overwrite_frequency=None,
+#     loss_scale_factor=None,
+#     gradient_accumulation_steps=None,
+#     name='adam',
+#     **kwargs
+# )
+# torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False, 
+# *, foreach=None, maximize=False, capturable=False, differentiable=False, fused=None)
+class torch_optim_Adam:
+    def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
+        """
+        A TensorFlow implementation of torch.optim.Adam.
+
+        Args:
+            params (list): List of TensorFlow variables to optimize.
+            lr (float): Learning rate.
+            betas (tuple): Coefficients used for computing running averages of gradient and its square.
+            eps (float): Term added to the denominator to improve numerical stability.
+            weight_decay (float): Weight decay (L2 penalty).
+        """
+        self.params = params
+        self.lr = lr
+        self.betas = betas
+        self.eps = eps
+        self.weight_decay = weight_decay
         
-# #         # self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-# #         # self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-# #         # self.norm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        # TensorFlow Adam optimizer
+        self.optimizer = tf.keras.optimizers.Adam(
+            learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps
+        )
 
-# #         self.norm1 = nn_LayerNorm(epsilon=1e-6)
-# #         self.norm2 = nn_LayerNorm(epsilon=1e-6)
-# #         self.norm3 = nn_LayerNorm(epsilon=1e-6)
+    def zero_grad(self):
+        """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
+        pass
 
-# #         # self.dropout1 = tf.keras.layers.Dropout(dropout)
-# #         # self.dropout2 = tf.keras.layers.Dropout(dropout)
-# #         # self.dropout3 = tf.keras.layers.Dropout(dropout)
 
-# #         self.dropout1 = nn_Dropout(dropout)
-# #         self.dropout2 = nn_Dropout(dropout)
-# #         self.dropout3 = nn_Dropout(dropout)
+    def step(self, gradients):
+        """Apply gradients to parameters."""
+        self.optimizer.apply_gradients(zip(gradients, self.params))
 
-# #     def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-# #         # Self-attention on target
-# #         tgt2 = self.self_attn(tgt, tgt, attention_mask=tgt_mask, training=training)
-# #         tgt = tgt + self.dropout1(tgt2, training=training)
-# #         tgt = self.norm1(tgt)
 
-# #         # Cross-attention between target and memory
-# #         tgt2 = self.cross_attn(tgt, memory, attention_mask=memory_mask, training=training)
-# #         tgt = tgt + self.dropout2(tgt2, training=training)
-# #         tgt = self.norm2(tgt)
+    # def apply_gradients(self, gradients):
+    #     self.optimizer.apply_gradients(zip(gradients, self.params))
 
-# #         # Feedforward network
-# #         tgt2 = self.ffn(tgt, training=training)
-# #         tgt = tgt + self.dropout3(tgt2, training=training)
-# #         tgt = self.norm3(tgt)
+    def apply_gradients(self, zipped_gradients):
+        self.optimizer.apply_gradients(zipped_gradients)
 
-# #         return tgt
 
 
-# class nn_TransformerDecoder(tf.keras.layers.Layer):
-#     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerDecoder", **kwargs):
 
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("called nn_TransformerDecoder __init__()")
 
-#         super(nn_TransformerDecoder, self).__init__(name=name, **kwargs)
-#         self.layers = [
-#             nn_TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
-#             for _ in range(n_layers)
-#         ]
-#         self.norm = tf.keras.layers.LayerNormalization(epsilon=1e-6)
 
-#     def call(self, tgt, memory, tgt_mask=None, memory_mask=None, training=None):
-#         for layer in self.layers:
-#             tgt = layer(tgt, memory, tgt_mask=tgt_mask, memory_mask=memory_mask, training=training)
-#         return self.norm(tgt)
+# torch.optim.AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False, 
+# *, maximize=False, foreach=None, capturable=False, differentiable=False, fused=None)
+class torch_optim_AdamW:
+    def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01):
+        """
+        A TensorFlow implementation of torch.optim.AdamW.
 
+        Args:
+            params (list): List of TensorFlow variables to optimize.
+            lr (float): Learning rate.
+            betas (tuple): Coefficients used for computing running averages of gradient and its square.
+            eps (float): Term added to the denominator to improve numerical stability.
+            weight_decay (float): Weight decay (L2 penalty).
+        """
+        self.params = params
+        self.lr = lr
+        self.betas = betas
+        self.eps = eps
+        self.weight_decay = weight_decay
 
+        # # TensorFlow AdamW optimizer
+        # self.optimizer = tf.keras.optimizers.experimental.AdamW(
+        #     learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
+        # )
+        # TensorFlow AdamW optimizer
+        self.optimizer = tf.keras.optimizers.AdamW(
+            learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
+        )
 
+    def zero_grad(self):
+        """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
+        pass
 
+    def step(self, gradients):
+        """Apply gradients to parameters."""
+        self.optimizer.apply_gradients(zip(gradients, self.params))
 
 
+    # def apply_gradients(self, gradients):
+    #     self.optimizer.apply_gradients(zip(gradients, self.params))
 
-
-
-
-
-
-
-
-
-
-
-
-# class nn_TransformerEncoderLayer(tf.keras.layers.Layer):
-#     def __init__(self, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoderLayer", **kwargs):
-
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("called nn_TransformerEncoderLayer __init__()")
-
-#         super(nn_TransformerEncoderLayer, self).__init__(name=name, **kwargs)
-#         self.self_attn = tf.keras.layers.MultiHeadAttention(num_heads=nhead, key_dim=d_model, dropout=dropout)
-#         self.ffn = tf.keras.Sequential([
-#             tf.keras.layers.Dense(dim_feedforward, activation=activation),
-#             tf.keras.layers.Dropout(dropout),
-#             tf.keras.layers.Dense(d_model),
-#         ])
-#         self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-#         self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-#         self.dropout1 = tf.keras.layers.Dropout(dropout)
-#         self.dropout2 = tf.keras.layers.Dropout(dropout)
-
-#     def call(self, x, training):
-#         # Self-attention
-#         attn_output = self.self_attn(x, x, training=training)
-#         x = x + self.dropout1(attn_output, training=training)
-#         x = self.norm1(x)
-
-#         # Feedforward network
-#         ffn_output = self.ffn(x, training=training)
-#         x = x + self.dropout2(ffn_output, training=training)
-#         x = self.norm2(x)
-#         return x
-
-
-
-
-
-# class nn_TransformerEncoder(tf.keras.layers.Layer):
-#     def __init__(self, n_layers, d_model, nhead, dim_feedforward, dropout, activation, name="nn_TransformerEncoder", **kwargs):
-
-#         if OUTPUT_FUNCTION_HEADER:
-#             print("called nn_TransformerEncoder __init__()")
-
-#         super(nn_TransformerEncoder, self).__init__(name=name, **kwargs)
-#         self.layers = [
-#             nn_TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
-#             for _ in range(n_layers)
-#         ]
-
-#     def call(self, x, training):
-#         for layer in self.layers:
-#             x = layer(x, training=training)
-#         return x
-
-
-
-
-
-
-
-
-
-
-
-
-# # tf.keras.optimizers.Adam(
-# #     learning_rate=0.001,
-# #     beta_1=0.9,
-# #     beta_2=0.999,
-# #     epsilon=1e-07,
-# #     amsgrad=False,
-# #     weight_decay=None,
-# #     clipnorm=None,
-# #     clipvalue=None,
-# #     global_clipnorm=None,
-# #     use_ema=False,
-# #     ema_momentum=0.99,
-# #     ema_overwrite_frequency=None,
-# #     loss_scale_factor=None,
-# #     gradient_accumulation_steps=None,
-# #     name='adam',
-# #     **kwargs
-# # )
-# # torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False, 
-# # *, foreach=None, maximize=False, capturable=False, differentiable=False, fused=None)
-# class torch_optim_Adam:
-#     def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
-#         """
-#         A TensorFlow implementation of torch.optim.Adam.
-
-#         Args:
-#             params (list): List of TensorFlow variables to optimize.
-#             lr (float): Learning rate.
-#             betas (tuple): Coefficients used for computing running averages of gradient and its square.
-#             eps (float): Term added to the denominator to improve numerical stability.
-#             weight_decay (float): Weight decay (L2 penalty).
-#         """
-#         self.params = params
-#         self.lr = lr
-#         self.betas = betas
-#         self.eps = eps
-#         self.weight_decay = weight_decay
-        
-#         # TensorFlow Adam optimizer
-#         self.optimizer = tf.keras.optimizers.Adam(
-#             learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps
-#         )
-
-#     def zero_grad(self):
-#         """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
-#         pass
-
-
-#     def step(self, gradients):
-#         """Apply gradients to parameters."""
-#         self.optimizer.apply_gradients(zip(gradients, self.params))
-
-
-#     # def apply_gradients(self, gradients):
-#     #     self.optimizer.apply_gradients(zip(gradients, self.params))
-
-#     def apply_gradients(self, zipped_gradients):
-#         self.optimizer.apply_gradients(zipped_gradients)
-
-
-
-
-
-
-# # torch.optim.AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False, 
-# # *, maximize=False, foreach=None, capturable=False, differentiable=False, fused=None)
-# class torch_optim_AdamW:
-#     def __init__(self, params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01):
-#         """
-#         A TensorFlow implementation of torch.optim.AdamW.
-
-#         Args:
-#             params (list): List of TensorFlow variables to optimize.
-#             lr (float): Learning rate.
-#             betas (tuple): Coefficients used for computing running averages of gradient and its square.
-#             eps (float): Term added to the denominator to improve numerical stability.
-#             weight_decay (float): Weight decay (L2 penalty).
-#         """
-#         self.params = params
-#         self.lr = lr
-#         self.betas = betas
-#         self.eps = eps
-#         self.weight_decay = weight_decay
-
-#         # # TensorFlow AdamW optimizer
-#         # self.optimizer = tf.keras.optimizers.experimental.AdamW(
-#         #     learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
-#         # )
-#         # TensorFlow AdamW optimizer
-#         self.optimizer = tf.keras.optimizers.AdamW(
-#             learning_rate=lr, beta_1=betas[0], beta_2=betas[1], epsilon=eps, weight_decay=weight_decay
-#         )
-
-#     def zero_grad(self):
-#         """No-op function for compatibility, gradients are reset automatically in TensorFlow."""
-#         pass
-
-#     def step(self, gradients):
-#         """Apply gradients to parameters."""
-#         self.optimizer.apply_gradients(zip(gradients, self.params))
-
-
-#     # def apply_gradients(self, gradients):
-#     #     self.optimizer.apply_gradients(zip(gradients, self.params))
-
-#     def apply_gradients(self, zipped_gradients):
-#         self.optimizer.apply_gradients(zipped_gradients)
+    def apply_gradients(self, zipped_gradients):
+        self.optimizer.apply_gradients(zipped_gradients)
 
 
 
@@ -3420,18 +3701,19 @@ def model_forward_backward_gradients(input_features, target_label, loss_func, mo
 def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grads, norm_type=2.0, error_if_nonfinite=False):
     # torch.nn.utils.clip_grad_norm_
     """
-    这里多了一个grads参数，因为tensorflow的grads要紧跟着tf.GradientTape
-    模仿 PyTorch 中的 clip_grad_norm_ 函数，裁剪 TensorFlow 模型参数的梯度
-    :param grads: 梯度列表
-    :param max_norm: 梯度的最大范数
-    :param norm_type: 范数类型，默认为 2 范数
-    :param error_if_nonfinite: 如果梯度包含非有限值（如 NaN 或 Inf），是否抛出错误
-    :return: 裁剪后的梯度
+    This function has an additional `grads` parameter because TensorFlow gradients need to be right after tf.GradientTape.
+    Mimicking PyTorch's clip_grad_norm_ function, it clips the gradients of TensorFlow model parameters.
+    
+    :param grads: List of gradients
+    :param max_norm: Maximum norm of the gradients
+    :param norm_type: Type of norm, default is L2 norm
+    :param error_if_nonfinite: Whether to raise an error if gradients contain non-finite values (e.g., NaN or Inf)
+    :return: Clipped gradients
     """
     if norm_type != 2.0:
         raise NotImplementedError("Only L2 norm is currently supported")
 
-    # 计算所有梯度的范数
+    # Compute the norm of all gradients
     grads_finite = [tf.clip_by_value(g, -1e7, 1e7) if g is not None else tf.zeros_like(parameters[i]) for i, g in enumerate(grads)]
     # print("grads_finite = ", grads_finite)
 
@@ -3439,7 +3721,7 @@ def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grad
 
     # print("global_norm = ", global_norm)
 
-    # 如果范数超过最大值，进行裁剪
+    # Clip if the norm exceeds the maximum value
     clip_coef = max_norm / (global_norm + 1e-6)
     # print("clip_coef = ", clip_coef)
     clip_coef_bf = tf.where(global_norm < max_norm, tf.ones_like(clip_coef), clip_coef)
@@ -3448,14 +3730,15 @@ def torch_nn_utils_clip_grad_norm_and_step(parameters, optimizer, max_norm, grad
 
     # print("clipped_grads = ", clipped_grads)
 
-    # 如果 error_if_nonfinite 为 True，检查非有限值
+    # If error_if_nonfinite is True, check for non-finite values
     if error_if_nonfinite:
         for g in grads:
             if g is not None and (tf.reduce_any(tf.is_nan(g)) or tf.reduce_any(tf.is_inf(g))):
                 raise ValueError("Gradients contain non-finite values.")
 
+    zip_gradients_params = zip(clipped_grads, parameters)
 
-    optimizer.apply_gradients(clipped_grads)
+    optimizer.apply_gradients(zip_gradients_params)
     
     return clipped_grads
 
@@ -3496,17 +3779,166 @@ def torch_tensor_requires_grad_(tensor, requires_grad=True):
 
 
 
-def torch_utils_data_DataLoader(dataset, batch_size=1, shuffle=False, sampler=None,
-           batch_sampler=None, num_workers=0, collate_fn=None,
-           pin_memory=False, drop_last=False, timeout=0,
-           worker_init_fn=None, *, prefetch_factor=2,
-           persistent_workers=False):
-    # torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, sampler=None,
-    #    batch_sampler=None, num_workers=0, collate_fn=None,
-    #    pin_memory=False, drop_last=False, timeout=0,
-    #    worker_init_fn=None, *, prefetch_factor=2,
-    #    persistent_workers=False)
-    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# class torch_utils_data_DataLoader:
+#     # dataset,          # The dataset
+#     # batch_size=32,    # Batch size
+#     # shuffle=True,     # Shuffle the data during training
+#     # num_workers=4,    # 4 subprocesses for loading data
+#     # pin_memory=True,  # Enable when training on GPU
+#     # drop_last=False,  # Retain the last incomplete batch
+#     # prefetch_factor=2 # Preload 2 batches per worker
+#     def __init__(self,
+#         dataset, 
+#         batch_size=1, 
+#         shuffle=False, 
+#         # sampler=None,
+#         # batch_sampler=None, 
+#         num_workers=0, 
+#         # collate_fn=None,
+#         pin_memory=False, 
+#         drop_last=False, 
+#         # timeout=0,
+#         # worker_init_fn=None, *, 
+#         prefetch_factor=2,
+#         # persistent_workers=False
+#         ):
+#         # torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, sampler=None,
+#         #    batch_sampler=None, num_workers=0, collate_fn=None,
+#         #    pin_memory=False, drop_last=False, timeout=0,
+#         #    worker_init_fn=None, *, prefetch_factor=2,
+#         #    persistent_workers=False)
+#         self.batch_size = batch_size
+#         self.shuffle = shuffle
+#         self.drop_last = drop_last
+#         self.prefetch_factor = prefetch_factor
+
+    
+#     def 
+
+    
+#     pass
+
+class torch_utils_data_DataLoader:
+    def __init__(self, dataset, batch_size=1, shuffle=False, 
+            num_workers=0, pin_memory=False, drop_last=False, prefetch_factor=2):
+        """
+        PyTorch-style DataLoader implementation, supports TensorFlow-compatible data loading.
+        :param dataset: The dataset, must be a list[dict] or implement __getitem__ and __len__
+        :param batch_size: The size of each batch
+        :param shuffle: Whether to shuffle the data
+        :param drop_last: Whether to drop the last incomplete batch
+        :param n_epochs: Total number of training epochs
+        :param seed: Random seed
+        """
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.drop_last = drop_last
+        # self.n_epochs = n_epochs
+        # self.seed = seed
+        self.data_size = len(dataset)
+
+
+    def __iter__(self):
+        """
+        Iterator method, allows traversal of data using `for batch in dataloader`
+        """
+        # self.seed
+        rng = np.random.default_rng()  # Maintain reproducibility
+        indices = list(range(self.data_size))
+
+        # for epoch in range(self.n_epochs):
+        if self.shuffle:
+            rng.shuffle(indices)  # Shuffle the index order
+        
+        
+        batch_data = {
+            "actions": [],
+            "states": [],
+            "rewards": [],
+            "next_states": [],
+            "rgb": [],
+        }
+        batch_count = 0
+
+        for i in indices:
+            sample = self.dataset[i]  # Get a sample
+            batch_data["actions"].append(sample.get("actions", None))
+            batch_data["states"].append(sample.get("states", None))
+            batch_data["rewards"].append(sample.get("rewards", None))
+            batch_data["next_states"].append(sample.get("next_states", None))
+            batch_data["rgb"].append(sample.get("rgb", None))
+
+            batch_count += 1
+
+            if batch_count == self.batch_size:  # yield when batch_size is met
+                return_dict = {}
+                for key, value in batch_data.items():
+                    # print("key = ", key)
+                    # print("value = ", value) 
+                    # print("value[0] = ", value[0])                   
+                    if value[0] is not None:
+                        return_dict[key] = tf.convert_to_tensor(value)
+                    #     # print("return_dict[key].shape = ", return_dict[key].shape)
+                    # else:
+                    #     return_dict[key] = None
+                yield return_dict
+                batch_data = {key: [] for key in batch_data}  # Reinitialize
+                batch_count = 0
+
+        if not self.drop_last and batch_count > 0:
+            # Handle the last batch (if drop_last=False)
+            # yield {key: tf.convert_to_tensor(value) for key, value in batch_data.items()}
+                return_dict = {}
+                for key, value in batch_data.items():
+                    # print("key = ", key)
+                    # print("value = ", value)
+                    if value[0] is not None:   
+                        return_dict[key] = tf.convert_to_tensor(value)
+                    # else:
+                    #     return_dict[key] = None
+                yield return_dict
+
+
+    def __len__(self):
+        """
+        Calculate the total number of batches
+        """
+        if self.drop_last:
+            return self.data_size // self.batch_size
+        return (self.data_size + self.batch_size - 1) // self.batch_size  # Round up
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3664,7 +4096,7 @@ class CosineAWR(tf.keras.optimizers.schedules.LearningRateSchedule):
 
         #Because tensorflow automatically set epoch for each epoch，to achieve the same optimizer as the pytorch version, we choose to fix epoch=None manually
         if epoch is not None:
-            epoch = int(epoch)  # 强制转换为整数
+            epoch = int(epoch)  # Force conversion to integer
 
         # print("tf: 2epoch = ", epoch)
         epoch = None
@@ -3750,7 +4182,7 @@ class CosineAWR(tf.keras.optimizers.schedules.LearningRateSchedule):
                     )
                 ) / 2
 
-        # 更新学习率
+        # update learning rate
         # tf.keras.backend.set_value(self.optimizer.lr, lr)
 
         # print("tf: lr = ", self.lr)
@@ -3764,103 +4196,417 @@ class CosineAWR(tf.keras.optimizers.schedules.LearningRateSchedule):
 
 
 
+# def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="zeros", align_corners=False):
 
 
-
-
-
-
-
-def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="zeros", align_corners=False):
-
-
-    def grid_sampler_unnormalize_tf(coord, side, align_corners):
-        if align_corners:
-            return ((coord + 1) / 2) * (side - 1)
-        else:
-            return ((coord + 1) * side - 1) / 2
+#     def grid_sampler_unnormalize_tf(coord, side, align_corners):
+#         if align_corners:
+#             return ((coord + 1) / 2) * (side - 1)
+#         else:
+#             return ((coord + 1) * side - 1) / 2
             
-    def grid_sampler_compute_source_index_tf(coord, size, align_corners):
-        return grid_sampler_unnormalize_tf(coord, size, align_corners)
+#     def grid_sampler_compute_source_index_tf(coord, size, align_corners):
+#         return grid_sampler_unnormalize_tf(coord, size, align_corners)
 
-    def safe_get_tf(image, n, c, x, y, H, W):
-        value = tf.zeros([1])
-        x = tf.cast(x, tf.int32)  # Ensure x is an integer type
-        y = tf.cast(y, tf.int32)  # Ensure y is an integer type
-        if x >= 0 and x < W and y >= 0 and y < H:
-            value = image[n, c, y, x]
-        return value
+#     def safe_get_tf(image, n, c, x, y, H, W):
+#         value = tf.zeros([1])
+#         x = tf.cast(x, tf.int32)  # Ensure x is an integer type
+#         y = tf.cast(y, tf.int32)  # Ensure y is an integer type
+#         if x >= 0 and x < W and y >= 0 and y < H:
+#             value = image[n, c, y, x]
+#         return value
 
 
-    assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
-    assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
-    assert mode == "bilinear", "only bilinear is implemented right now"
-    assert len(image.shape) == 4, "len(input.shape) must be 4"
+#     assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+#     assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+#     assert mode == "bilinear", "only bilinear is implemented right now"
+#     assert len(image.shape) == 4, "len(input.shape) must be 4"
 
+#     N, C, H_in, W_in = image.shape
+
+#     H_out = grid.shape[1]
+#     W_out = grid.shape[2]
+    
+#     # output_tensor = tf.zeros_like(image)
+    
+#     output_tensor = np.zeros( [N, C, H_out, W_out] )
+#     # np.zeros_like(image)
+
+
+
+#     for n in range(N):
+#         for w in range(W_out):
+#             for h in range(H_out):
+#                 # Get corresponding grid x and y
+#                 x = grid[n, h, w, 1]
+#                 y = grid[n, h, w, 0]
+                
+#                 # Unnormalize with align_corners condition
+#                 ix = grid_sampler_compute_source_index_tf(x, W_in, align_corners)
+#                 iy = grid_sampler_compute_source_index_tf(y, H_in, align_corners)
+                
+#                 x0 = tf.floor(ix)
+#                 x1 = x0 + 1
+
+#                 y0 = tf.floor(iy)
+#                 y1 = y0 + 1
+    
+#                 # Get W matrix before I matrix, as I matrix requires Channel information
+#                 wa = (x1 - ix) * (y1 - iy)
+#                 wb = (x1 - ix) * (iy - y0)
+#                 wc = (ix - x0) * (y1 - iy)
+#                 wd = (ix - x0) * (iy - y0)
+                
+#                 # Get values of the image by provided x0, y0, x1, y1 by channel
+#                 for c in range(C):
+#                     Ia = safe_get_tf(image, n, c, y0, x0, H_in, W_in)
+#                     Ib = safe_get_tf(image, n, c, y1, x0, H_in, W_in)
+#                     Ic = safe_get_tf(image, n, c, y0, x1, H_in, W_in)
+#                     Id = safe_get_tf(image, n, c, y1, x1, H_in, W_in)
+#                     out_ch_val = Ia * wa + Ib * wb + Ic * wc + Id * wd
+
+#                     # output_tensor[n, h, w, c] = out_ch_val
+#                     # output_tensor[n, h, w, c] = out_ch_val.numpy()
+#                     output_tensor[n, c, h, w] = out_ch_val.numpy()
+#     output_tensor = tf.convert_to_tensor(output_tensor)
+#     return output_tensor
+
+
+
+
+
+
+def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="zeros", align_corners=False):
+    def safe_gather_nd(tensor, indices, default_value=0.0):
+
+        tensor_len = len(tensor.shape)
+        indices_last_len = tf.shape(indices)[-1]
+        augment_dim = tensor_len - indices_last_len
+        
+
+        # print("tensor = ", tensor)
+        # print("indices = ", indices)
+        # Get tensor shape
+        tensor_shape = tf.shape(tensor)
+        max_indices = tensor_shape[:tf.shape(indices)[-1]]  # Calculate maximum index for each dimension
+
+        # print("max_indices = ", max_indices)
+
+        # Check if indices are out of bounds
+        is_out_of_bounds = tf.reduce_any(indices < 0, axis=-1) | tf.reduce_any(indices >= max_indices, axis=-1)
+
+        match_dim_is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)  # (3, 1)
+        
+        # print("is_out_of_bounds = ", is_out_of_bounds)
+        # print("match_dim_is_out_of_bounds = ", match_dim_is_out_of_bounds)
+        # print("tf.zeros_like(indices) = ", tf.zeros_like(indices))
+        # print("indices = ", indices)
+
+        # Create valid indices by replacing out-of-bounds indices with (0, 0, ...) to avoid errors
+        safe_indices = tf.where(match_dim_is_out_of_bounds, tf.zeros_like(indices), indices)
+
+        # print("safe_indices = ", safe_indices)
+
+        # Get gather_nd result
+        gathered_values = tf.gather_nd(tensor, safe_indices)
+
+        # print("gathered_values = ", gathered_values)
+        # print("gathered_values = ", tf.transpose(gathered_values, [0, 3, 1, 2]))
+
+        for i in range(augment_dim):
+            is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)
+
+        # print("is_out_of_bounds = ", is_out_of_bounds)
+
+        # Replace out-of-bounds indices with default_value
+        result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values),  tf.cast(default_value, gathered_values.dtype) ), gathered_values)
+
+        # print("result = ", result)
+
+        return result
+
+    assert mode == "bilinear", "Only bilinear mode is supported."
+    assert padding_mode == "zeros", "Only zeros padding_mode is implemented."
+
+    # PyTorch: [N, C, H, W] → TensorFlow: [N, H, W, C]
+    # x = tf.transpose(x, [0, 2, 3, 1])
+    # N, H_in, W_in, C = x.shape
     N, C, H_in, W_in = image.shape
 
-    H_out = grid.shape[1]
-    W_out = grid.shape[2]
+    H_out, W_out = grid.shape[1:3]
+
+    # Normalize grid [-1, 1] → [0, H-1] or [0, W-1]
+    def grid_sampler_unnormalize(coord, size, align_corners):
+        # if align_corners:
+        #     return 0.5 * ((coord + 1) * (size - 1))
+        # else:
+        #     return 0.5 * ((coord + 1) * size - 1)
+        if align_corners:
+            return ((coord + 1) / 2) * (size - 1)
+        else:
+            return ((coord + 1) * size - 1) / 2
+            
+    # dim1 = tf.reshape( tf.range(N), [-1, 1, 1, 1] )
+
+    # dim2 = tf.reshape( tf.range(H_in), [1, -1, 1, 1])
+    # dim3 = tf.reshape( tf.range(W_in), [1, 1, -1, 1])
+    # dim4 = tf.reshape( tf.range(2), [1, 1, 1, -1])
+
+    # batch_idx = tf.reshape(tf.range(N), [-1, 1, 1])  # [N, 1, 1]
+    # batch_idx = tf.broadcast_to(batch_idx, [N, y.shape[1], y.shape[2]])  # Expand to [N, H_out, W_out]
     
-    # output_tensor = tf.zeros_like(image)
+    # indices_x = tf.stack([dim1, dim3, dim3, dim4], axis=-1)
     
-    output_tensor = np.zeros( [N, C, H_out, W_out] )
-    # np.zeros_like(image)
-
-
-    for n in range(N):
-        for w in range(W_out):
-            for h in range(H_out):
-                # Get corresponding grid x and y
-                x = grid[n, h, w, 1]
-                y = grid[n, h, w, 0]
-                
-                # Unnormalize with align_corners condition
-                ix = grid_sampler_compute_source_index_tf(x, W_in, align_corners)
-                iy = grid_sampler_compute_source_index_tf(y, H_in, align_corners)
-                
-                x0 = tf.floor(ix)
-                x1 = x0 + 1
-
-                y0 = tf.floor(iy)
-                y1 = y0 + 1
-
-                
+    # xy = tf.gather_nd(image, indices_x)
     
-                # Get W matrix before I matrix, as I matrix requires Channel information
-                wa = (x1 - ix) * (y1 - iy)
-                wb = (x1 - ix) * (iy - y0)
-                wc = (ix - x0) * (y1 - iy)
-                wd = (ix - x0) * (iy - y0)
+
+
+    # ix = grid_sampler_unnormalize(grid[..., 0], W_in, align_corners)
+    # iy = grid_sampler_unnormalize(grid[..., 1], H_in, align_corners)
+    ix = grid_sampler_unnormalize(grid[..., 1], W_in, align_corners)
+    iy = grid_sampler_unnormalize(grid[..., 0], H_in, align_corners)
+    
+    # print("image.shape = ", image.shape)
+    # print("grid.shape = ", grid.shape)
+    # print("ix.shape = ", ix.shape)
+    # print("iy.shape = ", iy.shape)
+
+    x0 = tf.math.floor(ix)
+    x1 = x0 + 1
+
+    y0 = tf.math.floor(iy)
+    y1 = y0 + 1
+
+    # print("y0 = ", y0)
+    # print("y0.shape = ", y0.shape)
+
+    # print("y1 = ", y1)
+
+    # print("x0.shape = ", x0.shape)
+    # print("x1.shape = ", x1.shape)
+    # print("y0.shape = ", y0.shape)
+    # print("y1.shape = ", y1.shape)
+
+    # # Limit index range (padding_mode="zeros" handles the boundaries)
+    # x0 = tf.clip_by_value(x0, 0, W_in - 1)
+    # x1 = tf.clip_by_value(x1, 0, W_in - 1)
+    # y0 = tf.clip_by_value(y0, 0, H_in - 1)
+    # y1 = tf.clip_by_value(y1, 0, H_in - 1)
+
+    # Compute weights
+    wa = (x1 - ix) * (y1 - iy)
+    wb = (x1 - ix) * (iy - y0)
+    wc = (ix - x0) * (y1 - iy)
+    wd = (ix - x0) * (iy - y0)
+
+
+    def gather_nd(image, x, y, N):
+        """ Use tf.gather_nd for indexing, ensuring batch_idx matches the shape """
+        batch_idx = tf.reshape(tf.range(N), [-1, 1, 1])  # [N, 1, 1]
+        batch_idx = tf.broadcast_to(batch_idx, [N, y.shape[1], y.shape[2]])  # Expand to [N, H_out, W_out]
+        
+        indices = tf.stack([batch_idx, x, y], axis=-1)  # [N, H_out, W_out, 3]
+        return safe_gather_nd(image, indices)
+
+    
+
+    image = tf.transpose(image, [0, 2, 3, 1])
+
+    Ia = gather_nd(image, tf.cast(x0, tf.int32), tf.cast(y0, tf.int32), N)
+    Ib = gather_nd(image, tf.cast(x0, tf.int32), tf.cast(y1, tf.int32), N)
+    Ic = gather_nd(image, tf.cast(x1, tf.int32), tf.cast(y0, tf.int32), N)
+    Id = gather_nd(image, tf.cast(x1, tf.int32), tf.cast(y1, tf.int32), N)
+
+
+    # print("Ia = ", Ia)
+    
+    Ia = tf.transpose(Ia, [0, 3, 1, 2])
+    Ib = tf.transpose(Ib, [0, 3, 1, 2])
+    Ic = tf.transpose(Ic, [0, 3, 1, 2])
+    Id = tf.transpose(Id, [0, 3, 1, 2])
+
+    # print("Ia = ", Ia)
+    # print("Ib = ", Ib)
+    # print("Ic = ", Ic)
+    # print("Id = ", Id)
+
+    wa = tf.expand_dims(wa, axis=1)  # Change to [N, 1, H_out, W_out]
+    wa = tf.broadcast_to(wa, [N, C, H_out, W_out])
+    wb = tf.expand_dims(wb, axis=1)  # Change to [N, 1, H_out, W_out]
+    wb = tf.broadcast_to(wb, [N, C, H_out, W_out])
+    wc = tf.expand_dims(wc, axis=1)  # Change to [N, 1, H_out, W_out]
+    wc = tf.broadcast_to(wc, [N, C, H_out, W_out])
+    wd = tf.expand_dims(wd, axis=1)  # Change to [N, 1, H_out, W_out]
+    wd = tf.broadcast_to(wd, [N, C, H_out, W_out])
+
+    # print("wa = ",  wa)
+    # print("wb = ",  wb)
+    # print("wc = ",  wc)
+    # print("wd = ",  wd)
+
+    output = Ia * wa + Ib * wb + Ic * wc + Id * wd
+
+    return output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def torch_nn_functional_grid_sample2(image, grid, mode='bilinear', padding_mode="zeros", align_corners=False):
+
+
+#     def grid_sampler_unnormalize_tf(coord, side, align_corners):
+#         if align_corners:
+#             return ((coord + 1) / 2) * (side - 1)
+#         else:
+#             return ((coord + 1) * side - 1) / 2
+            
+#     def grid_sampler_compute_source_index_tf(coord, size, align_corners):
+#         return grid_sampler_unnormalize_tf(coord, size, align_corners)
+
+#     def safe_get_tf(image, n, c, x, y, H, W):
+#         value = tf.zeros([1])
+#         x = tf.cast(x, tf.int32)  # Ensure x is an integer type
+#         y = tf.cast(y, tf.int32)  # Ensure y is an integer type
+#         if x >= 0 and x < W and y >= 0 and y < H:
+#             value = image[n, c, y, x]
+#         return value
+
+
+#     assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+#     assert padding_mode == "zeros", "only zeros padding_mode is implemented right now"
+#     assert mode == "bilinear", "only bilinear is implemented right now"
+#     assert len(image.shape) == 4, "len(input.shape) must be 4"
+
+#     N, C, H_in, W_in = image.shape
+
+#     H_out = grid.shape[1]
+#     W_out = grid.shape[2]
+    
+#     # output_tensor = tf.zeros_like(image)
+    
+#     output_tensor = np.zeros( [N, C, H_out, W_out] )
+#     # np.zeros_like(image)
+
+
+#     np_Ia = np.zeros( [N, C, H_out, W_out] )
+#     np_Ib = np.zeros( [N, C, H_out, W_out] )
+#     np_Ic = np.zeros( [N, C, H_out, W_out] )
+#     np_Id = np.zeros( [N, C, H_out, W_out] )
+
+#     np_x0 = np.zeros( [N, W_out, H_out] )
+#     np_y0 = np.zeros( [N, W_out, H_out] )
+
+#     np_x1 = np.zeros( [N, W_out, H_out] )
+#     np_y1 = np.zeros( [N, W_out, H_out] )
+
+
+
+#     np_wa = np.zeros( [N, C, H_out, W_out] )
+#     np_wb = np.zeros( [N, C, H_out, W_out] )
+#     np_wc = np.zeros( [N, C, H_out, W_out] )
+#     np_wd = np.zeros( [N, C, H_out, W_out] )
+
+#     for n in range(N):
+#         for w in range(W_out):
+#             for h in range(H_out):
+#                 # Get corresponding grid x and y
+#                 x = grid[n, h, w, 1]
+#                 y = grid[n, h, w, 0]
+                
+#                 # Unnormalize with align_corners condition
+#                 ix = grid_sampler_compute_source_index_tf(x, W_in, align_corners)
+#                 iy = grid_sampler_compute_source_index_tf(y, H_in, align_corners)
+                
+#                 x0 = tf.floor(ix)
+#                 np_x0[n, h, w] = x0.numpy()
+
+#                 x1 = x0 + 1
+
+#                 np_x1[n, h, w] = x1.numpy()
+
+
+#                 y0 = tf.floor(iy)
+#                 np_y0[n, h, w] = y0.numpy()
+
+
+#                 y1 = y0 + 1
+    
+#                 np_y1[n, h, w] = y1.numpy()
+
+#                 # Get W matrix before I matrix, as I matrix requires Channel information
+#                 wa = (x1 - ix) * (y1 - iy)
+#                 wb = (x1 - ix) * (iy - y0)
+#                 wc = (ix - x0) * (y1 - iy)
+#                 wd = (ix - x0) * (iy - y0)
 
                 
-                # Get values of the image by provided x0, y0, x1, y1 by channel
-                for c in range(C):
-                    Ia = safe_get_tf(image, n, c, y0, x0, H_in, W_in)
-                    Ib = safe_get_tf(image, n, c, y1, x0, H_in, W_in)
-                    Ic = safe_get_tf(image, n, c, y0, x1, H_in, W_in)
-                    Id = safe_get_tf(image, n, c, y1, x1, H_in, W_in)
-                    out_ch_val = Ia * wa + Ib * wb + Ic * wc + Id * wd
+#                 # Get values of the image by provided x0, y0, x1, y1 by channel
+#                 for c in range(C):
+#                     Ia = safe_get_tf(image, n, c, y0, x0, H_in, W_in)
+#                     Ib = safe_get_tf(image, n, c, y1, x0, H_in, W_in)
+#                     Ic = safe_get_tf(image, n, c, y0, x1, H_in, W_in)
+#                     Id = safe_get_tf(image, n, c, y1, x1, H_in, W_in)
+#                     # out_ch_val = Ia * wa + Ib * wb + Ic * wc + Id * wd
 
-                    # output_tensor[n, h, w, c] = out_ch_val
-                    # output_tensor[n, h, w, c] = out_ch_val.numpy()
-                    output_tensor[n, c, h, w] = out_ch_val.numpy()
-    output_tensor = tf.convert_to_tensor(output_tensor)
-    return output_tensor
+#                     # output_tensor[n, h, w, c] = out_ch_val
+#                     # output_tensor[n, h, w, c] = out_ch_val.numpy()
+
+#                     np_Ia[n, c, h, w] = Ia.numpy()
+#                     np_Ib[n, c, h, w] = Ib.numpy()
+#                     np_Ic[n, c, h, w] = Ic.numpy()
+#                     np_Id[n, c, h, w] = Id.numpy()
+
+#                     np_wa[n, c, h, w] = wa.numpy()
+#                     np_wb[n, c, h, w] = wb.numpy()
+#                     np_wc[n, c, h, w] = wc.numpy()
+#                     np_wd[n, c, h, w] = wd.numpy()
+
+#                     # output_tensor[n, c, h, w] = out_ch_val.numpy()
+
+#     # print("np_Ia = ", np_Ia)
+#     # print("np_Ib = ", np_Ib)
+#     # print("np_Ic = ", np_Ic)
+#     # print("np_Id = ", np_Id)
+#     print("np_wa = ", np_wa)
+#     print("np_wb = ", np_wb)
+#     print("np_wc = ", np_wc)
+#     print("np_wd = ", np_wd)
+
+#     # print("np_Ia.shape = ", np_Ia.shape)
+
+#     print("np_x1 = ", np_x1)
+
+#     print("np_y1 = ", np_y1)
+
+#     # print("np_x0 = ", np_x0)
+#     # print("np_x0.shape = ", np_x0.shape)
+
+#     # print("np_y0 = ", np_y0)
+#     # print("np_y0.shape = ", np_y0.shape)
+
+#     # print("np_Ib = ", np_Ib)
+#     # print("np_Ic = ", np_Ic)
+#     # print("np_Id = ", np_Id)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+#     output_tensor = tf.convert_to_tensor(output_tensor)
+#     return output_tensor
 
 
 
@@ -3898,7 +4644,7 @@ def torch_nn_functional_grid_sample(image, grid, mode='bilinear', padding_mode="
 
 class Normal:
     def __init__(self, loc, scale):
-        #mean
+        # #mean
         self.loc = loc
 
         # print("self.loc = ", self.loc)
@@ -3922,88 +4668,108 @@ class Normal:
 
         # self.event_shape = scale.shape
 
+        import tensorflow_probability as tfp
+
+        self.distribution = tfp.distributions.Normal(loc=loc, scale=scale, name='Normal')
+
+        self.first_rsample = True
+
+
     def log_prob(self, x):
         """
-        计算正态分布的对数概率密度函数
+        Computes the log of the probability density function of a normal distribution.
 
         Args:
-            x: 需要计算概率密度的点
-            mean: 正态分布的均值
-            std: 正态分布的标准差
+            x: The point at which to compute the probability density.
+            mean: The mean of the normal distribution.
+            std: The standard deviation of the normal distribution.
 
         Returns:
-            对数概率密度
+            Log of the probability density.
         """
-        # var = self.scale**2
-        log_pdf = -tf.math.log(self.scale * tf.math.sqrt(2 * tf.constant(np.pi))) - 0.5 * ((x - self.loc) ** 2) / (self.scale ** 2)
+        # # var = self.scale**2
+        # log_pdf = -tf.math.log(self.scale * tf.math.sqrt(2 * tf.constant(np.pi))) - 0.5 * ((x - self.loc) ** 2) / (self.scale ** 2)
 
-        # log_pdf = torch.tensor(log_pdf.numpy())
+        # # log_pdf = torch.tensor(log_pdf.numpy())
         
-        return log_pdf
+        # return log_pdf
 
-    def sample(self, shape=None):
+        return self.distribution.log_prob(x)
+
+
+    def sample(self, sample_shape = tf.TensorShape([])):
         """
-        从正态分布中采样
-
-        Args:
-            shape: 采样的形状。如果为 None，默认返回单个样本。
-
-        Returns:
-            从正态分布中采样的张量
+        Sample from a normal distribution.
         """
 
-        if OUTPUT_VARIABLES:
-            print("1sample.shape = ", shape)
+        # if OUTPUT_VARIABLES:
+        #     print("1sample.shape = ", shape)
 
-        if shape == None or shape == tf.TensorShape([]):
-            shape = self.loc.shape
+        # if shape == None or shape == tf.TensorShape([]):
+        #     shape = self.loc.shape
 
-        if OUTPUT_VARIABLES:
-            print("1sample.shape = ", shape)
+        # if OUTPUT_VARIABLES:
+        #     print("1sample.shape = ", shape)
 
-        sampled = tf.random.normal(shape=shape, mean=self.loc, stddev=self.scale)
+        # sampled = tf.random.normal(shape=shape, mean=self.loc, stddev=self.scale)
 
-        # sampled = torch.tensor(sampled.numpy())
+        # print("Normal.sample(): = ", sampled)
 
-        # print("normal: sampled = ", sampled)
+        # # sampled = torch.tensor(sampled.numpy())
 
-        return sampled
+        # # print("normal: sampled = ", sampled)
+
+        # return sampled
+        return self.distribution.sample(sample_shape)
+
+
+    def rsample(self, sample_shape = tf.TensorShape([])):
+
+        if self.first_rsample:
+            import tensorflow_probability as tfp
+            self.distribution = tfp.distributions.Normal(loc=tf.constant(0.0), scale=tf.constant(1.0))
+            self.first_rsample = False
+        eps = self.distribution.sample(sample_shape)
+        result = self.loc + eps * self.scale
+        return result
+
 
     def entropy(self):
         """
-        计算正态分布的熵
+        Computes the entropy of the normal distribution.
 
         Returns:
-            正态分布的熵
+            The entropy of the normal distribution.
         """
-        # 使用公式 H(X) = 0.5 * log(2 * pi * e * std^2)
-        entropy = 0.5 * tf.math.log(2 * tf.constant(np.pi) * tf.constant(np.e) * self.scale ** 2)
+        # Using the formula H(X) = 0.5 * log(2 * pi * e * std^2)
+        # entropy = 0.5 * tf.math.log(2 * tf.constant(np.pi) * tf.constant(np.e) * self.scale ** 2)
         
-        # entropy = torch.tensor(entropy.numpy())
+        # # entropy = torch.tensor(entropy.numpy())
 
-        return entropy
+        # return entropy
+
+        return self.distribution.entropy()
 
 
 # import tensorflow as tf
 
 def _sum_rightmost(x, n):
     """
-    对张量的最后 n 个维度进行求和。
+    Sum the last n dimensions of a tensor.
     
     Args:
-        x: 输入的张量。
-        n: 需要求和的最后 n 个维度的数量。
-        
-    Returns:
-        求和后的张量。
+        x: The input tensor.
+        n: The number of last n dimensions to sum over.
+        Returns:
+            The tensor after summing.
     """
-    # 获取张量的总维度数
+    # Get the total number of dimensions of the tensor
     num_dims = len(x.shape)
     
-    # 求和的维度是从最后一个维度向前数 n 个维度
+    # The dimensions to sum over are the last n dimensions
     axes = list(range(num_dims - n, num_dims))
     
-    # 使用 tf.reduce_sum 对指定维度进行求和
+    # Use tf.reduce_sum to sum over the specified dimensions
     return tf.reduce_sum(x, axis=axes)
 
 
@@ -4015,36 +4781,51 @@ class Independent:
                 "Expected reinterpreted_batch_ndims <= len(base_distribution.batch_shape), "
                 f"actual {reinterpreted_batch_ndims} vs {len(base_distribution.batch_shape)}"
             )
-        shape = base_distribution.batch_shape + base_distribution.event_shape
-        # print("shape = ", shape)
+        # shape = base_distribution.batch_shape + base_distribution.event_shape
+        # # print("shape = ", shape)
 
-        # if base_distribution.event_shape != :
-        event_dim = reinterpreted_batch_ndims + len(base_distribution.event_shape)
-        # print("event_dim = ", event_dim)
-        # print("reinterpreted_batch_ndims = ", reinterpreted_batch_ndims)
-        # print("len(base_distribution.event_shape) = ", len(base_distribution.event_shape))
+        # # if base_distribution.event_shape != :
+        # event_dim = reinterpreted_batch_ndims + len(base_distribution.event_shape)
+        # # print("event_dim = ", event_dim)
+        # # print("reinterpreted_batch_ndims = ", reinterpreted_batch_ndims)
+        # # print("len(base_distribution.event_shape) = ", len(base_distribution.event_shape))
 
-        self.batch_shape = shape[: len(shape) - event_dim]
-        self.event_shape = shape[len(shape) - event_dim :]
+        # self.batch_shape = shape[: len(shape) - event_dim]
+        # self.event_shape = shape[len(shape) - event_dim :]
 
-        # print("self.batch_shape = ", self.batch_shape)
-        # print("self.event_shape = ", self.event_shape)
+        # # print("self.batch_shape = ", self.batch_shape)
+        # # print("self.event_shape = ", self.event_shape)
 
-        self.base_dist = base_distribution
-        self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
-        # super().__init__(batch_shape, event_shape, validate_args=validate_args)
+        # self.base_dist = base_distribution
+        # self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
+        # # super().__init__(batch_shape, event_shape, validate_args=validate_args)
+
+        import tensorflow_probability as tfp
+
+        # print("base_distribution = ", base_distribution)
+
+        # print("base_distribution.distribution = ", base_distribution.distribution)
+
+        self.distribution = tfp.distributions.Independent(base_distribution.distribution, reinterpreted_batch_ndims=reinterpreted_batch_ndims)  
+
 
     def log_prob(self, value):
-        log_prob = self.base_dist.log_prob(value)
-        # print("log_prob before = ", log_prob)
-        return _sum_rightmost(log_prob, self.reinterpreted_batch_ndims)
+        # log_prob = self.base_dist.log_prob(value)
+        # # print("log_prob before = ", log_prob)
+        # return _sum_rightmost(log_prob, self.reinterpreted_batch_ndims)
+
+        return self.distribution.log_prob(value)
 
     def entropy(self):
-        entropy = self.base_dist.entropy()
-        return _sum_rightmost(entropy, self.reinterpreted_batch_ndims)
+        # entropy = self.base_dist.entropy()
+        # return _sum_rightmost(entropy, self.reinterpreted_batch_ndims)
+        return self.distribution.entropy()
     
     def sample(self, sample_shape=tf.TensorShape([])):
-        return self.base_dist.sample(sample_shape)
+        # sample_result = self.base_dist.sample(sample_shape)
+        # print("Independent: sample_result = ", sample_result)
+        # return sample_result
+        return self.distribution.sample(sample_shape)
     
 
 # class Categorical:
@@ -4064,85 +4845,129 @@ class Categorical:
         
         # print("logits.shape = ", logits.shape)
 
+        # print("Categorical: __init__(): probs = ", probs)
+
+        # print("Categorical: __init__(): logits = ", logits)
+
+
         if (probs is None) == (logits is None):
             raise ValueError(
                 "Either `probs` or `logits` must be specified, but not both."
             )
 
 
+        import tensorflow_probability as tfp
+
+
+
         if probs is not None:
             self.probs = probs
+            self.distribution = tfp.distributions.Categorical(probs=probs)  
         elif logits is not None:
             self.logits = logits
             self.probs = tf.nn.softmax(logits, axis=-1)
+            self.distribution = tfp.distributions.Categorical(logits=logits)  
+    
+
         # else:
         #     raise ValueError("Must specify either probs or logits.")
     
+        # print("1: Categorical: __init__(): self.probs = ", self.probs)
 
-        # self.batch_shape = logits.shape
+        # # self.batch_shape = logits.shape
+
+        # # self.event_shape = tf.TensorShape([])
+
+        # # if self.probs is not None:
+        # if len(self.probs.shape) < 1:
+        #     raise ValueError("`probs` parameter must be at least one-dimensional.")
+        # # self.probs = probs / probs.sum(-1, keepdim=True)
+        # if probs is not None:
+        #     self.probs = probs / tf.reduce_sum(probs, axis=-1, keepdims=True)
+        
+        # print("2: Categorical: __init__(): self.probs = ", self.probs)
+
+        # # else:
+        # #     raise ValueError("must specify probs.")
+        #     # if logits.dim() < 1:
+        #     #     raise ValueError("`logits` parameter must be at least one-dimensional.")
+        #     # Normalize
+        #     # self.logits = logits - logits.logsumexp(dim=-1, keepdim=True)
+        # self._param = self.probs if probs is not None else self.logits
+        # self._num_events = self._param.shape[-1]
+        # # print("type(self._num_events) = ", type(self._num_events))
+        # batch_shape = (
+        #     self._param.shape[:-1] if len(self._param.shape) > 1 else tf.TensorShape([])
+        # )
+        # self.batch_shape = batch_shape
+        # # super().__init__(batch_shape, validate_args=validate_args)
 
         # self.event_shape = tf.TensorShape([])
 
-        # if self.probs is not None:
-        if len(self.probs.shape) < 1:
-            raise ValueError("`probs` parameter must be at least one-dimensional.")
-        # self.probs = probs / probs.sum(-1, keepdim=True)
-        if probs is not None:
-            self.probs = probs / tf.reduce_sum(probs, axis=-1, keepdims=True)
-
-        # else:
-        #     raise ValueError("must specify probs.")
-            # if logits.dim() < 1:
-            #     raise ValueError("`logits` parameter must be at least one-dimensional.")
-            # Normalize
-            # self.logits = logits - logits.logsumexp(dim=-1, keepdim=True)
-        self._param = self.probs if probs is not None else self.logits
-        self._num_events = self._param.shape[-1]
-        # print("type(self._num_events) = ", type(self._num_events))
-        batch_shape = (
-            self._param.shape[:-1] if len(self._param.shape) > 1 else tf.TensorShape([])
-        )
-        self.batch_shape = batch_shape
-        # super().__init__(batch_shape, validate_args=validate_args)
 
 
-    def sample(self):
-        return tf.random.categorical(self.probs, num_samples = 1, dtype=tf.int32)
+    def sample(self, sample_shape = tf.TensorShape([]) ):
+        # # if shape == None or shape == tf.TensorShape([]):
+        # #     shape = self.probs.shape
+
+        # # return tf.random.categorical(self.probs, num_samples = 1, dtype=tf.int32)
+
+        # if not isinstance(sample_shape, tf.TensorShape):
+        #     sample_shape = tf.TensorShape(sample_shape)
+        # num_elements = torch_tensor_item( tf.reduce_prod(sample_shape) )
+
+        # print("Categorical: sample(): num_elements = ", num_elements)
+        # # print("sample_shape.as_list() = ", sample_shape.as_list())
+        # probs_2d = torch_reshape(self.probs, -1, self._num_events)
+
+        # print("Categorical: sample(): probs_2d = ", probs_2d)
+
+        # samples_2d = torch_tensor_transpose( torch_multinomial(probs_2d, num_elements, True), 0, 1)
+        # extended_shape = tf.TensorShape(sample_shape + self.batch_shape + self.event_shape).as_list()
+
+        # print("Categorical: sample(): extended_shape = ", extended_shape)
+
+        # return torch_reshape( samples_2d, extended_shape )
+        return self.distribution(sample_shape)
+
 
     def log_prob(self, value):
-        assert len(value.shape.as_list()) <= 2
-        if self.probs is not None:
+        # assert len(value.shape.as_list()) <= 2
+        # if self.probs is not None:
 
-            value_shape_list = list(value.shape)
+        #     value_shape_list = list(value.shape)
 
-            batch_dim = value_shape_list[0]
+        #     batch_dim = value_shape_list[0]
 
-            all_tensors = []
+        #     all_tensors = []
 
-            for i in range(batch_dim):
-                index = int(value[i, ...].numpy())  # 获取索引
+        #     for i in range(batch_dim):
+        #         index = int(value[i, ...].numpy())  # Get the index
 
-                log_prob_value = tf.gather(self.probs, index, axis=-1)  # 从 probs 中收集数据
+        #         log_prob_value = tf.gather(self.probs, index, axis=-1)  # Gather data from probs
 
-                # 然后计算 log
-                log_prob_value = tf.math.log(log_prob_value)
+        #         # Then compute the log
+        #         log_prob_value = tf.math.log(log_prob_value)
 
-                # 将结果重新形状化
-                all_tensors.append(tf.reshape(log_prob_value, [1, -1]))
+        #         # Reshape the result
+        #         all_tensors.append(tf.reshape(log_prob_value, [1, -1]))
                 
-            if batch_dim == 1:
-                result = all_tensors[0]
-            else:
-                result = tf.concat(all_tensors, axis=0)
+        #     if batch_dim == 1:
+        #         result = all_tensors[0]
+        #     else:
+        #         result = tf.concat(all_tensors, axis=0)
 
-            return result
+        #     return result
 
-        else:  # logits provided
-            raise ValueError("Must specify probs.")
+        # else:  # logits provided
+        #     raise ValueError("Must specify probs.")
+
+        return self.distribution.sample(value)
 
 
     def entropy(self):
-        return -tf.reduce_sum( self.probs * tf.math.log(self.probs), axis=-1 )
+        # return -tf.reduce_sum( self.probs * tf.math.log(self.probs), axis=-1 )
+        return self.distribution.entropy()
 
 
 
@@ -4152,110 +4977,176 @@ class MixtureSameFamily:
     def __init__(
             self, mixture_distribution, component_distribution, validate_args=None
         ):
-        self._mixture_distribution = mixture_distribution
-        self._component_distribution = component_distribution
+        # self._mixture_distribution = mixture_distribution
+        # self._component_distribution = component_distribution
 
-        if not isinstance(self._mixture_distribution, Categorical):
-            raise ValueError(
-                " The Mixture distribution needs to be an "
-                " instance of torch.distributions.Categorical"
-            )
+        import tensorflow_probability as tfp
 
-        # if not isinstance(self._component_distribution, Distribution):
+        self.distribution = tfp.distributions.MixtureSameFamily(mixture_distribution = mixture_distribution.distribution, \
+                                                                components_distribution = component_distribution.distribution)
+
+        # if not isinstance(self._mixture_distribution, Categorical):
         #     raise ValueError(
-        #         "The Component distribution need to be an "
-        #         "instance of torch.distributions.Distribution"
+        #         " The Mixture distribution needs to be an "
+        #         " instance of torch.distributions.Categorical"
         #     )
 
-        # Check that batch size matches
-        mdbs = self._mixture_distribution.batch_shape
+        # # if not isinstance(self._component_distribution, Distribution):
+        # #     raise ValueError(
+        # #         "The Component distribution need to be an "
+        # #         "instance of torch.distributions.Distribution"
+        # #     )
 
-        if OUTPUT_VARIABLES:
-            print("self._component_distribution.batch_shape = ", self._component_distribution.batch_shape)
+        # # Check that batch size matches
+        # mdbs = self._mixture_distribution.batch_shape
 
-        cdbs = self._component_distribution.batch_shape[:-1]
-        # cdbs = self._component_distribution.batch_shape
+        # if OUTPUT_VARIABLES:
+        #     print("self._component_distribution.batch_shape = ", self._component_distribution.batch_shape)
+
+        # cdbs = self._component_distribution.batch_shape[:-1]
+        # # cdbs = self._component_distribution.batch_shape
         
-        for size1, size2 in zip(reversed(mdbs), reversed(cdbs)):
-            if size1 != 1 and size2 != 1 and size1 != size2:
-                raise ValueError(
-                    f"`mixture_distribution.batch_shape` ({mdbs}) is not "
-                    "compatible with `component_distribution."
-                    f"batch_shape`({cdbs})"
-                )
+        # for size1, size2 in zip(reversed(mdbs), reversed(cdbs)):
+        #     if size1 != 1 and size2 != 1 and size1 != size2:
+        #         raise ValueError(
+        #             f"`mixture_distribution.batch_shape` ({mdbs}) is not "
+        #             "compatible with `component_distribution."
+        #             f"batch_shape`({cdbs})"
+        #         )
 
-        # Check that the number of mixture component matches
-        km = self._mixture_distribution.logits.shape[-1]
-        kc = self._component_distribution.batch_shape[-1]
-        if km is not None and kc is not None and km != kc:
-            raise ValueError(
-                f"`mixture_distribution component` ({km}) does not"
-                " equal `component_distribution.batch_shape[-1]`"
-                f" ({kc})"
-            )
-        self._num_component = km
+        # # Check that the number of mixture component matches
+        # km = self._mixture_distribution.logits.shape[-1]
+        # kc = self._component_distribution.batch_shape[-1]
+        # if km is not None and kc is not None and km != kc:
+        #     raise ValueError(
+        #         f"`mixture_distribution component` ({km}) does not"
+        #         " equal `component_distribution.batch_shape[-1]`"
+        #         f" ({kc})"
+        #     )
+        # self._num_component = km
 
-        event_shape = self._component_distribution.event_shape
-        self._event_ndims = len(event_shape)
+        # event_shape = self._component_distribution.event_shape
+        # self._event_ndims = len(event_shape)
 
-        self.batch_shape = cdbs
-        self.event_shape = event_shape
+        # self.batch_shape = cdbs
+        # self.event_shape = event_shape
 
-        # super().__init__(
-        #     batch_shape=cdbs, event_shape=event_shape, validate_args=validate_args
-        # )
+        # # super().__init__(
+        # #     batch_shape=cdbs, event_shape=event_shape, validate_args=validate_args
+        # # )
 
 
     def log_prob(self, x):
-        # if self._validate_args:
-        #     self._validate_sample(x)
-        x = tf.expand_dims(x, axis=-1 - self._event_ndims)
-        log_prob_x = self.component_distribution.log_prob(x)  # [S, B, k]
+        # # if self._validate_args:
+        # #     self._validate_sample(x)
+        # x = tf.expand_dims(x, axis=-1 - self._event_ndims)
+        # log_prob_x = self._component_distribution.log_prob(x)  # [S, B, k]
 
 
-        log_mix_prob = tf.math.log(self.mixture_distribution.probs)
+        # log_mix_prob = tf.math.log(self._mixture_distribution.probs)
 
-        return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]
+        # return torch_logsumexp(log_prob_x + log_mix_prob, dim=-1)  # [S, B]
+        return self.distribution.log_prob(x)
 
 
     def sample(self, sample_shape = tf.TensorShape([]) ):
-        with torch_no_grad() as tape:
-            # sample_len = len(sample_shape)
-            # batch_len = len(self.batch_shape)
+        # with torch_no_grad() as tape:
+        #     # sample_len = len(sample_shape)
+        #     # batch_len = len(self.batch_shape)
 
-            sample_len = sample_shape[0]
-            batch_len = self.batch_shape[0]
-
-            gather_dim = sample_len + batch_len
-            es = self.event_shape
-
-            # mixture samples [n, B]
-            mix_sample = self.mixture_distribution.sample(sample_shape)
-            mix_shape = mix_sample.shape
-
-            # component samples [n, B, k, E]
-            comp_samples = self.component_distribution.sample(sample_shape)
-
-            mix_sample_shape = list(mix_shape) + [1] * (len(es) + 1)
-
-            print("list(mix_shape) = ", list(mix_shape))
-
-            print("[1] * (len(es) + 1) = ", [1] * (len(es) + 1))
-
-            print("mix_sample_shape = ", mix_sample_shape)
-
-            # Gather along the k dimension
-            mix_sample_r = torch_reshape(mix_sample,
-                mix_sample_shape
-            )
-
-            mix_sample_r = torch_tensor_repeat( mix_sample_r,
-                [1] * mix_shape[0] + [1] + es
-            )
-
-            samples = torch_gather(comp_samples, gather_dim, mix_sample_r)
-            return torch_squeeze(samples, gather_dim)
+        #     # sample_len = sample_shape[0]
+        #     # batch_len = self.batch_shape[0]
+        #     sample_len = len(sample_shape)
+        #     # [0] if sample_shape.rank > 0 else 0
+        #     batch_len = len(self.batch_shape)
+        #     # [0] if self.batch_shape.rank > 0 else 0
 
 
 
+        #     gather_dim = sample_len + batch_len
+        #     es = self.event_shape
 
+
+
+        #     # mixture samples [n, B]
+        #     mix_sample = self._mixture_distribution.sample(sample_shape)
+        #     mix_shape = mix_sample.shape
+
+        #     # component samples [n, B, k, E]
+        #     comp_samples = self._component_distribution.sample(sample_shape)
+
+        #     mix_sample_shape = list(mix_shape) + [1] * (len(es) + 1)
+
+        #     print("MixtureSameFamily.sample(): list(mix_shape) = ", list(mix_shape))
+
+        #     print("MixtureSameFamily.sample(): [1] * (len(es) + 1) = ", [1] * (len(es) + 1))
+
+        #     print("MixtureSameFamily.sample(): mix_sample_shape = ", mix_sample_shape)
+
+        #     # Gather along the k dimension
+        #     mix_sample_r = torch_reshape(mix_sample,
+        #         mix_sample_shape
+        #     )
+
+        #     shape_list = [1] * len(mix_shape) + [1] + es
+
+        #     print("MixtureSameFamily.sample(): mix_sample_r = ", mix_sample_r)
+        #     print("MixtureSameFamily.sample(): shape_list = ", shape_list)
+
+        #     mix_sample_r = torch_tensor_repeat( mix_sample_r,
+        #         shape_list
+        #     )
+
+        #     # print("mix_sample_r:2 = ", mix_sample_r)
+
+        #     print("MixtureSameFamily.sample(): comp_samples = ", comp_samples)
+        #     print("MixtureSameFamily.sample(): gather_dim = ", gather_dim)
+        #     print("MixtureSameFamily.sample(): mix_sample_r = ", mix_sample_r)
+
+        #     # (40, 5, 8)
+        #     # 40
+        #     # (40, 1, 8)
+
+        #     samples = torch_gather(comp_samples, gather_dim, mix_sample_r)
+
+        #     return torch_squeeze(samples, gather_dim)
+        return self.distribution.sample(sample_shape)
+
+
+
+
+
+
+
+
+
+
+
+
+# class MultivariateNormal:
+#     def __init__(self, loc, covariance_matrix=None, precision_matrix=None, scale_tril=None, validate_args=None):
+
+#         import tensorflow_probability as tfp
+
+
+#         self.distribution = tfp.distributions.Independent(loc, covariance_matrix)  
+
+
+#     def log_prob(self, value):
+#         # log_prob = self.base_dist.log_prob(value)
+#         # # print("log_prob before = ", log_prob)
+#         # return _sum_rightmost(log_prob, self.reinterpreted_batch_ndims)
+
+#         return self.distribution.log_prob(value)
+
+#     def entropy(self):
+#         # entropy = self.base_dist.entropy()
+#         # return _sum_rightmost(entropy, self.reinterpreted_batch_ndims)
+#         return self.distribution.entropy()
+    
+#     def sample(self, sample_shape=tf.TensorShape([])):
+#         # sample_result = self.base_dist.sample(sample_shape)
+#         # print("Independent: sample_result = ", sample_result)
+#         # return sample_result
+#         return self.distribution.sample(sample_shape)
+    
