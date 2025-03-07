@@ -34,7 +34,7 @@ class SpatialEmb(tf.keras.layers.Layer):
         num_proj = patch_dim
 
 
-        # #输入是proj_in_dim维度的
+        # # input is of proj_in_dim dimension
         # # Input projection layers
         # self.input_proj = tf.keras.Sequential([
         #     tf.keras.layers.Dense(proj_dim),
@@ -42,7 +42,7 @@ class SpatialEmb(tf.keras.layers.Layer):
         #     tf.keras.layers.ReLU()
         # ])
 
-        #输入是proj_in_dim维度的
+        # # input is of proj_in_dim dimension
         # Input projection layers
         if serialized_input_proj:
             self.input_proj = serialized_input_proj
@@ -137,9 +137,9 @@ class SpatialEmb(tf.keras.layers.Layer):
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'MLP': MLP,                            # Custom MLP layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,
             'nn_Dropout': nn_Dropout,

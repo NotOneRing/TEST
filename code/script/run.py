@@ -60,7 +60,7 @@ print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 # DPPO_WANDB_ENTITY=None
 
-#输出环境变量work了
+# use this line before running code
 # export WANDB_MODE=disabled
 
 # allows arbitrary python code execution in configs using the ${eval:''} resolver

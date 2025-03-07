@@ -186,9 +186,9 @@ class GaussianModel(tf.keras.Model):
             #     'Gaussian_MLP': Gaussian_MLP,
             #     # 'VPGDiffusion': VPGDiffusion,
             #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-            #     'MLP': MLP,                            # 自定义的 MLP 层
-            #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            #     'MLP': MLP,                            # Custom MLP layer
+            #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
             #     "nn_Identity": nn_Identity,
             #     'nn_Linear': nn_Linear,
             #     'nn_LayerNorm': nn_LayerNorm,
@@ -343,9 +343,9 @@ class GaussianModel(tf.keras.Model):
         #     'Gaussian_MLP': Gaussian_MLP,
         #     # 'VPGDiffusion': VPGDiffusion,
         #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # 自定义的 MLP 层
-        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #     'MLP': MLP,                            # Custom MLP layer
+        #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+        #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
         #     "nn_Identity": nn_Identity,
         #     'nn_Linear': nn_Linear,
         #     'nn_LayerNorm': nn_LayerNorm,
@@ -649,7 +649,7 @@ class GaussianModel(tf.keras.Model):
             shape1 = (256, 8, 14)
             shape2 = (256, 1, 59)
 
-        # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
+        # the same name "avoiding-m5" for D3IL with avoid_m1/m2/m3
         elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
             #avoid_m1
             # item_actions_copy.shape =  
@@ -768,7 +768,7 @@ class GaussianModel(tf.keras.Model):
 
 
 
-        # 打印加载的内容
+        # print loaded content
 
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)
@@ -832,7 +832,7 @@ class GaussianModel(tf.keras.Model):
 
 
 
-        # 打印加载的内容
+        # print loaded content
 
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)

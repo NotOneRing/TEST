@@ -17,9 +17,9 @@ cur_dict = {
     'DiffusionMLP': DiffusionMLP,
     # 'VPGDiffusion': VPGDiffusion,
     'SinusoidalPosEmb': SinusoidalPosEmb,   
-    'MLP': MLP,                            # 自定义的 MLP 层
-    'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-    'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+    'MLP': MLP,                            # Custom MLP layer
+    'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+    'nn_Sequential': nn_Sequential,        # Custom Sequential class
     'nn_Linear': nn_Linear,
     'nn_LayerNorm': nn_LayerNorm,
     'nn_Dropout': nn_Dropout,

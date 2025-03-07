@@ -297,7 +297,7 @@ class Gaussian_VisionMLP(tf.keras.layers.Layer):
         config = super(Gaussian_VisionMLP, self).get_config()
 
 
-        # 打印每个属性及其类型和值
+        # print every property with its type and value
         if OUTPUT_VARIABLES:
             print("Checking Gaussian_VisionMLP Config elements:")
             print(f"backbone: {self.backbone}, type: {type(self.backbone)}")
@@ -658,7 +658,7 @@ class Gaussian_MLP(tf.keras.Model):
 
 
 
-        # 打印每个属性及其类型和值
+        # print every property with its type and value
         if OUTPUT_VARIABLES:
             print("Checking DiffusionMLP Config elements:")
             print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
@@ -729,9 +729,9 @@ class Gaussian_MLP(tf.keras.Model):
         #     'GaussianModel': GaussianModel,
         #     # 'VPGDiffusion': VPGDiffusion,
         #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # 自定义的 MLP 层
-        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #     'MLP': MLP,                            # Custom MLP layer
+        #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+        #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
         #     'nn_Linear': nn_Linear,
         #     'nn_LayerNorm': nn_LayerNorm,
         #     'nn_Dropout': nn_Dropout,

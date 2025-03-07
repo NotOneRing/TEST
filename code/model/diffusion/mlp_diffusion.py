@@ -275,7 +275,7 @@ class VisionDiffusionMLP(tf.keras.Model):
         config = super(VisionDiffusionMLP, self).get_config()
 
 
-        # 打印每个属性及其类型和值
+        # print every property with its type and value
         if OUTPUT_VARIABLES:
             print("Checking VisionDiffusionMLP Config elements:")
 
@@ -544,10 +544,10 @@ class VisionDiffusionMLP(tf.keras.Model):
 #         self.fan_in = fan_in
 
 #     def __call__(self, shape, dtype=None):
-#         limit = math.sqrt(3.0 / self.fan_in)  # PyTorch 的 Kaiming Uniform 范围
+#         limit = math.sqrt(3.0 / self.fan_in)  # PyTorch's value range of Kaiming Uniform
 #         return tf.random.uniform(shape, -limit, limit, dtype=dtype)
 
-#     def get_config(self):  # 必须实现以支持序列化
+#     def get_config(self):  # support serialization
 #         return {'fan_in': self.fan_in}
 
 #     @classmethod
@@ -704,9 +704,9 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         # self.time_embedding = tf.keras.Sequential([
         #     SinusoidalPosEmb(time_dim),
-        #     CustomDense(units=time_dim * 2, input_dim=time_dim),  # 自定义初始化的 Dense 层
+        #     CustomDense(units=time_dim * 2, input_dim=time_dim),  # Custom Dense layer
         #     tf.keras.layers.Activation('mish'),
-        #     CustomDense(units=time_dim, input_dim=time_dim * 2),  # 自定义初始化的 Dense 层
+        #     CustomDense(units=time_dim, input_dim=time_dim * 2),  # Custom Dense layer
         # ])
 
 
@@ -774,7 +774,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
         # config = {}
         config = super(DiffusionMLP, self).get_config()
 
-        # 打印每个属性及其类型和值
+        # print every property with its type and value
         if OUTPUT_VARIABLES:
             print("Checking DiffusionMLP Config elements:")
             print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")
@@ -880,9 +880,9 @@ class DiffusionMLP(tf.keras.layers.Layer):
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'MLP': MLP,                            # Custom MLP layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,
             'nn_Dropout': nn_Dropout,
@@ -1228,24 +1228,24 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
     #     model = Model(inputs=x, outputs=output)
 
-    #     # 返回模型的 summary
+    #     # return model's summary
     #     return model.summary()
 
 
     # def summary(self, x, time, cond, **kwargs):
     #     from tensorflow.keras import Input, Model
 
-    #     # # 假设x的形状为 (self.action_dim * self.horizon_steps,)
+    #     # # suppose the shape of x is (self.action_dim * self.horizon_steps,)
     #     # x_input = Input(shape=(self.action_dim * self.horizon_steps,), name='x_input')
 
     #     # # print("self.action_dim * self.horizon_steps = ", self.action_dim * self.horizon_steps)
 
-    #     # # 假设time的形状为 (time_dim,) 
+    #     # # suppose the shape of time is (time_dim,) 
     #     # time_input = Input(shape=(1,), name='time_input')
 
 
     #     # if self.cond_mlp_dims is not None:
-    #     #     # 假设cond的形状为 (cond_dim,)
+    #     #     # suppose the shape of cond is (cond_dim,)
     #     #     cond_input = Input(shape=(self.cond_mlp_dims[-1],), name='cond_input')
     #     #     # print("self.cond_mlp_dims[-1] = ", self.cond_mlp_dims[-1])
     #     # else:
@@ -1254,10 +1254,10 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
     #     # # print("[x_input, time_input, cond_input] = ", [x_input, time_input, cond_input])
 
-    #     # # 调用模型的 call 方法获取输出
+    #     # # use model's call() method to gain output
     #     # output = self.call(x_input, time_input, cond_input)
 
-    #     # 创建模型
+    #     # create the model
     #     # model = Model(inputs=[x_input, time_input, cond_input], outputs=output)
 
     #     cond_state = cond['state']
@@ -1302,7 +1302,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
     #     model = Model(inputs=[x, time, cond_state], outputs=output)
 
-    #     # 返回模型的 summary
+    #     # return model's summary
     #     return model.summary()
 
 

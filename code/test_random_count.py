@@ -1,10 +1,10 @@
 import numpy as np
 from functools import wraps
 
-# 计数器初始化
+# Initialize counter
 random_call_count = 0
 
-# 定义装饰器
+# Define decorator
 def count_random_calls(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -13,12 +13,13 @@ def count_random_calls(func):
         return func(*args, **kwargs)
     return wrapper
 
-# Hook 所有 np.random 函数（示例 Hook 两个函数）
+# Hook np.random functions (example: Hook two functions)
 np.random.normal = count_random_calls(np.random.normal)
 np.random.randint = count_random_calls(np.random.randint)
 
-# 测试调用
+# Test the calls
 data1 = np.random.normal(0, 1, size=10)
 data2 = np.random.randint(0, 10, size=5)
 
 print(f"Random functions called {random_call_count} times.")
+

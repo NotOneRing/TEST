@@ -179,7 +179,7 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                 # with torch.no_grad():
                 with torch_no_grad() as tape:
                     
-                    # 这个和torch版本一样
+                    # Same as the torch version
                     # print("prev_obs_venv['state'] = ", prev_obs_venv["state"])
 
                     cond = {
@@ -354,7 +354,8 @@ class TrainPPODiffusionAgent(TrainPPOAgent):
                         print("type(self.model.critic) = ", type(self.model.critic))
 
                         # values = self.model.critic(obs).cpu().numpy().flatten()
-                        #这里的是obs，不是obs_next
+                        
+                        #obs here，not obs_next
                         values = self.model.critic(obs).numpy().flatten()
                         
                         values_trajs = np.vstack(

@@ -113,14 +113,14 @@ class StitchedSequenceDataset:
         # print("sequence.py: StitchedSequenceDataset.__getitem__()")
         start, num_before_start = self.indices[idx]
 
-        # 计算结束索引
+        # Calculate the end index
         end = start + self.horizon_steps
         
         states = self.states[(start - num_before_start) : (start + 1), :]
 
         actions = self.actions[start:end, :]
         
-        # 将状态按时间倒序堆叠，因此最近的状态在最后
+        # Stack the states in reverse order of time, so that the most recent state is at the last
         states = tf.stack(
             [
                 # states[max(num_before_start - t, 0)]
@@ -133,14 +133,14 @@ class StitchedSequenceDataset:
 
         # print("after returned dict")
 
-        # 如果使用图像，则从开始索引减去开始前的步数到结束索引获取图像
+        # If images are used, adjust the start index by subtracting the steps prior to the start
         if self.use_img:
             # raise NotImplementedError("use_img: dimension check is not implemented now.")
             
             # print("images.shape = ", images.shape)
             images = self.images[(start - num_before_start) : end]
 
-            # 将图像按时间倒序堆叠，因此最近的图像在最后
+            # Stack the images in reverse order of time, so that the most recent image is at the last
             images = torch_stack(
                 [
                     images[max(num_before_start - t, 0)]
@@ -148,19 +148,18 @@ class StitchedSequenceDataset:
                 ]
             )
 
-            # # 将图像添加到条件字典中
+            # Add images to the condition dictionary
             # conditions["rgb"] = images
 
             returned_dict['rgb'] = images
 
-        # # 创建一个包含动作和条件的批次
+        # Create a batch of actions and conditions
         # batch = Batch(actions, conditions)
         returned_dict['actions'] = actions
 
         # print("type(batch) = ", type(batch))
         # print("batch = ", batch)
 
-        # # 返回批次
         # return batch
         return returned_dict
 
@@ -204,25 +203,24 @@ class StitchedSequenceDataset:
 
 
     def _inputs(self):
-        # 数据集没有父数据集作为输入，因此返回 None
         return None
 
 
     # @property
     # def element_spec(self):
-    #     # 定义动作的 TensorSpec
+    #     # Define the TensorSpec of action
     #     action_spec = tf.TensorSpec(
     #         shape=(self.horizon_steps, self.actions.shape[-1]),
     #         dtype=self.actions.dtype,
     #     )
 
-    #     # 定义状态的 TensorSpec
+    #     # Define the TensorSpec of state
     #     state_spec = tf.TensorSpec(
     #         shape=(self.cond_steps, self.states.shape[-1]),
     #         dtype=self.states.dtype,
     #     )
 
-    #     # 定义 conditions 的字典结构
+    # Define the structure of the specifications dictionary
     #     spec = {"state": state_spec}
     #     if self.use_img:
     #         img_spec = tf.TensorSpec(
@@ -230,7 +228,7 @@ class StitchedSequenceDataset:
     #             dtype=self.images.dtype,
     #         )
     #         spec["rgb"] = img_spec
-    #     # 返回一个 Batch 的 TensorSpec
+    # Return TensorSpecs for (action, batch_inputs)
     #     return (action_spec, spec)
 
 

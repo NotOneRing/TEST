@@ -3,16 +3,16 @@
 
 import tensorflow_datasets as tfds
 
-# # 加载 d4rl_mujoco_hopper/v2-medium 数据集
+# # load d4rl_mujoco_hopper/v2-medium dataset
 # dataset, info = tfds.load('d4rl_mujoco_hopper/v2-medium', with_info=True, as_supervised=True)
 
-# # 查看数据集的信息
+# # View dataset information
 # print(info)
 
-# # 获取训练集
+# # Get the training set
 # train_data = dataset['train']
 
-# # 预览数据集中的一部分
+# # Preview a portion of the dataset
 # for example in train_data.take(5):
 #     states, actions = example
 #     print('States:', states.numpy())
@@ -20,10 +20,10 @@ import tensorflow_datasets as tfds
 
 
 dataset = tfds.load('d4rl_mujoco_hopper/v2-medium', as_supervised=False)
-# 获取数据集中的信息
+# Get dataset information
 # print(info)
 
-# 查看数据集内容结构
+# View the structure of the dataset
 for example in dataset['train']:
     print(example)
     break

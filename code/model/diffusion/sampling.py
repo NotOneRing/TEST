@@ -39,8 +39,8 @@ def extract(a, t, x_shape):
     # b = t.get_shape().as_list()[0]
     b = t.shape[0]
     
-    # print("tf.shape(t):", tf.shape(t))  # 返回形状
-    # print("tf.shape(t)[0]:", tf.shape(t)[0])  # 直接获取第一个维度
+    # print("tf.shape(t):", tf.shape(t))  # get shape
+    # print("tf.shape(t)[0]:", tf.shape(t)[0])  # get the first dimension
 
     # print("int(b.numpy()) = ", int(b.numpy()))
     # print("int(b) = ", int(b))

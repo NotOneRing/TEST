@@ -825,7 +825,7 @@ class SAC_PPODiffusion(VPGDiffusion):
             shape1 = (256, 8, 14)
             shape2 = (256, 1, 59)
 
-        # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
+        # the same name "avoiding-m5" for D3IL with avoid_m1/m2/m3
         elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
             #avoid_m1
             # item_actions_copy.shape =  

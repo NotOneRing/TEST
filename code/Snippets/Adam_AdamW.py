@@ -28,7 +28,7 @@ class my_opt():
         self.b2t = 1.0
 
 
-    # 模拟Adam的step
+    # simulate Adam's step()
     def step(self):
         for name, param in self.params.named_parameters():
             if param.grad is None:
@@ -44,7 +44,7 @@ class my_opt():
             param.data -= n * (self.lr * m / (v.sqrt() + self.eps))
 
 
-    # 模拟AdamW的step
+    # simulate AdamW's step
     def stepW(self):
         for name, param in self.params.named_parameters():
             if param.grad is None:
@@ -66,7 +66,7 @@ adam_model = M()
 adamw_model = M()
 my_adam_model = M()
 my_adamw_model = M()
-# 使4个模型参数相同
+# make the 4 models have the same parameters
 adamw_model.load_state_dict(adam_model.state_dict())
 my_adam_model.load_state_dict(adam_model.state_dict())
 my_adamw_model.load_state_dict(adam_model.state_dict())
@@ -76,7 +76,7 @@ model_ls = {'adam_model': adam_model,
             'my_adam_model': my_adam_model,
             'my_adamw_model': my_adamw_model}
 
-# 检查4个模型初始参数
+# check the initialized parameters of the 4 models
 for m in model_ls:
     print(f"Model : {m}")
     model = model_ls[m]
@@ -118,3 +118,12 @@ for i in range(5):
             print(parma)
 
         model.zero_grad()
+
+
+
+
+
+
+
+
+

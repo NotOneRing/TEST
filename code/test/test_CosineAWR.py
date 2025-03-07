@@ -394,7 +394,7 @@ def test_torch_and_tf_learning_rate_model():
     # Define optimizers
     # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=1)
     # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=0.0000001)
-    #这里的lr是废的，改多大多小都行，最后被CosineAnnealingWarmupRestarts里面的值替代了
+    #discarded lr, replaced by value inside CosineAnnealingWarmupRestarts
     torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=0.01)
 
     # from util.scheduler import CosineAnnealingWarmupRestarts
@@ -562,7 +562,7 @@ def test_torch_and_tf_learning_rate_model_AdamW():
     # Define optimizers
     # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=1)
     # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=0.0000001)
-    #这里的lr是废的，改多大多小都行，最后被CosineAnnealingWarmupRestarts里面的值替代了
+    #discarded lr, replaced by value inside CosineAnnealingWarmupRestarts
     torch_optimizer = torch.optim.AdamW(torch_model.parameters(), lr=0.01)
 
     # from util.scheduler import CosineAnnealingWarmupRestarts
@@ -753,7 +753,7 @@ def test_torch_and_tf_learning_rate_model_AdamW():
     # Define optimizers
     # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=1)
     # torch_optimizer = torch.optim.Adam(torch_model.parameters(), lr=0.0000001)
-    #这里的lr是废的，改多大多小都行，最后被CosineAnnealingWarmupRestarts里面的值替代了
+    #discarded lr, replaced by value inside CosineAnnealingWarmupRestarts
     torch_optimizer = torch.optim.AdamW(torch_model.parameters(), lr=0.01)
 
     # from util.scheduler import CosineAnnealingWarmupRestarts

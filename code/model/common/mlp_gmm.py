@@ -233,7 +233,7 @@ class GMM_MLP(tf.keras.Model):
 
 
 
-        # 打印每个属性及其类型和值
+        # print every property with its type and value
         if OUTPUT_VARIABLES:
             print("Checking GMM_MLP Config elements:")
             print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")

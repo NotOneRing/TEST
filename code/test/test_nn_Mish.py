@@ -5,13 +5,13 @@ import numpy as np
 
 
 def test_Mish():
-    # 创建一个ELU激活层
+    # create a Mish activation
     mish = nn.Mish()
 
-    # 输入张量
+    # input tensor
     input_tensor = torch.tensor([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply mish activation
     output = mish(input_tensor)
     print(output)
 
@@ -20,13 +20,13 @@ def test_Mish():
     import tensorflow as tf
     from util.torch_to_tf import nn_Mish
 
-    # 创建一个ELU激活层
+    # create a layer of Mish activation
     mish = nn_Mish()
 
-    # 输入张量
+    # input tensor
     input_tensor_tf = tf.constant([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply mish activation
     output_tf = mish(input_tensor_tf)
     print(output_tf)
 

@@ -500,7 +500,7 @@ class TrainOriginalDacerAgent(TrainAgent):
                         zip_tf_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
 
 
-                        # # 打印梯度检查
+                        # print grad check
                         # for grad, var in zip_tf_gradients_actor_params:
                         #     if grad is None:
                         #         print(f"Gradient for {var} is None")

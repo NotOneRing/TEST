@@ -53,13 +53,13 @@ class A(tf.keras.Model):
 
 
 
-# 创建模型实例
+# create model instance
 model_a = A()
 
-# 编译和训练
+# compile and train
 model_a.compile(optimizer='adam', loss='mse')
-x_train = tf.random.normal((32, 10))  # 输入形状：32个样本，每个样本10维
-y_train = tf.random.normal((32, 4))   # 输出形状：32个样本，每个样本4维
+x_train = tf.random.normal((32, 10))  # input shape：32 samples，every sample of 10 dimension
+y_train = tf.random.normal((32, 4))   # output shape：32 samples，every sample of 4 dimension
 model_a.fit(x_train, y_train, epochs=3)
 
 
@@ -67,19 +67,19 @@ model_a.fit(x_train, y_train, epochs=3)
 
 
 
-# 保存模型（会递归保存B和C的所有内容）
+# save model (save all contents of B and C recursively)
 model_a.save("nested_model.keras")
 
 
 
 
 
-# 加载模型
+# load models
 loaded_model_a = tf.keras.models.load_model("nested_model.keras")
 
 
 
-# 检查是否保留了权重
+# check if weights are retained
 outputs_original = model_a(x_train)
 outputs_loaded = loaded_model_a(x_train)
 
@@ -88,9 +88,9 @@ print("outputs_loaded = ", outputs_loaded)
 
 assert np.allclose(outputs_original.numpy(), outputs_loaded.numpy())
 
-print(tf.reduce_sum(tf.abs(outputs_original - outputs_loaded)))  # 应接近于0
+print(tf.reduce_sum(tf.abs(outputs_original - outputs_loaded)))  # shoule be close to 0
 
-# 检查优化器状态
+# check the state of optimizer
 print(loaded_model_a.optimizer.get_config())
 
 

@@ -200,7 +200,7 @@ class ResidualBlock1D(tf.keras.layers.Layer):
 
 
         if cond_encoder == None:
-            #input是cond_dim维度的
+            #input is of dimension cond_dim
             if larger_encoder:
                 self.cond_encoder = nn_Sequential([
                     nn_Linear(cond_dim, cond_channels),
@@ -226,7 +226,7 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         # print("residual_conv: out_channels = ", out_channels)
 
         # make sure dimensions compatible
-        # 输入是in_channels的
+        # input is of in_channels dimension
 
         if residual_conv == None:
             # Residual Connection
@@ -690,7 +690,7 @@ class Unet1D(tf.keras.Model):
 
 
 
-        # 打印每个属性及其类型和值
+        # print every property with its type and value
         if OUTPUT_VARIABLES:
             print("Checking Unet1D Config elements:")
             print(f"action_dim: {self.action_dim}, type: {type(self.action_dim)}")

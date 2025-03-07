@@ -816,7 +816,7 @@ def torch_repeat_interleave(tensor, repeats, dim=None):
 
     
     if isinstance(repeats, int):
-        # repeats = torch_full_like(torch_tensor(tensor.shape), repeats)  # 扩展为与 tensor 大小一致
+        # repeats = torch_full_like(torch_tensor(tensor.shape), repeats)  # expand to the same shape as tensor
         pass
     else:
         raise ValueError("non scalar repeats is not implemented for this function")
@@ -2957,7 +2957,7 @@ class nn_Conv2d(tf.keras.layers.Layer):
         # PyTorch input (N, C, H, W) -> TensorFlow (N, H, W, C)
         x = tf.transpose(x, [0, 2, 3, 1])
 
-        # 进行卷积
+        # have convolution
         x = self.conv2d(x)
 
         # Convert back to PyTorch format: (N, C, H, W)

@@ -51,7 +51,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         model.build(input_shape=(None, *cfg.model.input_shape))  # Ensure the model is built
 
-        #后加的，为了初始化模型
+        #initialize model
         _ = model(tf.constant(np.random.randn(1, *cfg.model.input_shape).astype(np.float32)))
 
         return model
@@ -131,7 +131,7 @@ class TrainDiffusionAgent(PreTrainAgent):
             else:
                 data_before_generator['next_states'].append(None)
 
-        # 构造 Dataset
+        # construct Dataset
         dataset = tf.data.Dataset.from_tensor_slices(data_before_generator)
 
         buffer_size = len(data_before_generator)
@@ -149,7 +149,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
         loss_train_epoch = []
 
-        #最终的，但是太慢了，不适合调试网络结构
+
         for epoch, item in enumerate(dataset):
 
 
@@ -166,7 +166,7 @@ class TrainDiffusionAgent(PreTrainAgent):
             cond = {}
             cond['state'] = item["states"]
 
-            # #初始化
+            # Initialization
             # cond_input1 = deepcopy(cond)
             # cond_input2 = deepcopy(cond)
             # _ = self.model(cond_input1)
@@ -250,9 +250,9 @@ class TrainDiffusionAgent(PreTrainAgent):
             #     'DiffusionMLP': DiffusionMLP,
             #     # 'VPGDiffusion': VPGDiffusion,
             #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-            #     'MLP': MLP,                            # 自定义的 MLP 层
-            #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            #     'MLP': MLP,                            # Custom MLP layer
+            #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
             #     'nn_Linear': nn_Linear,
             #     'nn_LayerNorm': nn_LayerNorm,
             #     'nn_Dropout': nn_Dropout,
@@ -281,7 +281,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             # self.optimizer.apply_gradients(zip_gradients_params)
 
-            # 不能用step
+            # do not use step
             # self.optimizer.step(gradients)
             self.optimizer.apply_gradients(zip_gradients_params)
 

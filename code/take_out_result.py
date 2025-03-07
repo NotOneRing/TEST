@@ -3,7 +3,7 @@ file_path = "tf_run_py_pretrain_hopper_medium_v2.txt"
 
 # open file and take out lines with "train loss"
 with open(file_path, "r") as file:
-    # 逐行读取
+    # read line by line
     matching_lines = [line for line in file if ("train loss" in line or "Epoch" in line)]
 
 # print lines containing "train loss"

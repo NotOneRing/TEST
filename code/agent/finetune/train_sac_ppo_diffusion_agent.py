@@ -186,7 +186,7 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                 # with torch.no_grad():
                 with torch_no_grad() as tape:
                     
-                    # 这个和torch版本一样
+                    # Same as the torch version
                     # print("prev_obs_venv['state'] = ", prev_obs_venv["state"])
 
                     cond = {

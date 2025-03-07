@@ -31,7 +31,7 @@ def is_broadcastable(src, dst):
     print("fax_utils.py:", "is_broadcastable()")
     
     try:
-        # 使用 tf.broadcast_static_shape 判断两个形状是否可以广播
+        # use tf.broadcast_static_shape to judge if one shape can be broadcasted to the other
         return tf.broadcast_static_shape(src, dst) == dst
     except ValueError:
         return False

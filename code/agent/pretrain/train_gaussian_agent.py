@@ -615,7 +615,7 @@ class TrainGaussianAgent(PreTrainAgent):
     #         else:
     #             data_before_generator['next_states'].append(None)
 
-    #     # 构造 Dataset
+    #     # construct Dataset
     #     dataset = tf.data.Dataset.from_tensor_slices(data_before_generator)
 
     #     buffer_size = len(data_before_generator)
@@ -633,7 +633,6 @@ class TrainGaussianAgent(PreTrainAgent):
 
     #     loss_train_epoch = []
 
-    #     #最终的，但是太慢了，不适合调试网络结构
     #     for epoch, item in enumerate(dataset):
 
 

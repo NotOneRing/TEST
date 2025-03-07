@@ -66,7 +66,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
     #     model.build(input_shape=(None, *cfg.model.input_shape))  # Ensure the model is built
 
-    #     #后加的，为了初始化模型
+    #initialize model
     #     _ = model(tf.constant(np.random.randn(1, *cfg.model.input_shape).astype(np.float32)))
 
     #     return model
@@ -458,7 +458,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
     # def run(self):
 
-    #     # 训练模式
+    #     # training mode
     #     # tf.keras.backend.set_learning_phase(True)
 
     #     print("train_diffusion_agent.py: TrainDiffusionAgent.run()")
@@ -535,7 +535,7 @@ class TrainDiffusionAgent(PreTrainAgent):
     #         else:
     #             data_before_generator['next_states'].append(None)
 
-    #     # 构造 Dataset
+    #     # construct Dataset
     #     dataset = tf.data.Dataset.from_tensor_slices(data_before_generator)
 
     #     buffer_size = len(data_before_generator)
@@ -570,7 +570,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
     #     if not RUN_FUNCTION_TEST_SAVE_LOAD:
-    #         #最终的，但是太慢了，不适合调试网络结构
+    #         #iterate all data, too slow to debug network structure
     #         for epoch, item in enumerate(dataset):
 
     #             print( f"Current epoch = {epoch}" )
@@ -714,7 +714,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
 
     #     else:
-    #         #最终的，但是太慢了，不适合调试网络结构
+    #         #iterate all data, too slow to debug network structure
     #         for epoch, item in enumerate(dataset):
 
     #             print( f"Current epoch = {epoch}" )
@@ -790,7 +790,7 @@ class TrainDiffusionAgent(PreTrainAgent):
     #             print("train_diffusion_agent.py: run() 2")
 
             
-    #             # #初始化
+    #             # #Initialization
     #             # cond_input1 = deepcopy(cond)
     #             # cond_input2 = deepcopy(cond)
     #             # _ = self.model(cond_input1)
@@ -977,7 +977,7 @@ class TrainDiffusionAgent(PreTrainAgent):
 
     #             # self.optimizer.apply_gradients(zip_gradients_params)
 
-    #             # 不能用step
+    #             # do not use step
     #             # self.optimizer.step(gradients)
 
     #             if DEBUG:
@@ -1206,7 +1206,7 @@ class TrainDiffusionAgent(PreTrainAgent):
     #                     # print("2self.model.trainable_variables = ", self.model.trainable_variables)
     #                     # print("2self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
 
-    #                     # self.ema_model.set_weights(self.model.get_weights())  # 同步权重
+    #                     # self.ema_model.set_weights(self.model.get_weights())  # synchronize weights
     #                     # print("1self.model.trainable_variables = ", self.model.trainable_variables)
     #                     # print("1self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
 
@@ -1264,9 +1264,9 @@ class TrainDiffusionAgent(PreTrainAgent):
     #         #     'DiffusionMLP': DiffusionMLP,
     #         #     # 'VPGDiffusion': VPGDiffusion,
     #         #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-    #         #     'MLP': MLP,                            # 自定义的 MLP 层
-    #         #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-    #         #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+    #         #     'MLP': MLP,                            # Custom MLP layer
+    #         #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+    #         #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
     #         #     'nn_Linear': nn_Linear,
     #         #     'nn_LayerNorm': nn_LayerNorm,
     #         #     'nn_Dropout': nn_Dropout,

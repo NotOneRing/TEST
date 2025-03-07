@@ -18,12 +18,19 @@
 
 import numpy as np
 
-# 第一次设置种子并生成随机数
+# Set the seed for the first time and generate random numbers
 np.random.seed(0)
-print("第一次随机数:", np.random.rand(3))
-# 输出: [0.5488135  0.71518937 0.60276338]
+print("First random numbers:", np.random.rand(3))
+# Output: [0.5488135  0.71518937 0.60276338]
 
-# 第二次设置相同种子并生成随机数
+# Set the same seed again and generate random numbers
 np.random.seed(0)
-print("第二次随机数:", np.random.rand(3))
-# 输出: [0.5488135  0.71518937 0.60276338]
+print("Second random numbers:", np.random.rand(3))
+# Output: [0.5488135  0.71518937 0.60276338]
+
+
+
+
+
+
+

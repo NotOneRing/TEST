@@ -48,7 +48,7 @@ torch_model = PyTorchModel()
 
 tf_model.build( input_shape = (None, 5) )
 
-# #后加的，为了初始化模型
+#initialize model
 _ = tf_model(tf.constant(np.random.randn(1, 5).astype(np.float32)))
 
 

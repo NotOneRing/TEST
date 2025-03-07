@@ -5,13 +5,13 @@ import numpy as np
 
 
 def test_Softplus():
-    # 创建一个ELU激活层
+    # create a layer of Softplus
     softplus = nn.Softplus()
 
-    # 输入张量
+    # input tensor
     input_tensor = torch.tensor([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply softplus activation
     output = softplus(input_tensor)
     print(output)
 
@@ -20,13 +20,13 @@ def test_Softplus():
     import tensorflow as tf
     from util.torch_to_tf import nn_Softplus
 
-    # 创建一个ELU激活层
+    # create a layer of Softplus
     softplus = nn_Softplus()
 
-    # 输入张量
+    # input tensor
     input_tensor_tf = tf.constant([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply softplus activation
     output_tf = softplus(input_tensor_tf)
     print(output_tf)
 
@@ -35,6 +35,12 @@ def test_Softplus():
 
 
 test_Softplus()
+
+
+
+
+
+
 
 
 

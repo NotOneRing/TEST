@@ -212,7 +212,7 @@ class GMM_Transformer(tf.keras.Model):
             activation=transformer_activation,
         )
 
-        #输入维度horizon_steps * transformer_embed_dim
+        # input dimension of horizon_steps * transformer_embed_dim
         self.modes_head = nn_Linear(horizon_steps * transformer_embed_dim, num_modes)
 
     def call(self, cond):
@@ -311,7 +311,7 @@ class Transformer(tf.keras.Model):
         self.model_layers = []
 
         # encoder for observations
-        #输入维度cond_dim
+        #input dimension of cond_dim
         self.cond_obs_emb = nn_Linear(cond_dim, n_emb)
         self.cond_pos_emb = nn_Parameter(torch_zeros([1, T_cond, n_emb]))
 
@@ -330,7 +330,7 @@ class Transformer(tf.keras.Model):
 
 
         # else:
-        #     # 输入n_emb
+        #     # input dimension of n_emb
         #     self.encoder = tf.keras.Sequential([
         #         tf.keras.layers.Dense(4 * n_emb),
         #         nn_Mish(),

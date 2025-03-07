@@ -262,7 +262,7 @@ class PatchEmbed2(tf.keras.layers.Layer):
         self.img_h = img_h
         self.img_w = img_w
 
-        #输入是num_channel
+        #input dimension of num_channel
         layers = [
             nn_Conv2d(num_channel, embed_dim, kernel_size=8, stride=4),
             nn_GroupNorm() if use_norm else nn_Identity(),
@@ -762,18 +762,18 @@ def named_apply(fn, module, name="", depth_first=True, include_root=False):
 def test_patch_embed():
     print("vit.py: test_patch_embed()")
 
-    # 测试第一个 PatchEmbed 类
+    # test first class of PatchEmbed
     print("embed 1")
     embed = PatchEmbed1(128) 
-    # x = tf.random.uniform([10, 96, 96, 3])  # 输入数据形状为 NHWC
+    # x = tf.random.uniform([10, 96, 96, 3])  # input data with shape NHWC
     x = torch_rand(10, 3, 96, 96)
     y = embed(x)
     print("Output shape for embed 1:", y.shape)
 
-    # 测试第二个 PatchEmbed 类
+    # test second class of PatchEmbed
     print("embed 2")
-    embed = PatchEmbed2(128)  # 对应第二种设置
-    # x = tf.random.uniform([10, 96, 96, 3])  # 输入数据形状为 NHWC
+    embed = PatchEmbed2(128)  # second configuration
+    # x = tf.random.uniform([10, 96, 96, 3])  # input data with shape NHWC
     x = torch_rand(10, 3, 96, 96)
     y = embed(x)
     print("Output shape for embed 2:", y.shape)

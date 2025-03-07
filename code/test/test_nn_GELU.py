@@ -4,13 +4,13 @@ import torch.nn as nn
 import numpy as np
 
 def test_GELU():
-    # 创建一个GELU激活层
+    # create a layer of GELU
     gelu = nn.GELU()
 
-    # 输入张量
+    # input tensor
     input_tensor = torch.tensor([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply gelu activation
     output = gelu(input_tensor)
     print(output)
 
@@ -19,13 +19,13 @@ def test_GELU():
     import tensorflow as tf
     from util.torch_to_tf import nn_GELU
 
-    # 创建一个ELU激活层
+    # create a layer of GELU
     gelu = nn_GELU()
 
-    # 输入张量
+    # input tensor
     input_tensor_tf = tf.constant([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply gelu activation
     output_tf = gelu(input_tensor_tf)
     print(output_tf)
 

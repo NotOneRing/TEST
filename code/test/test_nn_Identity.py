@@ -5,13 +5,13 @@ import numpy as np
 
 
 def test_Identity():
-    # 创建一个ELU激活层
+    # createa a layer of Identity
     identity = nn.Identity()
 
-    # 输入张量
+    # input tensor
     input_tensor = torch.tensor([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply identity activation
     output = identity(input_tensor)
     print(output)
 
@@ -20,13 +20,13 @@ def test_Identity():
     import tensorflow as tf
     from util.torch_to_tf import nn_Identity
 
-    # 创建一个ELU激活层
+    # creatae a layer of Identity
     identity = nn_Identity()
 
-    # 输入张量
+    # input tensor
     input_tensor_tf = tf.constant([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply Identity
     output_tf = identity(input_tensor_tf)
     print(output_tf)
 

@@ -12,11 +12,11 @@ from util.torch_to_tf import nn_ReLU, nn_GELU, nn_Tanh, nn_ELU, nn_Mish, nn_Iden
 # activation_dict = {
 #     "ReLU": tf.keras.layers.ReLU(),
 #     "ELU": tf.keras.layers.ELU(),
-#     "GELU": tf.keras.layers.Activation(tf.keras.activations.gelu),  # 使用 Activation 层来包装 GELU 函数
-#     "Tanh": tf.keras.layers.Activation(tf.keras.activations.tanh),  # 使用 tf.keras.activations.tanh
+#     "GELU": tf.keras.layers.Activation(tf.keras.activations.gelu),  # use Activation layer to wrap GELU function
+#     "Tanh": tf.keras.layers.Activation(tf.keras.activations.tanh),  # use tf.keras.activations.tanh
 #     "Mish": tf.keras.layers.Activation(lambda x: x * tf.tanh(tf.math.log(1 + tf.exp(x)))),  # Custom Mish implementation
 #     "Identity": tf.keras.layers.Activation("linear"),
-#     "Softplus": tf.keras.layers.Activation(tf.keras.activations.softplus),  # 使用 tf.keras.activations.softplus
+#     "Softplus": tf.keras.layers.Activation(tf.keras.activations.softplus),  # use tf.keras.activations.softplus
 # }
 
 from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, OUTPUT_POSITIONS, OUTPUT_FUNCTION_HEADER
@@ -273,9 +273,9 @@ class MLP(
         #     'DiffusionMLP': DiffusionMLP,
         #     # 'VPGDiffusion': VPGDiffusion,
         #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # 自定义的 MLP 层
-        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #     'MLP': MLP,                            # Custom MLP layer
+        #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+        #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
         #     'nn_Linear': nn_Linear,
         #     'nn_LayerNorm': nn_LayerNorm,
         #     'nn_Dropout': nn_Dropout,
@@ -487,7 +487,7 @@ class ResidualMLP(
         config = super(ResidualMLP, self).get_config()  # Call the base class's get_config
 
         if OUTPUT_POSITIONS:
-            # 打印每个属性及其类型和值
+            # print every property with its type and value
             print("Checking ResidualMLP Config elements:")
 
         if OUTPUT_VARIABLES:
@@ -536,9 +536,9 @@ class ResidualMLP(
         #     'DiffusionMLP': DiffusionMLP,
         #     # 'VPGDiffusion': VPGDiffusion,
         #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # 自定义的 MLP 层
-        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #     'MLP': MLP,                            # Custom MLP layer
+        #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+        #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
         #     'nn_Linear': nn_Linear,
         #     'nn_LayerNorm': nn_LayerNorm,
         #     'nn_Dropout': nn_Dropout,
@@ -707,7 +707,7 @@ class TwoLayerPreActivationResNetLinear(models.Model):
     def get_config(self):
         config = super(TwoLayerPreActivationResNetLinear, self).get_config()  # Call the base class's get_config
 
-        # 打印每个属性及其类型和值
+        # print every property with its type and value
         if OUTPUT_POSITIONS:
             print("Checking TwoLayerPreActivationResNetLinear Config elements:")
 
@@ -772,9 +772,9 @@ class TwoLayerPreActivationResNetLinear(models.Model):
         #     'DiffusionMLP': DiffusionMLP,
         #     # 'VPGDiffusion': VPGDiffusion,
         #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # 自定义的 MLP 层
-        #     'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-        #     'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+        #     'MLP': MLP,                            # Custom MLP layer
+        #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+        #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
         #     'nn_Linear': nn_Linear,
         #     'nn_LayerNorm': nn_LayerNorm,
         #     'nn_Dropout': nn_Dropout,

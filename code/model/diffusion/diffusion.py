@@ -176,13 +176,13 @@ class DiffusionModel(tf.keras.Model):
 
         # print("self.alphas_cumprod = ", self.alphas_cumprod)
         
-        # # 创建一个值为1的Tensor，数据类型和设备与 self.alphas_cumprod 相同
+        # # create a Tensor of value 1, with the same data type and device as self.alphas_cumprod
         # ones_tensor = tf.ones([1], dtype=self.alphas_cumprod.dtype)
 
-        # # 将 self.alphas_cumprod 的第一个值从序列中移除
+        # # remove the first value from the sequence of self.alphas_cumprod
         # alphas_cumprod_truncated = self.alphas_cumprod[:-1]
 
-        # # 将 ones_tensor 和 alphas_cumprod_truncated 进行拼接
+        # # concatenate ones_tensor and alphas_cumprod_truncated
         # self.alphas_cumprod_prev = tf.concat([ones_tensor, alphas_cumprod_truncated], axis=0)
 
         self.alphas_cumprod_prev = torch_cat(
@@ -359,9 +359,9 @@ class DiffusionModel(tf.keras.Model):
                 'DiffusionMLP': DiffusionMLP,
                 # 'VPGDiffusion': VPGDiffusion,
                 'SinusoidalPosEmb': SinusoidalPosEmb,   
-                'MLP': MLP,                            # 自定义的 MLP 层
-                'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-                'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+                'MLP': MLP,                            # Custom MLP layer
+                'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+                'nn_Sequential': nn_Sequential,        # Custom Sequential class
                 "nn_Identity": nn_Identity,
                 'nn_Linear': nn_Linear,
                 'nn_LayerNorm': nn_LayerNorm,
@@ -639,9 +639,9 @@ class DiffusionModel(tf.keras.Model):
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'MLP': MLP,                            # Custom MLP layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             "nn_Identity": nn_Identity,
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,
@@ -750,8 +750,8 @@ class DiffusionModel(tf.keras.Model):
         self.batch_size = batch_size
         self.network.batch_size = batch_size
 
-        # print("tf.shape(x_start):", tf.shape(x_start))  # 返回形状
-        # print("tf.shape(x_start)[0]:", tf.shape(x_start)[0])  # 直接获取第一个维度
+        # print("tf.shape(x_start):", tf.shape(x_start))  # return shape
+        # print("tf.shape(x_start)[0]:", tf.shape(x_start)[0])  # get the first dimension
 
         # print("int(batch_size.numpy()) = ", int(batch_size.numpy()))
         # print("int(batch_size) = ", int(batch_size))
@@ -761,7 +761,7 @@ class DiffusionModel(tf.keras.Model):
         if OUTPUT_VARIABLES:
             print("batch_size = ", batch_size)
 
-        # # 生成 [0, self.denoising_steps) 范围的随机整数
+        # # generate random integers within range of [0, self.denoising_steps)
 
         if DEBUG or NP_RANDOM:
             if self.loss_ori_t is None or training:
@@ -785,10 +785,10 @@ class DiffusionModel(tf.keras.Model):
                 low = 0, high = self.denoising_steps, size = (batch_size,)
             ), tf.int64)
 
-        # t = tf.cast( torch_full((batch_size,), 3), tf.int64)  # 固定为 3
+        # t = tf.cast( torch_full((batch_size,), 3), tf.int64)  # fixed to 3 for test
 
 
-        # t = tf.fill([batch_size], 3)  # 固定为 3
+        # t = tf.fill([batch_size], 3)  # fixed to 3 for test
 
         # args_list = [*args]
 
@@ -851,7 +851,7 @@ class DiffusionModel(tf.keras.Model):
         if OUTPUT_VARIABLES:
             print("batch_size = ", batch_size)
 
-        # # 生成 [0, self.denoising_steps) 范围的随机整数
+        # # generate random integers within range of [0, self.denoising_steps)
 
         if DEBUG or NP_RANDOM:
             if self.loss_ori_t is None or training:
@@ -932,11 +932,11 @@ class DiffusionModel(tf.keras.Model):
             noise = torch_randn_like(x_start)
 
         # fixed_value = 1.0
-        # noise = torch_full_like(x_start, fixed_value)  # 使用固定值替代随机噪声
+        # noise = torch_full_like(x_start, fixed_value)  # use fixed value to replace random noise
 
-        # # 假设 x_start 是一个已定义的张量
-        # fixed_value = 1.0  # 固定数值
-        # # noise = tf.fill(tf.shape(x_start), fixed_value)  # 使用 tf.fill 填充固定值
+        # # suppose x_start is a tensor already defined
+        # fixed_value = 1.0  # fixed number
+        # # noise = tf.fill(tf.shape(x_start), fixed_value)  # use tf.fill to fill fixed value
         # noise = tf.fill(x_start.shape, fixed_value)
 
         # print("x_start = ", x_start)
@@ -980,7 +980,6 @@ class DiffusionModel(tf.keras.Model):
         # # append time and cond
         # time = tf.reshape(t, [B, 1])
 
-        # # 提前展平 Batch * -1
         # # # # Predict
         # # x_recon = self.network(x_noisy, t, cond=cond, training=training_flag)
 
@@ -1315,7 +1314,7 @@ class DiffusionModel(tf.keras.Model):
         # from tensorflow.__internal__.tracking import TrackedDict
 
         # if not isinstance(t, tf.Tensor):
-        #     t = dict(t)  # 转换为普通字典
+        #     t = dict(t)  # change to class dict
         #     values = t['config']['value']
         #     dtype = t['config']['dtype']
         #     t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
@@ -1569,7 +1568,7 @@ class DiffusionModel(tf.keras.Model):
             shape1 = (256, 8, 14)
             shape2 = (256, 1, 59)
 
-        # D3IL - avoid_m1/m2/m3，这几个都是avoiding-m5
+        # the same name "avoiding-m5" for D3IL with avoid_m1/m2/m3
         elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
             #avoid_m1
             # item_actions_copy.shape =  
@@ -1693,7 +1692,7 @@ class DiffusionModel(tf.keras.Model):
         #     if loss_ori_t:
         #         if OUTPUT_POSITIONS:
         #             print("Enter loss_ori_t")
-        #         loss_ori_t = dict(loss_ori_t)  # 转换为普通字典
+        #         loss_ori_t = dict(loss_ori_t)  # change to the class dict
         #         values = loss_ori_t['config']['value']
         #         dtype = loss_ori_t['config']['dtype']
         #         loss_ori_t = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
@@ -1706,7 +1705,7 @@ class DiffusionModel(tf.keras.Model):
         #     if p_losses_noise:
         #         if OUTPUT_POSITIONS:
         #             print("Enter p_losses_noise")
-        #         p_losses_noise = dict(p_losses_noise)  # 转换为普通字典
+        #         p_losses_noise = dict(p_losses_noise)  # change to the class dict
         #         values = p_losses_noise['config']['value']
         #         dtype = p_losses_noise['config']['dtype']
         #         p_losses_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
@@ -1719,7 +1718,7 @@ class DiffusionModel(tf.keras.Model):
         #     if call_noise:
         #         if OUTPUT_POSITIONS:
         #             print("Enter call_noise")
-        #         call_noise = dict()  # 转换为普通字典
+        #         call_noise = dict()  # change to the class dict
         #         values = call_noise['config']['value']
         #         dtype = call_noise['config']['dtype']
         #         call_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
@@ -1732,7 +1731,7 @@ class DiffusionModel(tf.keras.Model):
         #     if call_x:
         #         if OUTPUT_POSITIONS:
         #             print("Enter call_x")
-        #         call_x = dict()  # 转换为普通字典
+        #         call_x = dict()  # change to the class dict
         #         values = call_x['config']['value']
         #         dtype = call_x['config']['dtype']
         #         call_x = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
@@ -1745,7 +1744,7 @@ class DiffusionModel(tf.keras.Model):
         #     if q_sample_noise:
         #         if OUTPUT_POSITIONS:
         #             print("Enter q_sample_noise")
-        #         q_sample_noise = dict(q_sample_noise)  # 转换为普通字典
+        #         q_sample_noise = dict(q_sample_noise)  # change to the class dict
         #         values = q_sample_noise['config']['value']
         #         dtype = q_sample_noise['config']['dtype']
         #         q_sample_noise = tf.convert_to_tensor(values, dtype=getattr(tf, dtype))
@@ -1770,7 +1769,7 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-        # 打印加载的内容
+        # print loaded content
 
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)
@@ -2074,7 +2073,7 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-        # 打印加载的内容
+        # print loaded content
 
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)
@@ -3649,7 +3648,7 @@ class DiffusionModel(tf.keras.Model):
 
 
 
-        # 打印加载的内容
+        # print loaded content
 
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)

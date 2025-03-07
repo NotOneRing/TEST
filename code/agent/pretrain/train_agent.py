@@ -37,9 +37,9 @@ from util.config import DEBUG, METHOD_NAME
 # def batch_to_device(batch, device="/GPU:0"):
 #     print("train_agent.py: batch_to_device()")
 
-#     # 使用 tf.device 来转移数据到指定设备
+#     # use tf.device to transfer data to designated device
 #     with tf.device(device):
-#         # 假设 batch 是一个字典或类似结构，逐个字段转移数据到指定设备
+#         # suppose batch is a dict or a similar data structure，transfer every keys to the designated device
 #         vals = {field: to_device(getattr(batch, field), device) for field in batch._fields}
 #     return type(batch)(**vals)
 
@@ -238,7 +238,7 @@ class EMA:
         #     diff = ma_weights - ma_trainable_variables
         #     print("diff = ", diff)
 
-        # # ma_model.set_weights(ma_model.get_weights())  # 强制刷新 trainable_variables
+        # # ma_model.set_weights(ma_model.get_weights())  # refresh trainable_variables
         # for i, var in enumerate(ma_model.trainable_variables):
         #     print("type(ma_model.get_weights()[i]) = ", type(ma_model.get_weights()[i]))
         #     print("type(var) = ", type(var))
@@ -432,7 +432,7 @@ class PreTrainAgent:
 
 
         # print("self.model = ", self.model)
-        # print("Model attributes:", dir(self.model))  # 查看模型的所有属性
+        # print("Model attributes:", dir(self.model))  # find all attributes of the model
 
         # print("0self.model.loss() = ", self.model.loss())
 
@@ -442,17 +442,17 @@ class PreTrainAgent:
 
 
         # self.ema_model = deepcopy(self.model)
-        #把这部分拿到train_diffusion_agent里面去
+        #take this part into the train_diffusion_agent.py
 
 
         print("self.ema = EMA()")
 
         print("self.model = ", self.model)
 
-        # # 获取 model 的输入形状
+        # # get the input shape of model
         # input_shape = self.model.input_shape
 
-        # # 去掉批次维度 (None)，构建 ema_model
+        # # remove batch dimension (None), construct ema_model
         # self.ema_model.build(input_shape)
 
         print("after build model")
@@ -615,9 +615,9 @@ class PreTrainAgent:
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'MLP': MLP,                            # Custom MLP layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             "nn_Identity": nn_Identity,
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,
@@ -828,9 +828,9 @@ class PreTrainAgent:
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'MLP': MLP,                            # Custom MLP layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             "nn_Identity": nn_Identity,
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,
@@ -1022,9 +1022,9 @@ class PreTrainAgent:
             'DiffusionMLP': DiffusionMLP,
             # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
-            'MLP': MLP,                            # 自定义的 MLP 层
-            'ResidualMLP': ResidualMLP,            # 自定义的 ResidualMLP 层
-            'nn_Sequential': nn_Sequential,        # 自定义的 Sequential 类
+            'MLP': MLP,                            # Custom MLP layer
+            'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
+            'nn_Sequential': nn_Sequential,        # Custom Sequential class
             "nn_Identity": nn_Identity,
             'nn_Linear': nn_Linear,
             'nn_LayerNorm': nn_LayerNorm,

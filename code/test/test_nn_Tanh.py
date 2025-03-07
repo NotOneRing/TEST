@@ -4,13 +4,13 @@ import torch.nn as nn
 import numpy as np
 
 def test_Tanh():
-    # 创建一个ELU激活层
+    # create a layer of Tanh
     tanh = nn.Tanh()
 
-    # 输入张量
+    # input tensor
     input_tensor = torch.tensor([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # create tanh activation
     output = tanh(input_tensor)
     print(output)
 
@@ -19,13 +19,13 @@ def test_Tanh():
     import tensorflow as tf
     from util.torch_to_tf import nn_Tanh
 
-    # 创建一个ELU激活层
+    # creata a layer of Tanh
     tanh = nn_Tanh()
 
-    # 输入张量
+    # input tensor
     input_tensor_tf = tf.constant([-1.0, 0.0, 1.0])
 
-    # 应用ELU激活
+    # apply tanh activation
     output_tf = tanh(input_tensor_tf)
     print(output_tf)
 
