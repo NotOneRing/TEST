@@ -1,12 +1,12 @@
 import tensorflow as tf
 
-# 创建简单模型
+# create a simple model
 model = tf.keras.Sequential([
     tf.keras.layers.Dense(4, input_shape=(3,), activation='relu'),
     tf.keras.layers.Dense(2)
 ])
 
-# 查看 trainable_variables
+# look at the trainable_variables
 trainable_vars = model.trainable_variables
 
 print("type(trainable_vars) = ", type(trainable_vars))

@@ -113,55 +113,55 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# 设置随机种子，保证结果可复现
+# set random seeds to ensure the reproducibility
 torch.manual_seed(42)
 
-# 创建 TransformerDecoderLayer
+# create a TransformerDecoderLayer
 d_model = 4
 nhead = 2
 decoder_layer = nn.TransformerDecoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=16, dropout=0)
 
-# # **手动初始化权重，使输出可预测**
+# initialize weights manually to make output predictable**
 # for param in decoder_layer.parameters():
 #     param.data.fill_(0.5)
 
-# **输入数据 (batch=1)**
+# input data with batch=1
 tgt = torch.tensor([[[0.1, 0.2, 0.3, 0.4]],
                     [[0.5, 0.6, 0.7, 0.8]]])  # (tgt_len=2, batch_size=1, d_model=4)
 
 memory = torch.tensor([[[0.9, 1.0, 1.1, 1.2]],
                        [[1.3, 1.4, 1.5, 1.6]]])  # (memory_len=2, batch_size=1, d_model=4)
 
-# **前向传播**
+# forward pass
 output = decoder_layer(tgt, memory)
 
-# **打印输出**
-print("TransformerDecoderLayer 输出：\n", output)
+# print output
+print("TransformerDecoderLayer output: \n", output)
 
 
 
 from util.torch_to_tf import nn_TransformerDecoderLayer, torch_tensor
 
-# 创建 TransformerDecoderLayer
+# create a TransformerDecoderLayer
 d_model = 4
 nhead = 2
 decoder_layer = nn_TransformerDecoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=16, dropout=0)
 
-# **手动初始化权重，使输出可预测**
+# initialize weights manually to make the output predictable
 # for param in decoder_layer.trainble_variables:
 #     param.assign(0.5)
 
 
-# **输入数据 (batch=1)**
+# input data with batch=1
 tgt = torch_tensor( np.array([[[0.1, 0.2, 0.3, 0.4]],
                     [[0.5, 0.6, 0.7, 0.8]]]) )  # (tgt_len=2, batch_size=1, d_model=4)
 
 memory = torch_tensor( np.array([[[0.9, 1.0, 1.1, 1.2]],
                        [[1.3, 1.4, 1.5, 1.6]]]) )  # (memory_len=2, batch_size=1, d_model=4)
 
-# **前向传播**
+# forward pass
 output = decoder_layer(tgt, memory)
 
-# **打印输出**
-print("TransformerDecoderLayer 输出：\n", output)
+# print output
+print("TransformerDecoderLayer output: \n", output)
 

@@ -4928,7 +4928,7 @@ class Categorical:
         # print("Categorical: sample(): extended_shape = ", extended_shape)
 
         # return torch_reshape( samples_2d, extended_shape )
-        return self.distribution(sample_shape)
+        return self.distribution.sample(sample_shape)
 
 
     def log_prob(self, value):
@@ -4962,7 +4962,7 @@ class Categorical:
         # else:  # logits provided
         #     raise ValueError("Must specify probs.")
 
-        return self.distribution.sample(value)
+        return self.distribution.log_prob(value)
 
 
     def entropy(self):

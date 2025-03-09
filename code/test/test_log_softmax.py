@@ -1,27 +1,27 @@
 import torch
 
-x = torch.tensor([1.0, 2.0, 3.0])  # 输入张量
-log_softmax_x = torch.log_softmax(x, dim=0)  # 对 dim=0 计算 log_softmax
+x = torch.tensor([1.0, 2.0, 3.0])  # input tensor
+log_softmax_x = torch.log_softmax(x, dim=0)  # calculate log_softmax for dim=0
 
 print(log_softmax_x)
-# 输出: tensor([-2.4076, -1.4076, -0.4076])
+# output: tensor([-2.4076, -1.4076, -0.4076])
 
 
 
 
 
 x = torch.tensor([1.0, 2.0, 3.0])
-softmax = torch.exp(x) / torch.sum(torch.exp(x))  # 先计算 softmax
-log_softmax_manual = torch.log(softmax)  # 再对 softmax 取对数
-log_softmax_direct = torch.log_softmax(x, dim=0)  # 直接用 log_softmax
+softmax = torch.exp(x) / torch.sum(torch.exp(x))  # calculate softmax
+log_softmax_manual = torch.log(softmax)  # get log for softmax
+log_softmax_direct = torch.log_softmax(x, dim=0)  # use log_softmax directly
 
 print(log_softmax_manual)
-print(log_softmax_direct)  # 结果相同
+print(log_softmax_direct)  # equivalent results
 
 
 
 x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-log_softmax_x = torch.log_softmax(x, dim=1)  # 对 dim=1 计算 log_softmax
+log_softmax_x = torch.log_softmax(x, dim=1)  # use dim=1 to calculate log_softmax
 
 print(log_softmax_x)
 
@@ -39,19 +39,19 @@ x = tf.constant([1.0, 2.0, 3.0])
 log_softmax_x = tf.nn.log_softmax(x)
 
 print(log_softmax_x)
-# 输出: [-2.4076059 -1.4076059 -0.4076059]
+# output: [-2.4076059 -1.4076059 -0.4076059]
 
 
 
 
 x = tf.constant([1.0, 2.0, 3.0])
-softmax = tf.exp(x) / tf.reduce_sum(tf.exp(x))  # 手动计算 softmax
-log_softmax_manual = tf.math.log(softmax)  # 手动计算 log
+softmax = tf.exp(x) / tf.reduce_sum(tf.exp(x))  # calculate softmax manually
+log_softmax_manual = tf.math.log(softmax)  # calculate log manually
 
-log_softmax_direct = tf.nn.log_softmax(x)  # 直接用 log_softmax
+log_softmax_direct = tf.nn.log_softmax(x)  # use log_softmax directly
 
 print(log_softmax_manual.numpy())
-print(log_softmax_direct.numpy())  # 结果相同
+print(log_softmax_direct.numpy())  # the same result
 
 
 

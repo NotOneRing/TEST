@@ -6,7 +6,7 @@ import numpy as np
 from util.torch_to_tf import nn_ModuleList
 
 
-# 初始化对齐函数
+# initialize alignment function
 def align_initialization(torch_modulelist, tf_modulelist):
     for torch_layer, tf_layer in zip(torch_modulelist, tf_modulelist):
         if isinstance(torch_layer, nn.Linear) and isinstance(tf_layer, tf.keras.layers.Dense):
@@ -17,12 +17,12 @@ def align_initialization(torch_modulelist, tf_modulelist):
             dummy_input = tf.random.normal([1, torch_layer.in_features])
             tf_layer(dummy_input)  # Trigger weight initialization
 
-            # 提取 PyTorch 初始化权重和偏置
+            # extract PyTorch's initialization weights and biases
             torch_weight = torch_layer.weight.detach().numpy()
             torch_bias = torch_layer.bias.detach().numpy() if torch_layer.bias is not None else None
             
-            # 赋值给 TensorFlow 层
-            tf_layer.kernel.assign(torch_weight.T)  # 转置权重
+            # assign to the TensorFlow layer
+            tf_layer.kernel.assign(torch_weight.T)  # transpose the weights
             if torch_bias is not None:
                 tf_layer.bias.assign(torch_bias)
             else:
@@ -30,7 +30,7 @@ def align_initialization(torch_modulelist, tf_modulelist):
 
 
 
-# PyTorch 测试函数
+# PyTorch testing function
 def test_torch_modulelist(module_list, input_tensor):
 
 
@@ -43,7 +43,7 @@ def test_torch_modulelist(module_list, input_tensor):
 
 
 
-# TensorFlow 测试函数
+# TensorFlow testing function
 def test_tf_modulelist(module_list, input_tensor):
 
 
@@ -52,13 +52,13 @@ def test_tf_modulelist(module_list, input_tensor):
 
 
 
-# 比较测试
+# compare testing results
 def test_results():
-    # 创建相同的输入张量
+    # create the same input tensor
     torch_input = torch.randn(1, 10)
     tf_input = tf.convert_to_tensor(torch_input.detach().numpy(), dtype=tf.float32)
     
-    # # 获取 PyTorch 和 TensorFlow 的模型及输出
+    # # get PyTorch's and TensorFlow's models and outputs
     # torch_modulelist, torch_outputs = test_torch_modulelist(torch_input)
     # tf_modulelist, tf_outputs = test_tf_modulelist(tf_input)
     
@@ -74,49 +74,49 @@ def test_results():
         tf.keras.layers.Dense(5, activation=None)
     ])
 
-    # 对齐初始化
+    # align initialization
     align_initialization(torch_modulelist, tf_modulelist)
     
 
-    # 获取 PyTorch 和 TensorFlow 的模型及输出
+    # # get PyTorch's and TensorFlow's models and outputs
     torch_outputs = test_torch_modulelist(torch_modulelist, torch_input)
     tf_outputs = test_tf_modulelist(tf_modulelist, tf_input)
     
 
-    # 确保输出层数一致
+    # ensure the number of output layers are consistent
     assert len(torch_outputs) == len(tf_outputs), \
         f"Mismatch in number of layers: {len(torch_outputs)} (torch) vs {len(tf_outputs)} (tf)"
     
-    # 比较每层输出
+    # compare the output of each layer
     for i, (torch_out, tf_out) in enumerate(zip(torch_outputs, tf_outputs)):
-        # 转换为 NumPy 数组
+        # convert to the NumPy arrays
         torch_out_np = torch_out.detach().numpy()
         tf_out_np = tf_out.numpy()
         
-        # 检查形状是否一致
+        # check both shape are consistent
         if torch_out_np.shape != tf_out_np.shape:
             print(f"Layer {i} shape mismatch: Torch {torch_out_np.shape}, TF {tf_out_np.shape}")
         else:
             print(f"Layer {i} shape match: {torch_out_np.shape}")
         
-        # 检查值是否接近
+        # check both values are consistent
         match = np.allclose(torch_out_np, tf_out_np, atol=1e-5)
         print(f"Layer {i} output match: {match}")
 
         assert match
         
-        # 如果不匹配，打印差异
+        # if not match, print the difference
         if not match:
             diff = np.abs(torch_out_np - tf_out_np)
             print(f"Layer {i} max difference: {np.max(diff)}")
             print(f"Layer {i} difference matrix:\n{diff}")
         
-        # 打印每层的输出值（可选）
+        # print output values of each layer(optional)
         print(f"Layer {i} Torch output:\n{torch_out_np}")
         print(f"Layer {i} TF output:\n{tf_out_np}")
         print("-" * 50)
 
 
 
-# 执行测试
+# run test
 test_results()

@@ -2,7 +2,7 @@ import torch
 
 
 def test_randn():
-    # 生成一个 2x3 的标准正态分布随机张量
+    # create 2x3 standard normal distribution random tensor
     tensor = torch.randn(2, 3)
     print(tensor)
 
@@ -13,7 +13,7 @@ def test_randn():
 
     import tensorflow as tf
 
-    # # 生成一个 2x3 的标准正态分布随机张量
+    # create 2x3 standard normal distribution random tensor
     # tensor_tf = tf.random.normal([2, 3])
 
     from util.torch_to_tf import torch_randn

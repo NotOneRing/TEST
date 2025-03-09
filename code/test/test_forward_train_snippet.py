@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import tensorflow as tf
 
-# Step 1: 使用 numpy 构造数据
+# Step 1: use numpy to construct data
 np.random.seed(42)
 batch_size = 4
 num_modes = 2
@@ -12,7 +12,7 @@ means = np.random.randn(batch_size, num_modes, dim)
 scales = np.abs(np.random.randn(batch_size, num_modes, dim)) * 0.5
 logits = np.random.randn(batch_size, num_modes)
 
-# Step 2: 将 numpy 转换为 torch 和 tensorflow
+# Step 2: convert numpy into torch and tensorflow
 means_torch = torch.tensor(means, dtype=torch.float32)
 scales_torch = torch.tensor(scales, dtype=torch.float32)
 logits_torch = torch.tensor(logits, dtype=torch.float32)

@@ -82,44 +82,44 @@ class A(tf.keras.Model):
         return cls(sub_model=sub_model, **config)
 
 
-# 创建模型实例
+# create model instance
 model_a = A()
 
-# 优化器
+# optimizer
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-# 数据
-x_train = tf.random.normal((32, 10))  # 输入形状：32个样本，每个样本10维
-y_train = tf.random.normal((32, 4))   # 输出形状：32个样本，每个样本4维
+# data
+x_train = tf.random.normal((32, 10))  # input shape: 32 samples, each with dimension 10
+y_train = tf.random.normal((32, 4))   # input shape: 32 samples, each with dimension 4
 
-# 定义损失函数
+# define loss function
 mse_loss_fn = tf.keras.losses.MeanSquaredError()
 
-# 训练步骤
-for epoch in range(3):  # 训练 3 个 epoch
+# training procedures
+for epoch in range(3):  # train 3 epochs
     print(f"Epoch {epoch + 1}")
-    for step in range(1):  # 遍历数据 (这里是简化版本)
+    for step in range(1):  # iterate data(this is the simplified version)
         with tf.GradientTape() as tape:
-            predictions = model_a(x_train)  # 前向传播
-            loss = mse_loss_fn(y_train, predictions)  # 计算损失
+            predictions = model_a(x_train)  # forward pass
+            loss = mse_loss_fn(y_train, predictions)  # calculate loss
 
-        gradients = tape.gradient(loss, model_a.trainable_variables)  # 计算梯度
-        optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))  # 应用梯度
+        gradients = tape.gradient(loss, model_a.trainable_variables)  # calculate gradient
+        optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))  # apply gradient
 
         print(f"Step {step + 1}, Loss: {loss.numpy():.4f}")
 
-# 保存模型
+# save the model
 model_a.save("nested_model.keras")
 
-# 加载模型
+# load the model
 loaded_model_a = tf.keras.models.load_model("nested_model.keras")
 
-# 检查是否保留了权重
+# check if weights are the same
 outputs_original = model_a(x_train)
 outputs_loaded = loaded_model_a(x_train)
 
 assert np.allclose(outputs_original.numpy(), outputs_loaded.numpy())
 
 
-print(tf.reduce_sum(tf.abs(outputs_original - outputs_loaded)))  # 应接近于0
+print(tf.reduce_sum(tf.abs(outputs_original - outputs_loaded)))  # should be close to 0
 

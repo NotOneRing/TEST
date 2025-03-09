@@ -13,7 +13,7 @@ def test_sqrt():
     print(var)  
     
     sigma = tf.constant([1.0, 2.0, 3.0])
-    var_tf = torch_sqrt(sigma)  # 逐元素平方
+    var_tf = torch_sqrt(sigma)  # element-wise square
     print(var) 
     
 

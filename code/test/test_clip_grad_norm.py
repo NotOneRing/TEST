@@ -15,21 +15,21 @@ from util.torch_to_tf import torch_optim_Adam, nn_Linear, nn_ReLU, nn_Sequential
 
 
 
-# 设置随机种子，确保可复现性
+# set random seeds to ensure the re-producibility
 torch.manual_seed(0)
 np.random.seed(0)
 tf.random.set_seed(0)
 
 
 
-# TensorFlow 模型
+# TensorFlow model
 tf_model = nn_Sequential([
     nn_Linear(5, 10),
     nn_ReLU(),
     nn_Linear(10, 1)
 ])
 
-# PyTorch 模型
+# PyTorch model
 class PyTorchModel(nn.Module):
     def __init__(self):
         super(PyTorchModel, self).__init__()
@@ -52,7 +52,7 @@ tf_model.build( input_shape = (None, 5) )
 _ = tf_model(tf.constant(np.random.randn(1, 5).astype(np.float32)))
 
 
-# 同步初始化权重 (尽量接近)
+# set the same initialization in TensorFlow and PyTorch
 with torch.no_grad():
     # print("tf_model = ", tf_model)
     # print("tf_model[0] = ", tf_model[0])
@@ -64,19 +64,19 @@ with torch.no_grad():
 
 
 
-# 定义优化器
+# define optimizer
 tf_optimizer = torch_optim_Adam(tf_model.trainable_variables, lr=0.01)
 torch_optimizer = optim.Adam(torch_model.parameters(), lr=0.01)
 
 
-# 创建输入数据 (保持一致)
+# create input data (keep consistency)
 tf_x = tf.random.normal([32, 5])
 tf_y = tf.random.normal([32, 1])
 torch_x = torch.tensor(tf_x.numpy(), dtype=torch.float32)
 torch_y = torch.tensor(tf_y.numpy(), dtype=torch.float32)
 
 
-# # TensorFlow 训练和梯度裁剪
+# # TensorFlow: train and clip grads
 # with tf.GradientTape() as tape:
 #     tf_output = tf_model(tf_x)
 #     tf_loss = tf.reduce_mean(tf.square(tf_output - tf_y))
@@ -85,7 +85,7 @@ torch_y = torch.tensor(tf_y.numpy(), dtype=torch.float32)
 # clipped_tf_grads = torch_nn_utils_clip_grad_norm_and_step(tf_model.trainable_variables, tf_optimizer, max_norm=1.0, grads = tf_grads)
 
 # stacked_tf_clipped_grad = tf.stack([tf.norm(g) for g in clipped_tf_grads if g is not None])
-# # 计算 TensorFlow 裁剪后梯度的范数
+# # calculate the norm of the clipped gradients in TensorFlow
 # clipped_tf_grad_norm = tf.norm(stacked_tf_clipped_grad)
 
 # print("stacked_tf_clipped_grad = ", stacked_tf_clipped_grad)
@@ -108,7 +108,7 @@ torch_y = torch.tensor(tf_y.numpy(), dtype=torch.float32)
 
 
 
-# # PyTorch 训练和梯度裁剪
+# # PyTorch: train and clip grads
 # torch_output = torch_model(torch_x)
 # torch_loss = torch.nn.functional.mse_loss(torch_output, torch_y)
 # torch_optimizer.zero_grad()
@@ -119,7 +119,7 @@ torch_y = torch.tensor(tf_y.numpy(), dtype=torch.float32)
 
 # print("PyTorch: clipped_grad = ", clipped_grad)
 
-# # 计算 PyTorch 裁剪后梯度的范数
+# # calculate the norm of the clipped gradient in PyTorch
 # total_norm = torch.norm(clipped_grad)
 # print(f"PyTorch clipped grad norm: {total_norm.item()}")
 
@@ -142,7 +142,7 @@ torch_y = torch.tensor(tf_y.numpy(), dtype=torch.float32)
 # Training loop
 for step in range(5):
     
-    # PyTorch 训练和梯度裁剪
+    # PyTorch: train and clip gradients
     torch_optimizer.zero_grad()
     torch_output = torch_model(torch_x)
     torch_loss = torch.nn.functional.mse_loss(torch_output, torch_y)
@@ -153,7 +153,7 @@ for step in range(5):
 
     print("PyTorch: clipped_grad = ", clipped_grad)
 
-    # 计算 PyTorch 裁剪后梯度的范数
+    # calculate the norm of the clipped gradient in PyTorch
     total_norm = torch.norm(clipped_grad)
     print(f"PyTorch clipped grad norm: {total_norm.item()}")
 
@@ -175,7 +175,7 @@ for step in range(5):
     clipped_tf_grads = torch_nn_utils_clip_grad_norm_and_step(tf_model.trainable_variables, tf_optimizer, max_norm=1.0, grads = tf_gradients)
 
     stacked_tf_clipped_grad = tf.stack([tf.norm(g) for g in clipped_tf_grads if g is not None])
-    # 计算 TensorFlow 裁剪后梯度的范数
+    # calculate the norm of the clipped gradient in TensorFlow
     clipped_tf_grad_norm = tf.norm(stacked_tf_clipped_grad)
 
     print("stacked_tf_clipped_grad = ", stacked_tf_clipped_grad)

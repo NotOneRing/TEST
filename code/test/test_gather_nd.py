@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-# 定义一个示例张量
+# define an example tensor
 # tensor = tf.constant([[1, 2, 3], 
 #                       [4, 5, 6], 
 #                       [7, 8, 9]])
@@ -10,26 +10,26 @@ tensor = tf.reshape(tensor, (3, 3, 3))
 
 print("tensor = ", tensor)
 
-# 定义索引列表
+# define indices list
 indices = tf.constant([[0, 0], [1, 1], [2, 2]])
 
-# 使用 tf.gather_nd
+# use tf.gather_nd
 result = tf.gather_nd(tensor, indices)
 
-print(result.numpy())  # 输出 [1, 5, 9]
+print(result.numpy())  # output [1, 5, 9]
 
 
 
-# 假设需要沿第 0 维和第 1 维同时索引
-rows = tf.constant([0, 1, 2])  # 第 0 维索引
-cols = tf.constant([0, 1, 2])  # 第 1 维索引
+# suppose we need index along dim 0 and dim 1 simultaneously
+rows = tf.constant([0, 1, 2])  # index along 0 dim
+cols = tf.constant([0, 1, 2])  # index along 1 dim
 
-# 使用 tf.stack 创建索引
+# use tf.stack to create indices
 indices = tf.stack([rows, cols], axis=1)
 
-# 使用 tf.gather_nd 提取值
+# use tf.gather_nd to get values
 result = tf.gather_nd(tensor, indices)
 
-print(result.numpy())  # 输出 [1, 5, 9]
+print(result.numpy())  # output [1, 5, 9]
 
 

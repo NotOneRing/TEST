@@ -13,13 +13,13 @@ torch_output = torch_layer(torch_input).detach().numpy()
 
 
 # TensorFlow ConvTranspose1d
-tf_layer = nn_ConvTranspose1d(3, 3, 4, 2, 1)  # 只实现 padding=1
+tf_layer = nn_ConvTranspose1d(3, 3, 4, 2, 1)  # only implement the padding=1 case
 tf_input = tf.convert_to_tensor(torch_input.numpy(), dtype=tf.float32)
 tf_output = tf_layer(tf_input).numpy()
 
 # same weights
-torch_weights = torch_layer.weight.detach().numpy()  # PyTorch 权重
-torch_weights_tf = np.transpose(torch_weights, (2, 1, 0))  # 转换为 TensorFlow 形状
+torch_weights = torch_layer.weight.detach().numpy()  # PyTorch weight
+torch_weights_tf = np.transpose(torch_weights, (2, 1, 0))  # convert to the shape of the TensorFlow shape
 tf_layer.conv1d_transpose.kernel.assign(torch_weights_tf)
 
 # same bias
@@ -29,8 +29,8 @@ if torch_layer.bias is not None:
 tf_output = tf_layer(tf_input).numpy()
 
 
-print("最大误差:", np.abs(torch_output - tf_output).max())
-print("PyTorch 输出形状:", torch_output.shape)
-print("TensorFlow 输出形状:", tf_output.shape)
+print("max difference:", np.abs(torch_output - tf_output).max())
+print("PyTorch output shape:", torch_output.shape)
+print("TensorFlow output shape:", tf_output.shape)
 
 

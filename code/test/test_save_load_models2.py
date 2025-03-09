@@ -84,22 +84,22 @@ class A(tf.keras.Model):
         return cls(sub_model=sub_model, **config)
 
 
-# 测试代码
+# test code
 model_a = A()
 
-# 编译和训练
+# compile and train the model
 model_a.compile(optimizer='adam', loss='mse')
-x_train = tf.random.normal((32, 10))  # 输入形状：32个样本，每个样本10维
-y_train = tf.random.normal((32, 4))   # 输出形状：32个样本，每个样本4维
+x_train = tf.random.normal((32, 10))  # output shape：32 samples, each with dimension 10
+y_train = tf.random.normal((32, 4))   # output shape：32 samples, each with dimension 4
 model_a.fit(x_train, y_train, epochs=3)
 
-# 保存模型
+# output model
 model_a.save("nested_model.keras")
 
-# 加载模型
+# load model
 loaded_model_a = tf.keras.models.load_model("nested_model.keras")
 
-# 检查是否保留了权重
+# check if weights are the same
 outputs_original = model_a(x_train)
 outputs_loaded = loaded_model_a(x_train)
 
@@ -108,7 +108,7 @@ print("outputs_loaded = ", outputs_loaded)
 
 assert np.allclose(outputs_original.numpy(), outputs_loaded.numpy())
 
-print(tf.reduce_sum(tf.abs(outputs_original - outputs_loaded)))  # 应接近于0
+print(tf.reduce_sum(tf.abs(outputs_original - outputs_loaded)))  # should be close to 0
 
-# 检查优化器状态
+# check the configuration of the optimizer
 print(loaded_model_a.optimizer.get_config())

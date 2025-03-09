@@ -19,7 +19,7 @@ def test_repeat_interleave():
 
     repeats = 3
 
-    # 测试
+    # test
     tensor = torch.tensor(tensor_np)
     # repeats = torch.tensor(repeats_np)
 

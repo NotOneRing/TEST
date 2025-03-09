@@ -26,7 +26,8 @@ def test_compare_tf_torch():
     tf_input = tf.convert_to_tensor(input_data)
 
     # tf_layer.build(input_shape=(None, 5))
-    #初始化一下
+
+    # initialization
     tf_output = tf_layer(tf_input).numpy()
 
     # Copy PyTorch weights and bias to TensorFlow

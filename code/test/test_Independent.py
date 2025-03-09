@@ -4,24 +4,16 @@
 import torch
 from torch.distributions import Normal, Independent
 
-# # 定义两个独立的正态分布
-# normal1 = Normal(torch.zeros(5), torch.ones(5))  # 均值为0，标准差为1
-# normal2 = Normal(torch.ones(5), torch.ones(5))  # 均值为1，标准差为1
+# # define two independent Normal distributions
+# normal1 = Normal(torch.zeros(5), torch.ones(5))  # 0 as mean, and 1 as std
+# normal2 = Normal(torch.ones(5), torch.ones(5))  # 0 as mean, and 1 as std
 
-# # 将它们包装成独立分布
+# # wrap them into independent distributions
 # independent_distribution = Independent(normal1, reinterpreted_batch_ndims=1)
 
-# # 采样
+# # draw samples
 # samples = independent_distribution.sample()
 # print(f"Independent Samples: {samples}")
-
-
-
-
-
-
-
-
 
 
 # import torch
@@ -33,15 +25,15 @@ import tensorflow as tf
 import numpy as np
 
 from util.torch_to_tf import Normal, Independent, torch_zeros, torch_ones
-# , Indepan
 
-# 定义一个批次数据，每个数据点是两个独立的正态分布
-base_distribution = Normal(torch_zeros(3, 2), torch_ones(3, 2))  # 3个数据点，每个点有2个独立正态分布
 
-# 使用 Independent 将它们视为独立分布
+# define a batch of data, each data point is two independent normal distributions
+base_distribution = Normal(torch_zeros(3, 2), torch_ones(3, 2))  # 3 data points, each point has 2 independent normal distributions
+
+# Use Independent, regard them as independent distributions
 independent_distribution = Independent(base_distribution, reinterpreted_batch_ndims=1)
 
-# 采样
+# draw samples
 samples = independent_distribution.sample()
 print(f"1Independent Samples (Batch): {samples}")
 
@@ -50,8 +42,8 @@ print(f"1Independent Samples (Batch): {samples}")
 
 x = samples
 
-# 计算
-log_prob = independent_distribution.log_prob(x)  # 对应均值的概率密度
+# calculate
+log_prob = independent_distribution.log_prob(x)  # log probability to x
 print(f"1Log probability at x = {x}: {log_prob.numpy()}")
 
 
@@ -73,13 +65,13 @@ import torch
 from torch.distributions import Normal, Independent
 
 
-# 定义一个批次数据，每个数据点是两个独立的正态分布
-base_distribution = Normal(torch.zeros(3, 2), torch.ones(3, 2))  # 3个数据点，每个点有2个独立正态分布
+# Define a batch of data points. Each data point is two independent normal distributions.
+base_distribution = Normal(torch.zeros(3, 2), torch.ones(3, 2))  # 3 data points, each point has 2 independent normal distributions
 
-# 使用 Independent 将它们视为独立分布
+# Use Independent, regard them as independent distributions
 independent_distribution = Independent(base_distribution, reinterpreted_batch_ndims=1)
 
-# # 采样
+# # draw samples
 samples = torch.tensor(samples.numpy())
 print(f"2Independent Samples (Batch): {samples}")
 
@@ -92,7 +84,7 @@ x = torch.tensor(samples)
 
 log_prob = independent_distribution.log_prob(x)  
 
-# 计算
+
 # log_prob = log_normal_pdf(x, mu, sigma)
 print(f"2Log probability at x = {x}: {log_prob.numpy()}")
 
@@ -111,13 +103,13 @@ print(f"2Log probability at x = {x}: {log_prob.numpy()}")
 # import torch
 # from torch.distributions import Normal, Independent
 
-# # 定义一个三维的正态分布
-# base_distribution = Normal(torch.zeros(2, 3, 4), torch.ones(2, 3, 4))  # 形状为 (2, 3, 4)
+# # define one three-dimensional normal distribution
+# base_distribution = Normal(torch.zeros(2, 3, 4), torch.ones(2, 3, 4))  # shape of (2, 3, 4)
 
-# # 使用 Independent 处理批次中的独立分布
+# # use Independent to handle the independent distribution within each batch
 # independent_distribution = Independent(base_distribution, reinterpreted_batch_ndims=2)
 
-# # 采样
+# # draw samples
 # samples = independent_distribution.sample()
 # print(f"Independent Samples (3D Batch): {samples}")
 

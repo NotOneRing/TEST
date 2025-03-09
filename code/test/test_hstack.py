@@ -16,7 +16,7 @@ def test_hstack():
 
     print(result.shape)
 
-    # 输出：
+    # output:
     # tensor([[1, 2, 5, 6],
     #         [3, 4, 7, 8]])
 
@@ -35,7 +35,7 @@ def test_hstack():
 
     print(result_tf)
     assert np.allclose(result.numpy(), result_tf.numpy())
-    # 输出：
+    # output:
     # tensor([[1, 2, 5, 6],
     #         [3, 4, 7, 8]])
 

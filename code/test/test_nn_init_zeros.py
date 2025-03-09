@@ -32,7 +32,7 @@ def test_zeros_initialization():
     # TensorFlow forward pass
     tf_input = tf.constant(input_data)
 
-    #只是build没用，必须运行初始化一下
+    # Only build() is not used. Run the program to initialize
     tf_output = tf_layer(tf_input).numpy()
 
     torch_nn_init_zeros_(tf_layer.kernel)

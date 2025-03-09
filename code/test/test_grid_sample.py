@@ -6,7 +6,7 @@ import numpy as np
 
 
 
-# 固定种子以确保相同的随机数
+# fix random seeds to ensure reproducibility
 seed = 42
 torch.manual_seed(seed)
 np.random.seed(seed)

@@ -6,12 +6,12 @@ from tensorflow.keras.saving import register_keras_serializable
 from util.torch_to_tf import nn_Linear, nn_ReLU, nn_LayerNorm
 
 
-np.random.seed(42)  # 设置 NumPy 随机种子
-tf.random.set_seed(42)  # 设置 TensorFlow 随机种子
+np.random.seed(42)  # set NumPy random seed
+tf.random.set_seed(42)  # set TensorFlow random seed
 import random
 random.seed(42)
 
-# 子模型 C
+# sub-class C
 @register_keras_serializable(package="Custom")
 class C(tf.keras.Model):
     def __init__(self, units=4, **kwargs):
@@ -37,7 +37,7 @@ class C(tf.keras.Model):
         return cls(**config)
 
 
-# 子模型 B
+# sub-class B
 @register_keras_serializable(package="Custom")
 class B(tf.keras.Model):
     def __init__(self, units=8, sub_model=None, **kwargs):
@@ -70,7 +70,7 @@ class B(tf.keras.Model):
         return cls(sub_model=sub_model, **config)
 
 
-# 主模型 A
+# main class A
 @register_keras_serializable(package="Custom")
 class A(tf.keras.Model):
     def __init__(self, units=16, sub_model=None, **kwargs):
@@ -109,45 +109,45 @@ class A(tf.keras.Model):
         return cls(sub_model=sub_model, **config)
 
 
-# 创建模型实例
+# create the model instance
 model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
 
-# 优化器
+# optimizer
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-# 数据
-x_train = tf.random.normal((32, 10))  # 输入形状：32个样本，每个样本10维
-y_train = tf.random.normal((32, 4))   # 输出形状：32个样本，每个样本4维
+# data
+x_train = tf.random.normal((32, 10))  # input shape, 32 samples, each with dimension 10
+y_train = tf.random.normal((32, 4))   # input shape, 32 samples, each with dimension 4
 
-# 定义损失函数
+# define loss function
 mse_loss_fn = tf.keras.losses.MeanSquaredError()
 
-# 训练步骤
-for epoch in range(3):  # 训练 3 个 epoch
+# training procedures
+for epoch in range(3):  # train 3 epochs
     print(f"Epoch {epoch + 1}")
-    for step in range(1):  # 遍历数据 (这里是简化版本)
+    for step in range(1):  # iterate data (this is the simplified version)
         with tf.GradientTape() as tape:
-            predictions = model_a(x_train)  # 前向传播
+            predictions = model_a(x_train)  # forward pass
             print(f"y_train shape: {y_train.shape}, predictions shape: {predictions.shape}")
-            loss = mse_loss_fn(y_train, predictions)  # 计算损失
+            loss = mse_loss_fn(y_train, predictions)  # calculate the loss
 
-        gradients = tape.gradient(loss, model_a.trainable_variables)  # 计算梯度
-        optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))  # 应用梯度
+        gradients = tape.gradient(loss, model_a.trainable_variables)  # calculate gradients
+        optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))  # apply gradients
 
         print(f"Step {step + 1}, Loss: {loss.numpy():.4f}")
 
-# 保存模型
+# save the model
 model_a.save("nested_model.keras")
 
-# 加载模型
+# load the model
 loaded_model_a = tf.keras.models.load_model("nested_model.keras", custom_objects={"A": A, "B": B, "C": C})
 
-# 检查是否保留了权重
+# check if weights are the same
 outputs_original = model_a(x_train)
-loss1 = mse_loss_fn(y_train, outputs_original)  # 计算损失
+loss1 = mse_loss_fn(y_train, outputs_original)  # calculate the loss
 
 outputs_loaded = loaded_model_a(x_train)
-loss2 = mse_loss_fn(y_train, outputs_loaded)  # 计算损失
+loss2 = mse_loss_fn(y_train, outputs_loaded)  # calculate the loss
 
 print(f"Loss1: {loss1.numpy():.4f}")
 print(f"Loss2: {loss2.numpy():.4f}")

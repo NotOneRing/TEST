@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-# PyTorch 网络
+# PyTorch network
 class SimpleNet(torch.nn.Module):
     def __init__(self):
         super(SimpleNet, self).__init__()
@@ -14,16 +14,16 @@ class SimpleNet(torch.nn.Module):
         x = self.fc2(x)
         return x
 
-# 创建一个 PyTorch tensor
+# create a PyTorch tensor
 tensor_pytorch = torch.tensor([1.0, 2.0], requires_grad=False)
 
-# 使用 requires_grad_() 方法设置梯度计算
-tensor_pytorch.requires_grad_()  # 设置为需要梯度计算
+# use the requires_grad_() method to set gradient calculation
+tensor_pytorch.requires_grad_()  # set tensor_pytorch to have gradient calculation
 
-# 查看 tensor 是否需要梯度
+# check if the tensor needs to have gradient calculation
 print("PyTorch tensor requires_grad:", tensor_pytorch.requires_grad)
 
-# 创建 PyTorch 网络并训练
+# create a PyTorch network and train
 net = SimpleNet()
 optimizer = optim.SGD(net.parameters(), lr=0.01)
 # input_tensor = torch.tensor([1.0, 2.0], requires_grad=True)
@@ -34,13 +34,13 @@ print("input_tensor.shape = ", input_tensor.shape)
 
 output = net(input_tensor)
 
-# 反向传播
+# backward propagation
 output.backward()
 
-# 查看梯度
+# check gradients
 print("PyTorch gradient for input_tensor:", input_tensor.grad)
 
-# 查看网络中参数的梯度
+# check gradients of the networks' parameters
 for name, param in net.named_parameters():
     print(f"Gradient for {name}: {param.grad}")
 
@@ -49,7 +49,7 @@ for name, param in net.named_parameters():
 
 import tensorflow as tf
 
-# TensorFlow 网络
+# TensorFlow network
 class SimpleNet_tf(tf.keras.Model):
     def __init__(self):
         super(SimpleNet_tf, self).__init__()
@@ -60,7 +60,7 @@ class SimpleNet_tf(tf.keras.Model):
         x = self.dense1(inputs)
         return self.dense2(x)
 
-# 创建一个 TensorFlow 变量
+# create a TensorFlow variable
 tensor_tf = tf.Variable([1.0, 2.0], trainable=False)
 
 
@@ -72,13 +72,13 @@ tensor_tf = tf.Variable([1.0, 2.0], trainable=False)
     
 from util.torch_to_tf import torch_tensor_requires_grad_
 
-# 使用该 wrapper 设置 trainable 属性
+# use this wrapper to set the trainable property
 # tensor_tf = torch_tensor_requires_grad_(tensor_tf, requires_grad=True)
 
-# 查看 tensor 是否需要梯度
+# check if the tensor needs the gradient calculation
 print("TensorFlow tensor trainable:", tensor_tf.trainable)
 
-# 创建 TensorFlow 网络并训练
+# create a TensorFlow network and train
 net_tf = SimpleNet_tf()
 
 import numpy as np

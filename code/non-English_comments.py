@@ -21,3 +21,9 @@ def find_chinese_comments(directory):
 current_directory = '.'
 find_chinese_comments(current_directory)
 
+
+
+
+
+
+

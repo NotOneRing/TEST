@@ -6,7 +6,7 @@ import numpy as np
 from util.torch_to_tf import torch_flip
 
 
-# 测试样例 1: 随机生成形状为 (2, 3, 4) 的张量
+# test case 1: generate a tensor of random integers within range (0, 10) with shape (2, 3, 4)
 def test_case_1():
     input_array = np.random.randint(0, 10, (2, 3, 4))
     tf_input = tf.constant(input_array)
@@ -26,7 +26,7 @@ def test_case_1():
 
 
 
-# 测试样例 2: 随机生成形状为 (3, 3) 的张量
+# test case 2: generate a tensor of random integers within range (0, 10) with shape (3, 3)
 def test_case_2():
     input_array = np.random.randint(0, 10, (3, 3))
     tf_input = tf.constant(input_array)
@@ -46,7 +46,7 @@ def test_case_2():
 
 
 
-# 测试样例 3: 随机生成形状为 (1, 5, 2) 的张量
+# test case 3: generate a tensor of random integers within range (0, 10) with shape (1, 5, 2)
 def test_case_3():
     input_array = np.random.randint(0, 10, (1, 5, 2))
     tf_input = tf.constant(input_array)
@@ -66,7 +66,7 @@ def test_case_3():
 
 
 
-# 测试样例 4: 随机生成形状为 (4, 1, 3) 的张量
+# test case 4: generate a tensor of random integers within range (0, 10) with shape (4, 1, 3)
 def test_case_4():
     input_array = np.random.randint(0, 10, (4, 1, 3))
     tf_input = tf.constant(input_array)
@@ -86,7 +86,7 @@ def test_case_4():
 
 
 
-# 测试样例 5: 随机生成形状为 (3, 1, 5, 2) 的张量
+# test case 5: generate a tensor of random integers within range (0, 10) with shape (3, 1, 5, 2)
 def test_case_5():
     input_array = np.random.randint(0, 10, (3, 1, 5, 2))
     tf_input = tf.constant(input_array)
@@ -106,7 +106,7 @@ def test_case_5():
 
 
 
-# 执行所有测试
+# run all test cases
 def run_tests():
     test_case_1()
     test_case_2()

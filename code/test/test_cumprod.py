@@ -1,10 +1,10 @@
 def test_cumprod():
     import torch
 
-    # 创建一个一维张量
+    # create a tensor of 1 dimension
     tensor = torch.tensor([1, 2, 3, 4])
 
-    # 计算累积乘积
+    # calculate cumulative products
     cumprod_result = torch.cumprod(tensor, dim=0)
     print(cumprod_result)
 
@@ -12,12 +12,12 @@ def test_cumprod():
 
     tensor_2d = torch.tensor([[1, 2, 3], [4, 5, 6]])
 
-    # 沿着维度 0（行）计算累积乘积
+    # calculate the cumulative product along the zeroth dimension
     cumprod_dim_0 = torch.cumprod(tensor_2d, dim=0)
     print("cumprod along dim 0:")
     print(cumprod_dim_0)
 
-    # 沿着维度 1（列）计算累积乘积
+    # calculate the cumulative product along the first dimension
     cumprod_dim_1 = torch.cumprod(tensor_2d, dim=1)
     print("cumprod along dim 1:")
     print(cumprod_dim_1)
@@ -28,10 +28,10 @@ def test_cumprod():
 
     import tensorflow as tf
 
-    # 创建一个一维张量
+    # create a tensor of 1 dimension
     tensor = tf.constant([1, 2, 3, 4])
 
-    # 计算累积乘积
+    # calculate cumulative products
     tf_cumprod_result = torch_cumprod(tensor, dim=0)
     print(cumprod_result)
 
@@ -39,12 +39,12 @@ def test_cumprod():
 
     tensor_2d = tf.constant([[1, 2, 3], [4, 5, 6]])
 
-    # 沿着维度 0（行）计算累积乘积
+    # calculate the cumulative product along the zeroth dimension
     tf_cumprod_dim_0 = torch_cumprod(tensor_2d, dim=0)
     print("cumprod along axis 0:")
     print(cumprod_dim_0)
 
-    # 沿着维度 1（列）计算累积乘积
+    # calculate the cumulative product along the first dimension
     tf_cumprod_dim_1 = torch_cumprod(tensor_2d, dim=1)
     print("cumprod along axis 1:")
     print(cumprod_dim_1)

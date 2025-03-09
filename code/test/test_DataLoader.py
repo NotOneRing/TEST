@@ -8,7 +8,7 @@ from util.torch_to_tf import torch_utils_data_DataLoader
 
 
 
-# === 示例数据集 ===
+# example dataset
 dataset = [
     {
     "actions": np.random.rand(3), 
@@ -21,12 +21,12 @@ dataset = [
 
 
 
-# === 创建 DataLoader ===
+# create DataLoader
 dataloader = torch_utils_data_DataLoader(dataset, batch_size=5, shuffle=True)
 
 
 
-# === 迭代数据 ===
+# iterate data
 for batch_idx, batch in enumerate(dataloader):
     print(f"Batch {batch_idx + 1}:")
     for key, value in batch.items():

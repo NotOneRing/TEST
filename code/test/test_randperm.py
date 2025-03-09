@@ -11,13 +11,13 @@ from util.config import DEBUG
 
 def test_randperm():
 
-    # 生成一个从 0 到 9 的整数序列并随机打乱
+    # create an integer sequence from 0 to 9 and shuffle it randomly
     tensor = torch.randperm(10)
     print(tensor)
 
 
 
-    # 生成一个从 0 到 9 的整数序列并随机打乱
+    # create an integer sequence from 0 to 9 and shuffle it randomly
     tensor_tf = torch_randperm(10)
     print("type(tensor_tf)", type(tensor_tf))
     print(tensor_tf)

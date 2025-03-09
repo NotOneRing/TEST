@@ -6,36 +6,36 @@ import numpy as np
 from util.torch_to_tf import torch_zeros
 
 
-# 测试函数，比较两个库中的零张量
+# test function, compare zero tensor in tensorflow and torch
 def test_zeros_equivalence(shape):
-    # TensorFlow 创建的零张量
+    # TensorFlow: zeros tensor
     tf_tensor = torch_zeros(shape, dtype=tf.float32)
 
-    # PyTorch 创建的零张量
+    # PyTorch: zeros tensor
     torch_tensor = torch.zeros(shape, dtype=torch.float32)
 
-    # 比较 TensorFlow 和 PyTorch 输出的张量
+    # compare tensor in TensorFlow and PyTorch
     print(f"TensorFlow zeros tensor:\n{tf_tensor.numpy()}")
     print(f"PyTorch zeros tensor:\n{torch_tensor.numpy()}")
 
-    # 检查它们的输出是否相等
+    # check if their outputs are equivalent
     match = np.allclose(tf_tensor.numpy(), torch_tensor.numpy())
     print(f"Outputs match: {match}")
 
 
 
 
-    # TensorFlow 创建的零张量
+    # TensorFlow: zeros tensor
     tf_tensor = torch_zeros(*shape, dtype=tf.float32)
 
-    # PyTorch 创建的零张量
+    # PyTorch: zeros tensor
     torch_tensor = torch.zeros(*shape, dtype=torch.float32)
 
-    # 比较 TensorFlow 和 PyTorch 输出的张量
+    # compare output tensors in TensorFlow and PyTorch
     print(f"TensorFlow zeros tensor:\n{tf_tensor.numpy()}")
     print(f"PyTorch zeros tensor:\n{torch_tensor.numpy()}")
 
-    # 检查它们的输出是否相等
+    # check if their outputs are equivalent
     match = np.allclose(tf_tensor.numpy(), torch_tensor.numpy())
     print(f"Outputs match: {match}")
 
@@ -43,8 +43,8 @@ def test_zeros_equivalence(shape):
 
     return match
 
-# 运行测试
-shape = (2, 3)  # 设置测试的形状
+# run test
+shape = (2, 3)  # set testing shape
 
 test_zeros_equivalence(shape)
 

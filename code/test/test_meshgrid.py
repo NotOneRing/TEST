@@ -8,7 +8,7 @@ from util.torch_to_tf import torch_meshgrid
 
 
 def test_meshgrid():
-    # 创建两个一维张量
+    # create two tensors of 1 dimension
     x = torch.tensor([1, 2, 3])
     y = torch.tensor([4, 5])
 
@@ -20,7 +20,7 @@ def test_meshgrid():
     print(y)
 
 
-    # 使用 meshgrid 创建坐标网格
+    # use meshgrid to create coordinate network
     xx1, yy1 = torch.meshgrid(x, y, indexing='ij')
     # xx, yy = torch.meshgrid(x, y, indexing='xy')
     # xx, yy = torch.meshgrid(x, y)
@@ -38,7 +38,7 @@ def test_meshgrid():
     print(yy1.shape)
 
 
-    # 使用 meshgrid 创建坐标网格
+    # use meshgrid to create coordinate network
     xx2, yy2 = torch.meshgrid([x, y], indexing='ij')
     # xx, yy = torch.meshgrid(x, y, indexing='xy')
     # xx, yy = torch.meshgrid(x, y)
@@ -59,7 +59,7 @@ def test_meshgrid():
 
 
 
-    # 创建两个一维张量
+    # create two tensors of 1 dimension
     x = tf.constant([1, 2, 3])
     y = tf.constant([4, 5])
 
@@ -72,7 +72,7 @@ def test_meshgrid():
 
 
 
-    # 使用 meshgrid 创建坐标网格
+    # use meshgrid to create coordinate network
     # xx, yy = torch_meshgrid(x, y)
     xx1_tf, yy1_tf = torch_meshgrid(x, y, indexing = "ij")
     # xx, yy = tf.meshgrid(x, y, indexing = "xy")
@@ -87,7 +87,7 @@ def test_meshgrid():
 
 
 
-    # 使用 meshgrid 创建坐标网格
+    # use meshgrid to create coordinate network
     # xx, yy = torch_meshgrid(x, y)
     xx2_tf, yy2_tf = torch_meshgrid([x, y], indexing = "ij")
     # xx, yy = tf.meshgrid(x, y, indexing = "xy")

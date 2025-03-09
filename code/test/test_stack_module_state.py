@@ -15,7 +15,7 @@ from torch.func import stack_module_state
 
 
 
-# 定义简单模型
+# define the simple model
 class SimpleNet(nn.Module):
     def __init__(self):
         super().__init__()
@@ -44,10 +44,10 @@ print("Stacked Parameters Shape:", {k: v.shape for k, v in stacked_params1.items
 print("Stacked Buffers:", stacked_buffers1)
 
 
-# 创建多个模型实例
+# create multiple model instances
 models = [SimpleNet() for _ in range(3)]
 
-# 堆叠这些模型的参数和缓冲区
+# stack the parameters and buffers of these models
 stacked_params2, stacked_buffers2 = stack_module_state(models)
 
 print("Stacked Parameters Shape:", {k: v.shape for k, v in stacked_params2.items()})
@@ -61,7 +61,7 @@ for k, v in stacked_params2.items():
 
 
 
-# W的维度是(out_features, in_features)，因为y = xW^{\top} + b
+# W's dimension is (out_features, in_features), because y = xW^{\top} + b
 
 import tensorflow as tf
 
@@ -137,7 +137,7 @@ for k, v in tf_stacked_params1.items():
     else:
         tf_result1.append(v)
 
-# 创建多个模型实例
+# create multiple model instances
 models_tf = [tf_SimpleNet() for _ in range(3)]
 
 for i, network in enumerate(models_tf):
@@ -147,7 +147,7 @@ for i, network in enumerate(models_tf):
         network.fc.trainable_weights[0].assign(models[i].fc.weight.detach().numpy().T)  # kernel
         network.fc.trainable_weights[1].assign(models[i].fc.bias.detach().numpy())     # bias
 
-# 堆叠这些模型的参数和缓冲区
+# stack the parameters and buffers of these models
 tf_stacked_params2, tf_stacked_buffers2 = torch_func_stack_module_state(models_tf)
 
 print("Stacked Parameters Shape:", {k: v.shape for k, v in tf_stacked_params2.items()})

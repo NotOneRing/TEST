@@ -2,7 +2,7 @@ import torch
 import tensorflow as tf
 import numpy as np
 
-# # 定义 torch_tensor_transpose 函数
+# # define torch_tensor_transpose function
 # def torch_tensor_transpose(input, dim0, dim1):
 #     dim_lens = len(input.shape)
 #     perm = list(range(dim_lens))
@@ -16,7 +16,7 @@ from util.torch_to_tf import torch_tensor_transpose
 
 def test_transpose():
 
-    # 测试案例
+    # test cases
     test_cases = [
         {"shape": (2, 3), "dim0": 0, "dim1": 1},
         {"shape": (2, 3, 4), "dim0": 0, "dim1": 2},
@@ -27,21 +27,21 @@ def test_transpose():
         shape = case["shape"]
         dim0, dim1 = case["dim0"], case["dim1"]
 
-        # 生成随机张量
+        # create random tensor
         torch_tensor = torch.rand(shape)
         tf_tensor = tf.convert_to_tensor(torch_tensor.numpy())
 
-        # PyTorch 转置
+        # PyTorch transpose
         torch_transposed = torch.transpose(torch_tensor, dim0, dim1)
 
-        # TensorFlow 转置
+        # TensorFlow transpose
         tf_transposed = torch_tensor_transpose(tf_tensor, dim0, dim1)
 
-        # 转换回 NumPy 比较
+        # convert back to NumPy to compare
         torch_transposed_np = torch_transposed.numpy()
         tf_transposed_np = tf_transposed.numpy()
 
-        # 打印测试结果
+        # print testing results
         assert np.allclose(torch_transposed_np, tf_transposed_np), f"Test case {i + 1} failed!"
         print(f"Test case {i + 1}: Passed!")
         print(f"Original shape: {shape}, Transposed shape: {torch_transposed_np.shape}")

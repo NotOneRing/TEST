@@ -10,7 +10,7 @@ import numpy as np
 
 def test_mse_loss():
 
-    # 示例数据
+    # example data:
     input = torch.tensor([0.5, 1.0, 1.5])
     target = torch.tensor([1.0, 1.0, 1.0])
 

@@ -7,12 +7,12 @@ x = tf.Variable([1.0, 2.0, 3.0], trainable=True)
 
 with tf.GradientTape(watch_accessed_variables=True, persistent=True) as tape:
     y = x * 2
-    z = y + 1  # y 的梯度计算被禁止
+    z = y + 1
     loss = tf.reduce_sum(z)
 
-# 梯度计算
+# calculate gradient
 grad = tape.gradient(loss, x)
-print("x grad = ", grad)  # 输出 None，因为 z 不会传播梯度
+print("x grad = ", grad)  # output grad
 
 grad = tape.gradient(loss, y)
 print("y grad = ", grad)
@@ -26,12 +26,12 @@ from util.torch_to_tf import torch_no_grad
 
 with torch_no_grad() as tape:
     y = x * 2
-    z = y + 1  # y 的梯度计算被禁止
+    z = y + 1  # y's gradient calculation is forbidden by torch_no_grad
     loss = tf.reduce_sum(z)
 
-# 梯度计算
+# calculate gradient
 grad = tape.gradient(loss, x)
-print("x grad = ", grad)  # 输出 None，因为 z 不会传播梯度
+print("x grad = ", grad)  # Output None, because z does not propagate gradient
 
 grad = tape.gradient(loss, y)
 print("y grad = ", grad)

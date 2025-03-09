@@ -1,19 +1,19 @@
 import torch
 from torch.distributions import Normal
 
-# 定义均值和标准差
+# define the mean and standard deviation
 mean = torch.tensor([0.0, 1.0])
 std = torch.tensor([1.0, 0.5])
 
-# 创建正态分布对象
+# create a Normal distribution
 dist = Normal(mean, std)
 
-# 采样
-sample = dist.sample()  # 生成一个样本
+# sample
+sample = dist.sample()  # generate one sample
 print(f"Sample: {sample}")
 
-# 计算概率密度函数值
-log_prob = dist.log_prob(torch.tensor([1.0, 1.0]))  # 对应均值的概率密度
+# calculate the probability density function(PDF) value
+log_prob = dist.log_prob(torch.tensor([1.0, 1.0]))  # probability density function corresponding to [1.0, 1.0]
 print(f"Log probability: {log_prob}")
 
 
@@ -28,38 +28,40 @@ from util.torch_to_tf import Normal
 
 # def log_normal_pdf(x, mean, std):
 #     """
-#     计算正态分布的对数概率密度函数
+#     Compute the log probability density function (PDF) of a normal distribution.
 
 #     Args:
-#         x: 需要计算概率密度的点
-#         mean: 正态分布的均值
-#         std: 正态分布的标准差
+#         x: The point at which to evaluate the probability density.
+#         mean: The mean of the normal distribution.
+#         std: The standard deviation of the normal distribution.
 
 #     Returns:
-#         对数概率密度
+#         The log probability density.
 #     """
-#     # 计算PDF的对数
+#     # Compute the log of the probability density function (PDF)
 #     log_pdf = -tf.math.log(std * tf.math.sqrt(2 * tf.constant(np.pi))) - 0.5 * ((x - mean) ** 2) / (std ** 2)
 #     return log_pdf
 
-# # 测试
 
-mu = tf.convert_to_tensor(mean.numpy(), dtype=np.float32)  # 均值
-sigma = tf.convert_to_tensor(std.numpy(), dtype=np.float32)  # 标准差
 
-# 假设我们要计算 x = 1 的对数概率密度
+# # test
+
+mu = tf.convert_to_tensor(mean.numpy(), dtype=np.float32)  # mean
+sigma = tf.convert_to_tensor(std.numpy(), dtype=np.float32)  # std
+
+# Suppose that we need to calculate the log probability density function at point x = 1
 x = tf.convert_to_tensor( np.array([1.0, 1.0]), dtype=np.float32 )
 
 dist = Normal(mu, sigma)
 
-# 采样
-sample = dist.sample()  # 生成一个样本
+# sample
+sample = dist.sample()  # generate one sample
 print(f"Sample: {sample}")
 
 
-log_prob = dist.log_prob(x)  # 对应均值的概率密度
+log_prob = dist.log_prob(x)  # probability density corresponding to x
 
-# 计算
+# calculate
 # log_prob = log_normal_pdf(x, mu, sigma)
 print(f"Log probability at x = {x}: {log_prob.numpy()}")
 

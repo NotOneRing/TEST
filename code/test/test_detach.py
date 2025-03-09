@@ -64,7 +64,7 @@ def compare_model_params(pytorch_model, tensorflow_model):
     tensorflow_params = tensorflow_model.trainable_variables
 
     for i, tensorflow_param in enumerate(tensorflow_params):
-        # 比较每个参数的值
+        # compare the value of each parameter
         key = list( pytorch_params.keys() )[i]
         temp = pytorch_weights[key]
 
@@ -82,7 +82,7 @@ def compare_model_params(pytorch_model, tensorflow_model):
 
 
 
-# 调用函数检查参数一致性
+# call functino to check the parameters are equivalent
 if compare_model_params(pytorch_net, tensorflow_net):
     print("The parameters are the same!")
 else:

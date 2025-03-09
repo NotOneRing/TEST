@@ -13,21 +13,21 @@ def test_triu():
 
     matrix = gen_2d_int()[0]
 
-    # 创建一个 3x3 矩阵
+    # create a matrix of 3x3
     torch_matrix = np_to_torch(matrix)
 
     tf_matrix = np_to_tf(matrix)
 
 
-    # 创建一个 3x3 矩阵
+    # create a matrix of 3x3
     tf_matrix = np_to_tf(matrix)
 
 
 
-    # 提取主对角线及其以上的部分
+    # Extract the main diagonal and the upper triangular part of the matrix.
     triu_matrix = torch.triu(torch_matrix, diagonal=0)
     print(triu_matrix)
-    # 输出:
+    # output:
     # tensor([[1, 2, 3],
     #         [0, 5, 6],
     #         [0, 0, 9]])
@@ -35,7 +35,7 @@ def test_triu():
 
 
 
-    # 创建一个上三角矩阵
+    # Create a matrix with elements in the upper triangular part
     upper_triangle_matrix = torch_triu(tf_matrix, diagonal=0)
     print(upper_triangle_matrix)
 
@@ -45,11 +45,10 @@ def test_triu():
     print("1")
 
 
-
-    # 提取主对角线以上的部分
+    # diagonal is positive, extract from the upper triangular part above the main diagonal of the matrix.
     triu_matrix = torch.triu(torch_matrix, diagonal=1)
     print(triu_matrix)
-    # 输出:
+    # output:
     # tensor([[0, 2, 3],
     #         [0, 0, 6],
     #         [0, 0, 0]])
@@ -66,10 +65,10 @@ def test_triu():
 
 
 
-    # 提取主对角线以下的部分
+    # diagonal is negative, extract from the lower triangular part below the main diagonal of the matrix.
     triu_matrix = torch.triu(torch_matrix, diagonal=-1)
     print(triu_matrix)
-    # 输出:
+    # output:
     # tensor([[1, 2, 3],
     #         [4, 5, 6],
     #         [0, 8, 9]])

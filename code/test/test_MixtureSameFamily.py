@@ -34,8 +34,8 @@ def test_MixtureSameFamily():
         component_distribution=component_distribution,
     )
 
-    # Option 1: 对 modes 维度求平均
-    sample_torch = means.mean(dim=1)  # 计算每个样本的所有模式的平均值
+    # Option 1: calculate average for dimension modes
+    sample_torch = means.mean(dim=1)  # calculate the average for each sample in all modes
     log_prob_torch = dist_torch.log_prob(sample_torch)
 
     print("Torch Log Probability: ", log_prob_torch)
@@ -61,8 +61,8 @@ def test_MixtureSameFamily():
         component_distribution=component_distribution_tf,
     )
 
-    # Option 1: 对 modes 维度求平均
-    sample_tf = tf.reduce_mean(means, axis=1)  # 计算每个样本的所有模式的平均值
+    # Option 1: calculate average for dimension modes
+    sample_tf = tf.reduce_mean(means, axis=1)  # calculate the average for each sample in all modes
     log_prob_tf = dist_tf.log_prob(sample_tf)
 
     print("TensorFlow Log Probability: ", log_prob_tf)

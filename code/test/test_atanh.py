@@ -18,7 +18,7 @@ print(y_torch)
 
 
 
-# 检查是否为 NaN 或 Inf
+# check if it's NaN or Inf
 y_is_nan = np.isnan(y.numpy())
 y_torch_is_nan = np.isnan(y_torch.numpy())
 
@@ -27,9 +27,9 @@ y_torch_is_inf = np.isinf(y_torch.numpy())
 
 
 
-# 先检查 NaN 和 Inf 是否一致
+# check if the NaN part and the Inf part are equivalent
 if np.all(y_is_nan == y_torch_is_nan) and np.all(y_is_inf == y_torch_is_inf):
-    # 忽略 NaN 和 Inf，检查其它值
+    # omit NaN and Inf. Check other values
     result = np.allclose(y.numpy()[~(y_is_nan | y_is_inf)], y_torch.numpy()[~(y_torch_is_nan | y_torch_is_inf)], atol=1e-4)
 else:
     result = False

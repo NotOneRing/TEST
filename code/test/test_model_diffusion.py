@@ -7,30 +7,29 @@ import tensorflow as tf
 
 # model/diffusion/sampling.py
 import numpy as np
-from model.diffusion.sampling import cosine_beta_schedule  # 替换为实际模块路径
+from model.diffusion.sampling import cosine_beta_schedule  
 
 def test_cosine_beta_schedule():
-    # 测试参数
     timesteps = 10
     s = 0.008
     dtype = tf.float32
 
-    # 调用函数
+    # call function
     betas = cosine_beta_schedule(timesteps, s, dtype)
 
-    # 检查返回类型
+    # check type of betas
     assert isinstance(betas, tf.Tensor), "Output is not a tf.Tensor"
 
-    # 检查返回值的dtype
+    # chcek dtype of betas
     assert betas.dtype == dtype, f"Expected dtype {dtype}, but got {betas.dtype}"
 
-    # 检查返回值的长度是否正确
+    # check the length of betas
     assert betas.shape[0] == timesteps, f"Expected length {timesteps}, but got {betas.shape[0]}"
 
-    # 检查beta值是否在 [0, 0.999] 范围内
+    # check beta's value within [0, 0.999]
     assert tf.reduce_all((betas >= 0) & (betas <= 0.999)), "Betas are out of expected range [0, 0.999]"
 
-    # 检查beta值是否递增或合理分布
+    # check betas and expected_betas_clipped are close
     alphas_cumprod = np.cos(((np.linspace(0, timesteps + 1, timesteps + 1) / (timesteps + 1)) + s) / (1 + s) * np.pi * 0.5) ** 2
     alphas_cumprod = alphas_cumprod / alphas_cumprod[0]
     expected_betas = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])
