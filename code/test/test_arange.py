@@ -1,49 +1,34 @@
-
-
-from util.torch_to_tf import torch_arange
-
-
+import unittest
 import numpy as np
-
-def test_arange():
-    tensor_tf1 = torch_arange(0, 10)
-    print(tensor_tf1)
-    # output：tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-
-    # create tensor from 1 to 9 with stride length of 2
-    tensor_tf2 = torch_arange(1, 10, step=2)
-    print(tensor_tf2)
-
-    print("type(tensor_tf2) = ", type(tensor_tf2))
+from util.torch_to_tf import torch_arange
+import torch
 
 
-    import torch
-
-    tensor1 = torch.arange(0, 10)
-    print(tensor1)
-    # Output: tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-
-    # create tensor from 1 to 9 with stride length of 2
-    tensor2 = torch.arange(1, 10, step=2)
-    print(tensor2)
-
-    assert np.allclose(tensor_tf1.numpy(), tensor1.numpy())
-
-    assert np.allclose(tensor_tf2.numpy(), tensor2.numpy())
-
-
-
-
-test_arange()
-
-
-
-
-
-
-
-
+class TestArange(unittest.TestCase):
+    def test_arange_basic(self):
+        """Test basic functionality of torch_arange from 0 to 10."""
+        tensor_tf1 = torch_arange(0, 10)
+        tensor1 = torch.arange(0, 10)
+        
+        # Print for debugging purposes
+        print(tensor_tf1)
+        print(tensor1)
+        
+        # Assert that the outputs are equivalent
+        self.assertTrue(np.allclose(tensor_tf1.numpy(), tensor1.numpy()))
+    
+    def test_arange_with_step(self):
+        """Test torch_arange with a step parameter."""
+        tensor_tf2 = torch_arange(1, 10, step=2)
+        tensor2 = torch.arange(1, 10, step=2)
+        
+        # Print for debugging purposes
+        print(tensor_tf2)
+        print(tensor2)
+        
+        # Assert that the outputs are equivalent
+        self.assertTrue(np.allclose(tensor_tf2.numpy(), tensor2.numpy()))
 
 
-
-
+if __name__ == '__main__':
+    unittest.main()
