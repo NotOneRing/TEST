@@ -76,10 +76,10 @@ class TestAdam(unittest.TestCase):
 
             self.tf_optimizer.step(tf_gradients)
 
-            # Print losses
-            print(f"Step {step + 1}:")
-            print(f"  PyTorch Loss: {torch_loss.item():.6f}")
-            print(f"  TensorFlow Loss: {tf_loss.numpy():.6f}")
+            # # Print losses
+            # print(f"Step {step + 1}:")
+            # print(f"  PyTorch Loss: {torch_loss.item():.6f}")
+            # print(f"  TensorFlow Loss: {tf_loss.numpy():.6f}")
 
             # Assert losses are close
             self.assertTrue(
@@ -91,9 +91,9 @@ class TestAdam(unittest.TestCase):
         torch_final_output = self.torch_model(torch.tensor(self.inputs)).detach().numpy()
         tf_final_output = self.tf_model(self.inputs).numpy()
 
-        print("\nFinal Output Comparison:")
-        print(f"  PyTorch: {torch_final_output}")
-        print(f"  TensorFlow: {tf_final_output}")
+        # print("\nFinal Output Comparison:")
+        # print(f"  PyTorch: {torch_final_output}")
+        # print(f"  TensorFlow: {tf_final_output}")
         
         # Assert final outputs are close
         self.assertTrue(

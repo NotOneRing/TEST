@@ -10,9 +10,9 @@ class TestArange(unittest.TestCase):
         tensor_tf1 = torch_arange(0, 10)
         tensor1 = torch.arange(0, 10)
         
-        # Print for debugging purposes
-        print(tensor_tf1)
-        print(tensor1)
+        # # Print for debugging purposes
+        # print(tensor_tf1)
+        # print(tensor1)
         
         # Assert that the outputs are equivalent
         self.assertTrue(np.allclose(tensor_tf1.numpy(), tensor1.numpy()))
@@ -22,9 +22,9 @@ class TestArange(unittest.TestCase):
         tensor_tf2 = torch_arange(1, 10, step=2)
         tensor2 = torch.arange(1, 10, step=2)
         
-        # Print for debugging purposes
-        print(tensor_tf2)
-        print(tensor2)
+        # # Print for debugging purposes
+        # print(tensor_tf2)
+        # print(tensor2)
         
         # Assert that the outputs are equivalent
         self.assertTrue(np.allclose(tensor_tf2.numpy(), tensor2.numpy()))

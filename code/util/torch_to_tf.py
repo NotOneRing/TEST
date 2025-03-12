@@ -325,22 +325,22 @@ def torch_log(input):
 
 
 
-# def torch_tensor_clamp_(input, min = float('-inf'), max = float('inf')):
-#     if isinstance(input, tf.Variable):
-#         temp_variable = tf.clip_by_value(input, min, max)
-#         # print("temp_variable = ", temp_variable)
-#         # print("input = ", input)
-#         input.assign( temp_variable )
-#         # print("after input.assign input= ", input)
-#     # wrong path
-#     # elif isinstance(input, tf.Tensor):
-#     #     variable = tf.Variable(input)
-#     #     variable = tf.clip_by_value(variable, min, max)
-#     #     tensor_from_variable = tf.convert_to_tensor(variable)
-#     #     input = None
-#     #     input = tensor_from_variable
-#     else:
-#         raise RuntimeError("Input must be tf.Variable to be able to changed")
+def torch_tensor_clamp_(input, min = float('-inf'), max = float('inf')):
+    if isinstance(input, tf.Variable):
+        temp_variable = tf.clip_by_value(input, min, max)
+        # print("temp_variable = ", temp_variable)
+        # print("input = ", input)
+        input.assign( temp_variable )
+        # print("after input.assign input= ", input)
+    # wrong path
+    # elif isinstance(input, tf.Tensor):
+    #     variable = tf.Variable(input)
+    #     variable = tf.clip_by_value(variable, min, max)
+    #     tensor_from_variable = tf.convert_to_tensor(variable)
+    #     input = None
+    #     input = tensor_from_variable
+    else:
+        raise RuntimeError("Input must be tf.Variable to be able to changed")
 
 
 
@@ -1701,8 +1701,8 @@ class nn_Dropout(tf.keras.layers.Layer):
     #     rate, noise_shape=None, seed=None, **kwargs
     # )
 
-    def call(self, net_params):
-        return self.model(net_params)
+    def call(self, net_params, training=False):
+        return self.model(net_params, training=training)
 
 
 
@@ -3968,9 +3968,8 @@ def torch_no_grad():
 
 
 
-def torch_tensor_cpu(tensor):
-
-    return 
+# def torch_tensor_cpu(tensor):
+#     return 
 
 
 
