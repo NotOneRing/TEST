@@ -268,8 +268,9 @@ def torch_stack(tensor_list_to_stack, dim = 0):
 
 def torch_multinomial(input, num_samples, replacement = True):
     assert replacement == True, "replacement must be True to use tf.random.categorical"
-    return tf.random.categorical(input, num_samples=num_samples)
-
+    logits = tf.math.log(input)
+    logits = logits[None, :]
+    return tf.random.categorical(logits, num_samples=num_samples, dtype=tf.int32).numpy().flatten()
 
 
 
@@ -4273,56 +4274,56 @@ class CosineAWR(tf.keras.optimizers.schedules.LearningRateSchedule):
 
 
 
+def safe_gather_nd(tensor, indices, default_value=0.0):
+
+    tensor_len = len(tensor.shape)
+    indices_last_len = tf.shape(indices)[-1]
+    augment_dim = tensor_len - indices_last_len
+    
+
+    # print("tensor = ", tensor)
+    # print("indices = ", indices)
+    # Get tensor shape
+    tensor_shape = tf.shape(tensor)
+    max_indices = tensor_shape[:tf.shape(indices)[-1]]  # Calculate maximum index for each dimension
+
+    # print("max_indices = ", max_indices)
+
+    # Check if indices are out of bounds
+    is_out_of_bounds = tf.reduce_any(indices < 0, axis=-1) | tf.reduce_any(indices >= max_indices, axis=-1)
+
+    match_dim_is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)  # (3, 1)
+    
+    # print("is_out_of_bounds = ", is_out_of_bounds)
+    # print("match_dim_is_out_of_bounds = ", match_dim_is_out_of_bounds)
+    # print("tf.zeros_like(indices) = ", tf.zeros_like(indices))
+    # print("indices = ", indices)
+
+    # Create valid indices by replacing out-of-bounds indices with (0, 0, ...) to avoid errors
+    safe_indices = tf.where(match_dim_is_out_of_bounds, tf.zeros_like(indices), indices)
+
+    # print("safe_indices = ", safe_indices)
+
+    # Get gather_nd result
+    gathered_values = tf.gather_nd(tensor, safe_indices)
+
+    # print("gathered_values = ", gathered_values)
+    # print("gathered_values = ", tf.transpose(gathered_values, [0, 3, 1, 2]))
+
+    for i in range(augment_dim):
+        is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)
+
+    # print("is_out_of_bounds = ", is_out_of_bounds)
+
+    # Replace out-of-bounds indices with default_value
+    result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values),  tf.cast(default_value, gathered_values.dtype) ), gathered_values)
+
+    # print("result = ", result)
+
+    return result
 
 
 def torch_nn_functional_grid_sample(image, grid, mode="bilinear", padding_mode="zeros", align_corners=False):
-    def safe_gather_nd(tensor, indices, default_value=0.0):
-
-        tensor_len = len(tensor.shape)
-        indices_last_len = tf.shape(indices)[-1]
-        augment_dim = tensor_len - indices_last_len
-        
-
-        # print("tensor = ", tensor)
-        # print("indices = ", indices)
-        # Get tensor shape
-        tensor_shape = tf.shape(tensor)
-        max_indices = tensor_shape[:tf.shape(indices)[-1]]  # Calculate maximum index for each dimension
-
-        # print("max_indices = ", max_indices)
-
-        # Check if indices are out of bounds
-        is_out_of_bounds = tf.reduce_any(indices < 0, axis=-1) | tf.reduce_any(indices >= max_indices, axis=-1)
-
-        match_dim_is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)  # (3, 1)
-        
-        # print("is_out_of_bounds = ", is_out_of_bounds)
-        # print("match_dim_is_out_of_bounds = ", match_dim_is_out_of_bounds)
-        # print("tf.zeros_like(indices) = ", tf.zeros_like(indices))
-        # print("indices = ", indices)
-
-        # Create valid indices by replacing out-of-bounds indices with (0, 0, ...) to avoid errors
-        safe_indices = tf.where(match_dim_is_out_of_bounds, tf.zeros_like(indices), indices)
-
-        # print("safe_indices = ", safe_indices)
-
-        # Get gather_nd result
-        gathered_values = tf.gather_nd(tensor, safe_indices)
-
-        # print("gathered_values = ", gathered_values)
-        # print("gathered_values = ", tf.transpose(gathered_values, [0, 3, 1, 2]))
-
-        for i in range(augment_dim):
-            is_out_of_bounds = tf.expand_dims(is_out_of_bounds, axis=-1)
-
-        # print("is_out_of_bounds = ", is_out_of_bounds)
-
-        # Replace out-of-bounds indices with default_value
-        result = tf.where(is_out_of_bounds, tf.fill(tf.shape(gathered_values),  tf.cast(default_value, gathered_values.dtype) ), gathered_values)
-
-        # print("result = ", result)
-
-        return result
 
     assert mode == "bilinear", "Only bilinear mode is supported."
     assert padding_mode == "zeros", "Only zeros padding_mode is implemented."

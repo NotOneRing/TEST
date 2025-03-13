@@ -1,23 +1,19 @@
+import unittest
 import numpy as np
 import torch
 import tensorflow as tf
 
 from util.torch_to_tf import torch_from_numpy
 
-def test_from_numpy():
+class TestFromNumpy(unittest.TestCase):
+    
+    def test_from_numpy(self):
+        numpy_array = np.full((3, 3), 5.0)
         
-    # use NumPy to generate one array
-    numpy_array = np.full((3, 3), 5.0)  # create a 3x3 array filled with 5.0
+        torch_tensor = torch.from_numpy(numpy_array)
+        tf_tensor = torch_from_numpy(numpy_array)
 
-    # convert the NumPy array to the PyTorch tensor and the TensorFlow tensor
-    torch_tensor = torch.from_numpy(numpy_array)
-    tf_tensor = torch_from_numpy(numpy_array)
+        self.assertTrue(np.allclose(torch_tensor.numpy(), tf_tensor.numpy()))
 
-
-    assert np.allclose(torch_tensor.numpy(), tf_tensor.numpy())
-
-test_from_numpy()
-
-
-
-
+if __name__ == '__main__':
+    unittest.main()

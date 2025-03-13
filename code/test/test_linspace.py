@@ -1,64 +1,25 @@
 import tensorflow as tf
-
 import torch
-
+import unittest
+import numpy as np
 from util.torch_to_tf import torch_linspace
 
-import numpy as np
+class TestLinspace(unittest.TestCase):
+    def test_linspace(self):
+        h = 5
+        pad = 10
+        eps = 1.0 / (h + pad)
 
-def test_linspace():
-    h = 5
+        # Create torch linspace array
+        torch_arange = torch.linspace(
+            -1.0 + eps, 1.0 - eps, h + 2 * pad
+        )[:h]
 
-    pad = 10
+        # Create tensorflow linspace array using custom implementation
+        tf_arange = torch_linspace(-1.0 + eps, 1.0 - eps, h + 2 * pad)[:h]
 
-    eps = 1.0 / (h + pad)
+        # Assert that both arrays are close to each other
+        self.assertTrue(np.allclose(torch_arange.numpy(), tf_arange.numpy()))
 
-    arange = torch.linspace(
-        -1.0 + eps, 1.0 - eps, h + 2 * pad
-    )[:h]
-
-
-    # print("1:torch: arange = ", arange)
-
-    # arange = arange.unsqueeze(0).repeat(h, 1).unsqueeze(2)
-
-    # print("2:torch: arange = ", arange)
-
-    # print("2:torch: arange.shape = ", arange.shape)
-
-    arange_tf = torch_linspace(-1.0 + eps, 1.0 - eps, h + 2 * pad)[:h]
-
-
-    assert np.allclose(arange.numpy(), arange_tf.numpy())
-
-    # print("1:tf: arange = ", arange)
-
-    # arange = tf.reshape(arange, (1, h, 1))
-
-    # print("2:tf: arange.shape = ", arange.shape)
-
-    # arange = tf.tile(arange, [h, 1, 1])
-
-    # print("2:tf: arange = ", arange)
-
-
-    # out_scale = torch.tensor([[0.1, 0.2, 0.3],
-    #             [0.4, 0.5, 0.6]])
-
-
-    # print("out_scale.shape = ", out_scale.shape)
-
-
-    # B = 3
-    # horizon_steps = 2
-
-    # out_scale = out_scale.repeat(B, horizon_steps)
-
-    # print("out_scale = ", out_scale)
-
-    # print("out_scale.shape = ", out_scale.shape)
-
-
-
-
-test_linspace()
+if __name__ == '__main__':
+    unittest.main()

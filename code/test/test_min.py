@@ -1,61 +1,54 @@
-
-
+import unittest
 import torch
-
 import numpy as np
-
 import tensorflow as tf
-
-
-x = np.array([[1, 2, 3],
-                  [4, 0, 6],
-                  [7, 8, 9]])
-# define the tensor
-torch_x = torch.tensor(x)
-
-# calculate the min value along dimension 0
-min_result = torch_x.min(dim=0)
-
-print("min_result = ", min_result)
-
-print("Values:", min_result.values)  # the min value
-print("Indices:", min_result.indices)  # the index of the min value
-
-
-
-min_result = torch_x.min()
-
-print("min_result = ", min_result)
-
-print("Values:", min_result.values)  # the min value
-print("Indices:", min_result.indices)  # the index of the min value
-
-
 from util.torch_to_tf import torch_min
 
 
-tf_x = tf.convert_to_tensor(x)
+class TestMin(unittest.TestCase):
+    def setUp(self):
+        # Define the test array and tensors
+        self.x = np.array([[1, 2, 3],
+                           [4, 0, 6],
+                           [7, 8, 9]])
+        self.torch_x = torch.tensor(self.x)
+        self.tf_x = tf.convert_to_tensor(self.x)
 
-# calculate the min value along dimension 0
-min_result = torch_min(tf_x, dim=0)
+    def test_torch_min_dim(self):
+        """Test PyTorch min function with dimension parameter"""
+        min_result = self.torch_x.min(dim=0)
+        
+        expected_values = torch.tensor([1, 0, 3])
+        expected_indices = torch.tensor([0, 1, 0])
+        
+        self.assertTrue(torch.all(torch.eq(min_result.values, expected_values)))
+        self.assertTrue(torch.all(torch.eq(min_result.indices, expected_indices)))
 
-print("min_result = ", min_result)
+        tf_min_result = torch_min(self.tf_x, dim=0)
+        
+        expected_values = tf.constant([1, 0, 3])
+        expected_indices = tf.constant([0, 1, 0])
 
-print("Values:", min_result.values)  # the min value
-print("Indices:", min_result.indices)  # the index of the min value
+        # print("tf_min_result.values.dtype = ", tf_min_result.values.dtype)
+        # print("tf_min_result.indices.dtype = ", tf_min_result.indices.dtype)
+        
+        self.assertTrue(tf.reduce_all(tf.equal( tf.cast(tf_min_result.values, tf.int32), expected_values)))
+        self.assertTrue(tf.reduce_all(tf.equal( tf.cast(tf_min_result.indices, tf.int32), expected_indices)))
 
+        self.assertTrue( np.allclose(tf_min_result.values, min_result.values) )
+        self.assertTrue( np.allclose(tf_min_result.indices, min_result.indices) )
 
+    def test_torch_min_global(self):
+        """Test PyTorch min function without dimension parameter (global min)"""
+        min_result = self.torch_x.min()
+        
+        self.assertEqual(min_result.item(), 0)
 
-min_result = torch_min(tf_x)
+        tf_min_result = torch_min(self.tf_x)
+        
+        self.assertEqual(tf_min_result.numpy(), 0)
 
-print("min_result = ", min_result)
+        self.assertTrue( np.allclose( min_result.numpy(), tf_min_result.numpy() ) )
 
-# print("Values:", min_result.values)  # the min value
-# print("Indices:", min_result.indices)  # the index of the min value
-
-
-
-
-
-
-
+if __name__ == '__main__':
+    unittest.main()
