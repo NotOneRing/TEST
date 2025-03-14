@@ -1,63 +1,58 @@
+import unittest
 import torch
-
-# Define a tensor and wrap it in nn.Parameter
-data_torch = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
-param_torch = torch.nn.Parameter(data_torch, requires_grad=True)
-
-# Print param details
-print("PyTorch Parameter:")
-print(f"Data: {param_torch.data}")
-print(f"Requires grad: {param_torch.requires_grad}")
-
-
 import tensorflow as tf
+import numpy as np
 
 from util.torch_to_tf import nn_Parameter, torch_exp
 
-# Define the data and create a TensorFlow parameter
-data = tf.constant([[1.0, 2.0], [3.0, 4.0]], dtype=tf.float32)
-# param = nn_Parameter(data, requires_grad=True)
+class TestNNParameter(unittest.TestCase):
+    def setUp(self):
+        # Define test data for both PyTorch and TensorFlow
+        self.data_torch = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+        self.data_tf = tf.constant([[1.0, 2.0], [3.0, 4.0]], dtype=tf.float32)
+        
+        # Create parameters
+        self.param_torch = torch.nn.Parameter(self.data_torch, requires_grad=True)
+        self.param_tf = nn_Parameter(self.data_tf, requires_grad=True)
 
-# a = torch_exp(param)
-# print("type(a) = ", type(a))
+    def test_parameter_creation(self):
+        """Test that parameters are created correctly with proper attributes"""
+        # PyTorch Parameter
+        self.assertIsInstance(self.param_torch, torch.nn.Parameter)
+        self.assertTrue(self.param_torch.requires_grad)
+        
+        # TensorFlow Parameter
+        self.assertIsInstance(self.param_tf, tf.Variable)
+        self.assertTrue(self.param_tf.trainable)
+    
+    def test_parameter_data(self):
+        """Test that parameter data is the same between PyTorch and TensorFlow"""
+        torch_param_data = self.param_torch.data.numpy()
+        tf_param_data = self.param_tf.numpy()
+        
+        # Check if data is the same
+        self.assertTrue(np.allclose(torch_param_data, tf_param_data))
+    
+    def test_requires_grad(self):
+        """Test that requires_grad/trainable property is the same"""
+        torch_requires_grad = self.param_torch.requires_grad
+        tf_requires_grad = self.param_tf.trainable
+        
+        # Check if requires_grad/trainable is the same
+        self.assertEqual(torch_requires_grad, tf_requires_grad)
+    
+    def test_torch_exp_compatibility(self):
+        """Test that torch_exp works with the Parameter"""
+        # Apply torch_exp to the parameter
+        result = torch_exp(self.param_tf)
+        
+        # print("result = ", result)
+        self.assertIsInstance(result, tf.Tensor)
 
-param = nn_Parameter(data, requires_grad=True)
+        # Verify the exponential operation was applied correctly
+        expected = np.exp(self.data_tf.numpy())
+        actual = result.numpy()
+        self.assertTrue(np.allclose(expected, actual))
 
-a = torch_exp(param)
-print("type(a) = ", type(a))
-
-if isinstance(a, tf.Variable):
-    print("a.trainable = ", a.trainable)
-
-
-
-# Print param details
-print("\nTensorFlow Parameter:")
-print(f"Data: {param.numpy()}")
-print(f"Requires grad: {param.trainable}")
-
-
-
-import numpy as np
-
-# PyTorch check
-torch_param_data = param_torch.data.numpy()
-torch_requires_grad = param_torch.requires_grad
-
-# TensorFlow check
-tf_param_data = param.numpy()
-tf_requires_grad = param.trainable
-
-# Check if data is the same
-print("\nChecking if the data is the same:")
-print(np.allclose(torch_param_data, tf_param_data))  # Should print True if data is the same
-
-# Check if requires_grad/trainable is the same
-print("Checking if requires_grad/trainable is the same:")
-print(torch_requires_grad == tf_requires_grad)  # Should print True if both are True
-
-
-
-
-
-
+if __name__ == '__main__':
+    unittest.main()

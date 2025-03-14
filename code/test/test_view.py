@@ -1,62 +1,55 @@
+import unittest
 import torch
-
 import numpy as np
-
 import tensorflow as tf
-
 from util.torch_to_tf import torch_tensor_view
 
 
-def test_view():
-    tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+class TestView(unittest.TestCase):
+    """Test class for testing the torch_tensor_view function against PyTorch's view method."""
 
-    result1 = tensor.view(3, 3)
+    def setUp(self):
+        """Set up test fixtures, creating the test tensors."""
+        # Create a PyTorch tensor for testing
+        self.torch_tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        
+        # Create a TensorFlow tensor with the same values
+        np_array = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        self.tf_tensor = tf.convert_to_tensor(np_array)
 
-    print(result1)
-    print(result1.shape)
+    def test_view_same_shape(self):
+        """Test view operation with the same shape (3, 3)."""
+        # PyTorch view operation
+        torch_result = self.torch_tensor.view(3, 3)
+        
+        # TensorFlow equivalent using torch_tensor_view
+        tf_result = torch_tensor_view(self.tf_tensor, 3, 3)
+        
+        # Verify the results are the same
+        self.assertTrue(np.allclose(torch_result.numpy(), tf_result.numpy()))
 
-    result2 = tensor.view(3, 3, 1)
+    def test_view_add_dimension(self):
+        """Test view operation adding a dimension (3, 3, 1)."""
+        # PyTorch view operation with tuple arguments
+        torch_result = self.torch_tensor.view(3, 3, 1)
+        
+        # TensorFlow equivalent using torch_tensor_view
+        tf_result = torch_tensor_view(self.tf_tensor, 3, 3, 1)
+        
+        # Verify the results are the same
+        self.assertTrue(np.allclose(torch_result.numpy(), tf_result.numpy()))
 
-
-    print("result2 = ", result2)
-    print("result2.shape = ", result2.shape)
-
-    print("tensor = ", tensor)
-    print("tensor.shape = ", tensor.shape)
-
-
-
-    result3 = tensor.view([3, 3, 1])
-
-
-    print("result3 = ", result3)
-    print("result3.shape = ", result3.shape)
-
-    print("tensor = ", tensor)
-    print("tensor.shape = ", tensor.shape)
-
-
-    tensor = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-
-    tensor = tf.convert_to_tensor(tensor)
-
-
-    result_tf1 = torch_tensor_view(tensor, 3, 3)
-    print("result_tf1 = ", result_tf1)
-
-
-    result_tf2 = torch_tensor_view(tensor, [3, 3, 1])
-    print("result_tf2 = ", result_tf2)
-
-
-    result_tf3 = torch_tensor_view(tensor, 3, 3, 1)
-    print("result_tf3 = ", result_tf3)
-
-    assert np.allclose(result1.numpy(), result_tf1.numpy())
-    assert np.allclose(result2.numpy(), result_tf2.numpy())
-    assert np.allclose(result3.numpy(), result_tf3.numpy())
+    def test_view_with_list(self):
+        """Test view operation with a list argument [3, 3, 1]."""
+        # PyTorch view operation with list argument
+        torch_result = self.torch_tensor.view([3, 3, 1])
+        
+        # TensorFlow equivalent using torch_tensor_view
+        tf_result = torch_tensor_view(self.tf_tensor, [3, 3, 1])
+        
+        # Verify the results are the same
+        self.assertTrue(np.allclose(torch_result.numpy(), tf_result.numpy()))
 
 
-test_view()
-
-
+if __name__ == '__main__':
+    unittest.main()

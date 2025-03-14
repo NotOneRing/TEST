@@ -1,6 +1,7 @@
 import torch
 import tensorflow as tf
 import numpy as np
+import unittest
 
 
 # TensorFlow wrapper for registering buffers
@@ -19,53 +20,45 @@ class TorchModel(torch.nn.Module):
 # TensorFlow class for testing torch_register_buffer
 class TFModel(tf.keras.layers.Layer):
     def __init__(self):
-        pass
+        super(TFModel, self).__init__()
 
     def register_my_buffer(self, name, tensor):
         torch_register_buffer(self, tensor, name)
 
-# Testing function
-def test_register_buffer():
-    # Input data
-    buffer_name = "memory_mask"
-    input_array = np.random.randn(5, 5).astype(np.float32)
 
-    # PyTorch
-    torch_model = TorchModel()
-    torch_tensor = torch.tensor(input_array)
-    torch_model.register_my_buffer(buffer_name, torch_tensor)
-    torch_buffer = getattr(torch_model, buffer_name)
+class TestRegisterBuffer(unittest.TestCase):
+    def test_register_buffer(self):
+        """Test if torch_register_buffer works the same as torch.register_buffer"""
+        # Input data
+        buffer_name = "memory_mask"
+        input_array = np.random.randn(5, 5).astype(np.float32)
 
-    # TensorFlow
-    tf_model = TFModel()
-    tf_model.register_my_buffer(buffer_name, input_array)
-    tf_buffer = getattr(tf_model, buffer_name)
+        # PyTorch
+        torch_model = TorchModel()
+        torch_tensor = torch.tensor(input_array)
+        torch_model.register_my_buffer(buffer_name, torch_tensor)
+        torch_buffer = getattr(torch_model, buffer_name)
 
-    # Compare outputs
-    print("PyTorch buffer:")
-    print(torch_buffer)
+        # TensorFlow
+        tf_model = TFModel()
+        tf_model.register_my_buffer(buffer_name, input_array)
+        tf_buffer = getattr(tf_model, buffer_name)
 
-    print("TensorFlow buffer:")
-    print(tf_buffer.numpy())
+        # # Print outputs for debugging
+        # print("PyTorch buffer:")
+        # print(torch_buffer)
 
-    # Check if values are close
-    is_close = np.allclose(torch_buffer.numpy(), tf_buffer.numpy(), atol=1e-5)
-    print(f"Buffers match: {is_close}")
+        # print("TensorFlow buffer:")
+        # print(tf_buffer.numpy())
 
-    assert np.allclose(torch_buffer.numpy(), tf_buffer.numpy(), atol=1e-5)
+        # Check if values are close
+        is_close = np.allclose(torch_buffer.numpy(), tf_buffer.numpy(), atol=1e-5)
+        # print(f"Buffers match: {is_close}")
+
+        # Use unittest assertion
+        self.assertTrue(np.allclose(torch_buffer.numpy(), tf_buffer.numpy(), atol=1e-5),
+                        "PyTorch and TensorFlow buffers should have the same values")
+
 
 if __name__ == "__main__":
-    test_register_buffer()
-
-
-
-
-
-
-
-
-
-
-
-
-
+    unittest.main()

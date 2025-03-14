@@ -1,3 +1,5 @@
+import unittest
+import os
 import tensorflow as tf
 import numpy as np
 from util.torch_to_tf import nn_Linear, nn_ReLU
@@ -84,31 +86,101 @@ class A(tf.keras.Model):
         return cls(sub_model=sub_model, **config)
 
 
-# test code
-model_a = A()
+class TestNestedModelSaveLoad(unittest.TestCase):
+    """Test saving and loading of nested TensorFlow models"""
+    
+    def setUp(self):
+        """Setup work before each test"""
+        # Set model save path
+        self.model_path = "nested_model.keras"
+        
+        # Ensure the file doesn't exist before testing
+        if os.path.exists(self.model_path):
+            os.remove(self.model_path)
+            
+        # Create training data
+        self.x_train = tf.random.normal((32, 10))  # Shape: 32 samples, 10 dimensions each
+        self.y_train = tf.random.normal((32, 4))   # Shape: 32 samples, 4 dimensions each
+    
+    def tearDown(self):
+        """Cleanup work after each test"""
+        # Delete model file created during testing
+        if os.path.exists(self.model_path):
+            os.remove(self.model_path)
+    
+    def test_nested_model_save_load(self):
+        """Test saving and loading functionality of nested models"""
+        # Create nested model
+        model_a = A()
+        
+        # Compile and train the model
+        model_a.compile(optimizer='adam', loss='mse')
+        model_a.fit(self.x_train, self.y_train, epochs=3, verbose=0)
+        
+        # Save the model
+        model_a.save(self.model_path)
+        
+        # Verify model file was created
+        self.assertTrue(os.path.exists(self.model_path), "Model file was not created successfully")
+        
+        # Load the model
+        loaded_model_a = tf.keras.models.load_model(self.model_path)
+        
+        # Check if outputs from original and loaded models are the same
+        outputs_original = model_a(self.x_train)
+        outputs_loaded = loaded_model_a(self.x_train)
+        
+        # Print outputs for comparison
+        print("outputs_original = ", outputs_original)
+        print("outputs_loaded = ", outputs_loaded)
+        
+        # Verify outputs are close using numpy's allclose function
+        self.assertTrue(
+            np.allclose(outputs_original.numpy(), outputs_loaded.numpy()),
+            "Outputs from original and loaded models do not match"
+        )
+        
+        # Calculate sum of absolute differences, should be close to 0
+        diff_sum = tf.reduce_sum(tf.abs(outputs_original - outputs_loaded))
+        print(f"Sum of output differences: {diff_sum}")
+        self.assertLess(diff_sum, 1e-5, "Output difference is too large")
+        
+        # Check if optimizer configuration was loaded correctly
+        optimizer_config = loaded_model_a.optimizer.get_config()
+        print("Loaded model optimizer config:", optimizer_config)
+        self.assertEqual(optimizer_config['name'], 'adam', "Incorrect optimizer type")
+    
+    def test_model_structure(self):
+        """Test if model structure and nested relationships are correctly saved and loaded"""
+        # Create original model
+        original_model = A()
+        
+        # Save the model
+        original_model.save(self.model_path)
+        
+        # Load the model
+        loaded_model = tf.keras.models.load_model(self.model_path)
+        
+        # Verify model hierarchy
+        # Model A should have dense_a, relu, and submodel B
+        self.assertTrue(hasattr(loaded_model, 'dense_a'), "Loaded model missing dense_a layer")
+        self.assertTrue(hasattr(loaded_model, 'relu'), "Loaded model missing relu layer")
+        self.assertTrue(hasattr(loaded_model, 'b'), "Loaded model missing submodel B")
+        
+        # Submodel B should have dense_b, relu, and submodel C
+        self.assertTrue(hasattr(loaded_model.b, 'dense_b'), "Submodel B missing dense_b layer")
+        self.assertTrue(hasattr(loaded_model.b, 'relu'), "Submodel B missing relu layer")
+        self.assertTrue(hasattr(loaded_model.b, 'c'), "Submodel B missing submodel C")
+        
+        # Submodel C should have dense_c and relu
+        self.assertTrue(hasattr(loaded_model.b.c, 'dense_c'), "Submodel C missing dense_c layer")
+        self.assertTrue(hasattr(loaded_model.b.c, 'relu'), "Submodel C missing relu layer")
+        
+        # Verify configuration parameters
+        self.assertEqual(loaded_model.units, 16, "Incorrect units parameter in model A")
+        self.assertEqual(loaded_model.b.units, 8, "Incorrect units parameter in submodel B")
+        self.assertEqual(loaded_model.b.c.units, 4, "Incorrect units parameter in submodel C")
 
-# compile and train the model
-model_a.compile(optimizer='adam', loss='mse')
-x_train = tf.random.normal((32, 10))  # output shape：32 samples, each with dimension 10
-y_train = tf.random.normal((32, 4))   # output shape：32 samples, each with dimension 4
-model_a.fit(x_train, y_train, epochs=3)
 
-# output model
-model_a.save("nested_model.keras")
-
-# load model
-loaded_model_a = tf.keras.models.load_model("nested_model.keras")
-
-# check if weights are the same
-outputs_original = model_a(x_train)
-outputs_loaded = loaded_model_a(x_train)
-
-print("outputs_original = ", outputs_original)
-print("outputs_loaded = ", outputs_loaded)
-
-assert np.allclose(outputs_original.numpy(), outputs_loaded.numpy())
-
-print(tf.reduce_sum(tf.abs(outputs_original - outputs_loaded)))  # should be close to 0
-
-# check the configuration of the optimizer
-print(loaded_model_a.optimizer.get_config())
+if __name__ == '__main__':
+    unittest.main()

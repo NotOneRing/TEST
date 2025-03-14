@@ -114,15 +114,27 @@ def torch_gather(input_tensor, dim, index_tensor):
 
 
 
-def torch_quantile(input_tensor, q, dim=None, interpolation='linear'):
+def torch_quantile(input_tensor, q, dim=None, keepdim=False, interpolation='linear'):
     """
     Compute the quantile of the input_tensor along a specified axis using TensorFlow.
     """
+    
+    dim_None_flag = False
+
+    input_shape_list = input_tensor.shape.as_list()
+    if isinstance(q, int):
+        q_shape_list = []
+    else:
+        q_shape_list = q.shape.as_list()
+
+    print("input_shape_list = ", input_shape_list)
+    print("q_shape_list = ", q_shape_list)
 
     # Flatten the input if axis is None
     if dim is None:
         input_tensor = tf.reshape(input_tensor, [-1])
         dim = 0
+        dim_None_flag = True
 
     # Sort the tensor along the given axis
     sorted_tensor = tf.sort(input_tensor, axis=dim)
@@ -143,7 +155,6 @@ def torch_quantile(input_tensor, q, dim=None, interpolation='linear'):
     # Compute weights for linear interpolation
     weights = indices - lower_indices
 
-
     # Interpolation methods
     if interpolation == 'linear':
         result = (1 - weights) * lower_values + weights * upper_values
@@ -157,7 +168,45 @@ def torch_quantile(input_tensor, q, dim=None, interpolation='linear'):
         result = (lower_values + upper_values) / 2
     else:
         raise ValueError("Unsupported interpolation method: {}".format(interpolation))
+
     
+    if dim_None_flag:
+        if keepdim:
+            result_shape = input_shape_list
+            for i in range(len(result_shape)):
+                result_shape[i] = 1
+            result_shape = q_shape_list + result_shape
+            # print("0:result_shape = ", result_shape)
+
+            result = tf.reshape( result, result_shape )
+        else:
+            if isinstance(q, int) or (len(q_shape_list) == 1 and q_shape_list[0] == 1):
+                result = tf.reshape( result, [])
+            else:
+                result = tf.reshape(result, q_shape_list)
+
+    elif keepdim==False:
+        result = torch_tensor_transpose(result, 0, dim)
+
+        if isinstance(q, int) or (len(q_shape_list) == 1 and q_shape_list[0] == 1):
+            result_shape = input_shape_list[:dim] + input_shape_list[dim+1:]
+        else:
+            result_shape = q_shape_list + input_shape_list[:dim] + input_shape_list[dim+1:]
+        # print("1:result_shape = ", result_shape)
+
+        result = tf.reshape( result, result_shape )
+    elif keepdim==True:
+        result = torch_tensor_transpose(result, 0, dim)
+
+        input_shape_list[dim] = 1
+        if isinstance(q, int) or (len(q_shape_list) == 1 and q_shape_list[0] == 1):
+            result_shape = input_shape_list
+        else:
+            result_shape = [q_shape_list[0], ] + input_shape_list
+        # print("2:result_shape = ", result_shape)
+
+        result = tf.reshape( result, result_shape )
+
     return result
 
 
@@ -279,7 +328,7 @@ def torch_where(index_tensor, input_tensor = None, replace_value = None):
         result = tf.where(index_tensor, input_tensor, replace_value)
     else:
         result = tf.where(index_tensor, input_tensor, replace_value)
-        assert len(result.shape) == 2, "result reshape must be two"
+        assert len(result.shape) == 2, "result's shape length must be two"
         true_num = result.shape[0]
         result_dim = result.shape[1]
         if OUTPUT_VARIABLES:
@@ -915,7 +964,7 @@ def torch_tensor_repeat(tensor, *repeats):
     if not repeats:
         raise ValueError("At least one repeat value must be provided.")
 
-    print("torch_tensor_repeat: 1")
+    # print("torch_tensor_repeat: 1")
 
     # processed_repeats = []
     if isinstance(repeats[0], (tuple, list)):
@@ -927,7 +976,7 @@ def torch_tensor_repeat(tensor, *repeats):
 
     repeats_tensor = torch_reshape( repeats_tensor, -1)
 
-    print("torch_tensor_repeat: 2")
+    # print("torch_tensor_repeat: 2")
 
     # Compute the target shape for tiling
     tensor_shape = tf.shape(tensor)
@@ -936,7 +985,7 @@ def torch_tensor_repeat(tensor, *repeats):
     tensor_dim = len(tensor_shape)
     repeat_dim = len(repeat_shape)
 
-    print("torch_tensor_repeat: 3")
+    # print("torch_tensor_repeat: 3")
 
     temp_tensor = tensor
 
@@ -944,15 +993,15 @@ def torch_tensor_repeat(tensor, *repeats):
         tensor_shape = [1] * (repeat_dim - tensor_dim) + tensor_shape.numpy().tolist()
         temp_tensor = tf.reshape(tensor, tensor_shape)
 
-    print("torch_tensor_repeat: 4")
+    # print("torch_tensor_repeat: 4")
 
-    print("temp_tensor = ", temp_tensor)
-    print("repeats_tensor = ", repeats_tensor)
+    # print("temp_tensor = ", temp_tensor)
+    # print("repeats_tensor = ", repeats_tensor)
 
     # Perform tiling
     repeated_tensor = tf.tile(temp_tensor, repeats_tensor)
 
-    print("torch_tensor_repeat: 5")
+    # print("torch_tensor_repeat: 5")
 
     return repeated_tensor
 
@@ -1245,7 +1294,8 @@ def torch_func_stack_module_state(models):
 
 def torch_func_functional_call(model, params, x):
     # Performs a functional call on the module by replacing the module parameters and buffers with the provided ones.
-    former_params = model.trainable_variables
+    from copy import deepcopy
+    former_params = deepcopy(model.trainable_variables)
 
     for var, param in zip(model.trainable_variables, params):
         var.assign(param)
@@ -1304,6 +1354,10 @@ def torch_nn_init_normal_(variable, mean=0.0, std=1.0):
     Returns:
         None: The variable is updated in place.
     """
+
+    print("type(variable) = ", type(variable))
+    print("isinstance(variable, tf.Variable) = ", isinstance(variable, tf.Variable))
+
     if not isinstance(variable, tf.Variable):
         raise ValueError("Input variable must be a tf.Variable.")
 
@@ -3194,7 +3248,7 @@ class nn_GroupNorm(tf.keras.layers.Layer):
         """
         x = torch_tensor_permute(x, [0, 2, 3, 1])
 
-        print("x.shape = ", x.shape)
+        # print("x.shape = ", x.shape)
 
         # Reshape the input tensor to group the channels
         batch_size, height, width, channels = tf.unstack(tf.shape(x))

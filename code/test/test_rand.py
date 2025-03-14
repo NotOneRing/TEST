@@ -1,47 +1,59 @@
 import torch
 import tensorflow as tf
 import numpy as np
+import unittest
 
-# # TensorFlow version of torch_rand
-# def torch_rand(*size, dtype=tf.dtypes.float32):
-#     return tf.random.uniform(shape=size, dtype=dtype)
+# Import the torch_rand function from util.torch_to_tf
 from util.torch_to_tf import torch_rand
 
-# Test function to compare PyTorch and TensorFlow outputs
-def test_random_functions():
-    # Define shape for random tensor
-    shape = (3, 4)
-
-    # PyTorch: torch.rand
-    pytorch_tensor = torch.rand(*shape)
-    print("PyTorch Tensor (torch.rand):")
-    print(pytorch_tensor)
+class TestRand(unittest.TestCase):
+    """
+    Test class for comparing PyTorch's rand function with its TensorFlow implementation.
+    """
     
-    # TensorFlow: torch_rand (wrapper for tf.random.uniform)
-    tensorflow_tensor = torch_rand(*shape)
-    print("\nTensorFlow Tensor (torch_rand wrapper):")
-    print(tensorflow_tensor)
+    def test_rand_unpacked_shape(self):
+        """
+        Test torch.rand and torch_rand with unpacked shape (*shape).
+        """
+        # Define shape for random tensor
+        shape = (3, 4)
 
-    # Check if the values are approximately equal
-    same_values = np.allclose(pytorch_tensor.numpy().shape, tensorflow_tensor.numpy().shape, atol=1e-5)
-    print("\nAre the PyTorch and TensorFlow outputs the same shape?", same_values)
-
-
-
-    # PyTorch: torch.rand
-    pytorch_tensor = torch.rand(shape)
-    print("PyTorch Tensor (torch.rand):")
-    print(pytorch_tensor)
+        # PyTorch: torch.rand
+        pytorch_tensor = torch.rand(*shape)
+        
+        # TensorFlow: torch_rand (wrapper for tf.random.uniform)
+        tensorflow_tensor = torch_rand(*shape)
+        
+        # Check if the shapes are equal
+        self.assertEqual(pytorch_tensor.shape, tensorflow_tensor.shape)
+        
+        # # Print tensors for debugging (optional)
+        # print("PyTorch Tensor (torch.rand):")
+        # print(pytorch_tensor)
+        # print("\nTensorFlow Tensor (torch_rand wrapper):")
+        # print(tensorflow_tensor)
     
-    # TensorFlow: torch_rand (wrapper for tf.random.uniform)
-    tensorflow_tensor = torch_rand(shape)
-    print("\nTensorFlow Tensor (torch_rand wrapper):")
-    print(tensorflow_tensor)
+    def test_rand_packed_shape(self):
+        """
+        Test torch.rand and torch_rand with packed shape (shape).
+        """
+        # Define shape for random tensor
+        shape = (3, 4)
 
-    # Check if the values are approximately equal
-    same_values = np.allclose(pytorch_tensor.numpy().shape, tensorflow_tensor.numpy().shape, atol=1e-5)
-    print("\nAre the PyTorch and TensorFlow outputs the same shape?", same_values)
+        # PyTorch: torch.rand
+        pytorch_tensor = torch.rand(shape)
+        
+        # TensorFlow: torch_rand (wrapper for tf.random.uniform)
+        tensorflow_tensor = torch_rand(shape)
+        
+        # Check if the shapes are equal
+        self.assertEqual(pytorch_tensor.shape, tensorflow_tensor.shape)
+        
+        # # Print tensors for debugging (optional)
+        # print("PyTorch Tensor (torch.rand):")
+        # print(pytorch_tensor)
+        # print("\nTensorFlow Tensor (torch_rand wrapper):")
+        # print(tensorflow_tensor)
 
-
-# Run the test
-test_random_functions()
+if __name__ == '__main__':
+    unittest.main()

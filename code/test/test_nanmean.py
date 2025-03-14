@@ -1,54 +1,49 @@
 import tensorflow as tf
-
 import numpy as np
+import unittest
+import torch
 
 from util.torch_to_tf import torch_nanmean
 
-def test_nanmean():
-    arr = np.array([1.1, 1.2, 1.3, float('nan')])
+class TestNanMean(unittest.TestCase):
+    def setUp(self):
+        # Setup test data
+        self.arr = np.array([1.1, 1.2, 1.3, float('nan')])
+        self.log_arr = np.array([0.1, 0.2, 0.3, 0.4])
+        
+    def test_nanmean_tensorflow_vs_pytorch(self):
+        # TensorFlow implementation
+        ratio = tf.constant(self.arr, dtype=tf.float64)
+        logratio = tf.constant(self.log_arr, dtype=tf.float64)
+        kl_difference_tf = (ratio - 1) - logratio
+        
+        print("TensorFlow kl_difference = ", kl_difference_tf)
+        
+        tf_approx_kl = torch_nanmean(kl_difference_tf)
+        print("TensorFlow Approximate KL Divergence:", tf_approx_kl.numpy())
+        
+        # PyTorch implementation
+        ratio_torch = torch.tensor(self.arr)
+        logratio_torch = torch.tensor(self.log_arr)
+        kl_difference_torch = (ratio_torch - 1) - logratio_torch
+        
+        print("PyTorch kl_difference = ", kl_difference_torch)
+        
+        torch_approx_kl = kl_difference_torch.nanmean()
+        print("PyTorch Approximate KL Divergence:", torch_approx_kl.numpy())
+        
+        # Assert that both implementations give the same result
+        self.assertTrue(np.allclose(tf_approx_kl.numpy(), torch_approx_kl.numpy()))
+    
+    def test_nanmean_handles_nan_values(self):
+        # Test that nanmean properly ignores NaN values
+        tensor_with_nan = tf.constant(self.arr, dtype=tf.float64)
+        result = torch_nanmean(tensor_with_nan)
+        
+        # Calculate expected result manually (average of non-NaN values)
+        expected = np.nanmean(self.arr)
+        
+        self.assertTrue(np.allclose(result.numpy(), expected))
 
-    log_arr = np.array([0.1, 0.2, 0.3, 0.4])
-
-    ratio = tf.constant(arr, dtype=tf.float64)
-    logratio = tf.constant(log_arr, dtype=tf.float64)
-
-
-    kl_difference = (ratio - 1) - logratio
-
-    print("kl_difference = ", kl_difference)
-
-    # kl_difference_no_nan = tf.boolean_mask(kl_difference, ~tf.math.is_nan(kl_difference))
-
-    # print("kl_difference_no_nan = ", kl_difference_no_nan)
-
-    # approx_kl = tf.reduce_mean(kl_difference_no_nan)
-
-    tf_approx_kl = torch_nanmean(kl_difference)
-
-    print("Approximate KL Divergence:", tf_approx_kl.numpy())
-
-
-    import torch
-
-    ratio = torch.tensor(arr)
-
-    logratio = torch.tensor(log_arr)
-
-    kl_difference = (ratio - 1) - logratio
-
-    print("kl_difference = ", kl_difference)
-
-    approx_kl = kl_difference.nanmean()
-
-    print("Approximate KL Divergence:", approx_kl.numpy())
-
-
-    assert np.allclose(tf_approx_kl.numpy(), approx_kl.numpy())
-
-
-test_nanmean()
-
-
-
-
-
+if __name__ == '__main__':
+    unittest.main()

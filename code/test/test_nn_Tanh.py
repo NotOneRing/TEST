@@ -1,43 +1,36 @@
 import torch
 import torch.nn as nn
-
 import numpy as np
-
-def test_Tanh():
-    # create a layer of Tanh
-    tanh = nn.Tanh()
-
-    # input tensor
-    input_tensor = torch.tensor([-1.0, 0.0, 1.0])
-
-    # create tanh activation
-    output = tanh(input_tensor)
-    print(output)
+import unittest
+import tensorflow as tf
+from util.torch_to_tf import nn_Tanh
 
 
+class TestTanh(unittest.TestCase):
+    def test_Tanh(self):
+        # create a layer of Tanh
+        tanh = nn.Tanh()
 
-    import tensorflow as tf
-    from util.torch_to_tf import nn_Tanh
+        # input tensor
+        input_tensor = torch.tensor([-1.0, 0.0, 1.0])
 
-    # creata a layer of Tanh
-    tanh = nn_Tanh()
+        # create tanh activation
+        output = tanh(input_tensor)
+        # print(output)
 
-    # input tensor
-    input_tensor_tf = tf.constant([-1.0, 0.0, 1.0])
+        # creata a layer of Tanh
+        tanh = nn_Tanh()
 
-    # apply tanh activation
-    output_tf = tanh(input_tensor_tf)
-    print(output_tf)
+        # input tensor
+        input_tensor_tf = tf.constant([-1.0, 0.0, 1.0])
 
-    assert np.allclose(output, output_tf)
+        # apply tanh activation
+        output_tf = tanh(input_tensor_tf)
+        # print(output_tf)
 
-
-
-test_Tanh()
-
-
-
+        # verify that PyTorch and TensorFlow implementations produce the same results
+        self.assertTrue(np.allclose(output, output_tf))
 
 
-
-
+if __name__ == '__main__':
+    unittest.main()

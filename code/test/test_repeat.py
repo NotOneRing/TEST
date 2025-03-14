@@ -1,75 +1,63 @@
 import torch
 import tensorflow as tf
 import numpy as np
-
+import unittest
 
 from util.torch_to_tf import torch_tensor_repeat
 
 
-# Test function to compare outputs
-def test_tensor_repeat():
-    # Create a random tensor in PyTorch
-    torch_tensor = torch.tensor([[1, 2], [3, 4]])
+class TestTensorRepeat(unittest.TestCase):
+    def test_tensor_repeat_with_unpacked_repeats(self):
+        """Test tensor repeat with unpacked repeats tuple."""
+        # Create a random tensor in PyTorch
+        torch_tensor = torch.tensor([[1, 2], [3, 4]])
 
-    # Specify repeat pattern
-    repeats = (2, 3, 4)
+        # Specify repeat pattern
+        repeats = (2, 3, 4)
 
-    # Repeat the tensor in PyTorch
-    pytorch_result = torch_tensor.repeat(*repeats).numpy()
+        # Repeat the tensor in PyTorch
+        pytorch_result = torch_tensor.repeat(*repeats).numpy()
 
-    print("PyTorch result:\n", pytorch_result)
+        # print("PyTorch result:\n", pytorch_result)
 
-    # Convert PyTorch tensor to TensorFlow tensor
-    tf_tensor = tf.convert_to_tensor(torch_tensor.numpy())
+        # Convert PyTorch tensor to TensorFlow tensor
+        tf_tensor = tf.convert_to_tensor(torch_tensor.numpy())
 
-    # Repeat the tensor in TensorFlow
-    tensorflow_result = torch_tensor_repeat(tf_tensor, *repeats).numpy()
-    
-    print("TensorFlow result:\n", tensorflow_result)
+        # Repeat the tensor in TensorFlow
+        tensorflow_result = torch_tensor_repeat(tf_tensor, *repeats).numpy()
+        
+        # print("TensorFlow result:\n", tensorflow_result)
 
-    # Check if the results match
-    if np.array_equal(pytorch_result, tensorflow_result):
-        print("The results match!")
-    else:
-        print("The results do not match!")
+        # Check if the results match
+        self.assertTrue(np.array_equal(pytorch_result, tensorflow_result),
+                        "The results do not match!")
 
+    def test_tensor_repeat_with_packed_repeats(self):
+        """Test tensor repeat with packed repeats tuple."""
+        # Create a random tensor in PyTorch
+        torch_tensor = torch.tensor([[1, 2], [3, 4]])
 
-    pytorch_result = torch_tensor.repeat(repeats).numpy()
+        # Specify repeat pattern
+        repeats = (2, 3, 4)
 
-    print("PyTorch result:\n", pytorch_result)
+        # Repeat the tensor in PyTorch
+        pytorch_result = torch_tensor.repeat(repeats).numpy()
 
-    print("pytorch_result.shape = ", pytorch_result.shape)
+        # print("PyTorch result:\n", pytorch_result)
+        # print("pytorch_result.shape = ", pytorch_result.shape)
 
+        # Convert PyTorch tensor to TensorFlow tensor
+        tf_tensor = tf.convert_to_tensor(torch_tensor.numpy())
 
-    # Repeat the tensor in TensorFlow
-    tensorflow_result = torch_tensor_repeat(tf_tensor, repeats).numpy()
+        # Repeat the tensor in TensorFlow
+        tensorflow_result = torch_tensor_repeat(tf_tensor, repeats).numpy()
 
-    print("TensorFlow result:\n", tensorflow_result)
+        # print("TensorFlow result:\n", tensorflow_result)
 
-
-    # Check if the results match
-    if np.array_equal(pytorch_result, tensorflow_result):
-        print("The results match!")
-    else:
-        print("The results do not match!")
-
-# Run the test
-test_tensor_repeat()
-
-
-
-
+        # Check if the results match
+        self.assertTrue(np.array_equal(pytorch_result, tensorflow_result),
+                        "The results do not match!")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+if __name__ == '__main__':
+    unittest.main()

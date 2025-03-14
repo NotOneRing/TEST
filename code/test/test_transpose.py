@@ -1,52 +1,58 @@
+import unittest
 import torch
 import tensorflow as tf
 import numpy as np
 
-# # define torch_tensor_transpose function
-# def torch_tensor_transpose(input, dim0, dim1):
-#     dim_lens = len(input.shape)
-#     perm = list(range(dim_lens))
-#     temp = perm[dim0]
-#     perm[dim0] = perm[dim1]
-#     perm[dim1] = temp
-#     return tf.transpose(input, perm=perm)
-
 from util.torch_to_tf import torch_tensor_transpose
 
 
-def test_transpose():
+class TestTranspose(unittest.TestCase):
+    """
+    Test class for tensor transpose operations between PyTorch and TensorFlow.
+    Tests the equivalence of transpose operations in both frameworks.
+    """
+    def test_transpose_operations(self):
+        """
+        Test transpose operations with different tensor shapes and dimension pairs.
+        Verifies that torch.transpose and the TensorFlow equivalent function
+        produce the same results.
+        """
+        # Test cases with different shapes and dimension pairs
+        test_cases = [
+            {"shape": (2, 3), "dim0": 0, "dim1": 1},
+            {"shape": (2, 3, 4), "dim0": 0, "dim1": 2},
+            {"shape": (5, 4, 3, 2), "dim0": 1, "dim1": 3},
+        ]
 
-    # test cases
-    test_cases = [
-        {"shape": (2, 3), "dim0": 0, "dim1": 1},
-        {"shape": (2, 3, 4), "dim0": 0, "dim1": 2},
-        {"shape": (5, 4, 3, 2), "dim0": 1, "dim1": 3},
-    ]
+        for i, case in enumerate(test_cases):
+            shape = case["shape"]
+            dim0, dim1 = case["dim0"], case["dim1"]
 
-    for i, case in enumerate(test_cases):
-        shape = case["shape"]
-        dim0, dim1 = case["dim0"], case["dim1"]
+            # Create random tensor
+            torch_tensor = torch.rand(shape)
+            tf_tensor = tf.convert_to_tensor(torch_tensor.numpy())
 
-        # create random tensor
-        torch_tensor = torch.rand(shape)
-        tf_tensor = tf.convert_to_tensor(torch_tensor.numpy())
+            # PyTorch transpose
+            torch_transposed = torch.transpose(torch_tensor, dim0, dim1)
 
-        # PyTorch transpose
-        torch_transposed = torch.transpose(torch_tensor, dim0, dim1)
+            # TensorFlow transpose
+            tf_transposed = torch_tensor_transpose(tf_tensor, dim0, dim1)
 
-        # TensorFlow transpose
-        tf_transposed = torch_tensor_transpose(tf_tensor, dim0, dim1)
+            # Convert back to NumPy to compare
+            torch_transposed_np = torch_transposed.numpy()
+            tf_transposed_np = tf_transposed.numpy()
 
-        # convert back to NumPy to compare
-        torch_transposed_np = torch_transposed.numpy()
-        tf_transposed_np = tf_transposed.numpy()
-
-        # print testing results
-        assert np.allclose(torch_transposed_np, tf_transposed_np), f"Test case {i + 1} failed!"
-        print(f"Test case {i + 1}: Passed!")
-        print(f"Original shape: {shape}, Transposed shape: {torch_transposed_np.shape}")
-
-
-test_transpose()
+            # Test case information for debugging
+            test_info = f"Test case {i + 1}: Original shape: {shape}, Transposed shape: {torch_transposed_np.shape}"
+            
+            # Assert that the results are equal within tolerance
+            self.assertTrue(
+                np.allclose(torch_transposed_np, tf_transposed_np),
+                f"{test_info} - PyTorch and TensorFlow results do not match"
+            )
+            print(f"Test case {i + 1}: Passed!")
+            print(f"Original shape: {shape}, Transposed shape: {torch_transposed_np.shape}")
 
 
+if __name__ == "__main__":
+    unittest.main()

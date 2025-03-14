@@ -1,5 +1,7 @@
+import unittest
 import tensorflow as tf
 import numpy as np
+import os
 from util.torch_to_tf import nn_Linear, nn_ReLU
 from tensorflow.keras.saving import register_keras_serializable
 
@@ -82,44 +84,110 @@ class A(tf.keras.Model):
         return cls(sub_model=sub_model, **config)
 
 
-# create model instance
-model_a = A()
+class TestNestedModelSaveLoad(unittest.TestCase):
+    """Test case for saving and loading nested TensorFlow models."""
+    
+    def setUp(self):
+        """Set up test environment before each test method."""
+        # Create model instance
+        self.model_a = A()
+        
+        # Define optimizer
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        
+        # Create test data
+        self.x_train = tf.random.normal((32, 10))  # input shape: 32 samples, each with dimension 10
+        self.y_train = tf.random.normal((32, 4))   # output shape: 32 samples, each with dimension 4
+        
+        # Define loss function
+        self.mse_loss_fn = tf.keras.losses.MeanSquaredError()
+        
+        # Model save path
+        self.model_path = "nested_model.keras"
+    
+    def tearDown(self):
+        """Clean up after each test method."""
+        # Remove saved model file if it exists
+        if os.path.exists(self.model_path):
+            os.remove(self.model_path)
+    
+    def test_model_training(self):
+        """Test that the model can be trained successfully."""
+        # Training procedures
+        for epoch in range(3):  # train 3 epochs
+            print(f"Epoch {epoch + 1}")
+            for step in range(1):  # iterate data (this is the simplified version)
+                with tf.GradientTape() as tape:
+                    predictions = self.model_a(self.x_train)  # forward pass
+                    loss = self.mse_loss_fn(self.y_train, predictions)  # calculate loss
+                
+                # Calculate gradient
+                gradients = tape.gradient(loss, self.model_a.trainable_variables)
+                # Apply gradient
+                self.optimizer.apply_gradients(zip(gradients, self.model_a.trainable_variables))
+                
+                # print(f"Step {step + 1}, Loss: {loss.numpy():.4f}")
+                
+                # Verify loss is a valid number
+                self.assertFalse(np.isnan(loss.numpy()), "Loss should not be NaN")
+    
+    def test_save_load_model(self):
+        """Test saving and loading the model."""
+        # First train the model
+        for epoch in range(3):
+            with tf.GradientTape() as tape:
+                predictions = self.model_a(self.x_train)
+                loss = self.mse_loss_fn(self.y_train, predictions)
+            
+            gradients = tape.gradient(loss, self.model_a.trainable_variables)
+            self.optimizer.apply_gradients(zip(gradients, self.model_a.trainable_variables))
+        
+        # Get outputs from original model
+        outputs_original = self.model_a(self.x_train)
+        
+        # Save the model
+        self.model_a.save(self.model_path)
+        
+        # Verify model file exists
+        self.assertTrue(os.path.exists(self.model_path), "Model file should exist after saving")
+        
+        # Load the model
+        loaded_model_a = tf.keras.models.load_model(self.model_path)
+        
+        # Get outputs from loaded model
+        outputs_loaded = loaded_model_a(self.x_train)
+        
+        # Check if outputs are the same
+        self.assertTrue(
+            np.allclose(outputs_original.numpy(), outputs_loaded.numpy()),
+            "Outputs from original and loaded models should be the same"
+        )
+        
+        # Calculate absolute difference
+        diff = tf.reduce_sum(tf.abs(outputs_original - outputs_loaded))
+        print(f"Sum of absolute differences: {diff.numpy()}")
+        
+        # Verify difference is close to zero
+        self.assertLess(diff.numpy(), 1e-5, "Difference between outputs should be close to zero")
+    
+    def test_model_architecture(self):
+        """Test that the model architecture is preserved after loading."""
+        # Save the model
+        self.model_a.save(self.model_path)
+        
+        # Load the model
+        loaded_model_a = tf.keras.models.load_model(self.model_path)
+        
+        # Check model structure
+        self.assertIsInstance(loaded_model_a, A, "Loaded model should be an instance of A")
+        self.assertIsInstance(loaded_model_a.b, B, "Loaded model's b attribute should be an instance of B")
+        self.assertIsInstance(loaded_model_a.b.c, C, "Loaded model's b.c attribute should be an instance of C")
+        
+        # Check model parameters
+        self.assertEqual(loaded_model_a.units, 16, "Model A should have 16 units")
+        self.assertEqual(loaded_model_a.b.units, 8, "Model B should have 8 units")
+        self.assertEqual(loaded_model_a.b.c.units, 4, "Model C should have 4 units")
 
-# optimizer
-optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-# data
-x_train = tf.random.normal((32, 10))  # input shape: 32 samples, each with dimension 10
-y_train = tf.random.normal((32, 4))   # input shape: 32 samples, each with dimension 4
-
-# define loss function
-mse_loss_fn = tf.keras.losses.MeanSquaredError()
-
-# training procedures
-for epoch in range(3):  # train 3 epochs
-    print(f"Epoch {epoch + 1}")
-    for step in range(1):  # iterate data(this is the simplified version)
-        with tf.GradientTape() as tape:
-            predictions = model_a(x_train)  # forward pass
-            loss = mse_loss_fn(y_train, predictions)  # calculate loss
-
-        gradients = tape.gradient(loss, model_a.trainable_variables)  # calculate gradient
-        optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))  # apply gradient
-
-        print(f"Step {step + 1}, Loss: {loss.numpy():.4f}")
-
-# save the model
-model_a.save("nested_model.keras")
-
-# load the model
-loaded_model_a = tf.keras.models.load_model("nested_model.keras")
-
-# check if weights are the same
-outputs_original = model_a(x_train)
-outputs_loaded = loaded_model_a(x_train)
-
-assert np.allclose(outputs_original.numpy(), outputs_loaded.numpy())
-
-
-print(tf.reduce_sum(tf.abs(outputs_original - outputs_loaded)))  # should be close to 0
-
+if __name__ == "__main__":
+    unittest.main()

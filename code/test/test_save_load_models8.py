@@ -1,15 +1,11 @@
+import unittest
 import tensorflow as tf
 import numpy as np
+import os
 from tensorflow.keras.saving import register_keras_serializable
-
 
 from util.torch_to_tf import nn_Linear, nn_ReLU, nn_LayerNorm
 
-
-np.random.seed(42)  # set NumPy random seed
-tf.random.set_seed(42)  # set TensorFlow random seed
-import random
-random.seed(42)
 
 # sub-class C
 @register_keras_serializable(package="Custom")
@@ -109,51 +105,119 @@ class A(tf.keras.Model):
         return cls(sub_model=sub_model, **config)
 
 
-# create the model instance
-model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
+class TestNestedModelSaveLoad(unittest.TestCase):
+    """Test case for saving and loading nested Keras models."""
+    
+    def setUp(self):
+        """Set up test environment before each test method."""
+        # Set random seeds for reproducibility
+        np.random.seed(42)
+        tf.random.set_seed(42)
+        import random
+        random.seed(42)
+        
+        # Define test data
+        self.x_train = tf.random.normal((32, 10))  # input shape: 32 samples, each with dimension 10
+        self.y_train = tf.random.normal((32, 4))   # output shape: 32 samples, each with dimension 4
+        
+        # Define loss function
+        self.mse_loss_fn = tf.keras.losses.MeanSquaredError()
+        
+        # Model save path
+        self.model_path = "nested_model.keras"
 
-# optimizer
-optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    def tearDown(self):
+        """Clean up after each test method."""
+        # Remove saved model file if it exists
+        if os.path.exists(self.model_path):
+            os.remove(self.model_path)
 
-# data
-x_train = tf.random.normal((32, 10))  # input shape, 32 samples, each with dimension 10
-y_train = tf.random.normal((32, 4))   # input shape, 32 samples, each with dimension 4
+    def test_model_creation(self):
+        """Test that nested models can be created properly."""
+        # Create the model instance with nested structure
+        model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
+        
+        # Test forward pass
+        output = model_a(self.x_train)
+        
+        # Check output shape
+        self.assertEqual(output.shape, (32, 4))
 
-# define loss function
-mse_loss_fn = tf.keras.losses.MeanSquaredError()
+    def test_model_training(self):
+        """Test that the model can be trained."""
+        # Create the model instance
+        model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
+        
+        # Create optimizer
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        
+        # Initial prediction
+        initial_pred = model_a(self.x_train)
+        initial_loss = self.mse_loss_fn(self.y_train, initial_pred)
+        
+        # Training procedures
+        for epoch in range(3):  # train 3 epochs
+            for step in range(1):  # iterate data (simplified version)
+                with tf.GradientTape() as tape:
+                    predictions = model_a(self.x_train)  # forward pass
+                    loss = self.mse_loss_fn(self.y_train, predictions)  # calculate loss
+                
+                gradients = tape.gradient(loss, model_a.trainable_variables)  # calculate gradients
+                optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))  # apply gradients
+        
+        # Final prediction
+        final_pred = model_a(self.x_train)
+        final_loss = self.mse_loss_fn(self.y_train, final_pred)
+        
+        # Check that loss decreased after training
+        self.assertLess(final_loss, initial_loss)
 
-# training procedures
-for epoch in range(3):  # train 3 epochs
-    print(f"Epoch {epoch + 1}")
-    for step in range(1):  # iterate data (this is the simplified version)
-        with tf.GradientTape() as tape:
-            predictions = model_a(x_train)  # forward pass
-            print(f"y_train shape: {y_train.shape}, predictions shape: {predictions.shape}")
-            loss = mse_loss_fn(y_train, predictions)  # calculate the loss
+    def test_save_load_consistency(self):
+        """Test that model outputs are consistent after saving and loading."""
+        # Create and train the model
+        model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
+        
+        # Create optimizer
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        
+        # Training procedures (simplified)
+        for epoch in range(3):
+            with tf.GradientTape() as tape:
+                predictions = model_a(self.x_train)
+                loss = self.mse_loss_fn(self.y_train, predictions)
+            
+            gradients = tape.gradient(loss, model_a.trainable_variables)
+            optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))
+        
+        # Get outputs from original model
+        outputs_original = model_a(self.x_train)
+        loss_original = self.mse_loss_fn(self.y_train, outputs_original)
+        
+        # Save the model
+        model_a.save(self.model_path)
+        
+        # Verify the model file exists
+        self.assertTrue(os.path.exists(self.model_path))
+        
+        # Load the model
+        loaded_model_a = tf.keras.models.load_model(
+            self.model_path, 
+            custom_objects={"A": A, "B": B, "C": C}
+        )
+        
+        # Get outputs from loaded model
+        outputs_loaded = loaded_model_a(self.x_train)
+        loss_loaded = self.mse_loss_fn(self.y_train, outputs_loaded)
+        
+        # Check that losses are the same
+        self.assertAlmostEqual(loss_original.numpy(), loss_loaded.numpy(), places=5)
+        
+        # Check that outputs are the same
+        self.assertTrue(np.allclose(outputs_original.numpy(), outputs_loaded.numpy()))
 
-        gradients = tape.gradient(loss, model_a.trainable_variables)  # calculate gradients
-        optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))  # apply gradients
-
-        print(f"Step {step + 1}, Loss: {loss.numpy():.4f}")
-
-# save the model
-model_a.save("nested_model.keras")
-
-# load the model
-loaded_model_a = tf.keras.models.load_model("nested_model.keras", custom_objects={"A": A, "B": B, "C": C})
-
-# check if weights are the same
-outputs_original = model_a(x_train)
-loss1 = mse_loss_fn(y_train, outputs_original)  # calculate the loss
-
-outputs_loaded = loaded_model_a(x_train)
-loss2 = mse_loss_fn(y_train, outputs_loaded)  # calculate the loss
-
-print(f"Loss1: {loss1.numpy():.4f}")
-print(f"Loss2: {loss2.numpy():.4f}")
+        self.assertTrue( np.allclose(model_a.dense_a.kernel.numpy(), loaded_model_a.dense_a.kernel.numpy()) )
 
 
-assert np.allclose(outputs_original.numpy(), outputs_loaded.numpy())
-print("Model outputs are consistent after saving and loading.")
 
-
+if __name__ == "__main__":
+    unittest.main()
