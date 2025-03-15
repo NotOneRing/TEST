@@ -1,56 +1,63 @@
 import tensorflow as tf
 import torch
 import numpy as np
+import unittest
 
 from util.torch_to_tf import torch_nn_init_xavier_normal_, torch_nn_init_zeros_, nn_Linear
 
 
+class TestXavierNormalInitialization(unittest.TestCase):
+    """
+    Test case for comparing PyTorch and TensorFlow implementations of xavier_normal_ initialization.
+    """
+    
+    def test_compare_tf_torch(self):
+        """
+        Test to compare outputs between PyTorch and TensorFlow when using xavier_normal_ initialization.
+        """
+        input_data = np.random.rand(1, 5).astype(np.float32)  # Input tensor for both frameworks
 
-# Testing PyTorch and TensorFlow outputs
-def test_compare_tf_torch():
-    input_data = np.random.rand(1, 5).astype(np.float32)  # Input tensor for both frameworks
+        # PyTorch
+        torch_layer = torch.nn.Linear(5, 10)
+        torch.nn.init.xavier_normal_(torch_layer.weight, gain=0.01)  # Initialize weights
+        torch_layer.bias.data.fill_(0.0)  # Initialize bias to zero
+        torch_input = torch.tensor(input_data)
+        torch_output = torch_layer(torch_input).detach().numpy()
 
-    # PyTorch
-    torch_layer = torch.nn.Linear(5, 10)
-    torch.nn.init.xavier_normal_(torch_layer.weight, gain=0.01)  # Initialize weights
-    torch_layer.bias.data.fill_(0.0)  # Initialize bias to zero
-    torch_input = torch.tensor(input_data)
-    torch_output = torch_layer(torch_input).detach().numpy()
+        # TensorFlow
+        tf_layer = nn_Linear(5, 10)
+        tf_input = tf.convert_to_tensor(input_data)
+        
+        # First get output before initialization
+        _ = tf_layer(tf_input).numpy()
+        
+        # Apply xavier_normal_ initialization
+        torch_nn_init_xavier_normal_(tf_layer.kernel, gain=0.01)
+        torch_nn_init_zeros_(tf_layer.bias)
+        
+        # Get output after initialization
+        tf_output = tf_layer(tf_input).numpy()
 
-    print("torch_layer.weight = ", torch_layer.weight)
+        # Assert that bias values are close
+        self.assertTrue(
+            np.allclose(torch_layer.bias.data.numpy(), tf_layer.bias.numpy(), atol=1e-5),
+            "Bias values do not match between PyTorch and TensorFlow"
+        )
+        
+        # # Assert that kernel/weight shapes match
+        # self.assertEqual(
+        #     torch_layer.weight.shape, 
+        #     (tf_layer.kernel.shape[1], tf_layer.kernel.shape[0]),
+        #     "Weight shapes do not match between PyTorch and TensorFlow (accounting for transpose)"
+        # )
+        
+        # # Assert that outputs are reasonably close
+        # # Note: We don't expect exact matches due to implementation differences
+        # self.assertTrue(
+        #     np.allclose(torch_output, tf_output, atol=1e-4),
+        #     "Outputs do not match between PyTorch and TensorFlow"
+        # )
 
-    # TensorFlow
-    # tf_layer = tf.keras.layers.Dense(10, use_bias=True)
-    tf_layer = nn_Linear(5, 10)
 
-    tf_input = tf.convert_to_tensor(input_data)
-
-    # tf_layer.build(input_shape=(None, 5))
-
-    # initialization
-    tf_output = tf_layer(tf_input).numpy()
-
-    # Copy PyTorch weights and bias to TensorFlow
-    torch_weights = torch_layer.weight.detach().numpy().T  # Transpose weights for TensorFlow
-    torch_bias = torch_layer.bias.detach().numpy()
-
-    torch_nn_init_xavier_normal_(tf_layer.kernel, gain=0.01)  # Use the same initializer
-    torch_nn_init_zeros_(tf_layer.bias)  # Use the same initializer
-    # tf_layer.kernel.assign(torch_weights)
-    # tf_layer.bias.assign(torch_bias)
-
-    print("tf_layer.kernel = ", tf_layer.kernel)
-    print("tf_layer.bias = ", tf_layer.bias)
-
-    tf_output = tf_layer(tf_input).numpy()
-
-    # Compare outputs
-    print("PyTorch output:\n", torch_output)
-    print("TensorFlow output:\n", tf_output)
-
-    print("bias match:", np.allclose(torch_layer.bias.data.numpy(), tf_layer.bias.numpy(), atol=1e-5))
-
-# if __name__ == "__main__":
-
-test_compare_tf_torch()
-
+if __name__ == "__main__":
+    unittest.main()

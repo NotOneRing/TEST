@@ -1,3 +1,4 @@
+import unittest
 import torch
 import tensorflow as tf
 import numpy as np
@@ -5,39 +6,47 @@ import numpy as np
 from util.torch_to_tf import torch_nn_init_ones_, nn_Linear
 
 
-# Define a test for both PyTorch and TensorFlow
-def test_ones_initialization():
-    # PyTorch implementation
-    torch_layer = torch.nn.Linear(5, 10)
-    torch.nn.init.ones_(torch_layer.weight)
-    torch.nn.init.ones_(torch_layer.bias)
+class TestNNInitOnes(unittest.TestCase):
+    """
+    Test case for comparing PyTorch and TensorFlow implementations of
+    ones initialization for neural network layers.
+    """
 
-    input_data = np.random.rand(1, 5).astype(np.float32)
+    def test_ones_initialization(self):
+        """
+        Test that verifies the equivalence between PyTorch and TensorFlow
+        implementations of ones initialization for linear layers.
+        """
+        # PyTorch implementation
+        torch_layer = torch.nn.Linear(5, 10)
+        torch.nn.init.ones_(torch_layer.weight)
+        torch.nn.init.ones_(torch_layer.bias)
 
-    # TensorFlow implementation
-    tf_layer = nn_Linear(5, 10)
-    # tf_layer.build(input_shape=(None, 5))  # Build the layer to initialize variables
-    tf_input = tf.constant(input_data)
-    tf_output = tf_layer(tf_input).numpy()
+        # Create input data
+        input_data = np.random.rand(1, 5).astype(np.float32)
 
-    torch_nn_init_ones_(tf_layer.kernel)
-    torch_nn_init_ones_(tf_layer.bias)
+        # TensorFlow implementation
+        tf_layer = nn_Linear(5, 10)
+        tf_input = tf.constant(input_data)
+        tf_output = tf_layer(tf_input).numpy()  # Initialize model weights
 
-    # Create identical input data
+        # Initialize TensorFlow weights with ones
+        torch_nn_init_ones_(tf_layer.kernel)
+        torch_nn_init_ones_(tf_layer.bias)
 
-    # PyTorch forward pass
-    torch_input = torch.tensor(input_data)
-    torch_output = torch_layer(torch_input).detach().numpy()
+        # PyTorch forward pass
+        torch_input = torch.tensor(input_data)
+        torch_output = torch_layer(torch_input).detach().numpy()
 
-    # TensorFlow forward pass
-    # tf_input = tf.constant(input_data)
-    tf_output = tf_layer(tf_input).numpy()
+        # TensorFlow forward pass after initialization
+        tf_output = tf_layer(tf_input).numpy()
 
-    # Compare outputs
-    print("Torch output:\n", torch_output)
-    print("TensorFlow output:\n", tf_output)
-    print("Outputs match:", np.allclose(torch_output, tf_output, atol=1e-5))
+        # Compare outputs with assertion instead of print
+        self.assertTrue(
+            np.allclose(torch_output, tf_output, atol=1e-5),
+            f"Outputs do not match:\nTorch output:\n{torch_output}\nTensorFlow output:\n{tf_output}"
+        )
 
-# Run the test
-# if __name__ == "__main__":
-test_ones_initialization()
+
+if __name__ == "__main__":
+    unittest.main()

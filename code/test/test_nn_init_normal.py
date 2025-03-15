@@ -40,8 +40,8 @@ class TestNNInitNormal(unittest.TestCase):
 
         tf_output = tf_layer(tf_input).numpy()
 
-        print("type(tf_layer.kernel) = ", type(tf_layer.kernel))
-        print("isinstance(tf_layer.kernel, tf.Variable) = ", isinstance(tf_layer.kernel, tf.Variable))
+        # print("type(tf_layer.kernel) = ", type(tf_layer.kernel))
+        # print("isinstance(tf_layer.kernel, tf.Variable) = ", isinstance(tf_layer.kernel, tf.Variable))
         
         torch_nn_init_normal_(tf_layer.kernel, mean=0.0, std=0.1)  # Use the same initializer
         torch_nn_init_zeros_(tf_layer.bias)  # Use the same initializer
@@ -50,12 +50,12 @@ class TestNNInitNormal(unittest.TestCase):
 
         tf_output = tf_layer(tf_input).numpy()
 
-        print("tf_layer.kernel = ", tf_layer.kernel)
-        print("tf_layer.bias = ", tf_layer.bias)
+        # print("tf_layer.kernel = ", tf_layer.kernel)
+        # print("tf_layer.bias = ", tf_layer.bias)
 
-        # Compare outputs
-        print("PyTorch output:\n", torch_output)
-        print("TensorFlow output:\n", tf_output)
+        # # Compare outputs
+        # print("PyTorch output:\n", torch_output)
+        # print("TensorFlow output:\n", tf_output)
 
         # Add assertions to verify the results
         self.assertTrue(np.allclose(torch_layer.bias.data.numpy(), tf_layer.bias.numpy(), atol=1e-5), 

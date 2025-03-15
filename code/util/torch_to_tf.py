@@ -1144,40 +1144,266 @@ def torch_dot(input, tensor, *, out=None):
 
 
 
-def torch_vmap(func, *inputs, in_dims=0, out_dims=0):
-    # print("inputs = ", inputs)
-    # print("type(inputs) = ", type(inputs) )
+from functools import wraps
+import inspect
+from typing import Callable, Union, Tuple, List, Dict, Any, Optional
 
-    # print("*inputs = ", *inputs)
-    # print("type(*inputs) = ", type(*inputs))
-    out = []
-    for tensor in inputs:
-        cur_tensor = torch_tensor_clone(tensor)
-        out.append(cur_tensor)
+def torch_vmap(func: Callable, 
+         in_dims: Union[int, Tuple[int, ...], List[int], Dict[str, int]] = 0, 
+         out_dims: Union[int, Tuple[int, ...], List[int], Dict[str, int]] = 0, 
+         randomness: str = 'error', 
+         *, 
+         chunk_size: Optional[int] = None) -> Callable:
+    """
+    TensorFlow implementation of PyTorch's vmap function.
     
-    if OUTPUT_VARIABLES:
-        print("out = ", out)
-
-    if in_dims != 0:
-        for i, tensor in enumerate(out):
-            out[i] = torch_tensor_transpose(out, 0, in_dims)
-
-    out = tuple(out)
-
-    if OUTPUT_VARIABLES:
-        print("out = ", out)
-
-
-    outputs_tf = tf.vectorized_map(lambda out: torch_dot(out[0], out[1]), out)
+    vmap is the vectorizing map; vmap(func) returns a new function that maps func over some dimension 
+    of the inputs. Semantically, vmap pushes the map into TensorFlow operations called by func, 
+    effectively vectorizing those operations.
     
-    if OUTPUT_VARIABLES:
-        print("outputs_tf = ", outputs_tf)
-
+    Args:
+        func (Callable): The function to be vectorized.
+        in_dims (Union[int, Tuple[int, ...], List[int], Dict[str, int]], optional): 
+            Specifies which dimension of each input should be mapped over. Default is 0.
+            If an int, the same dimension is used for all inputs.
+            If a tuple/list, each element corresponds to the dimension of the corresponding input.
+            If a dict, keys are argument names and values are dimensions.
+        out_dims (Union[int, Tuple[int, ...], List[int], Dict[str, int]], optional): 
+            Specifies which dimension of the output the mapped dimension should appear. Default is 0.
+            Format is the same as in_dims.
+        randomness (str, optional): How to handle randomness in the function. Default is 'error'.
+            Options are:
+            - 'error': Raise an error if randomness is detected.
+            - 'different': Use different random values for each batch element.
+            - 'same': Use the same random values for each batch element.
+        chunk_size (Optional[int], optional): If specified, the computation is chunked into smaller
+            batches of the specified size. This can be useful for large batches to avoid memory issues.
+            Default is None (no chunking).
+    Returns:
+        Callable: A vectorized version of the input function.
     
-    if out_dims != 0:
-        outputs = torch_tensor_transpose(outputs, 0, out_dims)
+    Raises:
+        ValueError: If randomness is set to 'error' and randomness is detected in the function.
+        ValueError: If in_dims or out_dims have invalid values.
+        NotImplementedError: If certain features are not yet implemented.
+    """
+    
+    if randomness not in ['error', 'different', 'same']:
+        raise ValueError(f"randomness must be one of 'error', 'different', 'same', got {randomness}")
+    
+    # print("func = ", func)
+    # print("in_dims = ", in_dims)
+    # print("out_dims = ", out_dims)
+    # print("randomness = ", randomness)
+    # print("chunk_size = ", chunk_size)
 
-    return outputs
+    # Handle different types of in_dims and out_dims
+    def normalize_dims(dims, arg_names):
+        if isinstance(dims, int):
+            return {name: dims for name in arg_names}
+        elif isinstance(dims, (list, tuple)):
+            if len(dims) != len(arg_names):
+                raise ValueError(f"Length of dims {len(dims)} does not match number of arguments {len(arg_names)}")
+            return {name: dim for name, dim in zip(arg_names, dims)}
+        elif isinstance(dims, dict):
+            # Ensure all keys in dims are in arg_names
+            for key in dims:
+                if key not in arg_names:
+                    raise ValueError(f"Argument '{key}' not found in function signature")
+            # Fill in default value (0) for missing keys
+            return {name: dims.get(name, 0) for name in arg_names}
+        else:
+            raise ValueError(f"dims must be an int, tuple, list, or dict, got {type(dims)}")
+    
+
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        # print("wrapper: func = ", func)
+        # print("wrapper: in_dims = ", in_dims)
+        # print("wrapper: out_dims = ", out_dims)
+        # print("wrapper: randomness = ", randomness)
+        # print("wrapper: chunk_size = ", chunk_size)
+
+
+        # Get the argument names from the function signature
+        sig = inspect.signature(func)
+        param_names = list(sig.parameters.keys())
+        
+        # print("param_names = ", param_names)
+        
+        # Create a mapping of argument names to their values
+        bound_args = sig.bind(*args, **kwargs)
+        bound_args.apply_defaults()
+        arg_dict = bound_args.arguments
+
+        # print("bound_args = ", bound_args)
+        # print("arg_dict = ", arg_dict)
+        # print("in_dims = ", in_dims)
+        
+        # Normalize in_dims and out_dims
+        in_dims_dict = normalize_dims(in_dims, arg_dict.keys())
+
+        # print("in_dims_dict = ", in_dims_dict)
+
+        # Handle chunking if specified
+        if chunk_size is not None:
+            # print("chunk_size is not None")
+            # Determine the batch size from the first argument with a non-None in_dim
+            batch_size = None
+            for name, value in arg_dict.items():
+                if in_dims_dict[name] is not None and isinstance(value, tf.Tensor):
+                    dim = in_dims_dict[name]
+                    if dim < 0:
+                        dim = len(value.shape) + dim
+                    batch_size = value.shape[dim]
+                    break
+            
+            if batch_size is None:
+                raise ValueError("Could not determine batch size for chunking")
+            
+            # Split the computation into chunks
+            results = []
+            for i in range(0, batch_size, chunk_size):
+                chunk_args = {}
+                for name, value in arg_dict.items():
+                    if in_dims_dict[name] is not None and isinstance(value, tf.Tensor):
+                        dim = in_dims_dict[name]
+                        if dim < 0:
+                            dim = len(value.shape) + dim
+                        indices = [slice(None)] * len(value.shape)
+                        indices[dim] = slice(i, min(i + chunk_size, batch_size))
+                        chunk_args[name] = value[tuple(indices)]
+                    else:
+                        chunk_args[name] = value
+                
+                # print("chunk_args = ", chunk_args)
+                
+                # Call the function with the chunked arguments
+                chunk_result = func(**chunk_args)
+
+                # print("chunk_result = ", chunk_result)
+
+                results.append(chunk_result)
+            
+            # Concatenate the results along the out_dims
+            if isinstance(out_dims, int):
+                return tf.concat(results, axis=out_dims)
+            else:
+                # Handle more complex out_dims structures
+                # This is a simplified implementation and may need to be extended
+                if isinstance(chunk_result, tuple):
+                    return tuple( tf.concat([r[i] for r in results], axis=out_dims[i]) 
+                                for i in range(len(chunk_result)) 
+                                )
+                elif isinstance(chunk_result, dict):
+                    return {k: tf.concat([r[k] for r in results], axis=out_dims.get(k, 0)) 
+                           for k in chunk_result}
+                else:
+                    return tf.concat(results, axis=out_dims)
+        
+        # Handle randomness
+        if randomness == 'error':
+            # In a real implementation, we would check for random operations here
+            # For simplicity, we'll just warn that this check is not implemented
+            tf.print("Warning: randomness='error' check is not fully implemented")
+        
+        # Vectorize the function using tf.vectorized_map or manual broadcasting
+        # This is a simplified implementation that handles basic cases
+        
+        # Prepare the inputs for vectorization
+        vectorized_args = {}
+        batch_size = None
+        batch_dim_indices = {}
+        
+        for name, value in arg_dict.items():
+            dim = in_dims_dict[name]
+            if dim is None or not isinstance(value, tf.Tensor):
+                # Non-tensor arguments or None in_dims are passed as-is
+                vectorized_args[name] = value
+                continue
+            
+            # Normalize negative dimensions
+            if dim < 0:
+                dim = len(value.shape) + dim
+            
+            # Record the batch dimension for later use
+            if batch_size is None:
+                batch_size = value.shape[dim]
+            elif value.shape[dim] != batch_size:
+                raise ValueError(f"Inconsistent batch sizes: got {value.shape[dim]} for argument '{name}', "
+                                f"expected {batch_size}")
+            
+            # Move the batch dimension to the first position for vectorized_map
+            if dim != 0:
+                perm = list(range(len(value.shape)))
+                perm.pop(dim)
+                perm.insert(0, dim)
+                value = tf.transpose(value, perm)
+            
+            vectorized_args[name] = value
+            batch_dim_indices[name] = dim
+        
+        if batch_size is None:
+            # print("batch_size is None")
+            # # No batch dimensions found, just call the function directly
+            # print("func = ", func)
+            # print("arg_dict = ", arg_dict)
+
+            return func(**arg_dict)
+        
+        # Define a function that operates on a single slice of the batch
+        def apply_func(batch_indices):
+            single_args = {}
+            for name, value in arg_dict.items():
+                if name in batch_dim_indices:
+                    dim = batch_dim_indices[name]
+                    if dim == 0:
+                        # If the batch dimension is already at index 0, just index it
+                        indices = [batch_indices] + [slice(None)] * (len(value.shape) - 1)
+                        single_args[name] = value[tuple(indices)]
+                    else:
+                        # If we transposed the tensor earlier, index the first dimension
+                        indices = [batch_indices] + [slice(None)] * (len(value.shape) - 1)
+                        single_args[name] = vectorized_args[name][tuple(indices)]
+                else:
+                    # Non-batched arguments are passed as-is
+                    single_args[name] = value
+            
+            # print("single_args = ", single_args)
+
+            return func(**single_args)
+        
+        # Use tf.vectorized_map to apply the function to each batch element
+        batch_indices = tf.range(batch_size)
+        # print("batch_indices = ", batch_indices)
+        result = tf.vectorized_map(lambda i: apply_func(i), batch_indices)
+        
+        # print("out_dims = ", out_dims)
+
+        # Handle out_dims
+        # For simplicity, we'll assume out_dims is an int and the result is a tensor
+        # A more complete implementation would handle complex output structures
+        if isinstance(out_dims, int) and out_dims != 0 and isinstance(result, tf.Tensor):
+            # Move the batch dimension (currently at 0) to the specified out_dims
+            ndim = len(result.shape)
+            if out_dims < 0:
+                cur_out_dims = ndim + out_dims
+            else:
+                cur_out_dims = out_dims
+
+            if out_dims >= ndim:
+                raise ValueError(f"out_dims {out_dims} is out of bounds for tensor of rank {ndim}")
+            
+            perm = list(range(ndim))
+            perm.pop(0)
+            perm.insert(cur_out_dims, 0)
+            result = tf.transpose(result, perm)
+        
+        return result
+    
+    return wrapper
 
 
 
@@ -1358,8 +1584,8 @@ def torch_nn_init_normal_(variable, mean=0.0, std=1.0):
     print("type(variable) = ", type(variable))
     print("isinstance(variable, tf.Variable) = ", isinstance(variable, tf.Variable))
 
-    if not isinstance(variable, tf.Variable):
-        raise ValueError("Input variable must be a tf.Variable.")
+    # if not isinstance(variable, tf.Variable):
+    #     raise ValueError("Input variable must be a tf.Variable.")
 
     # # Draw values from a normal distribution
     # normal_values = np.random.normal(loc=mean, scale=std, size=variable.shape)
@@ -1384,8 +1610,8 @@ def torch_nn_init_zeros_(tensor):
     Returns:
         None: The variable is updated in place.
     """
-    if not isinstance(tensor, tf.Variable):
-        raise ValueError("Input variable must be a tf.Variable.")
+    # if not isinstance(tensor, tf.Variable):
+    #     raise ValueError("Input variable must be a tf.Variable.")
     
     # Assign zeros to the variable
     tensor.assign(tf.zeros_like(tensor))
@@ -1403,8 +1629,8 @@ def torch_nn_init_ones_(tensor):
     Returns:
         None: The variable is updated in place.
     """
-    if not isinstance(tensor, tf.Variable):
-        raise ValueError("Input variable must be a tf.Variable.")
+    # if not isinstance(tensor, tf.Variable):
+    #     raise ValueError("Input variable must be a tf.Variable.")
     
     # Assign ones to the variable
     tensor.assign(tf.ones_like(tensor))
@@ -1416,8 +1642,8 @@ def torch_nn_init_ones_(tensor):
 
 
 def torch_nn_init_xavier_normal_(tensor, gain):
-    if not isinstance(tensor, tf.Variable):
-        raise ValueError("Input variable must be a tf.Variable.")
+    # if not isinstance(tensor, tf.Variable):
+    #     raise ValueError("Input variable must be a tf.Variable.")
     assert len(tensor.shape) == 2, "input tensor must be of shape 2"
     fan_in = tensor.shape[0]
     fan_out = tensor.shape[1]
