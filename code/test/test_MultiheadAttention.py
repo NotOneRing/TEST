@@ -8,7 +8,9 @@ from util.torch_to_tf import nn_MultiheadAttention
 class TestMultiheadAttention(unittest.TestCase):
     def setUp(self):
         # Set random seed for reproducibility
+        np.random.seed(42)
         torch.manual_seed(42)
+        tf.random.set_seed(42)
         
         self.batch_size = 2
         self.seq_len = 5
@@ -112,3 +114,6 @@ class TestMultiheadAttention(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+

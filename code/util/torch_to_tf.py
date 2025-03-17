@@ -2993,20 +2993,91 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
         x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
-    def scaled_dot_product_attention(self, query, key, value, mask=None):
-        """Compute scaled dot-product attention"""
+    # def scaled_dot_product_attention(self, query, key, value, mask=None):
+    #     """Compute scaled dot-product attention"""
+    #     matmul_qk = tf.matmul(query, key, transpose_b=True)
+    #     dk = tf.cast(tf.shape(key)[-1], tf.float32)
+    #     scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
+
+    #     if mask is not None:
+    #         scaled_attention_logits += (mask * -1e9)
+
+    #     attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
+    #     output = tf.matmul(attention_weights, value)
+    #     return output, attention_weights
+
+    def scaled_dot_product_attention(self, query, key, value, mask=None, attn_mask=None, key_padding_mask=None):
+        """Compute scaled dot-product attention with support for multiple mask types"""
         matmul_qk = tf.matmul(query, key, transpose_b=True)
         dk = tf.cast(tf.shape(key)[-1], tf.float32)
         scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
 
+        # Apply legacy mask if provided (for backward compatibility)
         if mask is not None:
             scaled_attention_logits += (mask * -1e9)
+        
+        # Apply attention mask if provided
+        if attn_mask is not None:
+            # If attn_mask is 2D, expand it to match the batch size and number of heads
+            if len(tf.shape(attn_mask)) == 2:
+                attn_mask = tf.expand_dims(tf.expand_dims(attn_mask, 0), 0)
+            
+            # Apply the mask by adding a large negative value to masked positions
+            scaled_attention_logits += (attn_mask * -1e9)
+        
+        # Apply key padding mask if provided
+        if key_padding_mask is not None:
+            # key_padding_mask is expected to be of shape [batch_size, seq_len_k]
+            # We need to reshape it to [batch_size, 1, 1, seq_len_k]
+            key_padding_mask = tf.cast(key_padding_mask, tf.float32)
+            key_padding_mask = tf.expand_dims(tf.expand_dims(key_padding_mask, 1), 2)
+            
+            # Apply the mask by adding a large negative value to masked positions
+            scaled_attention_logits += (key_padding_mask * -1e9)
 
         attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
         output = tf.matmul(attention_weights, value)
         return output, attention_weights
 
-    def call(self, query, key, value, mask=None):
+    # def call(self, query, key, value, mask=None):
+    #     batch_size = tf.shape(query)[0]
+
+    #     # Apply linear transformation to Q, K, V and split into multiple heads
+    #     query = self.query_dense(query)
+    #     key = self.key_dense(key)
+    #     value = self.value_dense(value)
+
+    #     query = self.split_heads(query, batch_size)
+    #     key = self.split_heads(key, batch_size)
+    #     value = self.split_heads(value, batch_size)
+
+    #     # Scaled dot-product attention
+    #     output, attention_weights = self.scaled_dot_product_attention(query, key, value, mask)
+
+    #     # Concatenate the multiple heads
+    #     output = tf.transpose(output, perm=[0, 2, 1, 3])
+    #     output = tf.reshape(output, (batch_size, -1, self.d_model))
+
+    #     attention_weights = tf.reduce_mean(attention_weights, axis=1)  # take the average of all heads
+
+    #     # Output transformation
+    #     output = self.output_dense(output)
+    #     return output, attention_weights
+
+
+
+    def call(self, query, key, value, mask=None, attn_mask=None, key_padding_mask=None):
+        """
+        Forward pass for MultiheadAttention with support for multiple mask types
+        
+        Args:
+            query: Query tensor
+            key: Key tensor
+            value: Value tensor
+            mask: Legacy mask parameter (kept for backward compatibility)
+            attn_mask: Optional mask applied to attention logits to mask specific position pairs
+            key_padding_mask: Optional mask for key sequence to mask padded positions
+        """
         batch_size = tf.shape(query)[0]
 
         # Apply linear transformation to Q, K, V and split into multiple heads
@@ -3019,7 +3090,9 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
         value = self.split_heads(value, batch_size)
 
         # Scaled dot-product attention
-        output, attention_weights = self.scaled_dot_product_attention(query, key, value, mask)
+        output, attention_weights = self.scaled_dot_product_attention(
+            query, key, value, mask, attn_mask, key_padding_mask
+        )
 
         # Concatenate the multiple heads
         output = tf.transpose(output, perm=[0, 2, 1, 3])
@@ -3030,6 +3103,7 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
         # Output transformation
         output = self.output_dense(output)
         return output, attention_weights
+
 
 
     def get_config(self):
@@ -3584,13 +3658,24 @@ class einops_layers_torch_Rearrange(tf.keras.layers.Layer):
 
 
 
+def _generate_square_subsequent_mask(
+    sz: int,
+    dtype = None,
+):
+    r"""Generate a square causal mask for the sequence.
 
+    The masked positions are filled with float('-inf'). Unmasked positions are filled with float(0.0).
+    """
+    return torch_triu(
+        torch_full((sz, sz), float("-inf"), dtype=dtype),
+        diagonal=1,
+    )
 
 class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, nhead, dim_feedforward=2048, 
                 #  dropout=0.1, 
                  dropout = 0,
-                 activation=nn_ReLU, layer_norm_eps=1e-5, batch_first=False,
+                 activation=nn_ReLU(), layer_norm_eps=1e-5, batch_first=False,
                  norm_first=False):
         super(nn_TransformerDecoderLayer, self).__init__()
         self.self_attn = nn_MultiheadAttention(d_model, nhead, 
@@ -3621,9 +3706,10 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
         self.norm_first = norm_first  # Control whether normalization is applied first (Pre-LN vs. Post-LN)
 
 
-    def forward(self, tgt, memory, 
+    def call(self, tgt, memory, 
                 tgt_mask=None, memory_mask=None, 
-                tgt_key_padding_mask=None, memory_key_padding_mask=None):
+                tgt_key_padding_mask=None, memory_key_padding_mask=None,
+                training=True):
         """
         Args:            
             tgt: Target sequence (embeddings of the target) (batch, tgt_len, d_model)
@@ -3638,30 +3724,301 @@ class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
         if self.norm_first:
             tgt2 = self.self_attn(self.norm1(tgt), self.norm1(tgt), self.norm1(tgt),
                                   attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
+            # if training:
             tgt = tgt + self.dropout1(tgt2)
+            # else:
+            #     tgt = tgt + tgt2
         else:
             tgt2 = self.self_attn(tgt, tgt, tgt, attn_mask=tgt_mask, key_padding_mask=tgt_key_padding_mask)[0]
+            # if training:
             tgt = self.norm1(tgt + self.dropout1(tgt2))
+            # else:
+            #     tgt = self.norm1(tgt + tgt2)
 
         # 2. Cross-Attention (Encoder-Decoder)
         if self.norm_first:
             tgt2 = self.multihead_attn(self.norm2(tgt), self.norm2(memory), self.norm2(memory),
                                        attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+            # if training:
             tgt = tgt + self.dropout2(tgt2)
+            # else:
+            #     tgt = tgt + tgt2
         else:
             tgt2 = self.multihead_attn(tgt, memory, memory, attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+            # # if training:
+            # result1 = tgt + self.dropout2(tgt2)
+            # result2 = tgt + tgt2
+            # print("tgt2 = ", tgt2)
+            # print("self.dropout2(tgt2) = ", self.dropout2(tgt2))
+            # assert np.allclose( result1.numpy(), result2.numpy(), atol=1e-4), "not equal"
             tgt = self.norm2(tgt + self.dropout2(tgt2))
+            # else:
+            #     tgt = self.norm2(tgt + tgt2)
 
         # 3. Feedforward Network (FFN)
         if self.norm_first:
+            # if training:
             tgt2 = self.linear2(self.dropout(self.activation(self.linear1(self.norm3(tgt)))))
             tgt = tgt + self.dropout3(tgt2)
+            # else:
+            #     tgt2 = self.linear2( self.activation(self.linear1(self.norm3(tgt))) )
+            #     tgt = tgt + tgt2
         else:
+            # if training:
             tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
             tgt = self.norm3(tgt + self.dropout3(tgt2))
+            # else:
+            #     tgt2 = self.linear2(self.activation(self.linear1(tgt)))
+            #     tgt = tgt + tgt2
 
         return tgt
 
+#     def __init__(
+#         self,
+#         d_model,
+#         nhead,
+#         dim_feedforward = 2048,
+#         dropout = 0.1,
+#         activation = nn_ReLU(),
+#         layer_norm_eps = 1e-5,
+#         batch_first = False,
+#         norm_first = False,
+#         bias = True,
+#         device=None,
+#         dtype=None,
+#     ) -> None:
+#         factory_kwargs = {"device": device, "dtype": dtype}
+#         super().__init__()
+#         # self.self_attn = nn_MultiheadAttention(
+#         #     d_model,
+#         #     nhead,
+#         #     dropout=dropout,
+#         #     batch_first=batch_first,
+#         #     bias=bias,
+#         #     **factory_kwargs,
+#         # )
+#         # self.multihead_attn = nn_MultiheadAttention(
+#         #     d_model,
+#         #     nhead,
+#         #     dropout=dropout,
+#         #     batch_first=batch_first,
+#         #     bias=bias,
+#         #     **factory_kwargs,
+#         # )
+#         self.self_attn = nn_MultiheadAttention(d_model, nhead, 
+#                                             #    dropout=dropout, 
+#                                             #    batch_first=batch_first
+#                                                )
+#         self.multihead_attn = nn_MultiheadAttention(d_model, nhead, 
+#                                                     # dropout=dropout, 
+#                                                     # batch_first=batch_first
+#                                                     )     
+#         # Feed-Forward Network (FFN)
+#         self.linear1 = nn_Linear(d_model, dim_feedforward)
+#         self.linear2 = nn_Linear(dim_feedforward, d_model)
+#         self.dropout = nn_Dropout(dropout)
+
+#         # Normalization
+#         self.norm1 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+#         self.norm2 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+#         self.norm3 = nn_LayerNorm(d_model, eps=layer_norm_eps)
+
+#         # Dropout
+#         self.dropout1 = nn_Dropout(dropout)
+#         self.dropout2 = nn_Dropout(dropout)
+#         self.dropout3 = nn_Dropout(dropout)
+
+#         self.activation = activation
+#         self.norm_first = norm_first  # Control whether normalization is applied first (Pre-LN vs. Post-LN)
+           
+#         # # Implementation of Feedforward model
+#         # self.linear1 = nn_Linear(d_model, dim_feedforward, bias=bias, **factory_kwargs)
+#         # self.dropout = nn_Dropout(dropout)
+#         # self.linear2 = nn_Linear(dim_feedforward, d_model, bias=bias, **factory_kwargs)
+
+#         # self.norm_first = norm_first
+#         # self.norm1 = nn_LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
+#         # self.norm2 = nn_LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
+#         # self.norm3 = nn_LayerNorm(d_model, eps=layer_norm_eps, bias=bias, **factory_kwargs)
+#         # self.dropout1 = nn_Dropout(dropout)
+#         # self.dropout2 = nn_Dropout(dropout)
+#         # self.dropout3 = nn_Dropout(dropout)
+
+#         # # Legacy string support for activation function.
+#         # if isinstance(activation, str):
+#         #     self.activation = _get_activation_fn(activation)
+#         # else:
+#         #     self.activation = activation
+
+#     # def __setstate__(self, state):
+#     #     if "activation" not in state:
+#     #         state["activation"] = F.relu
+#     #     super().__setstate__(state)
+
+#     def call(
+#         self,
+#         tgt,
+#         memory,
+#         tgt_mask = None,
+#         memory_mask = None,
+#         tgt_key_padding_mask = None,
+#         memory_key_padding_mask = None,
+#         tgt_is_causal: bool = False,
+#         memory_is_causal: bool = False,
+#     ):
+#         r"""Pass the inputs (and mask) through the decoder layer.
+
+#         Args:
+#             tgt: the sequence to the decoder layer (required).
+#             memory: the sequence from the last layer of the encoder (required).
+#             tgt_mask: the mask for the tgt sequence (optional).
+#             memory_mask: the mask for the memory sequence (optional).
+#             tgt_key_padding_mask: the mask for the tgt keys per batch (optional).
+#             memory_key_padding_mask: the mask for the memory keys per batch (optional).
+#             tgt_is_causal: If specified, applies a causal mask as ``tgt mask``.
+#                 Default: ``False``.
+#                 Warning:
+#                 ``tgt_is_causal`` provides a hint that ``tgt_mask`` is
+#                 the causal mask. Providing incorrect hints can result in
+#                 incorrect execution, including forward and backward
+#                 compatibility.
+#             memory_is_causal: If specified, applies a causal mask as
+#                 ``memory mask``.
+#                 Default: ``False``.
+#                 Warning:
+#                 ``memory_is_causal`` provides a hint that
+#                 ``memory_mask`` is the causal mask. Providing incorrect
+#                 hints can result in incorrect execution, including
+#                 forward and backward compatibility.
+
+#         Shape:
+#             see the docs in :class:`~torch.nn.Transformer`.
+#         """
+#         # see Fig. 1 of https://arxiv.org/pdf/2002.04745v1.pdf
+
+#         x = tgt
+#         if self.norm_first:
+#             x = x + self._sa_block(
+#                 self.norm1(x), tgt_mask, tgt_key_padding_mask, tgt_is_causal
+#             )
+#             x = x + self._mha_block(
+#                 self.norm2(x),
+#                 memory,
+#                 memory_mask,
+#                 memory_key_padding_mask,
+#                 memory_is_causal,
+#             )
+#             x = x + self._ff_block(self.norm3(x))
+#         else:
+#             x = self.norm1(
+#                 x + self._sa_block(x, tgt_mask, tgt_key_padding_mask, tgt_is_causal)
+#             )
+#             x = self.norm2(
+#                 x
+#                 + self._mha_block(
+#                     x, memory, memory_mask, memory_key_padding_mask, memory_is_causal
+#                 )
+#             )
+#             x = self.norm3(x + self._ff_block(x))
+
+#         return x
+
+#     # self-attention block
+#     def _sa_block(
+#         self,
+#         x,
+#         attn_mask,
+#         key_padding_mask,
+#         is_causal = False,
+#     ):
+#         x = self.self_attn(
+#             x,
+#             x,
+#             x,
+#             attn_mask=attn_mask,
+#             key_padding_mask=key_padding_mask,
+#             # is_causal=is_causal,
+#             # need_weights=False,
+#         )[0]
+#         return self.dropout1(x)
+
+#     # multihead attention block
+#     def _mha_block(
+#         self,
+#         x,
+#         mem,
+#         attn_mask,
+#         key_padding_mask,
+#         is_causal = False,
+#     ):
+#         x = self.multihead_attn(
+#             x,
+#             mem,
+#             mem,
+#             attn_mask=attn_mask,
+#             key_padding_mask=key_padding_mask,
+#             # is_causal=is_causal,
+#             # need_weights=False,
+#         )[0]
+#         return self.dropout2(x)
+
+#     # feed forward block
+#     def _ff_block(self, x):
+#         x = self.linear2(self.dropout(self.activation(self.linear1(x))))
+#         return self.dropout3(x)
+
+
+
+# def _get_activation_fn(activation: str):
+#     if activation == "relu":
+#         return nn_ReLU
+#     elif activation == "gelu":
+#         return nn_GELU
+
+#     raise RuntimeError(f"activation should be relu/gelu, not {activation}")
+
+
+# def _detect_is_causal_mask(
+#     mask,
+#     is_causal = None,
+#     size = None,
+# ) -> bool:
+#     """Return whether the given attention mask is causal.
+
+#     Warning:
+#     If ``is_causal`` is not ``None``, its value will be returned as is.  If a
+#     user supplies an incorrect ``is_causal`` hint,
+
+#     ``is_causal=False`` when the mask is in fact a causal attention.mask
+#        may lead to reduced performance relative to what would be achievable
+#        with ``is_causal=True``;
+#     ``is_causal=True`` when the mask is in fact not a causal attention.mask
+#        may lead to incorrect and unpredictable execution - in some scenarios,
+#        a causal mask may be applied based on the hint, in other execution
+#        scenarios the specified mask may be used.  The choice may not appear
+#        to be deterministic, in that a number of factors like alignment,
+#        hardware SKU, etc influence the decision whether to use a mask or
+#        rely on the hint.
+#     ``size`` if not None, check whether the mask is a causal mask of the provided size
+#        Otherwise, checks for any causal mask.
+#     """
+#     # Prevent type refinement
+#     make_causal = is_causal is True
+
+#     if is_causal is None and mask is not None:
+#         sz = size if size is not None else mask.size(-2)
+#         causal_comparison = _generate_square_subsequent_mask(
+#             sz, device=mask.device, dtype=mask.dtype
+#         )
+
+#         # Do not use `torch.equal` so we handle batched masks by
+#         # broadcasting the comparison.
+#         if mask.size() == causal_comparison.size():
+#             make_causal = bool((mask == causal_comparison).all())
+#         else:
+#             make_causal = False
+
+#     return make_causal
 
 
 
