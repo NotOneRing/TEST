@@ -46,9 +46,9 @@ class nn_ReLU(tf.keras.layers.Layer):
 
 # Sub-class model C
 @register_keras_serializable(package="Custom")
-class C(tf.keras.Model):
+class C4(tf.keras.Model):
     def __init__(self, units=4, **kwargs):
-        super(C, self).__init__(**kwargs)
+        super(C4, self).__init__(**kwargs)
         self.units = units
         self.dense_c = nn_Linear(8, self.units)
         self.relu = nn_ReLU()
@@ -69,13 +69,13 @@ class C(tf.keras.Model):
 
 # Sub-class model B
 @register_keras_serializable(package="Custom")
-class B(tf.keras.Model):
+class B4(tf.keras.Model):
     def __init__(self, units=8, sub_model=None, **kwargs):
-        super(B, self).__init__(**kwargs)
+        super(B4, self).__init__(**kwargs)
         self.units = units
         self.dense_b = nn_Linear(16, self.units)
         self.relu = nn_ReLU()
-        self.c = sub_model if sub_model else C()
+        self.c = sub_model if sub_model else C4()
 
     def call(self, inputs):
         x = self.dense_b(inputs)
@@ -98,13 +98,13 @@ class B(tf.keras.Model):
 
 # Main model A
 @register_keras_serializable(package="Custom")
-class A(tf.keras.Model):
+class A4(tf.keras.Model):
     def __init__(self, units=16, sub_model=None, **kwargs):
-        super(A, self).__init__(**kwargs)
+        super(A4, self).__init__(**kwargs)
         self.units = units
         self.dense_a = nn_Linear(10, self.units)
         self.relu = nn_ReLU()
-        self.b = sub_model if sub_model else B()
+        self.b = sub_model if sub_model else B4()
 
     def call(self, inputs):
         x = self.dense_a(inputs)
@@ -131,7 +131,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
     def setUp(self):
         """Set up test data and model."""
         # Create model instance with nested structure
-        self.model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
+        self.model_a = A4(units=16, sub_model=B4(units=8, sub_model=C4(units=4)))
         
         # Optimizer
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
@@ -174,7 +174,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         # Load the model
         loaded_model_a = tf.keras.models.load_model(
             self.model_path, 
-            custom_objects={"A": A, "B": B, "C": C, "nn_Linear": nn_Linear, "nn_ReLU": nn_ReLU}
+            custom_objects={"A4": A4, "B4": B4, "C4": C4, "nn_Linear": nn_Linear, "nn_ReLU": nn_ReLU}
         )
         
         # Get outputs from both models

@@ -9,9 +9,9 @@ from tensorflow.keras.saving import register_keras_serializable
 
 
 @register_keras_serializable(package="Custom")
-class C(tf.keras.Model):
+class C1(tf.keras.Model):
     def __init__(self, **kwargs):
-        super(C, self).__init__()
+        super(C1, self).__init__()
         self.dense_c = nn_Linear(8, 4)
         # tf.keras.layers.Dense(4, activation='relu')
         self.relu = nn_ReLU()
@@ -22,13 +22,13 @@ class C(tf.keras.Model):
 
 
 @register_keras_serializable(package="Custom")
-class B(tf.keras.Model):
+class B1(tf.keras.Model):
     def __init__(self, **kwargs):
-        super(B, self).__init__()
+        super(B1, self).__init__()
         self.dense_b = nn_Linear(16, 8)
         # tf.keras.layers.Dense(8, activation='relu')
         self.relu = nn_ReLU()
-        self.c = C()
+        self.c = C1()
     
     def call(self, inputs):
         x = self.dense_b(inputs)
@@ -37,13 +37,13 @@ class B(tf.keras.Model):
 
 
 @register_keras_serializable(package="Custom")
-class A(tf.keras.Model):
+class A1(tf.keras.Model):
     def __init__(self, **kwargs):
-        super(A, self).__init__()
+        super(A1, self).__init__()
         self.dense_a = nn_Linear(10, 16)
         # tf.keras.layers.Dense(16, activation='relu')
         self.relu = nn_ReLU()
-        self.b = B()
+        self.b = B1()
     
     def call(self, inputs):
         x = self.dense_a(inputs)
@@ -65,24 +65,24 @@ class TestSaveLoadModels(unittest.TestCase):
         if os.path.exists(self.model_path):
             os.remove(self.model_path)
     
-    def test_save_load_model(self):
+    def test_save_load_model1(self):
         """Test saving and loading nested models with weights preservation"""
         # create model instance
-        model_a = A()
+        model_a = A1()
 
         # # compile and train
-        # model_a.compile(optimizer='adam', loss='mse')
-        # model_a.fit(self.x_train, self.y_train, epochs=3, verbose=0)
-        pred = model_a(self.x_train)
+        model_a.compile(optimizer='adam', loss='mse')
+        model_a.fit(self.x_train, self.y_train, epochs=3, verbose=0)
+        # pred = model_a(self.x_train)
         
         # save model (save all contents of B and C recursively)
         model_a.save(self.model_path)
 
         from tensorflow.keras.utils import get_custom_objects
         cur_dict = {
-            'A': A,
-            'B': B,
-            'C': C,  
+            'A1': A1,
+            'B1': B1,
+            'C1': C1,  
             'nn_Linear': nn_Linear,
             'nn_ReLU': nn_ReLU,
         }

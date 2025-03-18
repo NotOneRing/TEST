@@ -7,9 +7,9 @@ from tensorflow.keras.saving import register_keras_serializable
 
 
 @register_keras_serializable(package="Custom")
-class C(tf.keras.Model):
+class C2(tf.keras.Model):
     def __init__(self, units=4, dense_c = None, **kwargs):
-        super(C, self).__init__(**kwargs)
+        super(C2, self).__init__(**kwargs)
         self.units = units
         if dense_c:
             self.dense_c = dense_c
@@ -36,9 +36,9 @@ class C(tf.keras.Model):
 
 
 @register_keras_serializable(package="Custom")
-class B(tf.keras.Model):
+class B2(tf.keras.Model):
     def __init__(self, units=8, sub_model=None, dense_b = None, **kwargs):
-        super(B, self).__init__(**kwargs)
+        super(B2, self).__init__(**kwargs)
         self.units = units
         if not dense_b:
             self.dense_b = nn_Linear(16, self.units)
@@ -46,7 +46,7 @@ class B(tf.keras.Model):
             self.dense_b = dense_b
 
         self.relu = nn_ReLU()
-        self.c = sub_model if sub_model else C()
+        self.c = sub_model if sub_model else C2()
 
     def call(self, inputs):
         x = self.dense_b(inputs)
@@ -70,16 +70,16 @@ class B(tf.keras.Model):
 
 
 @register_keras_serializable(package="Custom")
-class A(tf.keras.Model):
+class A2(tf.keras.Model):
     def __init__(self, units=16, sub_model=None, dense_a = None, **kwargs):
-        super(A, self).__init__(**kwargs)
+        super(A2, self).__init__(**kwargs)
         self.units = units
         if not dense_a:
             self.dense_a = nn_Linear(10, self.units)            
         else:
             self.dense_a = dense_a
         self.relu = nn_ReLU()
-        self.b = sub_model if sub_model else B()
+        self.b = sub_model if sub_model else B2()
 
     def call(self, inputs):
         x = self.dense_a(inputs)
@@ -127,7 +127,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
     def test_nested_model_save_load(self):
         """Test saving and loading functionality of nested models"""
         # Create nested model
-        model_a = A()
+        model_a = A2()
         
         # Compile and train the model
         model_a.compile(optimizer='adam', loss='mse')
@@ -141,9 +141,9 @@ class TestNestedModelSaveLoad(unittest.TestCase):
 
         from tensorflow.keras.utils import get_custom_objects
         cur_dict = {
-            'A': A,
-            'B': B,
-            'C': C,  
+            'A2': A2,
+            'B2': B2,
+            'C2': C2,  
             'nn_Linear': nn_Linear,
             'nn_ReLU': nn_ReLU,
         }
@@ -177,7 +177,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
     def test_model_structure(self):
         """Test if model structure and nested relationships are correctly saved and loaded"""
         # Create original model
-        original_model = A()
+        original_model = A2()
 
         original_model.compile(optimizer='adam', loss='mse')
         original_model.fit(self.x_train, self.y_train, epochs=3, verbose=0)
@@ -187,9 +187,9 @@ class TestNestedModelSaveLoad(unittest.TestCase):
 
         from tensorflow.keras.utils import get_custom_objects
         cur_dict = {
-            'A': A,
-            'B': B,
-            'C': C,  
+            'A2': A2,
+            'B2': B2,
+            'C2': C2,  
             'nn_Linear': nn_Linear,
             'nn_ReLU': nn_ReLU,
         }

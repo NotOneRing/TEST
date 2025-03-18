@@ -7,9 +7,9 @@ from tensorflow.keras.saving import register_keras_serializable
 
 
 @register_keras_serializable(package="Custom")
-class C(tf.keras.Model):
+class C3(tf.keras.Model):
     def __init__(self, units=4, **kwargs):
-        super(C, self).__init__(**kwargs)
+        super(C3, self).__init__(**kwargs)
         self.units = units
         self.dense_c = nn_Linear(8, self.units)
         self.relu = nn_ReLU()
@@ -29,13 +29,13 @@ class C(tf.keras.Model):
 
 
 @register_keras_serializable(package="Custom")
-class B(tf.keras.Model):
+class B3(tf.keras.Model):
     def __init__(self, units=8, sub_model=None, **kwargs):
-        super(B, self).__init__(**kwargs)
+        super(B3, self).__init__(**kwargs)
         self.units = units
         self.dense_b = nn_Linear(16, self.units)
         self.relu = nn_ReLU()
-        self.c = sub_model if sub_model else C()
+        self.c = sub_model if sub_model else C3()
 
     def call(self, inputs):
         x = self.dense_b(inputs)
@@ -57,13 +57,13 @@ class B(tf.keras.Model):
 
 
 @register_keras_serializable(package="Custom")
-class A(tf.keras.Model):
+class A3(tf.keras.Model):
     def __init__(self, units=16, sub_model=None, **kwargs):
-        super(A, self).__init__(**kwargs)
+        super(A3, self).__init__(**kwargs)
         self.units = units
         self.dense_a = nn_Linear(10, self.units)
         self.relu = nn_ReLU()
-        self.b = sub_model if sub_model else B()
+        self.b = sub_model if sub_model else B3()
 
     def call(self, inputs):
         x = self.dense_a(inputs)
@@ -90,7 +90,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
     def setUp(self):
         """Set up test environment before each test method."""
         # Create model instance
-        self.model_a = A()
+        self.model_a = A3()
         
         # Define optimizer
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
@@ -131,7 +131,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
                 # Verify loss is a valid number
                 self.assertFalse(np.isnan(loss.numpy()), "Loss should not be NaN")
     
-    def test_save_load_model(self):
+    def test_save_load_model3(self):
         """Test saving and loading the model."""
         # First train the model
         for epoch in range(3):
@@ -179,9 +179,9 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         loaded_model_a = tf.keras.models.load_model(self.model_path)
         
         # Check model structure
-        self.assertIsInstance(loaded_model_a, A, "Loaded model should be an instance of A")
-        self.assertIsInstance(loaded_model_a.b, B, "Loaded model's b attribute should be an instance of B")
-        self.assertIsInstance(loaded_model_a.b.c, C, "Loaded model's b.c attribute should be an instance of C")
+        self.assertIsInstance(loaded_model_a, A3, "Loaded model should be an instance of A")
+        self.assertIsInstance(loaded_model_a.b, B3, "Loaded model's b attribute should be an instance of B")
+        self.assertIsInstance(loaded_model_a.b.c, C3, "Loaded model's b.c attribute should be an instance of C")
         
         # Check model parameters
         self.assertEqual(loaded_model_a.units, 16, "Model A should have 16 units")

@@ -11,9 +11,9 @@ from util.torch_to_tf import nn_Linear, nn_ReLU, nn_LayerNorm
 
 # sub-class C
 @register_keras_serializable(package="Custom")
-class C(tf.keras.Model):
+class C7(tf.keras.Model):
     def __init__(self, units=4, **kwargs):
-        super(C, self).__init__(**kwargs)
+        super(C7, self).__init__(**kwargs)
         self.units = units
         self.dense_c = nn_Linear(8, self.units)
         self.relu = nn_ReLU()
@@ -35,9 +35,9 @@ class C(tf.keras.Model):
 
 # sub-class B
 @register_keras_serializable(package="Custom")
-class B(tf.keras.Model):
+class B7(tf.keras.Model):
     def __init__(self, units=8, sub_model=None, **kwargs):
-        super(B, self).__init__(**kwargs)
+        super(B7, self).__init__(**kwargs)
         self.units = units
         self.dense_b = nn_Linear(16, self.units)
         self.relu = nn_ReLU()
@@ -63,9 +63,9 @@ class B(tf.keras.Model):
 
         from tensorflow.keras.utils import get_custom_objects
         cur_dict = {
-            'A': A,
-            'B': B,
-            'C': C,  
+            'A7': A7,
+            'B7': B7,
+            'C7': C7,  
             'nn_Linear': nn_Linear,
             'nn_ReLU': nn_ReLU,
             "nn_LayerNorm": nn_LayerNorm,
@@ -77,9 +77,9 @@ class B(tf.keras.Model):
 
 # main class A
 @register_keras_serializable(package="Custom")
-class A(tf.keras.Model):
+class A7(tf.keras.Model):
     def __init__(self, units=16, sub_model=None, **kwargs):
-        super(A, self).__init__(**kwargs)
+        super(A7, self).__init__(**kwargs)
         self.units = units
         self.dense_a = nn_Linear(10, self.units)
         self.layernorm = nn_LayerNorm(self.units)
@@ -136,7 +136,7 @@ class TestSaveLoadNestedModels(unittest.TestCase):
     def test_model_training(self):
         """Test that the nested model can be trained properly."""
         # Create model instance
-        model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
+        model_a = A7(units=16, sub_model=B7(units=8, sub_model=C7(units=4)))
         
         # Optimizer
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
@@ -173,11 +173,11 @@ class TestSaveLoadNestedModels(unittest.TestCase):
         loaded_model_a = tf.keras.models.load_model(
             self.model_path, 
             # custom_objects={
-            #     "A": self.A, 
-            #     "B": self.B, 
-            #     "C": self.C
+            #     "A7": self.A7, 
+            #     "B7": self.B7, 
+            #     "C7": self.C7
             # }
-            custom_objects = {"A": A, "B": B, "C": C,
+            custom_objects = {"A7": A7, "B7": B7, "C7": C7,
                   "nn_Linear": nn_Linear, "nn_ReLU": nn_ReLU, "nn_LayerNorm": nn_LayerNorm}
 
         )

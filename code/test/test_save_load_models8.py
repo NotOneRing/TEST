@@ -11,9 +11,9 @@ from tensorflow.keras.utils import get_custom_objects
 
 # sub-class C
 @register_keras_serializable(package="Custom")
-class C(tf.keras.Model):
+class C8(tf.keras.Model):
     def __init__(self, units=4, dense_c=None, **kwargs):
-        super(C, self).__init__(**kwargs)
+        super(C8, self).__init__(**kwargs)
         self.units = units
         if not dense_c:
             self.dense_c = nn_Linear(8, self.units)
@@ -34,6 +34,9 @@ class C(tf.keras.Model):
             "units": self.units,
             "dense_c": tf.keras.layers.serialize(self.dense_c),
         })
+
+        print("C.get_config(): config = ", config)
+
         return config
 
     @classmethod
@@ -46,6 +49,13 @@ class C(tf.keras.Model):
         }
         get_custom_objects().update(cur_dict)
         
+        print("C.from_config(): config = ", config)
+
+        if "dense_c" in config:
+            print("'dense_c' in config")
+        else:
+            print("'dense_c' not in config")
+
         dense_c = tf.keras.layers.deserialize(config.pop("dense_c"),  custom_objects=get_custom_objects())
         
         return cls(dense_c = dense_c, **config)
@@ -53,9 +63,9 @@ class C(tf.keras.Model):
 
 # sub-class B
 @register_keras_serializable(package="Custom")
-class B(tf.keras.Model):
+class B8(tf.keras.Model):
     def __init__(self, units=8, sub_model=None, dense_b = None, **kwargs):
-        super(B, self).__init__(**kwargs)
+        super(B8, self).__init__(**kwargs)
         self.units = units
 
         if not dense_b:
@@ -82,6 +92,7 @@ class B(tf.keras.Model):
             "sub_model": tf.keras.layers.serialize(self.c),
             "dense_b": tf.keras.layers.serialize(self.dense_b),
         })
+        print("B.get_config(): config = ", config)
         return config
 
     @classmethod
@@ -90,14 +101,16 @@ class B(tf.keras.Model):
         from tensorflow.keras.utils import get_custom_objects
 
         cur_dict = {
-            # 'A': A,
-            'B': B,
-            'C': C,  
+            # 'A8': A8,
+            'B': B8,
+            'C': C8,  
             'nn_Linear': nn_Linear,
             'nn_ReLU': nn_ReLU,
             "nn_LayerNorm": nn_LayerNorm,
         }
         get_custom_objects().update(cur_dict)
+
+        print("B.from_config(): config = ", config)
 
 
         sub_model = tf.keras.layers.deserialize(config.pop("sub_model"),  custom_objects=get_custom_objects())
@@ -109,9 +122,9 @@ class B(tf.keras.Model):
 
 # main class A
 @register_keras_serializable(package="Custom")
-class A(tf.keras.Model):
+class A8(tf.keras.Model):
     def __init__(self, units=16, sub_model=None, dense_a = None, **kwargs):
-        super(A, self).__init__(**kwargs)
+        super(A8, self).__init__(**kwargs)
         self.units = units
 
         if not dense_a:
@@ -138,9 +151,9 @@ class A(tf.keras.Model):
         # print("self.b = ", self.b)
 
         cur_dict = {
-            # 'A': A,
-            'B': B,
-            'C': C,  
+            # 'A8': A8,
+            'B8': B8,
+            'C8': C8,  
             'nn_Linear': nn_Linear,
             'nn_ReLU': nn_ReLU,
             "nn_LayerNorm": nn_LayerNorm,
@@ -153,21 +166,26 @@ class A(tf.keras.Model):
             "sub_model": tf.keras.layers.serialize(self.b),
             "dense_a": tf.keras.layers.serialize(self.dense_a),
         })
+
+        print("A.get_config(): config = ", config)
+
         return config
 
     @classmethod
     def from_config(cls, config):
         from tensorflow.keras.utils import get_custom_objects
         cur_dict = {
-            # 'A': A,
-            'B': B,
-            'C': C,  
+            # 'A8': A8,
+            'B8': B8,
+            'C8': C8,  
             'nn_Linear': nn_Linear,
             'nn_ReLU': nn_ReLU,
             "nn_LayerNorm": nn_LayerNorm,
         }
         get_custom_objects().update(cur_dict)
-        
+
+        print("A.from_config(): config = ", config)
+
         sub_model = tf.keras.layers.deserialize(config.pop("sub_model"),  custom_objects=get_custom_objects())
         dense_a = tf.keras.layers.deserialize(config.pop("dense_a"),  custom_objects=get_custom_objects())
         return cls(sub_model=sub_model, dense_a=dense_a, **config)
@@ -203,7 +221,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
     def test_model_creation(self):
         """Test that nested models can be created properly."""
         # Create the model instance with nested structure
-        model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
+        model_a = A8(units=16, sub_model=B8(units=8, sub_model=C8(units=4)))
         
         # Test forward pass
         output = model_a(self.x_train)
@@ -214,7 +232,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
     def test_save_load_consistency(self):
         """Test that model outputs are consistent after saving and loading."""
         # Create and train the model
-        model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
+        model_a = A8(units=16, sub_model=B8(units=8, sub_model=C8(units=4)))
         
         # Create optimizer
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
@@ -245,7 +263,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         # Load the model
         loaded_model_a = tf.keras.models.load_model(
             self.model_path, 
-            custom_objects = {"A": A, "B": B, "C": C,
+            custom_objects = {"A8": A8, "B8": B8, "C8": C8,
                   "nn_Linear": nn_Linear, "nn_ReLU": nn_ReLU, "nn_LayerNorm": nn_LayerNorm}
         )
         

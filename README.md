@@ -470,16 +470,27 @@ Here is the general plot of the current DPOER result:
 <center class="third">
     <div style="display: flex; justify-content: space-around; text-align: center;">
         <div>
-            <b>DPOER on Square and Transport</b><br>
-            <img src="figure/Square_SAC.png" height="150" width="250"/><br>
-            <img src="figure/Transport_SAC.png" height="150" width="250"/><br>
-            <img src="figure/Halfcheetah_SAC.png" height="150" width="250"/><br>
-            <img src="figure/Hopper_SAC.png" height="150" width="250"/><br>
+            <b>DPOER on Square and Transport</b>
+            <br>
+            <img src="figure/Square_SAC.png" height="150" width="250">
+            <br>
+            <img src="figure/Transport_SAC.png" height="150" width="250">
+            <br>
+            <img src="figure/Lift_SAC.png" height="150" width="250"/>
+            <br>
+            <img src="figure/Can_SAC.png" height="150" width="250"/>
+            <br>
+            <img src="figure/Halfcheetah_SAC.png" height="150" width="250">
+            <br>
+            <img src="figure/Hopper_SAC.png" height="150" width="250"/>
+            <br>
+            <img src="figure/Walker_SAC.png" height="150" width="250">
+            <br>
         </div>
     </div>
 </center>
 As shown above, DPOER is slightly better than DPPO. 
-I increased the update frequency of the DPOER to every 50 batches. As shown in the figure, DPOER_50 outperforms both DPOER (updated every 10000 batches) and DPPO. The results on other datasets are still pending.
+I increased the update frequency of the DPOER to every 50 batches. As shown in the figure, DPOER_50 outperforms both DPOER (updated every 10000 batches) and DPPO.
 DPOER results are running with
 
 ```
@@ -500,5 +511,36 @@ Furthermore, I try to further improve the efficiency and attempt different varia
 
 
 
+# Revision Part
+## All Chinese comments have been changed to English:
+```
+python find_chinese_comments.py
+```
+It outputs nothing after the revision.
 
+## All test files have been changed to the unittest framework now:
+User could use the following command to run all tests in one time:
+To have the comparison between tensorflow and torch, user need to install torch. Another anaconda environment is encouraged to be created.
+```
+conda create -n test-dppo python=3.11
+conda activate test-dppo
+pip install tensorflow[and-cuda]==2.18.0 --no-cache-dir
+pip install tf-keras --no-cache-dir
+pip install -e .[d3il] --no-cache-dir
+pip install tensorflow-probability --no-cache-dir
+pip install opencv-python --no-cache-dir
+pip install scikit-learn --no-cache-dir
+<!-- pip uninstall torch -->
+<!-- pip install torch -->
+pip install -e .
+```
+Then run the following command to run all 276 test cases:
+```
+python -m unittest discover -s test -p "*.py" -v
+```
+It outputs success of all test cases. The end of the output is like 
+```
+Ran 276 tests in 28.368s
 
+OK
+```
