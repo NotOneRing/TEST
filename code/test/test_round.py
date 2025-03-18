@@ -14,7 +14,7 @@ class TestRound(unittest.TestCase):
         # round off
         rounded_tensor = torch.round(tensor)
 
-        print(rounded_tensor)
+        # print(rounded_tensor)
 
         # Create a tensor of float type
         tensor = tf.constant([1.1, 2.5, 3.7, -1.4])
@@ -22,7 +22,7 @@ class TestRound(unittest.TestCase):
         # round off
         tf_rounded_tensor = torch_round(tensor)
 
-        print(tf_rounded_tensor)
+        # print(tf_rounded_tensor)
 
         # Assert that PyTorch and TensorFlow implementations give the same results
         self.assertTrue(np.allclose(rounded_tensor, tf_rounded_tensor))

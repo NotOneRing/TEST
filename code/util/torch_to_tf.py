@@ -127,8 +127,8 @@ def torch_quantile(input_tensor, q, dim=None, keepdim=False, interpolation='line
     else:
         q_shape_list = q.shape.as_list()
 
-    print("input_shape_list = ", input_shape_list)
-    print("q_shape_list = ", q_shape_list)
+    # print("input_shape_list = ", input_shape_list)
+    # print("q_shape_list = ", q_shape_list)
 
     # Flatten the input if axis is None
     if dim is None:
@@ -1581,8 +1581,8 @@ def torch_nn_init_normal_(variable, mean=0.0, std=1.0):
         None: The variable is updated in place.
     """
 
-    print("type(variable) = ", type(variable))
-    print("isinstance(variable, tf.Variable) = ", isinstance(variable, tf.Variable))
+    # print("type(variable) = ", type(variable))
+    # print("isinstance(variable, tf.Variable) = ", isinstance(variable, tf.Variable))
 
     # if not isinstance(variable, tf.Variable):
     #     raise ValueError("Input variable must be a tf.Variable.")
@@ -2871,33 +2871,21 @@ class nn_LayerNorm(tf.keras.layers.Layer):
         else:
             self.beta = beta
 
+
     def get_config(self):
-        """
-        Returns the configuration of the LayerNorm layer.
-        This method is used to save and restore the layer's state.
-        """
-        config = super(nn_LayerNorm, self).get_config()  # Get the base configuration
-        # Ensure that `gamma` and `beta` configuration information is added to the returned config
+        config = super(nn_LayerNorm, self).get_config()
         config.update({
             'normalized_shape': self.normalized_shape,
-            'eps': self.epsilon,
-            # 'gamma': self.gamma,
-            # 'beta': self.beta
+            'eps': self.epsilon
         })
-
-        if OUTPUT_VARIABLES:
-            print("nn_LayerNorm.get_config() = ", config)
-
         return config
 
     @classmethod
     def from_config(cls, config):
-        """
-        Returns an instance of the custom layer from its configuration.
-        """
-        result = super(nn_LayerNorm, cls).from_config(config)
-        return result
-    
+        return cls(**config)
+
+
+
     def call(self, x):
         """
         Forward pass for LayerNorm.
@@ -2967,7 +2955,7 @@ class nn_LayerNorm(tf.keras.layers.Layer):
 
 
 class nn_MultiheadAttention(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads, name="nn_MultiheadAttention", **kwargs):
+    def __init__(self, d_model, num_heads, name="nn_MultiheadAttention", batch_first = False, **kwargs):
         
         if OUTPUT_FUNCTION_HEADER:
             print("called nn_MultiheadAttention __init__()")
@@ -2987,6 +2975,8 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
         # Output transformation
         self.output_dense = tf.keras.layers.Dense(d_model)
+
+        self.batch_first = batch_first
 
     def split_heads(self, x, batch_size):
         """Split the last dimension into multiple heads"""
@@ -3078,20 +3068,29 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
             attn_mask: Optional mask applied to attention logits to mask specific position pairs
             key_padding_mask: Optional mask for key sequence to mask padded positions
         """
-        batch_size = tf.shape(query)[0]
+        if not self.batch_first:
+            query_input = torch_tensor_transpose(query, 0, 1)
+            key_input = torch_tensor_transpose(key, 0, 1)
+            value_input = torch_tensor_transpose(value, 0, 1)
+        else:
+            query_input = query
+            key_input = key
+            value_input = value
+
+        batch_size = tf.shape(query_input)[0]
 
         # Apply linear transformation to Q, K, V and split into multiple heads
-        query = self.query_dense(query)
-        key = self.key_dense(key)
-        value = self.value_dense(value)
+        query_input = self.query_dense(query_input)
+        key_input = self.key_dense(key_input)
+        value_input = self.value_dense(value_input)
 
-        query = self.split_heads(query, batch_size)
-        key = self.split_heads(key, batch_size)
-        value = self.split_heads(value, batch_size)
+        query_input = self.split_heads(query_input, batch_size)
+        key_input = self.split_heads(key_input, batch_size)
+        value_input = self.split_heads(value_input, batch_size)
 
         # Scaled dot-product attention
         output, attention_weights = self.scaled_dot_product_attention(
-            query, key, value, mask, attn_mask, key_padding_mask
+            query_input, key_input, value_input, mask, attn_mask, key_padding_mask
         )
 
         # Concatenate the multiple heads
@@ -3102,6 +3101,13 @@ class nn_MultiheadAttention(tf.keras.layers.Layer):
 
         # Output transformation
         output = self.output_dense(output)
+
+        if not self.batch_first:
+            output = torch_tensor_transpose(output, 0, 1)
+        else:
+            output = output
+        
+        
         return output, attention_weights
 
 
@@ -3658,18 +3664,18 @@ class einops_layers_torch_Rearrange(tf.keras.layers.Layer):
 
 
 
-def _generate_square_subsequent_mask(
-    sz: int,
-    dtype = None,
-):
-    r"""Generate a square causal mask for the sequence.
+# def _generate_square_subsequent_mask(
+#     sz: int,
+#     dtype = None,
+# ):
+#     r"""Generate a square causal mask for the sequence.
 
-    The masked positions are filled with float('-inf'). Unmasked positions are filled with float(0.0).
-    """
-    return torch_triu(
-        torch_full((sz, sz), float("-inf"), dtype=dtype),
-        diagonal=1,
-    )
+#     The masked positions are filled with float('-inf'). Unmasked positions are filled with float(0.0).
+#     """
+#     return torch_triu(
+#         torch_full((sz, sz), float("-inf"), dtype=dtype),
+#         diagonal=1,
+#     )
 
 class nn_TransformerDecoderLayer(tf.keras.layers.Layer):
     def __init__(self, d_model, nhead, dim_feedforward=2048, 

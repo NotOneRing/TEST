@@ -40,7 +40,7 @@ class TestSaveLoadModels(unittest.TestCase):
         """Test that custom objects are properly registered with Keras."""
         # Verify custom objects are registered
         self.assertIn('SinusoidalPosEmb', get_custom_objects())
-        print("Custom objects:", get_custom_objects())
+        # print("Custom objects:", get_custom_objects())
     
     def test_sinusoidal_pos_emb_serialization(self):
         """Test serialization and deserialization of SinusoidalPosEmb class."""
@@ -59,7 +59,7 @@ class TestSaveLoadModels(unittest.TestCase):
         
         # Test from_config method
         sinu = SinusoidalPosEmb.from_config(serialized)
-        print("sinu =", sinu)
+        # print("sinu =", sinu)
         self.assertIsInstance(sinu, SinusoidalPosEmb)
         self.assertEqual(sinu.dim, 32)
 
@@ -67,7 +67,7 @@ class TestSaveLoadModels(unittest.TestCase):
         
         # Test deserialize method
         result = tf.keras.layers.deserialize(serialized, custom_objects=get_custom_objects())
-        print("result =", result)
+        # print("result =", result)
         self.assertIsInstance(result, SinusoidalPosEmb)
         self.assertEqual(result.dim, 32)
 

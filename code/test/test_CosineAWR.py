@@ -195,8 +195,8 @@ class TestCosineAWR(unittest.TestCase):
                 tf_loss, tf_gradients = model_forward_backward_gradients(inputs, targets, tf_loss_fn, tf_model)
                 tf_optimizer.step(tf_gradients)
 
-                print("torch_loss = ", torch_loss)
-                print("tf_loss = ", tf_loss)
+                # print("torch_loss = ", torch_loss)
+                # print("tf_loss = ", tf_loss)
 
                 # Assert losses are close
                 self.assertTrue(np.allclose(torch_loss.item(), tf_loss.numpy(), atol=1e-3))
@@ -209,8 +209,8 @@ class TestCosineAWR(unittest.TestCase):
         torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
         tf_final_output = tf_model(inputs).numpy()
 
-        print("torch_final_output = ", torch_final_output)
-        print("tf_final_output = ", tf_final_output)
+        # print("torch_final_output = ", torch_final_output)
+        # print("tf_final_output = ", tf_final_output)
 
         # Assert outputs are close
         self.assertTrue(np.allclose(torch_final_output, tf_final_output, atol=1e-3))
@@ -303,8 +303,8 @@ class TestCosineAWR(unittest.TestCase):
         torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
         tf_final_output = tf_model(inputs).numpy()
 
-        print("torch_final_output = ", torch_final_output)
-        print("tf_final_output = ", tf_final_output)
+        # print("torch_final_output = ", torch_final_output)
+        # print("tf_final_output = ", tf_final_output)
 
         # Assert outputs are close
         self.assertTrue(np.allclose(torch_final_output, tf_final_output, atol=1e-3))
@@ -399,8 +399,8 @@ class TestCosineAWR(unittest.TestCase):
         torch_final_output = torch_model(torch.tensor(inputs)).detach().numpy()
         tf_final_output = tf_model(inputs).numpy()
 
-        print("torch_final_output = ", torch_final_output)
-        print("tf_final_output = ", tf_final_output)
+        # print("torch_final_output = ", torch_final_output)
+        # print("tf_final_output = ", tf_final_output)
 
         # Assert outputs are close
         self.assertTrue(np.allclose(torch_final_output, tf_final_output, atol=1e-3))

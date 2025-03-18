@@ -26,9 +26,9 @@ class TestAbsFunction(unittest.TestCase):
         torch_np = torch_result.detach().numpy()
         tf_np = tf_result.numpy()
         
-        # Print results for debugging
-        print(f"PyTorch result: {torch_result}")
-        print(f"TensorFlow result: {tf_result}")
+        # # Print results for debugging
+        # print(f"PyTorch result: {torch_result}")
+        # print(f"TensorFlow result: {tf_result}")
         
         # Assert that the results are equal (within a small tolerance)
         np.testing.assert_allclose(torch_np, tf_np, rtol=1e-5, atol=1e-5)

@@ -63,11 +63,12 @@ class TestTensorFlow(unittest.TestCase):
         
         # Verify that summary can be generated without errors
         summary = []
+        
         result_model.summary(print_fn=lambda x: summary.append(x))
         
         # Check that summary contains expected information
         summary_text = '\n'.join(summary)
-        print("summary_text = ", summary_text)
+        # print("summary_text = ", summary_text)
         self.assertIn('Model: "', summary_text)
         self.assertIn('Dense', summary_text)
         self.assertIn('38', summary_text)  # Output dimension

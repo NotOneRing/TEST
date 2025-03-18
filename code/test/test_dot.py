@@ -12,7 +12,7 @@ class TestTorchDot(unittest.TestCase):
 
         # Calculate dot product using the torch_dot function
         dot_product = torch_dot(a, b)
-        print(dot_product)
+        # print(dot_product)
 
         # Create equivalent PyTorch tensors
         a_torch = torch.tensor(a.numpy())
@@ -20,7 +20,7 @@ class TestTorchDot(unittest.TestCase):
 
         # Calculate dot product using PyTorch's native dot function
         torch_dot_product = torch.dot(a_torch, b_torch)
-        print(torch_dot_product)
+        # print(torch_dot_product)
 
         # Assert that both dot products are equal
         self.assertEqual(

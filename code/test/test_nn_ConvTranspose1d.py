@@ -39,19 +39,14 @@ class TestConvTranspose1d(unittest.TestCase):
         """Test if PyTorch and TensorFlow outputs have similar values"""
         torch_output = self.torch_layer(self.torch_input).detach().numpy()
         tf_output = self.tf_layer(self.tf_input).numpy()
+
+        # print("max difference:", np.abs(torch_output - tf_output).max())
+        # print("PyTorch output shape:", torch_output.shape)
+        # print("TensorFlow output shape:", tf_output.shape)
         
         max_diff = np.abs(torch_output - tf_output).max()
         self.assertLess(max_diff, 1e-3, f"Max difference too large: {max_diff}")
         
-    def test_print_results(self):
-        """Print the results for manual inspection (not an actual test)"""
-        torch_output = self.torch_layer(self.torch_input).detach().numpy()
-        tf_output = self.tf_layer(self.tf_input).numpy()
-        
-        # print("max difference:", np.abs(torch_output - tf_output).max())
-        # print("PyTorch output shape:", torch_output.shape)
-        # print("TensorFlow output shape:", tf_output.shape)
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -8,10 +8,13 @@ from tensorflow.keras.saving import register_keras_serializable
 
 @register_keras_serializable(package="Custom")
 class C(tf.keras.Model):
-    def __init__(self, units=4, **kwargs):
+    def __init__(self, units=4, dense_c = None, **kwargs):
         super(C, self).__init__(**kwargs)
         self.units = units
-        self.dense_c = nn_Linear(8, self.units)
+        if dense_c:
+            self.dense_c = dense_c
+        else:
+            self.dense_c = nn_Linear(8, self.units)
         self.relu = nn_ReLU()
     
     def call(self, inputs):
@@ -22,20 +25,26 @@ class C(tf.keras.Model):
         config = super().get_config()
         config.update({
             "units": self.units,
+            "dense_c": tf.keras.layers.serialize(self.dense_c),
         })
         return config
 
     @classmethod
     def from_config(cls, config):
-        return cls(**config)
+        dense_c = tf.keras.layers.deserialize(config.pop("dense_c"))
+        return cls(dense_c = dense_c, **config)
 
 
 @register_keras_serializable(package="Custom")
 class B(tf.keras.Model):
-    def __init__(self, units=8, sub_model=None, **kwargs):
+    def __init__(self, units=8, sub_model=None, dense_b = None, **kwargs):
         super(B, self).__init__(**kwargs)
         self.units = units
-        self.dense_b = nn_Linear(16, self.units)
+        if not dense_b:
+            self.dense_b = nn_Linear(16, self.units)
+        else:
+            self.dense_b = dense_b
+
         self.relu = nn_ReLU()
         self.c = sub_model if sub_model else C()
 
@@ -49,21 +58,26 @@ class B(tf.keras.Model):
         config.update({
             "units": self.units,
             "sub_model": tf.keras.layers.serialize(self.c),
+            "dense_b": tf.keras.layers.serialize(self.dense_b),
         })
         return config
 
     @classmethod
     def from_config(cls, config):
         sub_model = tf.keras.layers.deserialize(config.pop("sub_model"))
-        return cls(sub_model=sub_model, **config)
+        dense_b = tf.keras.layers.deserialize(config.pop("dense_b"))
+        return cls(sub_model=sub_model, dense_b=dense_b, **config)
 
 
 @register_keras_serializable(package="Custom")
 class A(tf.keras.Model):
-    def __init__(self, units=16, sub_model=None, **kwargs):
+    def __init__(self, units=16, sub_model=None, dense_a = None, **kwargs):
         super(A, self).__init__(**kwargs)
         self.units = units
-        self.dense_a = nn_Linear(10, self.units)
+        if not dense_a:
+            self.dense_a = nn_Linear(10, self.units)            
+        else:
+            self.dense_a = dense_a
         self.relu = nn_ReLU()
         self.b = sub_model if sub_model else B()
 
@@ -77,13 +91,15 @@ class A(tf.keras.Model):
         config.update({
             "units": self.units,
             "sub_model": tf.keras.layers.serialize(self.b),
+            "dense_a": tf.keras.layers.serialize(self.dense_a),
         })
         return config
 
     @classmethod
     def from_config(cls, config):
         sub_model = tf.keras.layers.deserialize(config.pop("sub_model"))
-        return cls(sub_model=sub_model, **config)
+        dense_a = tf.keras.layers.deserialize(config.pop("dense_a"))
+        return cls(sub_model=sub_model, dense_a=dense_a, **config)
 
 
 class TestNestedModelSaveLoad(unittest.TestCase):
@@ -92,7 +108,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
     def setUp(self):
         """Setup work before each test"""
         # Set model save path
-        self.model_path = "nested_model.keras"
+        self.model_path = "nested_model2.keras"
         
         # Ensure the file doesn't exist before testing
         if os.path.exists(self.model_path):
@@ -122,17 +138,25 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         
         # Verify model file was created
         self.assertTrue(os.path.exists(self.model_path), "Model file was not created successfully")
-        
-        # Load the model
-        loaded_model_a = tf.keras.models.load_model(self.model_path)
+
+        from tensorflow.keras.utils import get_custom_objects
+        cur_dict = {
+            'A': A,
+            'B': B,
+            'C': C,  
+            'nn_Linear': nn_Linear,
+            'nn_ReLU': nn_ReLU,
+        }
+        get_custom_objects().update(cur_dict)
+        loaded_model_a = tf.keras.models.load_model(self.model_path, custom_objects=get_custom_objects())
         
         # Check if outputs from original and loaded models are the same
         outputs_original = model_a(self.x_train)
         outputs_loaded = loaded_model_a(self.x_train)
         
-        # Print outputs for comparison
-        print("outputs_original = ", outputs_original)
-        print("outputs_loaded = ", outputs_loaded)
+        # # Print outputs for comparison
+        # print("outputs_original = ", outputs_original)
+        # print("outputs_loaded = ", outputs_loaded)
         
         # Verify outputs are close using numpy's allclose function
         self.assertTrue(
@@ -142,25 +166,37 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         
         # Calculate sum of absolute differences, should be close to 0
         diff_sum = tf.reduce_sum(tf.abs(outputs_original - outputs_loaded))
-        print(f"Sum of output differences: {diff_sum}")
+        # print(f"Sum of output differences: {diff_sum}")
         self.assertLess(diff_sum, 1e-5, "Output difference is too large")
         
         # Check if optimizer configuration was loaded correctly
         optimizer_config = loaded_model_a.optimizer.get_config()
-        print("Loaded model optimizer config:", optimizer_config)
+        # print("Loaded model optimizer config:", optimizer_config)
         self.assertEqual(optimizer_config['name'], 'adam', "Incorrect optimizer type")
     
     def test_model_structure(self):
         """Test if model structure and nested relationships are correctly saved and loaded"""
         # Create original model
         original_model = A()
-        
+
+        original_model.compile(optimizer='adam', loss='mse')
+        original_model.fit(self.x_train, self.y_train, epochs=3, verbose=0)
+
         # Save the model
         original_model.save(self.model_path)
+
+        from tensorflow.keras.utils import get_custom_objects
+        cur_dict = {
+            'A': A,
+            'B': B,
+            'C': C,  
+            'nn_Linear': nn_Linear,
+            'nn_ReLU': nn_ReLU,
+        }
+        get_custom_objects().update(cur_dict)
+        loaded_model = tf.keras.models.load_model(self.model_path ,  custom_objects=get_custom_objects())
         
-        # Load the model
-        loaded_model = tf.keras.models.load_model(self.model_path)
-        
+
         # Verify model hierarchy
         # Model A should have dense_a, relu, and submodel B
         self.assertTrue(hasattr(loaded_model, 'dense_a'), "Loaded model missing dense_a layer")

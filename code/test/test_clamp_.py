@@ -30,9 +30,9 @@ class TestClamp(unittest.TestCase):
         torch_clipped_np = torch_input.numpy()
         torch_clip_clipped_np = tf_input.numpy()
 
-        print("Torch clipped result:\n", torch_clipped_np)
-        print("Torch_clip (TensorFlow) clipped result:\n", torch_clip_clipped_np)
-        print("Are the results identical? ", np.allclose(torch_clipped_np, torch_clip_clipped_np))
+        # print("Torch clipped result:\n", torch_clipped_np)
+        # print("Torch_clip (TensorFlow) clipped result:\n", torch_clip_clipped_np)
+        # print("Are the results identical? ", np.allclose(torch_clipped_np, torch_clip_clipped_np))
 
         # Assert that the results are identical
         self.assertTrue(np.allclose(torch_clipped_np, torch_clip_clipped_np))

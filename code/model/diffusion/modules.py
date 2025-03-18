@@ -20,7 +20,7 @@ from tensorflow.keras.saving import register_keras_serializable
 class SinusoidalPosEmb(tf.keras.layers.Layer):
     def __init__(self, dim, name = "SinusoidalPosEmb", **kwargs):
 
-        print("modules.py: SinusoidalPosEmb.__init__()")
+        # print("modules.py: SinusoidalPosEmb.__init__()")
 
         super(SinusoidalPosEmb, self).__init__(name=name,**kwargs)
         self.dim = dim

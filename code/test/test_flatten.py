@@ -31,7 +31,7 @@ class TestFlatten(unittest.TestCase):
 
         output = torch_flatten(feats_tf, 1, 2)
 
-        print("output = ", output)
+        # print("output = ", output)
 
         # PyTorch
         feats_torch_flatten = feats_torch.flatten(start_dim=1, end_dim=2)

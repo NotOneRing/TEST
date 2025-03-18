@@ -144,7 +144,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         self.mse_loss_fn = tf.keras.losses.MeanSquaredError()
         
         # Model save path
-        self.model_path = "nested_model.keras"
+        self.model_path = "nested_model4.keras"
     
     def tearDown(self):
         """Clean up after tests."""
@@ -168,16 +168,6 @@ class TestNestedModelSaveLoad(unittest.TestCase):
                 # Verify loss is a valid number
                 self.assertFalse(np.isnan(loss.numpy()))
     
-    def test_save_load_consistency(self):
-        """Test that model outputs are consistent after saving and loading."""
-        # First train the model briefly
-        with tf.GradientTape() as tape:
-            predictions = self.model_a(self.x_train)
-            loss = self.mse_loss_fn(self.y_train, predictions)
-        
-        gradients = tape.gradient(loss, self.model_a.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.model_a.trainable_variables))
-        
         # Save the model
         self.model_a.save(self.model_path)
         

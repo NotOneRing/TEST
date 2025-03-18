@@ -88,18 +88,18 @@ class TestModuleList(unittest.TestCase):
                 tf_out_np.shape,
                 f"Layer {i} shape mismatch: Torch {torch_out_np.shape}, TF {tf_out_np.shape}"
             )
-            print(f"Layer {i} shape match: {torch_out_np.shape}")
+            # print(f"Layer {i} shape match: {torch_out_np.shape}")
             
             # Check both values are consistent
             match = np.allclose(torch_out_np, tf_out_np, atol=1e-5)
-            print(f"Layer {i} output match: {match}")
+            # print(f"Layer {i} output match: {match}")
             
             self.assertTrue(match, f"Layer {i} outputs do not match")
             
-            # Print output values of each layer (for debugging)
-            print(f"Layer {i} Torch output:\n{torch_out_np}")
-            print(f"Layer {i} TF output:\n{tf_out_np}")
-            print("-" * 50)
+            # # Print output values of each layer (for debugging)
+            # print(f"Layer {i} Torch output:\n{torch_out_np}")
+            # print(f"Layer {i} TF output:\n{tf_out_np}")
+            # print("-" * 50)
 
 
 if __name__ == '__main__':

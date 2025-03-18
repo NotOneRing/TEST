@@ -24,8 +24,8 @@ class TestNNSequential(unittest.TestCase):
 
         pytorch_input = torch.randn(5, 4)  # Input tensor with shape (5, 4)
         pytorch_output = pytorch_model(pytorch_input).detach().numpy()
-        print("PyTorch output:")
-        print(pytorch_output)
+        # print("PyTorch output:")
+        # print(pytorch_output)
 
         tf_model = nn_Sequential(
             nn_Linear(4, 8),
@@ -58,19 +58,19 @@ class TestNNSequential(unittest.TestCase):
         tf_model[2].trainable_weights[0].assign(pytorch_weight2.T)  # kernel
         tf_model[2].trainable_weights[1].assign(pytorch_bias2)     # bias
 
-        print("len(tf_model) = ", len(tf_model))
-        print("len(pytorch_model) = ", len(pytorch_model))
+        # print("len(tf_model) = ", len(tf_model))
+        # print("len(pytorch_model) = ", len(pytorch_model))
 
         tf_input = tf.convert_to_tensor(pytorch_input.numpy())  # Convert PyTorch input to TensorFlow tensor
         tf_output = tf_model(tf_input).numpy()
-        print("\nTensorFlow output:")
-        print(tf_output)
+        # print("\nTensorFlow output:")
+        # print(tf_output)
 
-        # Compare results
-        if np.allclose(pytorch_output, tf_output, atol=1e-3):
-            print("\nThe results match!")
-        else:
-            print("\nThe results do not match!")
+        # # Compare results
+        # if np.allclose(pytorch_output, tf_output, atol=1e-3):
+        #     print("\nThe results match!")
+        # else:
+        #     print("\nThe results do not match!")
 
         # Use unittest assertion instead of assert
         self.assertTrue(np.allclose(pytorch_output, tf_output, atol=1e-3), 

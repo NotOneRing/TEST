@@ -47,8 +47,9 @@ class TestQuantile(unittest.TestCase):
         # Apply torch_quantile from util.torch_to_tf
         temp = torch_quantile(a_tf, q_tf, dim=None, keepdim=True)
         
-        print("temp = ", temp)
-        print("temp.shape = ", temp.shape)
+        # print("temp = ", temp)
+        # print("temp.shape = ", temp.shape)
+
         # # Expected shape: [3, 2, 1] - 3 quantiles, 2 rows, 1 column
         # self.assertEqual(temp.shape, (3, 2, 1))
         
@@ -56,8 +57,8 @@ class TestQuantile(unittest.TestCase):
         temp_torch = torch.quantile(a_torch, q_torch, dim=None, keepdim=True)
         temp_torch_np = temp_torch.numpy()
 
-        print("temp_torch_np = ", temp_torch_np)
-        print("temp_torch_np.shape = ", temp_torch_np.shape)
+        # print("temp_torch_np = ", temp_torch_np)
+        # print("temp_torch_np.shape = ", temp_torch_np.shape)
 
         # Verify TensorFlow implementation matches PyTorch
         self.assertTrue(np.allclose(temp.numpy(), temp_torch_np, rtol=1e-4))
@@ -76,8 +77,9 @@ class TestQuantile(unittest.TestCase):
         # Apply torch_quantile from util.torch_to_tf
         temp = torch_quantile(a_tf, q_tf, dim=None, keepdim=True)
         
-        print("temp = ", temp)
-        print("temp.shape = ", temp.shape)
+        # print("temp = ", temp)
+        # print("temp.shape = ", temp.shape)
+
         # # Expected shape: [3, 2, 1] - 3 quantiles, 2 rows, 1 column
         # self.assertEqual(temp.shape, (3, 2, 1))
         
@@ -85,8 +87,8 @@ class TestQuantile(unittest.TestCase):
         temp_torch = torch.quantile(a_torch, q_torch, dim=None, keepdim=True)
         temp_torch_np = temp_torch.numpy()
 
-        print("temp_torch_np = ", temp_torch_np)
-        print("temp_torch_np.shape = ", temp_torch_np.shape)
+        # print("temp_torch_np = ", temp_torch_np)
+        # print("temp_torch_np.shape = ", temp_torch_np.shape)
 
         # Verify TensorFlow implementation matches PyTorch
         self.assertTrue(np.allclose(temp.numpy(), temp_torch_np, rtol=1e-4))
@@ -107,8 +109,9 @@ class TestQuantile(unittest.TestCase):
         # Apply torch_quantile from util.torch_to_tf
         temp = torch_quantile(a_tf, q_tf, dim=None, keepdim=False)
         
-        print("temp = ", temp)
-        print("temp.shape = ", temp.shape)
+        # print("temp = ", temp)
+        # print("temp.shape = ", temp.shape)
+
         # # Expected shape: [3, 2, 1] - 3 quantiles, 2 rows, 1 column
         # self.assertEqual(temp.shape, (3, 2, 1))
         
@@ -116,8 +119,8 @@ class TestQuantile(unittest.TestCase):
         temp_torch = torch.quantile(a_torch, q_torch, dim=None, keepdim=False)
         temp_torch_np = temp_torch.numpy()
 
-        print("temp_torch_np = ", temp_torch_np)
-        print("temp_torch_np.shape = ", temp_torch_np.shape)
+        # print("temp_torch_np = ", temp_torch_np)
+        # print("temp_torch_np.shape = ", temp_torch_np.shape)
 
         # Verify TensorFlow implementation matches PyTorch
         self.assertTrue(np.allclose(temp.numpy(), temp_torch_np, rtol=1e-4))
@@ -136,8 +139,9 @@ class TestQuantile(unittest.TestCase):
         # Apply torch_quantile from util.torch_to_tf
         temp = torch_quantile(a_tf, q_tf, dim=None, keepdim=False)
         
-        print("temp = ", temp)
-        print("temp.shape = ", temp.shape)
+        # print("temp = ", temp)
+        # print("temp.shape = ", temp.shape)
+
         # # Expected shape: [3, 2, 1] - 3 quantiles, 2 rows, 1 column
         # self.assertEqual(temp.shape, (3, 2, 1))
         
@@ -145,8 +149,8 @@ class TestQuantile(unittest.TestCase):
         temp_torch = torch.quantile(a_torch, q_torch, dim=None, keepdim=False)
         temp_torch_np = temp_torch.numpy()
 
-        print("temp_torch_np = ", temp_torch_np)
-        print("temp_torch_np.shape = ", temp_torch_np.shape)
+        # print("temp_torch_np = ", temp_torch_np)
+        # print("temp_torch_np.shape = ", temp_torch_np.shape)
 
         # Verify TensorFlow implementation matches PyTorch
         self.assertTrue(np.allclose(temp.numpy(), temp_torch_np, rtol=1e-4))
@@ -167,8 +171,9 @@ class TestQuantile(unittest.TestCase):
         # Apply torch_quantile from util.torch_to_tf
         temp = torch_quantile(a_tf, q_tf, dim=1, keepdim=True)
         
-        print("temp = ", temp)
-        print("temp.shape = ", temp.shape)
+        # print("temp = ", temp)
+        # print("temp.shape = ", temp.shape)
+
         # # Expected shape: [3, 2, 1] - 3 quantiles, 2 rows, 1 column
         # self.assertEqual(temp.shape, (3, 2, 1))
         
@@ -176,8 +181,8 @@ class TestQuantile(unittest.TestCase):
         temp_torch = torch.quantile(a_torch, q_torch, dim=1, keepdim=True)
         temp_torch_np = temp_torch.numpy()
 
-        print("temp_torch_np = ", temp_torch_np)
-        print("temp_torch_np.shape = ", temp_torch_np.shape)
+        # print("temp_torch_np = ", temp_torch_np)
+        # print("temp_torch_np.shape = ", temp_torch_np.shape)
 
         # Verify TensorFlow implementation matches PyTorch
         self.assertTrue(np.allclose(temp.numpy(), temp_torch_np, rtol=1e-4))
@@ -196,8 +201,9 @@ class TestQuantile(unittest.TestCase):
         # Apply torch_quantile from util.torch_to_tf
         temp = torch_quantile(a_tf, q_tf, dim=1, keepdim=True)
         
-        print("temp = ", temp)
-        print("temp.shape = ", temp.shape)
+        # print("temp = ", temp)
+        # print("temp.shape = ", temp.shape)
+
         # # Expected shape: [3, 2, 1] - 3 quantiles, 2 rows, 1 column
         # self.assertEqual(temp.shape, (3, 2, 1))
         
@@ -205,8 +211,8 @@ class TestQuantile(unittest.TestCase):
         temp_torch = torch.quantile(a_torch, q_torch, dim=1, keepdim=True)
         temp_torch_np = temp_torch.numpy()
 
-        print("temp_torch_np = ", temp_torch_np)
-        print("temp_torch_np.shape = ", temp_torch_np.shape)
+        # print("temp_torch_np = ", temp_torch_np)
+        # print("temp_torch_np.shape = ", temp_torch_np.shape)
 
         # Verify TensorFlow implementation matches PyTorch
         self.assertTrue(np.allclose(temp.numpy(), temp_torch_np, rtol=1e-4))
@@ -227,8 +233,9 @@ class TestQuantile(unittest.TestCase):
         # Apply torch_quantile from util.torch_to_tf
         temp = torch_quantile(a_tf, q_tf, dim=1, keepdim=False)
         
-        print("temp = ", temp)
-        print("temp.shape = ", temp.shape)
+        # print("temp = ", temp)
+        # print("temp.shape = ", temp.shape)
+
         # # Expected shape: [3, 2, 1] - 3 quantiles, 2 rows, 1 column
         # self.assertEqual(temp.shape, (3, 2, 1))
         
@@ -236,8 +243,8 @@ class TestQuantile(unittest.TestCase):
         temp_torch = torch.quantile(a_torch, q_torch, dim=1, keepdim=False)
         temp_torch_np = temp_torch.numpy()
 
-        print("temp_torch_np = ", temp_torch_np)
-        print("temp_torch_np.shape = ", temp_torch_np.shape)
+        # print("temp_torch_np = ", temp_torch_np)
+        # print("temp_torch_np.shape = ", temp_torch_np.shape)
 
         # Verify TensorFlow implementation matches PyTorch
         self.assertTrue(np.allclose(temp.numpy(), temp_torch_np, rtol=1e-4))
@@ -257,8 +264,9 @@ class TestQuantile(unittest.TestCase):
         # Apply torch_quantile from util.torch_to_tf
         temp = torch_quantile(a_tf, q_tf, dim=1, keepdim=False)
         
-        print("temp = ", temp)
-        print("temp.shape = ", temp.shape)
+        # print("temp = ", temp)
+        # print("temp.shape = ", temp.shape)
+
         # # Expected shape: [3, 2, 1] - 3 quantiles, 2 rows, 1 column
         # self.assertEqual(temp.shape, (3, 2, 1))
         
@@ -266,8 +274,8 @@ class TestQuantile(unittest.TestCase):
         temp_torch = torch.quantile(a_torch, q_torch, dim=1, keepdim=False)
         temp_torch_np = temp_torch.numpy()
 
-        print("temp_torch_np = ", temp_torch_np)
-        print("temp_torch_np.shape = ", temp_torch_np.shape)
+        # print("temp_torch_np = ", temp_torch_np)
+        # print("temp_torch_np.shape = ", temp_torch_np.shape)
 
         # Verify TensorFlow implementation matches PyTorch
         self.assertTrue(np.allclose(temp.numpy(), temp_torch_np, rtol=1e-4))

@@ -17,20 +17,20 @@ class TestNanMean(unittest.TestCase):
         logratio = tf.constant(self.log_arr, dtype=tf.float64)
         kl_difference_tf = (ratio - 1) - logratio
         
-        print("TensorFlow kl_difference = ", kl_difference_tf)
+        # print("TensorFlow kl_difference = ", kl_difference_tf)
         
         tf_approx_kl = torch_nanmean(kl_difference_tf)
-        print("TensorFlow Approximate KL Divergence:", tf_approx_kl.numpy())
+        # print("TensorFlow Approximate KL Divergence:", tf_approx_kl.numpy())
         
         # PyTorch implementation
         ratio_torch = torch.tensor(self.arr)
         logratio_torch = torch.tensor(self.log_arr)
         kl_difference_torch = (ratio_torch - 1) - logratio_torch
         
-        print("PyTorch kl_difference = ", kl_difference_torch)
+        # print("PyTorch kl_difference = ", kl_difference_torch)
         
         torch_approx_kl = kl_difference_torch.nanmean()
-        print("PyTorch Approximate KL Divergence:", torch_approx_kl.numpy())
+        # print("PyTorch Approximate KL Divergence:", torch_approx_kl.numpy())
         
         # Assert that both implementations give the same result
         self.assertTrue(np.allclose(tf_approx_kl.numpy(), torch_approx_kl.numpy()))

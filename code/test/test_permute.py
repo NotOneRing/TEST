@@ -20,7 +20,7 @@ class TestPermute(unittest.TestCase):
         # Apply permute operation in PyTorch
         output_tensor_torch = input_tensor_torch.permute(1, 2, 0)
         
-        print(output_tensor_torch.shape)
+        # print(output_tensor_torch.shape)
         
         # Convert PyTorch tensor to TensorFlow tensor
         input_tensor_tf = tf.convert_to_tensor(input_tensor_torch.numpy())
@@ -30,7 +30,7 @@ class TestPermute(unittest.TestCase):
         # output_tensor_tf = torch_tensor_permute(input_tensor_tf, 1, 2, 0)
         output_tensor_tf = torch_tensor_permute(input_tensor_tf, (1, 2, 0))
         
-        print(output_tensor_tf.shape)
+        # print(output_tensor_tf.shape)
 
         # print("output_tensor_torch = ", output_tensor_torch)
         # print("output_tensor_tf = ", output_tensor_tf)

@@ -34,8 +34,8 @@ class TestNNFunctionalPad(unittest.TestCase):
         # Compare results
         self.assertTrue(np.allclose(result.numpy(), x_torch_padded_torch.numpy()))
         
-        print("np.allclose(result.numpy(), x_torch_padded_torch.numpy()) = ", 
-              np.allclose(result.numpy(), x_torch_padded_torch.numpy()))
+        # print("np.allclose(result.numpy(), x_torch_padded_torch.numpy()) = ", 
+        #       np.allclose(result.numpy(), x_torch_padded_torch.numpy()))
 
 
 if __name__ == '__main__':

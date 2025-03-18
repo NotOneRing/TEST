@@ -50,8 +50,8 @@ class TestTranspose(unittest.TestCase):
                 np.allclose(torch_transposed_np, tf_transposed_np),
                 f"{test_info} - PyTorch and TensorFlow results do not match"
             )
-            print(f"Test case {i + 1}: Passed!")
-            print(f"Original shape: {shape}, Transposed shape: {torch_transposed_np.shape}")
+            # print(f"Test case {i + 1}: Passed!")
+            # print(f"Original shape: {shape}, Transposed shape: {torch_transposed_np.shape}")
 
 
 if __name__ == "__main__":

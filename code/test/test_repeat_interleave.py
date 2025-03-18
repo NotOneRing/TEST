@@ -37,8 +37,10 @@ class TestRepeatInterleave(unittest.TestCase):
         # print("output.shape = ", tf_output.shape)
 
         # print(compare_result(torch_output, tf_output))
-        print(compare_result(tf_output, torch_output))
-        
+
+        # print(compare_result(tf_output, torch_output))
+
+
         self.assertTrue(compare_result(tf_output, torch_output))
 
 

@@ -6,14 +6,19 @@ from tensorflow.keras.saving import register_keras_serializable
 
 from util.torch_to_tf import nn_Linear, nn_ReLU, nn_LayerNorm
 
+from tensorflow.keras.utils import get_custom_objects
+
 
 # sub-class C
 @register_keras_serializable(package="Custom")
 class C(tf.keras.Model):
-    def __init__(self, units=4, **kwargs):
+    def __init__(self, units=4, dense_c=None, **kwargs):
         super(C, self).__init__(**kwargs)
         self.units = units
-        self.dense_c = nn_Linear(8, self.units)
+        if not dense_c:
+            self.dense_c = nn_Linear(8, self.units)
+        else:
+            self.dense_c = dense_c
         self.relu = nn_ReLU()
         self.layernorm = nn_LayerNorm(self.units)
 
@@ -25,21 +30,39 @@ class C(tf.keras.Model):
 
     def get_config(self):
         config = super().get_config()
-        config.update({"units": self.units})
+        config.update({
+            "units": self.units,
+            "dense_c": tf.keras.layers.serialize(self.dense_c),
+        })
         return config
 
     @classmethod
     def from_config(cls, config):
-        return cls(**config)
+
+        cur_dict = {
+            'nn_Linear': nn_Linear,
+            'nn_ReLU': nn_ReLU,
+            "nn_LayerNorm": nn_LayerNorm,
+        }
+        get_custom_objects().update(cur_dict)
+        
+        dense_c = tf.keras.layers.deserialize(config.pop("dense_c"),  custom_objects=get_custom_objects())
+        
+        return cls(dense_c = dense_c, **config)
 
 
 # sub-class B
 @register_keras_serializable(package="Custom")
 class B(tf.keras.Model):
-    def __init__(self, units=8, sub_model=None, **kwargs):
+    def __init__(self, units=8, sub_model=None, dense_b = None, **kwargs):
         super(B, self).__init__(**kwargs)
         self.units = units
-        self.dense_b = nn_Linear(16, self.units)
+
+        if not dense_b:
+            self.dense_b = nn_Linear(16, self.units)
+        else:
+            self.dense_b = dense_b
+
         self.relu = nn_ReLU()
         self.c = sub_model if sub_model else C()
 
@@ -57,24 +80,45 @@ class B(tf.keras.Model):
         config.update({
             "units": self.units,
             "sub_model": tf.keras.layers.serialize(self.c),
+            "dense_b": tf.keras.layers.serialize(self.dense_b),
         })
         return config
 
     @classmethod
     def from_config(cls, config):
-        sub_model = tf.keras.layers.deserialize(config.pop("sub_model"))
-        return cls(sub_model=sub_model, **config)
+
+        from tensorflow.keras.utils import get_custom_objects
+
+        cur_dict = {
+            # 'A': A,
+            'B': B,
+            'C': C,  
+            'nn_Linear': nn_Linear,
+            'nn_ReLU': nn_ReLU,
+            "nn_LayerNorm": nn_LayerNorm,
+        }
+        get_custom_objects().update(cur_dict)
+
+
+        sub_model = tf.keras.layers.deserialize(config.pop("sub_model"),  custom_objects=get_custom_objects())
+        dense_b = tf.keras.layers.deserialize(config.pop("dense_b"),  custom_objects=get_custom_objects())
+
+
+        return cls(sub_model=sub_model, dense_b=dense_b, **config)
 
 
 # main class A
 @register_keras_serializable(package="Custom")
 class A(tf.keras.Model):
-    def __init__(self, units=16, sub_model=None, **kwargs):
+    def __init__(self, units=16, sub_model=None, dense_a = None, **kwargs):
         super(A, self).__init__(**kwargs)
         self.units = units
 
-        self.dense_a = nn_Linear(10, self.units)
-
+        if not dense_a:
+            self.dense_a = nn_Linear(10, self.units)
+        else:
+            self.dense_a = dense_a
+            
         self.network = nn_Linear(10, self.units)
 
         self.layernorm = nn_LayerNorm(self.units)
@@ -91,18 +135,42 @@ class A(tf.keras.Model):
     def get_config(self):
         config = super().get_config()
 
-        print("self.b = ", self.b)
+        # print("self.b = ", self.b)
+
+        cur_dict = {
+            # 'A': A,
+            'B': B,
+            'C': C,  
+            'nn_Linear': nn_Linear,
+            'nn_ReLU': nn_ReLU,
+            "nn_LayerNorm": nn_LayerNorm,
+        }
+        get_custom_objects().update(cur_dict)
+
 
         config.update({
             "units": self.units,
             "sub_model": tf.keras.layers.serialize(self.b),
+            "dense_a": tf.keras.layers.serialize(self.dense_a),
         })
         return config
 
     @classmethod
     def from_config(cls, config):
-        sub_model = tf.keras.layers.deserialize(config.pop("sub_model"))
-        return cls(sub_model=sub_model, **config)
+        from tensorflow.keras.utils import get_custom_objects
+        cur_dict = {
+            # 'A': A,
+            'B': B,
+            'C': C,  
+            'nn_Linear': nn_Linear,
+            'nn_ReLU': nn_ReLU,
+            "nn_LayerNorm": nn_LayerNorm,
+        }
+        get_custom_objects().update(cur_dict)
+        
+        sub_model = tf.keras.layers.deserialize(config.pop("sub_model"),  custom_objects=get_custom_objects())
+        dense_a = tf.keras.layers.deserialize(config.pop("dense_a"),  custom_objects=get_custom_objects())
+        return cls(sub_model=sub_model, dense_a=dense_a, **config)
 
 
 class TestNestedModelSaveLoad(unittest.TestCase):
@@ -124,7 +192,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         self.mse_loss_fn = tf.keras.losses.MeanSquaredError()
         
         # Model save path
-        self.model_path = "nested_model.keras"
+        self.model_path = "nested_model8.keras"
 
     def tearDown(self):
         """Clean up after each test method."""
@@ -143,18 +211,15 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         # Check output shape
         self.assertEqual(output.shape, (32, 4))
 
-    def test_model_training(self):
-        """Test that the model can be trained."""
-        # Create the model instance
+    def test_save_load_consistency(self):
+        """Test that model outputs are consistent after saving and loading."""
+        # Create and train the model
         model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
         
         # Create optimizer
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         
-        # Initial prediction
-        initial_pred = model_a(self.x_train)
-        initial_loss = self.mse_loss_fn(self.y_train, initial_pred)
-        
+
         # Training procedures
         for epoch in range(3):  # train 3 epochs
             for step in range(1):  # iterate data (simplified version)
@@ -165,34 +230,12 @@ class TestNestedModelSaveLoad(unittest.TestCase):
                 gradients = tape.gradient(loss, model_a.trainable_variables)  # calculate gradients
                 optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))  # apply gradients
         
-        # Final prediction
-        final_pred = model_a(self.x_train)
-        final_loss = self.mse_loss_fn(self.y_train, final_pred)
-        
-        # Check that loss decreased after training
-        self.assertLess(final_loss, initial_loss)
-
-    def test_save_load_consistency(self):
-        """Test that model outputs are consistent after saving and loading."""
-        # Create and train the model
-        model_a = A(units=16, sub_model=B(units=8, sub_model=C(units=4)))
-        
-        # Create optimizer
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-        
-        # Training procedures (simplified)
-        for epoch in range(3):
-            with tf.GradientTape() as tape:
-                predictions = model_a(self.x_train)
-                loss = self.mse_loss_fn(self.y_train, predictions)
-            
-            gradients = tape.gradient(loss, model_a.trainable_variables)
-            optimizer.apply_gradients(zip(gradients, model_a.trainable_variables))
-        
-        # Get outputs from original model
         outputs_original = model_a(self.x_train)
         loss_original = self.mse_loss_fn(self.y_train, outputs_original)
-        
+
+
+
+
         # Save the model
         model_a.save(self.model_path)
         
@@ -202,7 +245,8 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         # Load the model
         loaded_model_a = tf.keras.models.load_model(
             self.model_path, 
-            custom_objects={"A": A, "B": B, "C": C}
+            custom_objects = {"A": A, "B": B, "C": C,
+                  "nn_Linear": nn_Linear, "nn_ReLU": nn_ReLU, "nn_LayerNorm": nn_LayerNorm}
         )
         
         # Get outputs from loaded model

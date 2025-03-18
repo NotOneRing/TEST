@@ -34,7 +34,7 @@ class TestAdam(unittest.TestCase):
         # Initialize weights in TensorFlow model to match PyTorch
         for torch_layer, tf_layer in zip(self.torch_model, self.tf_model):
             if isinstance(torch_layer, nn.Linear):
-                print("tf_layer = ", tf_layer)
+                # print("tf_layer = ", tf_layer)
                 tf_layer.trainable_weights[0].assign(torch_layer.weight.detach().numpy().T)  # kernel
                 tf_layer.trainable_weights[1].assign(torch_layer.bias.detach().numpy())     # bias
 
@@ -57,7 +57,7 @@ class TestAdam(unittest.TestCase):
             # PyTorch
             torch_inputs = torch.tensor(self.inputs)
             torch_targets = torch.tensor(self.targets)
-            print("torch_targets.device = ", torch_targets.device)
+            # print("torch_targets.device = ", torch_targets.device)
 
             self.torch_optimizer.zero_grad()
             torch_outputs = self.torch_model(torch_inputs)

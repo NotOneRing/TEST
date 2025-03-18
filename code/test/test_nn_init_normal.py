@@ -24,7 +24,7 @@ class TestNNInitNormal(unittest.TestCase):
         torch_input = torch.tensor(input_data)
         torch_output = torch_layer(torch_input).detach().numpy()
 
-        print("torch_layer.weight = ", torch_layer.weight)
+        # print("torch_layer.weight = ", torch_layer.weight)
 
         # TensorFlow
         # tf_layer = tf.keras.layers.Dense(10, use_bias=True)

@@ -103,7 +103,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         self.mse_loss_fn = tf.keras.losses.MeanSquaredError()
         
         # Model save path
-        self.model_path = "nested_model.keras"
+        self.model_path = "nested_model3.keras"
     
     def tearDown(self):
         """Clean up after each test method."""
@@ -115,7 +115,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         """Test that the model can be trained successfully."""
         # Training procedures
         for epoch in range(3):  # train 3 epochs
-            print(f"Epoch {epoch + 1}")
+            # print(f"Epoch {epoch + 1}")
             for step in range(1):  # iterate data (this is the simplified version)
                 with tf.GradientTape() as tape:
                     predictions = self.model_a(self.x_train)  # forward pass
@@ -165,7 +165,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         
         # Calculate absolute difference
         diff = tf.reduce_sum(tf.abs(outputs_original - outputs_loaded))
-        print(f"Sum of absolute differences: {diff.numpy()}")
+        # print(f"Sum of absolute differences: {diff.numpy()}")
         
         # Verify difference is close to zero
         self.assertLess(diff.numpy(), 1e-5, "Difference between outputs should be close to zero")

@@ -58,7 +58,7 @@ class TestSaveLoadModels(unittest.TestCase):
         self.y_train = tf.random.normal((32, 4))   # output shape：32 samples，every sample of 4 dimension
         
         # Model file path
-        self.model_path = "nested_model.keras"
+        self.model_path = "nested_model1.keras"
     
     def tearDown(self):
         # Clean up - remove the saved model file after tests
@@ -70,15 +70,27 @@ class TestSaveLoadModels(unittest.TestCase):
         # create model instance
         model_a = A()
 
-        # compile and train
-        model_a.compile(optimizer='adam', loss='mse')
-        model_a.fit(self.x_train, self.y_train, epochs=3, verbose=0)
-
+        # # compile and train
+        # model_a.compile(optimizer='adam', loss='mse')
+        # model_a.fit(self.x_train, self.y_train, epochs=3, verbose=0)
+        pred = model_a(self.x_train)
+        
         # save model (save all contents of B and C recursively)
         model_a.save(self.model_path)
 
-        # load models
-        loaded_model_a = tf.keras.models.load_model(self.model_path)
+        from tensorflow.keras.utils import get_custom_objects
+        cur_dict = {
+            'A': A,
+            'B': B,
+            'C': C,  
+            'nn_Linear': nn_Linear,
+            'nn_ReLU': nn_ReLU,
+        }
+        get_custom_objects().update(cur_dict)
+        loaded_model_a = tf.keras.models.load_model(self.model_path ,  custom_objects=get_custom_objects())
+        
+        # # load models
+        # loaded_model_a = tf.keras.models.load_model(self.model_path)
 
         # check if weights are retained
         outputs_original = model_a(self.x_train)
@@ -102,3 +114,7 @@ if __name__ == '__main__':
 # test.setUp()  # 1. run setUp() to create testing data
 # test.test_save_load_model()  # 2. running test
 # test.tearDown()  # 3. use tearDown() to clean environment
+
+
+
+

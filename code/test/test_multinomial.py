@@ -37,7 +37,7 @@ class TestMultinomial(unittest.TestCase):
         self.assertTrue(np.all(torch_samples_np < len(self.probabilities)), 
                         "Sampled indices should be less than number of categories")
         
-        print(f"torch.multinomial sampled indices: {torch_samples_np}")
+        # print(f"torch.multinomial sampled indices: {torch_samples_np}")
 
     def test_tensorflow_categorical(self):
         """Test TensorFlow's categorical sampling function"""
@@ -50,7 +50,7 @@ class TestMultinomial(unittest.TestCase):
         # tf_samples = tf.random.categorical(logits[None, :], self.num_samples, dtype=tf.int32).numpy().flatten()
         tf_samples = torch_multinomial(self.tf_probs, self.num_samples, replacement=True)
 
-        print("tf_samples = ", tf_samples)
+        # print("tf_samples = ", tf_samples)
 
         # Check shape
         self.assertEqual(tf_samples.shape[0], self.num_samples, 
@@ -61,7 +61,7 @@ class TestMultinomial(unittest.TestCase):
         self.assertTrue(np.all(tf_samples < len(self.probabilities)), 
                         "Sampled indices should be less than number of categories")
         
-        print(f"tensorflow tf.random.categorical sampled indices: {tf_samples}")
+        # print(f"tensorflow tf.random.categorical sampled indices: {tf_samples}")
 
 
 if __name__ == '__main__':

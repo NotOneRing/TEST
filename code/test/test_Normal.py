@@ -80,7 +80,7 @@ class TestNormal(unittest.TestCase):
     def test_equal_log_prob(self):
 
         dist = TorchNormal(self.mean, self.std)
-        torch_log_prob = dist.log_prob( torch.tensor(self.eval_point) )
+        torch_log_prob = dist.log_prob( self.eval_point) 
         
         dist = TFNormal(self.tf_mean, self.tf_std)
         tf_log_prob = dist.log_prob(self.tf_eval_point)

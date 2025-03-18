@@ -46,7 +46,7 @@ class TestMixtureSameFamily(unittest.TestCase):
         sample_torch = self.means_torch.mean(dim=1)  # calculate the average for each sample in all modes
         log_prob_torch = dist_torch.log_prob(sample_torch)
 
-        print("Torch Log Probability: ", log_prob_torch)
+        # print("Torch Log Probability: ", log_prob_torch)
 
         # TensorFlow implementation
         # Mixture components for TensorFlow
@@ -64,7 +64,7 @@ class TestMixtureSameFamily(unittest.TestCase):
         sample_tf = tf.reduce_mean(self.means_tf, axis=1)  # calculate the average for each sample in all modes
         log_prob_tf = dist_tf.log_prob(sample_tf)
 
-        print("TensorFlow Log Probability: ", log_prob_tf)
+        # print("TensorFlow Log Probability: ", log_prob_tf)
 
 
         self.assertTrue(np.allclose(log_prob_torch, log_prob_tf))

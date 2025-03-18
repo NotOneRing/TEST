@@ -12,11 +12,11 @@ class TestExpandDims(unittest.TestCase):
     def test_numpy_expand_dims(self):
         # Test numpy's expand_dims functionality using [:, None]
         
-        print("self.a.shape = ", self.a.shape)
+        # print("self.a.shape = ", self.a.shape)
 
         expanded = self.a[:, None]
         
-        print("expanded.shape = ", expanded.shape)
+        # print("expanded.shape = ", expanded.shape)
 
         self.assertEqual(expanded.shape, (3, 1, 3))
         

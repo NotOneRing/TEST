@@ -167,8 +167,8 @@ class TestClipGradNorm(unittest.TestCase):
         torch_final_output = self.torch_model(torch.tensor(self.tf_x.numpy())).detach().numpy()
         tf_final_output = self.tf_model(self.tf_x).numpy()
 
-        print("torch_final_output = ", torch_final_output)
-        print("tf_final_output = ", tf_final_output)
+        # print("torch_final_output = ", torch_final_output)
+        # print("tf_final_output = ", tf_final_output)
         
         # Assert that the final outputs are close
         self.assertTrue(

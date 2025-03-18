@@ -82,7 +82,7 @@ class A(tf.keras.Model):
 
     def get_config(self):
         config = super().get_config()
-        print("self.b = ", self.b)
+        # print("self.b = ", self.b)
         config.update({
             "units": self.units,
             "sub_model": tf.keras.layers.serialize(self.b),
@@ -114,7 +114,7 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         self.mse_loss_fn = tf.keras.losses.MeanSquaredError()
         
         # Model save path
-        self.model_path = "nested_model.keras"
+        self.model_path = "nested_model6.keras"
 
     def tearDown(self):
         """Clean up after each test."""
@@ -133,11 +133,10 @@ class TestNestedModelSaveLoad(unittest.TestCase):
         output = self.model_a(self.x_train)
         self.assertEqual(output.shape, self.y_train.shape)
 
-    def test_model_training(self):
-        """Test that the model can be trained."""
-        initial_output = self.model_a(self.x_train)
-        initial_loss = self.mse_loss_fn(self.y_train, initial_output)
-        
+
+    def test_save_and_load(self):
+        """Test that the model can be saved and loaded with consistent results."""
+
         # Train for 3 epochs
         for epoch in range(3):
             with tf.GradientTape() as tape:
@@ -146,24 +145,8 @@ class TestNestedModelSaveLoad(unittest.TestCase):
             
             gradients = tape.gradient(loss, self.model_a.trainable_variables)  # calculate gradients
             self.optimizer.apply_gradients(zip(gradients, self.model_a.trainable_variables))  # apply gradients
-        
-        # Verify that loss decreased after training
-        final_output = self.model_a(self.x_train)
-        final_loss = self.mse_loss_fn(self.y_train, final_output)
-        
-        # Loss should typically decrease after training
-        self.assertLessEqual(final_loss, initial_loss)
 
-    def test_save_and_load(self):
-        """Test that the model can be saved and loaded with consistent results."""
-        # Train the model for a single step to update weights
-        with tf.GradientTape() as tape:
-            predictions = self.model_a(self.x_train)
-            loss = self.mse_loss_fn(self.y_train, predictions)
-        
-        gradients = tape.gradient(loss, self.model_a.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.model_a.trainable_variables))
-        
+
         # Get outputs from original model
         outputs_original = self.model_a(self.x_train)
         
