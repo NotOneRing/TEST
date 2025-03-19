@@ -45,7 +45,8 @@ class EvalImgGaussianAgent(EvalAgent):
                 )
 
         # Reset env before iteration starts
-        self.model.eval()
+        training = False
+
         firsts_trajs = np.zeros((self.n_steps + 1, self.n_envs))
         prev_obs_venv = self.reset_env_all(options_venv=options_venv)
         firsts_trajs[0] = 1

@@ -83,12 +83,9 @@ class PPO_GMM(VPG_GMM):
         ratio = torch_exp( logratio )
 
         # get kl difference and whether value clipped
-        # with torch.no_grad():
-        # approx_kl = ((ratio - 1) - logratio).nanmean()
 
         with torch_no_grad() as tape:
             approx_kl = torch_nanmean((ratio - 1) - logratio)
-            # clipfrac = tf.reduce_mean( tf.cast( tf.greater( tf.abs(ratio - 1.0), self.clip_ploss_coef ), tf.float32) )
             clipfrac = (
                 torch_tensor_item( torch_mean( torch_tensor_float( ( torch_abs(ratio - 1.0)  > self.clip_ploss_coef ) ) ) )
             )

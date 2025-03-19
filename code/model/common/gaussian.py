@@ -25,21 +25,13 @@ from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, 
 nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
 nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
 nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
-# from model.rl.gaussian_calql import CalQL_Gaussian
 from model.diffusion.unet import ResidualBlock1D, Unet1D
 from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
-# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
-# from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
-# from model.diffusion.diffusion import DiffusionModel
 from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
 from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
 from model.common.modules import SpatialEmb, RandomShiftsAug
 from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-# from model.common.mlp_gmm import GMM_MLP
 from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
-# from model.common.gaussian import  GaussianModel
-# from model.common.critic import CriticObs, CriticObsAct
-# from model.common.gmm import GMMModel
 
 
 cur_dict = {
@@ -68,20 +60,12 @@ cur_dict = {
 "nn_Identity": nn_Identity, 
 "nn_Tanh": nn_Tanh,
 #part2:
-# "CalQL_Gaussian": CalQL_Gaussian,
 "ResidualBlock1D": ResidualBlock1D,
 "Unet1D": Unet1D,
 "Conv1dBlock": Conv1dBlock, 
 "Upsample1d": Upsample1d, 
 "Downsample1d": Downsample1d, 
 "SinusoidalPosEmb": SinusoidalPosEmb,
-# "DiffusionMLP": DiffusionMLP, 
-# # "VisionDiffusionMLP": VisionDiffusionMLP,
-# "EtaStateAction": EtaStateAction, 
-# "EtaState": EtaState, 
-# "EtaAction": EtaAction, 
-# "EtaFixed": EtaFixed,
-# # "DiffusionModel": DiffusionModel,
 #part3:
 "VitEncoder": VitEncoder, 
 "PatchEmbed1": PatchEmbed1, 
@@ -97,13 +81,8 @@ cur_dict = {
 "MLP": MLP,
 "ResidualMLP": ResidualMLP, 
 "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-# "GMM_MLP": GMM_MLP,
 "Gaussian_MLP": Gaussian_MLP, 
 "Gaussian_VisionMLP": Gaussian_VisionMLP,
-# # "GaussianModel": GaussianModel,
-# "CriticObs": CriticObs, 
-# "CriticObsAct": CriticObsAct,
-# # "GMMModel": GMMModel
 }
 
 
@@ -134,25 +113,9 @@ class GaussianModel(tf.keras.Model):
 
 
         super().__init__()
-        # self.device = device
-        # self.network = network
+
         if not hasattr(self, "network"):
             self.network = network
-
-        # .to(device)
-
-        # if network_path is not None:
-        #     print("self.network = ", self.network)
-        #     print("GaussianModel: network_path = ", network_path)
-
-            
-        #     # checkpoint = tf.train.Checkpoint(model=self)
-
-        #     # print("checkpoint = ", checkpoint)
-
-        #     # checkpoint.restore(network_path).expect_partial()
-        #     log.info("Loaded actor from %s", network_path)
-
 
         self.network_path = network_path
 
@@ -168,49 +131,11 @@ class GaussianModel(tf.keras.Model):
             else:
                 loadpath = network_path.replace('.pt', '.keras')
 
-            # from model.common.mlp_gaussian import Gaussian_MLP
-            # from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-            # from model.diffusion.modules import SinusoidalPosEmb
-            # from model.common.modules import SpatialEmb, RandomShiftsAug
-            # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
-
-            # from model.diffusion.unet import Downsample1d, ResidualBlock1D, Conv1dBlock, Unet1D
-
-            # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish, nn_ReLU,\
-            # nn_Conv1d, nn_Identity, einops_layers_torch_Rearrange
-
             from tensorflow.keras.utils import get_custom_objects
 
-            # cur_dict = {
-            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            #     'Gaussian_MLP': Gaussian_MLP,
-            #     # 'VPGDiffusion': VPGDiffusion,
-            #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-            #     'MLP': MLP,                            # Custom MLP layer
-            #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
-            #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
-            #     "nn_Identity": nn_Identity,
-            #     'nn_Linear': nn_Linear,
-            #     'nn_LayerNorm': nn_LayerNorm,
-            #     'nn_Dropout': nn_Dropout,
-            #     'nn_ReLU': nn_ReLU,
-            #     'nn_Mish': nn_Mish,
-            #     'SpatialEmb': SpatialEmb,
-            #     'RandomShiftsAug': RandomShiftsAug,
-            #     "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-            #     'RandomShiftsAug': RandomShiftsAug,
-            #     'Downsample1d': Downsample1d,
-            #     'ResidualBlock1D':ResidualBlock1D,
-            #     'Conv1dBlock': Conv1dBlock,
-            #     'nn_Conv1d': nn_Conv1d,
-            #     'Unet1D': Unet1D,
-            # }
-            # Register your custom class with Keras
+            # Register custom class with Keras
             get_custom_objects().update(cur_dict)
 
-
-
-            # self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
             final_load_path = loadpath.replace(".keras", "_network.keras")
             print("final_load_path = ", final_load_path)
@@ -227,19 +152,6 @@ class GaussianModel(tf.keras.Model):
             else:
                 self.build_actor(self.network)
 
-
-
-            # print("GaussianModel: self.network = ", self.network )
-
-
-
-
-        # # Log number of parameters in the network
-        # num_params = sum(np.prod(var.shape) for var in self.network.trainable_variables)
-        # log.info(f"Number of network parameters: {num_params}")
-
-        # for var in self.network.variables:
-        #     print(f"Gaussian.network: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
 
 
         self.horizon_steps = horizon_steps
@@ -259,7 +171,6 @@ class GaussianModel(tf.keras.Model):
     def get_config(self):
         config = super(GaussianModel, self).get_config()
 
-        # config = {}
 
         if OUTPUT_FUNCTION_HEADER:
             print("get_config: diffusion.py:GaussianModel.get_config()")
@@ -326,44 +237,11 @@ class GaussianModel(tf.keras.Model):
 
         from model.common.mlp_gaussian import Gaussian_MLP
 
-        # # from model.diffusion.diffusion import DiffusionModel
-        # from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-        # from model.diffusion.modules import SinusoidalPosEmb
-        # from model.common.modules import SpatialEmb, RandomShiftsAug
-        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, \
-        #     nn_Dropout, nn_ReLU, nn_Mish, nn_Identity, nn_Conv1d, nn_ConvTranspose1d
-
-        # from model.diffusion.unet import Unet1D, ResidualBlock1D
-
 
         from tensorflow.keras.utils import get_custom_objects
 
-        # cur_dict = {
-        #     # 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-        #     'Gaussian_MLP': Gaussian_MLP,
-        #     # 'VPGDiffusion': VPGDiffusion,
-        #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # Custom MLP layer
-        #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
-        #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
-        #     "nn_Identity": nn_Identity,
-        #     'nn_Linear': nn_Linear,
-        #     'nn_LayerNorm': nn_LayerNorm,
-        #     'nn_Dropout': nn_Dropout,
-        #     'nn_ReLU': nn_ReLU,
-        #     'nn_Mish': nn_Mish,
-        #     'SpatialEmb': SpatialEmb,
-        #     'RandomShiftsAug': RandomShiftsAug,
-        #     "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-        #     "Unet1D": Unet1D,
-        #     "ResidualBlock1D": ResidualBlock1D,
-        #     "nn_Conv1d": nn_Conv1d,
-        #     "nn_ConvTranspose1d": nn_ConvTranspose1d
-        #  }
-        # # Register your custom class with Keras
+        # # Register custom class with Keras
         get_custom_objects().update(cur_dict)
-
-        # print('get_custom_objects() = ', get_custom_objects())
 
         network = config.pop("network")
 
@@ -384,11 +262,6 @@ class GaussianModel(tf.keras.Model):
         else:
             raise RuntimeError("name not recognized")
 
-
-        # if name in cur_dict:
-        #     cur_dict[name].from_config(network)
-        # else:
-        #     raise RuntimeError("name not recognized")
 
 
         result = cls(
@@ -425,15 +298,11 @@ class GaussianModel(tf.keras.Model):
 
         B = len(true_action)
         dist = self.forward_train(training, cond, deterministic=False)
-        # true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         true_action = torch_tensor_view(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
 
         entropy = torch_mean(dist.entropy())
-        # log_prob = dist.log_prob(true_action)
-        # loss = -torch_mean(log_prob) - entropy * ent_coef
 
         loss = -dist.log_prob(true_action)  # [B]
-        # print("Distribution.Normal log_prob = ", loss)
         loss = torch_mean(loss) - entropy * ent_coef
 
         return loss, {"entropy": entropy}
@@ -463,7 +332,7 @@ class GaussianModel(tf.keras.Model):
 
         B = len(true_action)
         dist = GaussianModel.forward_train_build(self, network, training, cond, deterministic=False)
-        # true_action = tf.reshape(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
+
         true_action = torch_tensor_view(true_action, (B, -1))  # Flatten actions to shape [B, action_dim]
         log_prob = dist.log_prob(true_action)
         entropy = torch_mean(dist.entropy())
@@ -503,7 +372,6 @@ class GaussianModel(tf.keras.Model):
             # low-noise for all Gaussian dists
             scales = torch_ones_like(means) * 1e-4
 
-        # dist = tfp.distributions.Normal(loc=means, scale=scales)
         dist = Normal(means, scales)
 
         return dist
@@ -533,7 +401,6 @@ class GaussianModel(tf.keras.Model):
             # low-noise for all Gaussian dists
             scales = torch_ones_like(means) * 1e-4
 
-        # dist = tfp.distributions.Normal(loc=means, scale=scales)
         dist = Normal(means, scales)
 
         return dist
@@ -559,7 +426,6 @@ class GaussianModel(tf.keras.Model):
 
         print("gaussian.py: GaussianModel.call()")
 
-        # B = len(cond["state"]) if "state" in cond else len(cond["rgb"])
         B = cond["state"].shape[0] if "state" in cond else cond["rgb"].shape[0]
 
         T = self.horizon_steps
@@ -601,7 +467,6 @@ class GaussianModel(tf.keras.Model):
 
 
     def build_actor(self, actor, shape1=None, shape2=None):
-        # return
     
         print("build_actor: self.env_name = ", self.env_name)
 
@@ -609,10 +474,7 @@ class GaussianModel(tf.keras.Model):
             pass
         # Gym - hopper/walker2d/halfcheetah
         elif self.env_name == "hopper-medium-v2":
-            # hopper_medium
-            # item_actions_copy.shape =  
             shape1 = (128, 4, 3)
-            # cond_copy['state'].shape =  
             shape2 = (128, 1, 11)
         elif self.env_name == "kitchen-complete-v0":
             shape1 = (128, 4, 9)
@@ -635,10 +497,7 @@ class GaussianModel(tf.keras.Model):
             shape2 = (256, 1, 19)
 
         elif self.env_name == "can":
-            #can 
-            # item_actions_copy.shape =  
             shape1 = (256, 4, 7)
-            # cond_copy['state'].shape =  
             shape2 = (256, 1, 23)
 
         elif self.env_name == "square":
@@ -651,10 +510,7 @@ class GaussianModel(tf.keras.Model):
 
         # the same name "avoiding-m5" for D3IL with avoid_m1/m2/m3
         elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
-            #avoid_m1
-            # item_actions_copy.shape =  
             shape1 = (16, 4, 2)
-            # cond_copy['state'].shape =  
             shape2 = (16, 1, 4)
 
         # Furniture-Bench - one_leg/lamp/round_table_low/med
@@ -685,15 +541,9 @@ class GaussianModel(tf.keras.Model):
             # shape2 = (256, 1, 58)
             raise RuntimeError("The build shape is not implemented for current dataset")
 
-
-        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
-        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
-
-
         if OUTPUT_VARIABLES:
             print("type(shape1) = ", type(shape1))
             print("type(shape2) = ", type(shape2))
-
             print("shape1 = ", shape1)
             print("shape2 = ", shape2)
 
@@ -704,11 +554,9 @@ class GaussianModel(tf.keras.Model):
         build_dict = {'state': param2}
 
 
-        
-        # _ = self.loss_ori(param1, build_dict)
         all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict, ent_coef = 0)
 
-        print("all_one_build_result = ", all_one_build_result)
+        # print("all_one_build_result = ", all_one_build_result)
 
 
 
@@ -720,8 +568,6 @@ class GaussianModel(tf.keras.Model):
 
 
     def build_actor_vision(self, actor, shape1=None, shape2=None):
-        # return
-    
         print("build_actor_vision: self.env_name = ", self.env_name)
 
         if shape1 != None and shape2 != None:
@@ -767,24 +613,9 @@ class GaussianModel(tf.keras.Model):
             params_dict = pickle.load(file)
 
 
-
-        # print loaded content
-
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)
 
-
-        # # Square
-        # 'network.logvar_min'
-        # 'network.logvar_max'
-        # 'network.mlp_mean.layers.0.weight'
-        # 'network.mlp_mean.layers.0.bias'
-        # 'network.mlp_mean.layers.1.l1.weight'
-        # 'network.mlp_mean.layers.1.l1.bias'
-        # 'network.mlp_mean.layers.1.l2.weight'
-        # 'network.mlp_mean.layers.1.l2.bias'
-        # 'network.mlp_mean.layers.2.weight'
-        # 'network.mlp_mean.layers.2.bias'
 
         self.network.logvar_min = nn_Parameter(
             torch_tensor(params_dict['network.logvar_min']), requires_grad=False
@@ -832,88 +663,9 @@ class GaussianModel(tf.keras.Model):
 
 
 
-        # print loaded content
-
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)
-        # Square
-        # 'network.logvar_min'
-        # 'network.logvar_max'
-        # 'network.backbone.vit.pos_embed'
-        # 'network.backbone.vit.patch_embed.embed.0.weight'
-        # 'network.backbone.vit.patch_embed.embed.0.bias'
-        # 'network.backbone.vit.patch_embed.embed.3.weight'
-        # 'network.backbone.vit.patch_embed.embed.3.bias'
-        # 'network.backbone.vit.net.0.layer_norm1.weight'
-        # 'network.backbone.vit.net.0.layer_norm1.bias'
-        # 'network.backbone.vit.net.0.mha.qkv_proj.weight'
-        # 'network.backbone.vit.net.0.mha.qkv_proj.bias'
-        # 'network.backbone.vit.net.0.mha.out_proj.weight'
-        # 'network.backbone.vit.net.0.mha.out_proj.bias'
-        # 'network.backbone.vit.net.0.layer_norm2.weight'
-        # 'network.backbone.vit.net.0.layer_norm2.bias'
-        # 'network.backbone.vit.net.0.linear1.weight'
-        # 'network.backbone.vit.net.0.linear1.bias'
-        # 'network.backbone.vit.net.0.linear2.weight'
-        # 'network.backbone.vit.net.0.linear2.bias'
-        # 'network.backbone.vit.norm.weight'
-        # 'network.backbone.vit.norm.bias'
-        # 'network.compress.weight'
-        # 'network.compress.input_proj.0.weight'
-        # 'network.compress.input_proj.0.bias'
-        # 'network.compress.input_proj.1.weight'
-        # 'network.compress.input_proj.1.bias'
-        # 'network.mlp_mean.layers.0.weight'
-        # 'network.mlp_mean.layers.0.bias'
-        # 'network.mlp_mean.layers.1.l1.weight'
-        # 'network.mlp_mean.layers.1.l1.bias'
-        # 'network.mlp_mean.layers.1.l2.weight'
-        # 'network.mlp_mean.layers.1.l2.bias'
-        # 'network.mlp_mean.layers.2.weight'
-        # 'network.mlp_mean.layers.2.bias'
-        
-
-        # Transport
-        # 'network.logvar_min'
-        # 'network.logvar_max'
-        # 'network.backbone.vit.pos_embed'
-        # 'network.backbone.vit.patch_embed.embed.0.weight'
-        # 'network.backbone.vit.patch_embed.embed.0.bias'
-        # 'network.backbone.vit.patch_embed.embed.3.weight'
-        # 'network.backbone.vit.patch_embed.embed.3.bias'
-        # 'network.backbone.vit.net.0.layer_norm1.weight'
-        # 'network.backbone.vit.net.0.layer_norm1.bias'
-        # 'network.backbone.vit.net.0.mha.qkv_proj.weight'
-        # 'network.backbone.vit.net.0.mha.qkv_proj.bias'
-        # 'network.backbone.vit.net.0.mha.out_proj.weight'
-        # 'network.backbone.vit.net.0.mha.out_proj.bias'
-        # 'network.backbone.vit.net.0.layer_norm2.weight'
-        # 'network.backbone.vit.net.0.layer_norm2.bias'
-        # 'network.backbone.vit.net.0.linear1.weight'
-        # 'network.backbone.vit.net.0.linear1.bias'
-        # 'network.backbone.vit.net.0.linear2.weight'
-        # 'network.backbone.vit.net.0.linear2.bias'
-        # 'network.backbone.vit.norm.weight'
-        # 'network.backbone.vit.norm.bias'
-        # 'network.compress1.weight'
-        # 'network.compress1.input_proj.0.weight'
-        # 'network.compress1.input_proj.0.bias'
-        # 'network.compress1.input_proj.1.weight'
-        # 'network.compress1.input_proj.1.bias'
-        # 'network.compress2.weight'
-        # 'network.compress2.input_proj.0.weight'
-        # 'network.compress2.input_proj.0.bias'
-        # 'network.compress2.input_proj.1.weight'
-        # 'network.compress2.input_proj.1.bias'
-        # 'network.mlp_mean.layers.0.weight'
-        # 'network.mlp_mean.layers.0.bias'
-        # 'network.mlp_mean.layers.1.l1.weight'
-        # 'network.mlp_mean.layers.1.l1.bias'
-        # 'network.mlp_mean.layers.1.l2.weight'
-        # 'network.mlp_mean.layers.1.l2.bias'
-        # 'network.mlp_mean.layers.2.weight'
-        # 'network.mlp_mean.layers.2.bias'
-        
+            
         
         self.network.logvar_min = nn_Parameter(
             torch_tensor(params_dict['network.logvar_min']), requires_grad=False
@@ -983,9 +735,6 @@ class GaussianModel(tf.keras.Model):
 
 
 
-        # print("self.network.compress = ", self.network.compress)
-        # assert 0 == 1, "network.compress check"
-        # 'network.compress.weight'
         if 'network.compress.weight' in params_dict:
             if isinstance(self.network.compress.weight, tf.Variable):       
                 self.network.compress.weight = nn_Parameter(

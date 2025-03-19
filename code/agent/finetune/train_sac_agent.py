@@ -7,7 +7,6 @@ Does not support image observations right now.
 import os
 import pickle
 import numpy as np
-# import torch
 
 import tensorflow as tf
 
@@ -75,9 +74,6 @@ class TrainSACAgent(TrainAgent):
 
         print("init_temperature = ")
 
-        # self.log_alpha = torch_tensor( np.log(np.array([init_temperature])) )
-        # .to(self.device)
-
         self.log_alpha = tf.Variable( torch_tensor( np.log(np.array([init_temperature])) ) )
         
 
@@ -134,8 +130,6 @@ class TrainSACAgent(TrainAgent):
 
 
             
-            # self.model.eval() if eval_mode else self.model.train()
-
             if eval_mode:
                 training=False
             else:
@@ -162,12 +156,9 @@ class TrainSACAgent(TrainAgent):
                 if self.itr < self.n_explore_steps:
                     action_venv = self.venv.action_space.sample()
                 else:
-                    # with torch.no_grad():
                     with torch_no_grad() as tape:
                         cond = {
                             "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                            # .float()
-                            # .to(self.device)
                         }
                         samples = (
                             self.model(
@@ -256,33 +247,21 @@ class TrainSACAgent(TrainAgent):
                 inds = np.random.choice(len(obs_buffer), self.batch_size, replace=False)
                 obs_b = (
                     torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
                 )
                 next_obs_b = (
                     torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
                 )
                 actions_b = (
                     torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
                 )
                 rewards_b = (
                     torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
                 )
                 terminated_b = (
                     torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
-                    # .float()
-                    # .to(self.device)
                 )
 
                 # Update critic
-                # alpha = self.log_alpha.exp().item()
-
                 alpha = torch_tensor_item( torch_exp(self.log_alpha) )
 
 
@@ -302,7 +281,6 @@ class TrainSACAgent(TrainAgent):
 
                 zip_gradients_params = zip(tf_gradients, self.model.critic.trainable_variables)
 
-                # self.critic_optimizer.step(tf_gradients)
                 self.critic_optimizer.apply_gradients(zip_gradients_params)
 
 
@@ -325,7 +303,7 @@ class TrainSACAgent(TrainAgent):
                         tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
 
                         zip_gradients_params = zip(tf_gradients, self.model.actor.trainable_variables)
-                        # self.actor_optimizer.step(tf_gradients)
+
                         self.actor_optimizer.apply_gradients(zip_gradients_params)
 
 
@@ -341,7 +319,7 @@ class TrainSACAgent(TrainAgent):
                         tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])
 
                         zip_gradients_params = zip(tf_gradients, [self.log_alpha])
-                        # self.log_alpha_optimizer.step(tf_gradients)
+
                         self.log_alpha_optimizer.apply_gradients(zip_gradients_params)
 
 
@@ -364,24 +342,11 @@ class TrainSACAgent(TrainAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
-                    # log.info(
-                    #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t {time:8.4f}"
-                    # )
+                    
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} "
                         f"| loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} "
@@ -391,21 +356,6 @@ class TrainSACAgent(TrainAgent):
                         f"| t:{time:8.4f}"
                     )
 
-                    # if self.use_wandb:
-                    #     wandb_log_dict = {
-                    #         "total env step": cnt_train_step,
-                    #         "loss - critic": loss_critic,
-                    #         "entropy coeff": alpha,
-                    #         "avg episode reward - train": avg_episode_reward,
-                    #         "num episode - train":' num_episode_finished,
-                    #     }
-                    #     if loss_actor is not None:
-                    #         wandb_log_dict["loss - actor"] = loss_actor
-                    #     wandb.log(
-                    #         wandb_log_dict,
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

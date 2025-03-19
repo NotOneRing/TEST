@@ -92,7 +92,6 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
         
         self.actor_lr_scheduler = CosineAWR(
-            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -103,16 +102,13 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
         # Optimizer
         self.actor_optimizer = torch_optim_AdamW(
-            # self.model.actor.parameters(),
             self.model.actor.trainable_variables,
-            # lr=cfg.train.actor_lr,
             lr = self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
         )
 
 
         self.critic_lr_scheduler = CosineAWR(
-            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -122,9 +118,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
         )
 
         self.critic_optimizer = torch_optim_AdamW(
-            # self.model.critic.parameters(),
             self.model.critic.trainable_variables,
-            # lr=cfg.train.critic_lr,
             lr = self.critic_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
@@ -173,7 +167,6 @@ class TrainAWRDiffusionAgent(TrainAgent):
 
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
-            # self.model.eval() if eval_mode else self.model.train()
 
             if eval_mode:
                 training=False
@@ -199,19 +192,15 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy( prev_obs_venv["state"] ) )
-                        # .to(self.device)
                     }
                     samples = (
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
                         ).numpy()
-                        # .cpu()
-                        # .numpy()
                     )
                 action_venv = samples[:, : self.act_steps]
 
@@ -280,13 +269,11 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 terminated_trajs = np.array(deepcopy(terminated_buffer))
                 obs_t = einops.rearrange(
                     torch_tensor_float( torch_from_numpy(obs_trajs) ) 
-                    # .float().to(self.device)
                     ,
                     "s e h d -> (s e) h d",
                 )
 
                 values_trajs = np.array(
-                    # self.model.critic({"state": obs_t}).detach().cpu().numpy()
                     self.model.critic({"state": obs_t}).numpy()
                 ).reshape(-1, self.n_envs)
 
@@ -294,10 +281,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     obs_trajs, reward_trajs, terminated_trajs, values_trajs
                 )
 
-                # td_t = torch_from_numpy(td_trajs.flatten()).float().to(self.device)
-
                 td_t = torch_tensor_float( torch_flatten( torch_from_numpy(td_trajs) ) )
-                # .float().to(self.device)
 
                 # Update critic
                 num_batch = int(
@@ -306,20 +290,12 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 for _ in range(num_batch // self.critic_update_ratio):
                     inds = np.random.choice(len(obs_trajs), self.batch_size)
 
-                    # loss_critic = self.model.loss_critic(
-                    #     {"state": obs_t[inds]}, td_t[inds]
-                    # )
-
-                    # self.critic_optimizer.zero_grad()
-                    # loss_critic.backward()
-                    # self.critic_optimizer.step()
 
                     obs_result = tf.gather(obs_t, inds, axis=0)
                     td_result = tf.gather(td_t, inds, axis=0)
 
                     with tf.GradientTape() as tape:
                         loss_critic = self.model.loss_critic(
-                            # {"state": obs_t[inds]}, td_t[inds]
                             {"state": obs_result}, td_result
                         )
 
@@ -328,9 +304,6 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     zip_gradients_critic_params = zip(tf_gradients_critic, self.model.critic.trainable_variables)
                     self.critic_optimizer.apply_gradients(zip_gradients_critic_params)
 
-                    # tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
-                    # self.critic_optimizer.step(tf_gradients)
-
 
                 # Update policy - use a new copy of data
                 obs_trajs = np.array(deepcopy(obs_buffer))
@@ -338,13 +311,10 @@ class TrainAWRDiffusionAgent(TrainAgent):
                 reward_trajs = np.array(deepcopy(reward_buffer))
                 terminated_trajs = np.array(deepcopy(terminated_buffer))
                 obs_t = einops.rearrange(
-                    # torch_from_numpy(obs_trajs).float().to(self.device),
                     torch_tensor_float( torch_from_numpy(obs_trajs) ),
-                    # .to(self.device),
                     "s e h d -> (s e) h d",
                 )
                 values_trajs = np.array(
-                    # self.model.critic({"state": obs_t}).detach().cpu().numpy()
                     self.model.critic({"state": obs_t}).numpy()
                 ).reshape(-1, self.n_envs)
 
@@ -373,38 +343,21 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     inds = np.random.choice(len(obs_trajs), self.batch_size)
                     obs_b = {
                         "state": torch_tensor_float( torch_from_numpy(obs_trajs[inds]) )
-                        # "state": torch_from_numpy(obs_trajs[inds])
-                        # .float()
-                        # .to(self.device)
                     }
                     actions_b = (
                         torch_tensor_float( torch_from_numpy(samples_trajs[inds]) )
-                        # .float().to(self.device)
                     )
                     advantages_b = (
                         torch_tensor_float( torch_from_numpy(advantages_trajs[inds]) )
-                        # .float().to(self.device)
                     )
                     advantages_b = (advantages_b - torch_mean( advantages_b) ) / (
                         torch_std( advantages_b )
-                        # .std()
                         + 1e-6
                     )
                     
                     advantages_b_scaled = torch_exp(self.beta * advantages_b)
                     
                     advantages_b_scaled = torch_clamp( advantages_b_scaled, max=self.max_adv_weight)
-
-                    # # Update policy with collected trajectories
-                    # loss_actor = self.model.loss(
-                    #     actions_b,
-                    #     obs_b,
-                    #     torch_tensor_detach( advantages_b_scaled )
-                    #     # .detach()
-                    #     ,
-                    # )
-                    # self.actor_optimizer.zero_grad()
-                    # loss_actor.backward()
 
                     with tf.GradientTape() as tape:
                         # Update policy with collected trajectories
@@ -413,11 +366,9 @@ class TrainAWRDiffusionAgent(TrainAgent):
                             actions_b,
                             obs_b,
                             torch_tensor_detach( advantages_b_scaled )
-                            # .detach()
                             ,
                         )
 
-                    # tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
                     tf_gradients_actor = tape.gradient(loss_actor, self.model.actor.trainable_variables)                        
                     zip_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
 
@@ -425,14 +376,12 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     if self.itr >= self.n_critic_warmup_itr:
                         if self.max_grad_norm is not None:
                             torch_nn_utils_clip_grad_norm_and_step(
-                                # self.model.actor.parameters()
                                 self.model.actor.trainable_variables,
                                 self.actor_optimizer,
                                 self.max_grad_norm,
                                 tf_gradients_actor
                             )
                         else:
-                            # self.actor_optimizer.step(tf_gradients)
                             self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
 
             # Update lr
@@ -457,17 +406,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
+                    
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
@@ -475,18 +414,7 @@ class TrainAWRDiffusionAgent(TrainAgent):
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | num episode - train: {num_episode_finished:8.4f} | t:{time:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss - actor": loss_actor,
-                    #             "loss - critic": loss_critic,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
+                    
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

@@ -20,7 +20,6 @@ import math
 import tensorflow as tf
 
 from util.torch_to_tf import torch_quantile
-# import tensorflow_probability as tfp
 
 from util.torch_to_tf import torch_no_grad, torch_tensor_item
 
@@ -164,8 +163,6 @@ class PPODiffusion(VPGDiffusion):
         print("diffusion_ppo.py: PPODiffusion.loss()")
 
         # Get new logprobs for denoising steps from T-1 to 0 - entropy is fixed fod diffusion
-        # print("diffusion_ppo.py: PPODiffusion.loss(): 1")
-
 
         newlogprobs, eta = self.get_logprobs_subsample(
             obs,
@@ -175,7 +172,6 @@ class PPODiffusion(VPGDiffusion):
             get_ent=True,
         )
 
-        # print("diffusion_ppo.py: PPODiffusion.loss(): 2")
 
         entropy_loss = -torch_mean(eta)
 
@@ -193,7 +189,6 @@ class PPODiffusion(VPGDiffusion):
         newlogprobs = torch_tensor_view(newlogprobs, [-1])
         oldlogprobs = torch_tensor_view(oldlogprobs, [-1])
 
-        # print("diffusion_ppo.py: PPODiffusion.loss(): 3")
 
         bc_loss = 0
 
@@ -240,11 +235,6 @@ class PPODiffusion(VPGDiffusion):
         advantages = torch_clamp(advantages, advantage_min, advantage_max)
 
 
-        # print("diffusion_ppo.py: PPODiffusion.loss(): 5")
-
-
-        # print("type(self.ft_denoising_steps) = ", type(self.ft_denoising_steps))
-
         # denoising discount
         temp_discount = []
         for i in denoising_inds:
@@ -258,17 +248,7 @@ class PPODiffusion(VPGDiffusion):
             np.array(temp_discount)
         )
 
-        # discount = torch_tensor(
-        #     [
-        #         self.gamma_denoising ** ( (self.ft_denoising_steps - i - 1).numpy().item() )
-        #         for i in denoising_inds
-        #     ]
-        # )
 
-        # .to(self.device)
-        
-        # print("advantages = ", advantages)
-        # print("discount = ", discount)
         
         discount = tf.cast(discount, tf.float32)
 

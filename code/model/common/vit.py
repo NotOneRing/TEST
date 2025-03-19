@@ -24,7 +24,6 @@ class VitEncoderConfig:
     depth: int = 1
     embed_dim: int = 128
     num_heads: int = 4
-    # act_layer = nn.GELU
     act_layer= nn_GELU,
     stride: int = -1
     embed_style: str = "embed2"
@@ -151,7 +150,7 @@ class VitEncoder(tf.keras.layers.Layer):
         cur_dict = {
             'MinVit': MinVit, 
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
         
@@ -164,18 +163,15 @@ class VitEncoder(tf.keras.layers.Layer):
     def call(self, obs, flatten=False):
         print("vit.py: VitEncoder.call()")
 
-        # assert obs.max() > 5
         obs = obs / 255.0 - 0.5
         feats = self.vit(obs)
         if flatten:
-            # assert len(feats.shape) == 3, f"Expected feats to be 3D, but got {len(feats.shape)}D"
             feats = torch_flatten(feats, 1, 2)
 
         return feats
 
 
 
-# class PatchEmbed1(nn.Module):
 class PatchEmbed1(tf.keras.layers.Layer):
     def __init__(self, embed_dim, num_channel=3, img_h=96, img_w=96, conv = None,
         **kwargs):
@@ -512,7 +508,7 @@ class TransformerLayer(tf.keras.layers.Layer):
             'nn_Linear': nn_Linear,
             "nn_Dropout": nn_Dropout
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
         
@@ -682,7 +678,7 @@ class MinVit(tf.keras.Model):
             'nn_LayerNorm': nn_LayerNorm,
             "TransformerLayer": TransformerLayer
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
         
@@ -705,23 +701,6 @@ class MinVit(tf.keras.Model):
         return self.norm(x)
 
 
-
-
-
-
-# def init_weights_vit_timm(module, name=""):
-#     """ViT weight initialization, similar to timm for reproducibility"""
-
-#     print("vit.py: init_weights_vit_timm()")
-
-#     if isinstance(module, layers.Dense):
-#         initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
-#         module.kernel_initializer = initializer
-#         if module.bias is not None:
-#             module.bias_initializer = tf.keras.initializers.Zeros()
-#     elif isinstance(module, layers.Conv2D):
-#         initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
-#         module.kernel_initializer = initializer
 
 
 def init_weights_vit_timm(module, name: str = ""):
@@ -765,7 +744,7 @@ def test_patch_embed():
     # test first class of PatchEmbed
     print("embed 1")
     embed = PatchEmbed1(128) 
-    # x = tf.random.uniform([10, 96, 96, 3])  # input data with shape NHWC
+
     x = torch_rand(10, 3, 96, 96)
     y = embed(x)
     print("Output shape for embed 1:", y.shape)
@@ -773,7 +752,7 @@ def test_patch_embed():
     # test second class of PatchEmbed
     print("embed 2")
     embed = PatchEmbed2(128)  # second configuration
-    # x = tf.random.uniform([10, 96, 96, 3])  # input data with shape NHWC
+
     x = torch_rand(10, 3, 96, 96)
     y = embed(x)
     print("Output shape for embed 2:", y.shape)
@@ -786,7 +765,7 @@ def test_patch_embed():
 
 def test_transformer_layer():
     print("Testing TransformerLayer...")
-    # x = tf.random.uniform([10, 96, 96, 3])
+
     embed = PatchEmbed1(128)
     x = torch_rand(10, 3, 96, 96)
 
@@ -808,7 +787,6 @@ if __name__ == "__main__":
 
     print("vit.py: main()")
 
-    # obs_shape = [128, 128, 6]  # NHWC
     obs_shape = [6, 128, 128]  # NHWC
 
     enc = VitEncoder(
@@ -820,7 +798,7 @@ if __name__ == "__main__":
     )
 
     print(enc)
-    # x = tf.random.uniform([1, *obs_shape]) * 255
+
     x = torch_rand([1, *obs_shape]) * 255
 
     print("output size:", enc(x, flatten=False).shape)

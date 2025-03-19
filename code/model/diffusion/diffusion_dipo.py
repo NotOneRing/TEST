@@ -34,7 +34,7 @@ class DIPODiffusion(DiffusionModel):
         super().__init__(network=actor, use_ddim=use_ddim, **kwargs)
         assert not self.use_ddim, "DQL does not support DDIM"
         self.critic = critic
-        # .to(self.device)
+
 
         # target critic
         self.critic_target = copy.deepcopy(self.critic)
@@ -117,12 +117,9 @@ class DIPODiffusion(DiffusionModel):
 
             print("diffusion_dipo.py: DIPODiffusion.call()")
 
-            # device = self.betas.device
-            # B = len(cond["state"])
             B = tf.shape(cond["state"])[0]
 
             # Loop
-            # x = tf.random.normal((B, self.horizon_steps, self.action_dim))
             x = torch_randn((B, self.horizon_steps, self.action_dim))
 
             t_all = list(reversed(range(self.denoising_steps)))
@@ -131,7 +128,6 @@ class DIPODiffusion(DiffusionModel):
                 mean, logvar = self.p_mean_var(
                     x=x,
                     t=t_b,
-                    # cond=cond,
                     cond_state=cond['state'],
                     network_override=self.actor_target,
                 )
@@ -145,7 +141,6 @@ class DIPODiffusion(DiffusionModel):
                 else:
                     std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
                 
-                # noise = tf.random.normal(x.shape)
                 noise = torch_randn_like(x)
                 noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
 

@@ -7,7 +7,6 @@ from model.common.mlp import MLP, ResidualMLP
 from model.diffusion.modules import SinusoidalPosEmb
 from model.common.modules import SpatialEmb, RandomShiftsAug
 
-# from tensorflow.keras.layers import Layers
 
 log = tf.get_logger()
 
@@ -31,14 +30,9 @@ from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, 
 nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
 nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
 nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
-# from model.rl.gaussian_calql import CalQL_Gaussian
 from model.diffusion.unet import ResidualBlock1D, Unet1D
 from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
-# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
-# from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
-# from model.diffusion.diffusion import DiffusionModel
 from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
-# from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
 from model.common.modules import SpatialEmb, RandomShiftsAug
 from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
 
@@ -75,12 +69,6 @@ cur_dict = {
 "Upsample1d": Upsample1d, 
 "Downsample1d": Downsample1d, 
 "SinusoidalPosEmb": SinusoidalPosEmb,
-# "DiffusionMLP": DiffusionMLP, 
-# "VisionDiffusionMLP": VisionDiffusionMLP,
-# "EtaStateAction": EtaStateAction, 
-# "EtaState": EtaState, 
-# "EtaAction": EtaAction, 
-# "EtaFixed": EtaFixed,
 #part3:
 "VitEncoder": VitEncoder, 
 "PatchEmbed1": PatchEmbed1, 
@@ -88,9 +76,6 @@ cur_dict = {
 "MultiHeadAttention": MultiHeadAttention, 
 "TransformerLayer": TransformerLayer, 
 "MinVit": MinVit,
-# "Gaussian_Transformer": Gaussian_Transformer, 
-# "GMM_Transformer": GMM_Transformer, 
-# "Transformer": Transformer,
 "SpatialEmb": SpatialEmb,
 "RandomShiftsAug": RandomShiftsAug,
 "MLP": MLP,
@@ -107,9 +92,6 @@ cur_dict = {
 
 
 
-
-
-# class VisionDiffusionMLP(tf.keras.layers.Layer):
 @register_keras_serializable(package="Custom")
 class VisionDiffusionMLP(tf.keras.Model):
     """With ViT backbone"""
@@ -152,8 +134,6 @@ class VisionDiffusionMLP(tf.keras.Model):
         self.action_dim = action_dim
         self.horizon_steps = horizon_steps
         self.cond_dim = cond_dim
-        # self.img_cond_steps
-        # self.time_dim = time_dim
 
 
         if not isinstance(mlp_dims, list):
@@ -222,7 +202,6 @@ class VisionDiffusionMLP(tf.keras.Model):
                 ])
 
         # diffusion
-        # input_dim = time_dim + action_dim * horizon_steps + visual_feature_dim + cond_dim
         input_dim = (
             time_dim + action_dim * horizon_steps + visual_feature_dim + cond_dim
         )
@@ -271,7 +250,6 @@ class VisionDiffusionMLP(tf.keras.Model):
         if OUTPUT_FUNCTION_HEADER:
             print("VisionDiffusionMLP: get_config()")
 
-        # config = {}
         config = super(VisionDiffusionMLP, self).get_config()
 
 
@@ -473,7 +451,6 @@ class VisionDiffusionMLP(tf.keras.Model):
             if isinstance(self.compress, SpatialEmb):
                 feat = self.compress.call(feat, state)
             else:
-                # feat = torch_reshape(feat, [B, -1])
                 feat = torch_flatten(feat, 1, -1)
                 feat = self.compress(feat)
 
@@ -536,60 +513,6 @@ class VisionDiffusionMLP(tf.keras.Model):
 
 
 
-# import math
-
-
-# class KaimingUniformInitializer(tf.keras.initializers.Initializer):
-#     def __init__(self, fan_in):
-#         self.fan_in = fan_in
-
-#     def __call__(self, shape, dtype=None):
-#         limit = math.sqrt(3.0 / self.fan_in)  # PyTorch's value range of Kaiming Uniform
-#         return tf.random.uniform(shape, -limit, limit, dtype=dtype)
-
-#     def get_config(self):  # support serialization
-#         return {'fan_in': self.fan_in}
-
-#     @classmethod
-#     def from_config(cls, config):
-#         """Creates the layer from its config."""
-#         return cls(**config)
-
-
-# class CustomDense(tf.keras.layers.Layer):
-#     def __init__(self, units, input_dim, **kwargs):
-#         super(CustomDense, self).__init__(**kwargs)
-#         self.units = units
-#         self.input_dim = input_dim
-#         self.kernel_initializer = KaimingUniformInitializer(fan_in=input_dim)
-#         self.bias_initializer = tf.keras.initializers.Zeros()
-
-#     def build(self, input_shape):
-#         self.kernel = self.add_weight(
-#             shape=(self.input_dim, self.units),
-#             initializer=self.kernel_initializer,
-#             name='kernel',
-#         )
-#         self.bias = self.add_weight(
-#             shape=(self.units,),
-#             initializer=self.bias_initializer,
-#             name='bias',
-#         )
-
-#     def call(self, inputs):
-#         return tf.matmul(inputs, self.kernel) + self.bias
-
-#     def get_config(self):
-#         config = super(CustomDense, self).get_config()
-#         config.update({
-#             "units": self.units,
-#             "input_dim": self.input_dim,
-#         })
-#         return config
-
-#     @classmethod
-#     def from_config(cls, config):
-#         return cls(**config)
 
 
 
@@ -608,24 +531,7 @@ class VisionDiffusionMLP(tf.keras.Model):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# class DiffusionMLP(tf.keras.layers.Layer):
 @register_keras_serializable(package="Custom")
-# class DiffusionMLP(tf.keras.Model):
 class DiffusionMLP(tf.keras.layers.Layer):
     
     def __init__(
@@ -650,8 +556,6 @@ class DiffusionMLP(tf.keras.layers.Layer):
         if OUTPUT_FUNCTION_HEADER:
             print("mlp_diffusion.py: DiffusionMLP.__init__()")
 
-        # super(DiffusionMLP, self).__init__(name=name)
-        # super(DiffusionMLP, self).__init__(name=name, **kwargs)
         super(DiffusionMLP, self).__init__(**kwargs)
 
         if OUTPUT_POSITIONS:
@@ -664,18 +568,14 @@ class DiffusionMLP(tf.keras.layers.Layer):
         if OUTPUT_VARIABLES:
             print("self.cond_dim = ", self.cond_dim)
 
-        # print("self.time_dim = ", time_dim)
-
         self.time_dim = time_dim
         
-        # self.mlp_dims = mlp_dims
         self.mlp_dims = list(mlp_dims)
 
         if OUTPUT_VARIABLES:
             print("self.mlp_dims = ", self.mlp_dims)
             print( "type(self.mlp_dims) = ", type(self.mlp_dims) )
 
-        # self.cond_mlp_dims = cond_mlp_dims
         if cond_mlp_dims != None:
             self.cond_mlp_dims = list(cond_mlp_dims)
         else:
@@ -702,31 +602,14 @@ class DiffusionMLP(tf.keras.layers.Layer):
         else:
             self.time_embedding = time_embedding
 
-        # self.time_embedding = tf.keras.Sequential([
-        #     SinusoidalPosEmb(time_dim),
-        #     CustomDense(units=time_dim * 2, input_dim=time_dim),  # Custom Dense layer
-        #     tf.keras.layers.Activation('mish'),
-        #     CustomDense(units=time_dim, input_dim=time_dim * 2),  # Custom Dense layer
-        # ])
 
 
 
-
-        # print("time_dim = ", self.time_dim)
-
-        
-
-
-
-        # print("after sinusiodalPosEmb()")
-        
         if residual_style:
             model = ResidualMLP
         else:
             model = MLP
 
-
-        # print("after ResidualMLP and MLP")
         
 
         if self.cond_mlp_dims is not None:
@@ -747,11 +630,7 @@ class DiffusionMLP(tf.keras.layers.Layer):
             self.cond_mlp = None
 
 
-        # print("after cond_mlp and input_dim")
 
-
-        # print("[self.input_dim] + self.mlp_dims + [self.output_dim] = ", [self.input_dim] + self.mlp_dims + [self.output_dim])
-        
         if mlp_mean == None:
             self.mlp_mean = model(
                 [self.input_dim] + self.mlp_dims + [self.output_dim],
@@ -771,7 +650,6 @@ class DiffusionMLP(tf.keras.layers.Layer):
         if OUTPUT_FUNCTION_HEADER:
             print("DiffusionMLP: get_config()")
 
-        # config = {}
         config = super(DiffusionMLP, self).get_config()
 
         # print every property with its type and value
@@ -784,8 +662,6 @@ class DiffusionMLP(tf.keras.layers.Layer):
             
             print(f"mlp_dims: {self.mlp_dims}, type: {type(self.mlp_dims)}")
 
-            # print(f"input_dim: {self.input_dim}, type: {type(self.input_dim)}")
-            # print(f"output_dim: {self.output_dim}, type: {type(self.output_dim)}")
 
             print(f"cond_mlp_dims: {self.cond_mlp_dims}, type: {type(self.cond_mlp_dims)}")
             print(f"activation_type: {self.activation_type}, type: {type(self.activation_type)}")
@@ -806,56 +682,19 @@ class DiffusionMLP(tf.keras.layers.Layer):
             "out_activation_type": self.out_activation_type,
             "use_layernorm": self.use_layernorm,
             "residual_style": self.residual_style,
-            # "output_dim": self.output_dim,
-            # "input_dim": self.input_dim,
-            # "time_dim": self.time_dim,
+            
         })
 
-        # time_embedding_config = self.time_embedding.get_config()
-
-        # if self.cond_mlp:
-        #     cond_mlp_config = self.cond_mlp.get_config()
-        # else:
-        #     cond_mlp_config = None            
-
-        # mlp_mean_config = self.mlp_mean.get_config()
-
-        # if OUTPUT_VARIABLES:
-        #     print("time_embedding_config = ", time_embedding_config)
-
-        #     print("cond_mlp_config = ", cond_mlp_config)
-
-        #     print("mlp_mean_config = ", mlp_mean_config)
 
         config.update({
             "time_embedding": 
-            # time_embedding_config,
             tf.keras.layers.serialize(self.time_embedding),
             "cond_mlp": 
-            # cond_mlp_config,
             tf.keras.layers.serialize(self.cond_mlp),
             "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
-            # "mlp_mean": mlp_mean_config,
         })
 
-        # print("DiffusionMLP: config = ", config)
-
         return config
-
-        # time_embedding
-        # cond_mlp
-        # mlp_mean        
-
-        # config.update({
-        #     "time_embedding": tf.keras.layers.serialize(self.time_embedding),
-        #     "cond_mlp": tf.keras.layers.serialize(self.cond_mlp),
-        #     "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
-        # })
-
-        # time_embedding = tf.keras.layers.deserialize(config.pop("time_embedding"))
-        # cond_mlp = tf.keras.layers.deserialize(config.pop("cond_mlp"))
-        # mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean"))
-        # return cls(sub_model=sub_model, **config)
 
 
 
@@ -863,8 +702,6 @@ class DiffusionMLP(tf.keras.layers.Layer):
     def from_config(cls, config):
         if OUTPUT_FUNCTION_HEADER:
             print("DiffusionMLP: from_config()")
-
-        # print("DiffusionMLP: config = ", config)
 
         from model.diffusion.mlp_diffusion import DiffusionMLP
         from model.diffusion.diffusion import DiffusionModel
@@ -878,7 +715,6 @@ class DiffusionMLP(tf.keras.layers.Layer):
         cur_dict = {
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
-            # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # Custom MLP layer
             'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
@@ -891,13 +727,10 @@ class DiffusionMLP(tf.keras.layers.Layer):
             'SpatialEmb': SpatialEmb,
             'RandomShiftsAug': RandomShiftsAug,
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
-        # time_embedding = nn_Sequential.from_config( config.pop("time_embedding") )
         time_embedding = tf.keras.layers.deserialize(config.pop("time_embedding") ,  custom_objects=get_custom_objects() )
-
-        # cond_mlp = MLP.from_config(config.pop("cond_mlp"))
 
         config_cond_mlp = config.pop("cond_mlp")
         if config_cond_mlp:
@@ -909,140 +742,15 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
         mlp_mean = tf.keras.layers.deserialize(config.pop("mlp_mean") ,  custom_objects=get_custom_objects() )
 
-        # print("residual_style = ", residual_style)
-        # if residual_style:
-        #     print("ResidualMLP = ", ResidualMLP)
-        #     mlp_mean = ResidualMLP.from_config(config.pop("mlp_mean"))
-        # else:
-        #     mlp_mean = MLP.from_config(config.pop("mlp_mean"))
 
         result = cls(residual_style = residual_style, time_embedding = time_embedding, cond_mlp = cond_mlp, mlp_mean = mlp_mean, **config)
         return result
 
-        # return cls(**config)
-
-
-
-
-        # self.time_dim = time_dim
-
-
-
-
-    # # def call(self, x, time, cond, **kwargs):
-    # def call(self, x, time, state, **kwargs):
-    #     """
-    #     x: (B, Ta, Da)
-    #     time: (B,) or int, diffusion step
-    #     cond: dict with key state/rgb; more recent obs at the end
-    #         state: (B, To, Do)
-    #     """
-
-    #     # print("mlp_diffusion.py: DiffusionMLP.call()")
-    #     # print("x.shape = ", x.shape)
-    #     # print("time.shape = ", time.shape)
-    #     # • cond={'state': 'tf.Tensor(shape=(128, 1, 11), dtype=float32)'}
-    #     # • kwargs={'training': 'True'}
-    #     # print("cond.shape = ", cond.shape)
-
-    #     B, Ta, Da = x.shape
-    #     # B, Ta, Da = x_shape
-
-    #     assert B == x.shape[0]
-    #     assert Ta == self.horizon_steps
-    #     assert Da == self.action_dim
-
-    #     x = torch_tensor_view(x, B, -1)
-
-    #     # state = torch_tensor_view(cond["state"], B, -1)
-    #     # # flatten chunk
-    #     # x = tf.reshape(x, [B, -1])
-
-    #     # # flatten history
-    #     # state = tf.reshape(cond["state"], [B, -1])
-
-    #     # # append time and cond
-    #     # time = tf.reshape(time, [B, 1])
-
-    #     # obs encoder
-    #     if hasattr(self, "cond_mlp"):
-    #         state = self.cond_mlp(state)
-
-
-    #     # print("B = ", B)
-
-    #     # print("time = ", time)
-
-    #     # print("state = ", state)
-        
-    #     # print("1time.shape = ", time.shape)
-
-    #     # time = tf.squeeze(time, axis=1)
-    #     # time = tf.squeeze(time, axis=-1)
-    #     # time = tf.reshape(time, [B])
-
-    #     # print("2time.shape = ", time.shape)
-
-
-    #     time_emb = self.time_embedding(time)
-
-    #     # print("time_emb = ", time_emb)
-
-    #     # print("time_emb.shape = ", time_emb.shape)
-
-    #     time_emb = tf.squeeze(time_emb, axis=1)
-
-    #     # print("after tf.squeeze")
-
-    #     # for layer in self.time_embedding.layers:
-    #     #     if isinstance(layer, CustomDense):
-    #     #         print("TensorFlow Dense weights:", layer.kernel.numpy())
-    #     #         print("TensorFlow Dense bias:", layer.bias.numpy())
-
-
-    #     # print("x = ", x)
-
-    #     # print("time_emb = ", time_emb)
-
-    #     # print("state = ", state)
-        
-
-    #     # print("x.shape = ", x.shape)
-
-    #     # print("time_emb.shape = ", time_emb.shape)
-
-    #     # print("state.shape = ", state.shape)
-
-
-    #     x = tf.concat([x, time_emb, state], axis=-1)
-
-    #     # mlp head
-    #     out = self.mlp_mean(x)
-
-
-    #     # print("out.shape[0] = ", out.shape[0])
-    #     # print("out.shape = ", out.shape)
-
-    #     if out.shape[0]:
-    #         # print("branch1")
-    #         # print("out.shape[0] = ", out.shape[0])
-    #         final_out = tf.reshape(out, [-1, Ta, Da])
-    #     else:
-    #         # print("branch2")
-    #         # print("out.shape[0] = ", out.shape[0])
-    #         # final_out = tf.reshape(out, [None, Ta, Da])
-    #         final_out = tf.reshape(out, [-1, Ta, Da])
-
-    #     # print("final_out.shape = ", final_out.shape)
-
-    #     # return tf.reshape(out, [B, Ta, Da])
-    #     return final_out
 
 
     def call(
         self,
         inputs,
-        # **kwargs,
         training = True,
     ):
         """
@@ -1060,25 +768,15 @@ class DiffusionMLP(tf.keras.layers.Layer):
         x, time, cond_state = inputs
 
 
-        # print("x = ", x)
-        # print("time = ", time)
-        # print("cond_state = ", cond_state)
-
-        # print("x.shape = ", x.shape)
-        
         B, Ta, Da = x.shape
 
 
         # assert 
         B = x.shape[0]
         
-        # print("Ta = ", Ta)
-        # print("self.horizon_steps = ", self.horizon_steps)
-
+        
         assert Ta == self.horizon_steps
         assert Da == self.action_dim
-        # Ta = self.horizon_steps
-        # Da = self.action_dim
 
         # flatten chunk
         x = torch_tensor_view(x, B, -1)
@@ -1088,8 +786,6 @@ class DiffusionMLP(tf.keras.layers.Layer):
             print("Diffusion_MLP: call(): x1 = ", x)
 
         # flatten history
-
-        # state = torch_tensor_view( cond["state"], B, -1 )
         state = torch_tensor_view( cond_state, B, -1 )
 
         if OUTPUT_VARIABLES:
@@ -1106,40 +802,6 @@ class DiffusionMLP(tf.keras.layers.Layer):
             print("time = ", time)
 
 
-
-        # print("self.time_embedding = ", self.time_embedding)
-        # if OUTPUT_VARIABLES and self.time_embedding.built:
-
-            # # Time embedding layer 3
-            # print("DiffusionMLP.time_embedding[3].trainable_weights[0] (kernel):")
-            # print(self.time_embedding[3].trainable_weights[0].numpy())
-            # print("DiffusionMLP.time_embedding[3].trainable_weights[1] (bias):")
-            # print(self.time_embedding[3].trainable_weights[1].numpy())
-        
-
-
-            # layer1_result = self.time_embedding[0](time)
-
-            # layer2_result = self.time_embedding[1](layer1_result)
-
-            # layer3_result = self.time_embedding[2](layer2_result)
-
-            # layer4_result = self.time_embedding[3](layer3_result)
-
-            # print("layer1_result = ", layer1_result)
-
-            # print("DiffusionMLP.time_embedding[1].trainable_weights[0] (kernel):")
-            # print(self.time_embedding[1].trainable_weights[0].numpy())
-            # print("DiffusionMLP.time_embedding[1].trainable_weights[1] (bias):")
-            # print(self.time_embedding[1].trainable_weights[1].numpy())
-
-            # print("layer2_result = ", layer2_result)
-
-            # print("layer3_result = ", layer3_result)
-
-            # print("layer4_result = ", layer4_result)
-
-
         temp_result = self.time_embedding(time)
 
         if OUTPUT_VARIABLES:       
@@ -1151,29 +813,11 @@ class DiffusionMLP(tf.keras.layers.Layer):
         time_emb = torch_tensor_view(temp_result, B, self.time_dim)
 
 
-        # for layer in self.time_embedding:
-        #     if isinstance(layer, nn_Linear):
-        #         print("Linear weights:", layer.trainable_weights[0])
-        #         print("Linear bias:", layer.trainable_weights[1])
-                
-                
-        # print("x = ", x)
-
         if OUTPUT_VARIABLES:
             print("type(time_emb) = ", type(time_emb))
 
         if OUTPUT_VARIABLES:
             print("Diffusion_MLP: call(): time_emb = ", time_emb)
-
-        # print("state = ", state)
-
-
-                
-        # print("x.shape = ", x.shape)
-
-        # print("time_emb.shape = ", time_emb.shape)
-
-        # print("state.shape = ", state.shape)
 
 
         x = torch_cat([x, time_emb, state], dim=-1)
@@ -1212,120 +856,3 @@ class DiffusionMLP(tf.keras.layers.Layer):
 
 
     
-    # def summary(self):
-    #     from tensorflow.keras import Input, Model
-
-    #     if self.cond_mlp_dims is not None:
-    #         input_dim = self.time_dim + self.action_dim * self.horizon_steps + self.cond_mlp_dims[-1]
-    #     else:
-    #         input_dim = self.time_dim + self.action_dim * self.horizon_steps + self.cond_dim
-
-    #     input_shape = (input_dim,)  
-
-    #     x = Input(shape=input_shape)
-
-    #     output = self.call(x)
-
-    #     model = Model(inputs=x, outputs=output)
-
-    #     # return model's summary
-    #     return model.summary()
-
-
-    # def summary(self, x, time, cond, **kwargs):
-    #     from tensorflow.keras import Input, Model
-
-    #     # # suppose the shape of x is (self.action_dim * self.horizon_steps,)
-    #     # x_input = Input(shape=(self.action_dim * self.horizon_steps,), name='x_input')
-
-    #     # # print("self.action_dim * self.horizon_steps = ", self.action_dim * self.horizon_steps)
-
-    #     # # suppose the shape of time is (time_dim,) 
-    #     # time_input = Input(shape=(1,), name='time_input')
-
-
-    #     # if self.cond_mlp_dims is not None:
-    #     #     # suppose the shape of cond is (cond_dim,)
-    #     #     cond_input = Input(shape=(self.cond_mlp_dims[-1],), name='cond_input')
-    #     #     # print("self.cond_mlp_dims[-1] = ", self.cond_mlp_dims[-1])
-    #     # else:
-    #     #     cond_input = Input(shape=(self.cond_dim,), name='cond_input')
-    #     #     # print("self.cond_dim = ", self.cond_dim)
-
-    #     # # print("[x_input, time_input, cond_input] = ", [x_input, time_input, cond_input])
-
-    #     # # use model's call() method to gain output
-    #     # output = self.call(x_input, time_input, cond_input)
-
-    #     # create the model
-    #     # model = Model(inputs=[x_input, time_input, cond_input], outputs=output)
-
-    #     cond_state = cond['state']
-
-
-    #     B, Ta, Da = x.shape
-
-
-    #     B = x.shape[0]
-    #     assert Ta == self.horizon_steps
-    #     assert Da == self.action_dim
-
-    #     x = torch_tensor_view(x, B, -1)
-
-    #     state = torch_tensor_view( cond_state, B, -1 )
-
-    #     time = torch_tensor_view(time, B, 1)
-
-
-
-    #     # output = self.call(x, time, cond_state)
-
-
-
-    #     if hasattr(self, "cond_mlp"):
-    #         state = self.cond_mlp(state)
-
-    #     time_emb = torch_tensor_view(self.time_embedding(time), B, self.time_dim)
-
-    #     x = torch_cat([x, time_emb, state], dim=-1)
-
-
-    #     x = tf.keras.Input(shape=x.shape[1:], name="x")
-    #     time = tf.keras.Input(shape=time.shape[1:], name="time", dtype=tf.int32)
-    #     cond_state = tf.keras.Input(shape=cond_state.shape[1:], name="cond")
-
-    #     out = self.mlp_mean(x)
-        
-    #     # output = torch_tensor_view(out, B, Ta, Da)
-    #     output = out
-
-
-    #     model = Model(inputs=[x, time, cond_state], outputs=output)
-
-    #     # return model's summary
-    #     return model.summary()
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

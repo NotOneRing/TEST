@@ -31,7 +31,7 @@ class RWR_Gaussian(GaussianModel):
         # assign actor
         self.actor = self.network
 
-    # override
+
     def loss_ori(self, actions, obs, reward_weights):
 
         print("gaussian_rwr.py: RWR_Gaussian.loss()")
@@ -47,8 +47,7 @@ class RWR_Gaussian(GaussianModel):
         log_prob = -torch_mean(log_prob)
         return log_prob
 
-    # override
-    # @torch.no_grad()
+
     @tf.function
     def call(self, cond, deterministic=False, **kwargs):
         with torch_no_grad() as tape:

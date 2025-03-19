@@ -5,7 +5,6 @@ Parent PPO fine-tuning agent class.
 
 from typing import Optional
 
-# import torch
 
 import logging
 
@@ -68,7 +67,6 @@ class TrainPPOAgent(TrainAgent):
 
         # Optimizer
         self.actor_optimizer = torch_optim_AdamW(
-            # self.model.actor_ft.parameters(),
             self.model.actor_ft.trainable_variables,
             lr=self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
@@ -83,7 +81,6 @@ class TrainPPOAgent(TrainAgent):
 
 
         self.critic_lr_scheduler = CosineAWR(
-            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -102,9 +99,7 @@ class TrainPPOAgent(TrainAgent):
 
 
         self.critic_optimizer = torch_optim_AdamW(
-            # self.model.critic.parameters(),
             self.model.critic.trainable_variables,
-            # lr=cfg.train.critic_lr,
             lr = self.critic_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
@@ -163,7 +158,6 @@ class TrainPPOAgent(TrainAgent):
 
 
         new_scheduler = CosineAWR(
-            # self.actor_optimizer,
             first_cycle_steps=self.cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=self.cfg.train.actor_lr,
@@ -175,16 +169,13 @@ class TrainPPOAgent(TrainAgent):
         self.actor_lr_scheduler = new_scheduler
 
         new_optimizer = torch_optim_AdamW(
-            # self.model.actor_ft.parameters(),
             self.model.actor_ft.trainable_variables,
             lr=self.actor_lr_scheduler,
             weight_decay=self.cfg.train.actor_weight_decay,
         )
 
-        # new_optimizer.load_state_dict(self.actor_optimizer.state_dict())
         self.actor_optimizer = new_optimizer
 
-        # new_scheduler.load_state_dict(self.actor_lr_scheduler.state_dict())
         log.info("Reset actor optimizer")
 
 

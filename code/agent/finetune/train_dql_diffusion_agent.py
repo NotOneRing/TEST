@@ -13,7 +13,6 @@ Do not support pixel input right now.
 import os
 import pickle
 import numpy as np
-# import torch
 import logging
 import wandb
 
@@ -21,7 +20,6 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from collections import deque
 from agent.finetune.train_agent import TrainAgent
-# from util.scheduler import CosineAnnealingWarmupRestarts
 
 from util.torch_to_tf import CosineAWR, torch_optim_Adam, torch_optim_AdamW,\
     torch_from_numpy, torch_tensor_float, torch_nn_utils_clip_grad_norm_and_step, torch_no_grad
@@ -45,7 +43,6 @@ class TrainDQLDiffusionAgent(TrainAgent):
 
         # Optimizer
         self.actor_lr_scheduler = CosineAWR(
-            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -55,14 +52,12 @@ class TrainDQLDiffusionAgent(TrainAgent):
         )
 
         self.actor_optimizer = torch_optim_AdamW(
-            # self.model.actor.parameters(),
             self.model.actor.trainable_variables,
             lr=self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
         )
 
         self.critic_lr_scheduler = CosineAWR(
-            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -72,9 +67,7 @@ class TrainDQLDiffusionAgent(TrainAgent):
         )
 
         self.critic_optimizer = torch_optim_AdamW(
-            # self.model.critic.parameters(),
             self.model.critic.trainable_variables,
-            # lr=cfg.train.critic_lr,
             lr=self.critic_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
@@ -124,10 +117,6 @@ class TrainDQLDiffusionAgent(TrainAgent):
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
             
             
-            
-            
-            # self.model.eval() if eval_mode else self.model.train()
-
             if eval_mode:
                 training=False
             else:
@@ -154,20 +143,15 @@ class TrainDQLDiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
                     samples = (
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
                         ).numpy()
-                        # .cpu()
-                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
 
@@ -252,15 +236,10 @@ class TrainDQLDiffusionAgent(TrainAgent):
                 for _ in range(num_batch):
                     inds = np.random.choice(len(obs_buffer), self.batch_size)
                     obs_b = torch_tensor_float( torch_from_numpy(obs_array[inds]) )
-                    # .float().to(self.device)
                     next_obs_b = torch_tensor_float( torch_from_numpy(next_obs_array[inds]) )
-                    # .float().to(self.device)
                     actions_b = torch_tensor_float( torch_from_numpy(action_array[inds]) )
-                    # .float().to(self.device)
                     rewards_b = torch_tensor_float( torch_from_numpy(reward_array[inds]) )
-                    # .float().to(self.device)
                     terminated_b = torch_tensor_float( torch_from_numpy(terminated_array[inds]) )
-                    # .float().to(self.device)
 
                     with tf.GradientTape() as tape:
 
@@ -277,9 +256,6 @@ class TrainDQLDiffusionAgent(TrainAgent):
                             self.gamma,
                         )
 
-                    # tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
-                    # self.critic_optimizer.step(tf_gradients)
-
                     tf_critic_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)                        
                     zip_gradients_critic_params = zip(tf_critic_gradients, self.model.critic.trainable_variables)
                     self.critic_optimizer.apply_gradients(zip_gradients_critic_params)
@@ -287,30 +263,25 @@ class TrainDQLDiffusionAgent(TrainAgent):
 
                     # Update policy with collected trajectories
 
-                    # self.actor_optimizer.zero_grad()
                     with tf.GradientTape() as tape:
                         loss_actor = self.model.loss_actor(
                             {"state": obs_b},
                             self.eta,
                             self.act_steps,
                         )
-                    # loss_actor.backward()
-                    # tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
+
                     tf_actor_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)                        
                     zip_gradients_actor_params = zip(tf_actor_gradients, self.model.actor.trainable_variables)
 
                     if self.itr >= self.n_critic_warmup_itr:
                         if self.max_grad_norm is not None:
                             torch_nn_utils_clip_grad_norm_and_step(
-                                # self.model.actor.parameters()
                                 self.model.actor.trainable_variables, 
                                 self.actor_optimizer,
                                 self.max_grad_norm,
-                                # tf_gradients
                                 zip_gradients_actor_params
                             )
                         else:
-                            # self.actor_optimizer.step(tf_gradients)
                             self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
 
                     # update target
@@ -338,37 +309,15 @@ class TrainDQLDiffusionAgent(TrainAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
+
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
                     log.info(
-                        # f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
                         f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss - actor": loss_actor,
-                    #             "loss - critic": loss_critic,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
+
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

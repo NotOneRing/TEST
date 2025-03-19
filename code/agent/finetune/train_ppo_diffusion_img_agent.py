@@ -8,9 +8,6 @@ import pickle
 import einops
 import numpy as np
 
-
-
-# import torch
 import tensorflow as tf
 
 
@@ -69,11 +66,6 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
 
 
-
-
-
-            # self.model.eval() if eval_mode else self.model.train()
-
             if eval_mode:
                 training=False
             else:
@@ -118,12 +110,9 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     cond = {
                         key: torch_tensor_float( torch_from_numpy(prev_obs_venv[key]) )
-                        # .float()
-                        # .to(self.device)
                         for key in self.obs_dims
                     }  # batch each type of obs and put into dict
                     samples = self.model(
@@ -132,11 +121,9 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                         return_chain=True,
                     )
                     output_venv = (
-                        # samples.trajectories.cpu().numpy()
                         samples.trajectories.numpy()
                     )  # n_env x horizon x act
                     chains_venv = (
-                        # samples.chains.cpu().numpy()
                         samples.chains.numpy()
                     )  # n_env x denoising x horizon x act
                 action_venv = output_venv[:, : self.act_steps]
@@ -198,16 +185,13 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
 
             # Update models
             if not eval_mode:
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     # apply image randomization
                     obs_trajs["rgb"] = (
                         torch_tensor_float( torch_from_numpy(obs_trajs["rgb"]) )
-                        # .to(self.device)
                     )
                     obs_trajs["state"] = (
                         torch_tensor_float( torch_from_numpy(obs_trajs["state"]) )
-                        # .to(self.device)
                     )
                     if self.augment:
                         rgb = einops.rearrange(
@@ -241,14 +225,12 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                             self.model.critic(obs, no_augment=True)
                             .numpy()
                             .flatten()
-                            # .cpu()
                         )
                         values_trajs = np.vstack(
                             (values_trajs, values.reshape(-1, self.n_envs))
                         )
                     chains_t = einops.rearrange(
                         torch_tensor_float( torch_from_numpy(chains_trajs) ),
-                        # .to(self.device),
                         "s e t h d -> (s e) t h d",
                     )
                     chains_ts = torch_split(chains_t, self.logprob_batch_size, dim=0)
@@ -346,28 +328,21 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                             inds_b,
                             (self.n_steps * self.n_envs, self.model.ft_denoising_steps),
                         )
-                        # obs_b = {k: obs_k[k][batch_inds_b] for k in obs_k}
 
                         obs_b = {k: tf.gather(obs_k[k], batch_inds_b, axis=0) for k in obs_k}
 
-                        # chains_prev_b = chains_k[batch_inds_b, denoising_inds_b]
                         prev_b_indices = tf.stack([batch_inds_b, denoising_inds_b], axis=1)
                         chains_prev_b = tf.gather_nd(chains_k, prev_b_indices)
 
-                        # chains_next_b = chains_k[batch_inds_b, denoising_inds_b + 1]
                         next_b_indices = tf.stack([batch_inds_b, denoising_inds_b + 1], axis=1)
                         chains_next_b = tf.gather_nd(chains_k, next_b_indices)
 
-                        # returns_b = returns_k[batch_inds_b]
                         returns_b = tf.gather(returns_k, batch_inds_b, axis=0)
 
-                        # values_b = values_k[batch_inds_b]
                         values_b = tf.gather(values_k, batch_inds_b, axis=0)
 
-                        # advantages_b = advantages_k[batch_inds_b]
                         advantages_b = tf.gather(advantages_k, batch_inds_b, axis=0)
 
-                        # logprobs_b = logprobs_k[batch_inds_b, denoising_inds_b]
                         logprobs_b_indices = tf.stack([batch_inds_b, denoising_inds_b], axis=1)
                         logprobs_b = tf.gather_nd(logprobs_k, logprobs_b_indices)
 
@@ -421,39 +396,28 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
 
                         tf_gradients_eta_params = zip(tf_gradients_eta, self.model.eta.trainable_variables)
 
-                        # update policy and critic
-                        # loss.backward()
 
                         if (batch + 1) % self.grad_accumulate == 0:
                             if self.itr >= self.n_critic_warmup_itr:
                                 if self.max_grad_norm is not None:
                                     torch_nn_utils_clip_grad_norm_and_step(
-                                        # self.model.actor_ft.parameters(),
                                         self.model.actor_ft.trainable_variables,
                                         self.actor_optimizer,
                                         self.max_grad_norm,
                                         tf_gradients_actor_ft
                                     )
                                 else:
-                                    # self.actor_optimizer.step(tf_gradients_actor_ft)
                                     self.actor_optimizer.apply_gradients(tf_gradients_actor_ft_params)
 
                                 if (
                                     self.learn_eta
                                     and batch % self.eta_update_interval == 0
                                 ):
-                                    # self.eta_optimizer.step(tf_gradients_eta)
                                     self.eta_optimizer.apply_gradients(tf_gradients_eta_params)
 
 
-                            # self.critic_optimizer.step(tf_gradients_critic)
                             self.critic_optimizer.apply_gradients(tf_gradients_critic_params)
 
-
-                            # self.actor_optimizer.zero_grad()
-                            # self.critic_optimizer.zero_grad()
-                            # if self.learn_eta:
-                            #     self.eta_optimizer.zero_grad()
 
                             log.info(f"run grad update at batch {batch}")
                             log.info(
@@ -514,17 +478,7 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
+                    
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
@@ -538,33 +492,8 @@ class TrainPPOImgDiffusionAgent(TrainPPODiffusionAgent):
                         f"| approx kl: {approx_kl:8.4f},"
                         f"| ratio: {ratio:8.4f},"
                         f"| clipfrac: {np.mean(clipfracs):8.4f},"
-                        # | actor lr {self.actor_optimizer.param_groups[0]["lr"]:8.4f}, \
-                        # | critic lr {self.critic_optimizer.param_groups[0]["lr"]:8.4f} "
+                        
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss": loss,
-                    #             "pg loss": pg_loss,
-                    #             "value loss": v_loss,
-                    #             "bc loss": bc_loss,
-                    #             "eta": eta,
-                    #             "approx kl": approx_kl,
-                    #             "ratio": ratio,
-                    #             "clipfrac": np.mean(clipfracs),
-                    #             "explained variance": explained_var,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #             "diffusion - min sampling std": diffusion_min_sampling_std,
-                    #             "actor lr": self.actor_optimizer.param_groups[0]["lr"],
-                    #             "critic lr": self.critic_optimizer.param_groups[0][
-                    #                 "lr"
-                    #             ],
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

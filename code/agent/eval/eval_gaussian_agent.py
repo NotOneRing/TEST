@@ -43,7 +43,6 @@ class EvalGaussianAgent(EvalAgent):
                 )
 
         # Reset env before iteration starts
-        # self.model.eval()
         training = False
 
         firsts_trajs = np.zeros((self.n_steps + 1, self.n_envs))
@@ -68,19 +67,11 @@ class EvalGaussianAgent(EvalAgent):
                 print(f"Processed step {step} of {self.n_steps}")
 
             # Select action
-            # with torch.no_grad():
             with torch_no_grad() as tape:
                 cond = {
-                    # "state": 
-                    # # torch.from_numpy(prev_obs_venv["state"])
-                    # # .float()
-                    # tf.convert_to_tensor(prev_obs_venv["state"], dtype=tf.float32)
-                    # # .to(self.device)
                 "state": tf.Variable(prev_obs_venv["state"], dtype=tf.float32)
                 }
                 samples = self.model(cond=cond, deterministic=True, training=False)
-
-                # output_venv = samples.cpu().numpy()
                 output_venv = samples.numpy()
 
             action_venv = output_venv[:, : self.act_steps]

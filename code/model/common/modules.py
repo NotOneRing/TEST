@@ -15,7 +15,6 @@ torch_sum, torch_tensor, save_tf_Variable, load_tf_Variable
 from util.config import DATASET_NAME
 
 
-# class SpatialEmb(nn.Module):
 class SpatialEmb(tf.keras.layers.Layer):
     def __init__(self, num_patch, patch_dim, prop_dim, proj_dim, dropout, serialized_input_proj = None, serialized_dropout = None, weight = None, **kwargs):
 
@@ -34,15 +33,6 @@ class SpatialEmb(tf.keras.layers.Layer):
         num_proj = patch_dim
 
 
-        # # input is of proj_in_dim dimension
-        # # Input projection layers
-        # self.input_proj = tf.keras.Sequential([
-        #     tf.keras.layers.Dense(proj_dim),
-        #     tf.keras.layers.LayerNormalization(),
-        #     tf.keras.layers.ReLU()
-        # ])
-
-        # # input is of proj_in_dim dimension
         # Input projection layers
         if serialized_input_proj:
             self.input_proj = serialized_input_proj
@@ -52,13 +42,6 @@ class SpatialEmb(tf.keras.layers.Layer):
                 nn_LayerNorm(proj_dim),
                 nn_ReLU(inplace=True)
             ])
-        # # Learnable weights
-        # self.weight = self.add_weight(
-        #     shape=(1, num_proj, proj_dim),
-        #     initializer="random_normal",
-        #     trainable=True,
-        #     name="weight"
-        # )
 
         if weight is not None:
             self.weight = weight
@@ -85,28 +68,15 @@ class SpatialEmb(tf.keras.layers.Layer):
         print(f"proj_dim: {self.proj_dim}, type: {type(self.proj_dim)}")
         print(f"dropout: {self.dropout}, type: {type(self.dropout)}")
 
-        # if hasattr(self, 'serialized_input_proj'):
-        #     print(f"serialized_input_proj: {self.serialized_input_proj}, type: {type(self.serialized_input_proj)}")
 
         config.update({
         "serialized_input_proj": tf.keras.layers.serialize(self.input_proj),
         })
-        # else:
-        #     config.update({
-        #     "serialized_input_proj": None,
-        #     })
-            
 
-        # if hasattr(self, 'serialized_dropout'):
-        #     print(f"serialized_dropout: {self.serialized_dropout}, type: {type(self.serialized_dropout)}")
 
         config.update({
         "serialized_dropout": tf.keras.layers.serialize(self.dropout)
         })
-        # else:
-        #     config.update({
-        #     "serialized_dropout": None,
-        #     })
 
         save_tf_Variable(self.weight, "SpatialEmb_weight" + DATASET_NAME)
 
@@ -135,7 +105,6 @@ class SpatialEmb(tf.keras.layers.Layer):
         cur_dict = {
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
-            # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,   
             'MLP': MLP,                            # Custom MLP layer
             'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
@@ -148,7 +117,7 @@ class SpatialEmb(tf.keras.layers.Layer):
             'SpatialEmb': SpatialEmb,
             'RandomShiftsAug': RandomShiftsAug,
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
         config_serialized_input_proj = config.pop("serialized_input_proj")
@@ -167,11 +136,6 @@ class SpatialEmb(tf.keras.layers.Layer):
         return cls(serialized_input_proj=serialized_input_proj, serialized_dropout=serialized_dropout, weight=weight, **config)
 
 
-    # def extra_repr(self) -> str:
-
-    #     print("modules.py: SpatialEmb.extra_repr()")
-
-    #     return f"weight: nn.Parameter ({self.weight.size()})"
     def __repr__(self):
         weight_shape = self.weight.shape
         return f"SpatialEmb(weight: tf.Variable {weight_shape})"
@@ -182,13 +146,9 @@ class SpatialEmb(tf.keras.layers.Layer):
         print("modules.py: SpatialEmb.call()")
 
         # Transpose dimensions for TensorFlow
-        # feat = tf.transpose(feat, perm=[0, 2, 1])
         feat = torch_tensor_transpose(feat, 1, 2)
 
         if self.prop_dim > 0 and prop is not None:
-            # repeated_prop = tf.expand_dims(prop, axis=1)
-            # repeated_prop = tf.tile(repeated_prop, [1, tf.shape(feat)[1], 1])
-
             repeated_prop = torch_tensor_repeat( torch_unsqueeze(prop, 1), 1, feat.shape[1], 1)
 
             feat = torch_cat((feat, repeated_prop), dim=-1)
@@ -230,7 +190,6 @@ class RandomShiftsAug(tf.keras.layers.Layer):
 
         print("modules.py: RandomShiftsAug.__call__()")
 
-        # n, c, h, w = x.size()
         n, c, h, w = x.shape
 
         assert h == w
@@ -302,7 +261,6 @@ if __name__ == "__main__":
     image = Image.open(requests.get(image_url, stream=True).raw)
     image = image.resize((96, 96))
 
-    # image = torch_tensor(np.array(image)).permute(2, 0, 1).unsqueeze(0).float()
     image = torch_tensor_float( torch_unsqueeze(torch_tensor_permute( torch_tensor(np.array(image)), 2, 0, 1), 0) )
 
     
@@ -319,18 +277,6 @@ if __name__ == "__main__":
     image_aug.show()
 
     image_aug.save("augmented_image.jpg", format="JPEG")
-
-    # # Convert to NumPy array (matrix)
-    # image_matrix = np.array(image_aug)
-
-    # # Print the shape and matrix
-    # print("Shape of the image matrix:", image_matrix.shape)
-
-    # # Loop over pixels and print values
-    # for i in range(image_matrix.shape[0]):  # Loop over height
-    #     for j in range(image_matrix.shape[1]):  # Loop over width
-    #         pixel = image_matrix[i, j]
-    #         print(f"Pixel at ({i}, {j}): {pixel}")
 
 
 

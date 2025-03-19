@@ -2212,7 +2212,7 @@ class nn_Sequential(tf.keras.layers.Layer):
             'SpatialEmb': SpatialEmb,
             'RandomShiftsAug': RandomShiftsAug,
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
         # print('get_custom_objects() = ', get_custom_objects())
@@ -2377,7 +2377,7 @@ class nn_ModuleList(tf.keras.layers.Layer):
             'RandomShiftsAug': RandomShiftsAug,
             "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
         # print('get_custom_objects() = ', get_custom_objects())
@@ -3019,7 +3019,7 @@ class nn_Conv2d(tf.keras.layers.Layer):
             'SpatialEmb': SpatialEmb,
             'RandomShiftsAug': RandomShiftsAug,
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
         conv2d = config.pop("conv2d")

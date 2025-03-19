@@ -30,7 +30,6 @@ class SAC_Diffusion(DiffusionModel):
 
         # initialize doubel critic networks
         self.critic = critic
-        # .to(self.device)
 
         # initialize double target networks
         self.target_critic = deepcopy(self.critic)
@@ -53,7 +52,6 @@ class SAC_Diffusion(DiffusionModel):
 
         print("diffusion_sac.py: SAC_Diffusion.loss_critic()")
 
-        # with torch.no_grad():
         with torch_no_grad() as tape:
             next_actions, next_logprobs = self.call(
                 cond=next_obs,
@@ -93,7 +91,6 @@ class SAC_Diffusion(DiffusionModel):
 
         print("diffusion_sac.py: SAC_Diffusion.loss_temperature()")
 
-        # with torch.no_grad():
         with torch_no_grad() as tape:
             _, logprob = self.call(
                 obs,

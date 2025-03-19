@@ -17,7 +17,6 @@ import wandb
 log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
-# from util.scheduler import CosineAnnealingWarmupRestarts
 
 
 from util.torch_to_tf import torch_from_numpy, torch_tensor_float, torch_tensor, torch_nn_utils_clip_grad_norm_and_step, torch_exp, torch_clamp
@@ -37,7 +36,6 @@ class TrainRWRDiffusionAgent(TrainAgent):
         self.gamma = cfg.train.gamma
 
         self.lr_scheduler = CosineAWR(
-            # self.optimizer,
             first_cycle_steps=cfg.train.lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.lr,
@@ -48,9 +46,7 @@ class TrainRWRDiffusionAgent(TrainAgent):
 
         # Build optimizer
         self.optimizer = torch_optim_AdamW(
-            # self.model.parameters(),
             self.model.trainable_variables,
-            # lr=cfg.train.lr,
             lr = self.lr_scheduler,
             weight_decay=cfg.train.weight_decay,
         )
@@ -86,8 +82,6 @@ class TrainRWRDiffusionAgent(TrainAgent):
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
             
-            # self.model.eval() if eval_mode else self.model.train()
-
             if eval_mode:
                 training=False      
             else:
@@ -126,20 +120,15 @@ class TrainRWRDiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
                     samples = (
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
                         ).numpy()
-                        # .cpu()
-                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
                 samples_trajs[step] = samples
@@ -237,13 +226,9 @@ class TrainRWRDiffusionAgent(TrainAgent):
                         )
                     ) 
                     )
-                    # .float()
-                    # .to(self.device)
                 }
                 samples_k = (
                     torch_tensor_float( torch_tensor(np.concatenate(samples_trajs_split)) )
-                    # .float()
-                    # .to(self.device)
                 )
 
                 # Normalize reward
@@ -252,9 +237,6 @@ class TrainRWRDiffusionAgent(TrainAgent):
                 ) / ( returns_trajs_split.std() + 1e-3 )
                 rewards_k = (
                     torch_reshape( torch_tensor_float( torch_tensor(returns_trajs_split) ), -1)
-                    # .float()
-                    # .to(self.device)
-                    # .reshape(-1)
                 )
 
                 rewards_k_scaled = torch_exp(self.beta * rewards_k)
@@ -273,14 +255,11 @@ class TrainRWRDiffusionAgent(TrainAgent):
                         end = start + self.batch_size
                         inds_b = inds_k[start:end]  # b for batch
                         
-                        # obs_b = {"state": obs_k["state"][inds_b]}
                         temp_result = tf.gather(obs_k["state"], inds_b, axis=0)
                         obs_b = {"state": temp_result}
 
-                        # samples_b = samples_k[inds_b]
                         samples_b = tf.gather(samples_k, inds_b, axis=0)
 
-                        # rewards_b = rewards_k_scaled[inds_b]
                         rewards_b = tf.gather(rewards_k_scaled, inds_b, axis=0)
 
 
@@ -299,14 +278,12 @@ class TrainRWRDiffusionAgent(TrainAgent):
 
                         if self.max_grad_norm is not None:
                             torch_nn_utils_clip_grad_norm_and_step(
-                                # self.model.parameters(), 
                                 self.model.trainable_variables,
                                 self.optimizer,
                                 self.max_grad_norm,
                                 tf_gradients
                             )
                         else:
-                            # self.optimizer.step(tf_gradients)
                             self.optimizer.apply_gradients(zip_gradients_params)
 
 
@@ -334,17 +311,6 @@ class TrainRWRDiffusionAgent(TrainAgent):
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
 
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
@@ -352,17 +318,6 @@ class TrainRWRDiffusionAgent(TrainAgent):
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} | loss {loss:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss": loss,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

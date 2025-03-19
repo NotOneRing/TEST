@@ -5,12 +5,10 @@ Pre-training diffusion policy
 
 
 import logging
-# import wandb
 import numpy as np
 import tensorflow as tf
 
 from agent.pretrain.train_agent import PreTrainAgent
-# , batch_to_device
 
 log = logging.getLogger(__name__)
 from util.timer import Timer
@@ -37,8 +35,6 @@ class TrainDiffusionAgent(PreTrainAgent):
         super().__init__(cfg)
         self.model.batch_size = self.batch_size
 
-        # # # # Use tf's model handling
-        # self.model = self.build_model(cfg)
 
     def build_model(self, cfg):
         # Instantiate the model as a TensorFlow model
@@ -102,14 +98,9 @@ class TrainDiffusionAgent(PreTrainAgent):
                     break
 
             batch_train = self.dataset_train[i]
-            # actions = batch_train.actions
-            # conditions = batch_train.conditions
-            # conditions = batch_train['conditions']
 
             actions = batch_train['actions']
             data_before_generator['actions'].append(actions)
-            # states = batch_train['states']
-            # data_before_generator['states'].append(states)
 
             if "states" in batch_train:
                 data_before_generator['states'].append(batch_train['states'])
@@ -156,30 +147,15 @@ class TrainDiffusionAgent(PreTrainAgent):
 
             print( f"Epoch {epoch + 1}" )
 
-            # continue
-            
-            # # Train
-            # print(item)
-            # print("State:", item["states"].numpy())
-            # print("Action:", item["actions"].numpy())
 
             cond = {}
             cond['state'] = item["states"]
-
-            # Initialization
-            # cond_input1 = deepcopy(cond)
-            # cond_input2 = deepcopy(cond)
-            # _ = self.model(cond_input1)
-            # _ = self.ema_model(cond_input2)
 
             item_actions_copy = deepcopy(item['actions'])
             cond_copy = deepcopy(cond)
 
 
             with tf.GradientTape() as tape:
-                # Assuming loss is computed as a callable loss function
-                # loss_train = self.model.loss(*batch_train, training_flag=True)
-                # loss_train = self.model.loss(training_flag=True, *batch_train)
                 training_flag=True
                 
                 print("item['actions'] = ", item['actions'])
@@ -192,7 +168,6 @@ class TrainDiffusionAgent(PreTrainAgent):
                 loss_train = self.model.loss_ori(training_flag, item['actions'], cond)
 
                 print("self.model.network = ", self.model.network)
-                # print("self.ema_model.network = ", self.ema_model.network)
 
             gradients = tape.gradient(loss_train, self.model.trainable_variables)
 
@@ -205,84 +180,14 @@ class TrainDiffusionAgent(PreTrainAgent):
                     
                     self.reset_parameters()
 
-            # print("self.model.get_config() = ", self.model.get_config())
-
-
-            # if epoch == 0:
-            #     # self.ema_model = tf.keras.models.clone_model(self.model)
-            #     # _ = self.ema_model(cond)
-            #     # self.ema_model = deepcopy(self.model)
-            #     print('self.model = ', self.model)
-            #     print('self.ema_model = ', self.ema_model)
-            #     # self.ema_model.set_weights(self.model.get_weights())
-            #     print(self.model.summary())
-            #     print(self.ema_model.summary())
-
-
-            # print("tf.keras.layers.serialize")
-            # serialized_layer = tf.keras.layers.serialize(self.model.network)
-            # print("tf.keras.layers.deserialize")
-            # print("serialized_layer = ", serialized_layer)
-            
-            # from model.diffusion.mlp_diffusion import DiffusionMLP
-            # self.model.network = tf.keras.layers.deserialize(
-            #     serialized_layer, custom_objects={"DiffusionMLP": DiffusionMLP}
-            # )
-
-            # print("tf.keras.layers.serialize")
-            # serialized_layer = tf.keras.layers.serialize(self.model)
-            # print("tf.keras.layers.deserialize")
-            # print("serialized_layer = ", serialized_layer)
-
-
-            # from model.diffusion.mlp_diffusion import DiffusionMLP
-            # from model.diffusion.diffusion import DiffusionModel
-            # from model.common.mlp import MLP, ResidualMLP
-            # from model.diffusion.modules import SinusoidalPosEmb
-            # from model.common.modules import SpatialEmb, RandomShiftsAug
-            # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
-
-            # from tensorflow.keras.utils import get_custom_objects
-
-            # # Register your custom class with Keras
-            # get_custom_objects().update({
-            #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-            #     'DiffusionMLP': DiffusionMLP,
-            #     # 'VPGDiffusion': VPGDiffusion,
-            #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-            #     'MLP': MLP,                            # Custom MLP layer
-            #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
-            #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
-            #     'nn_Linear': nn_Linear,
-            #     'nn_LayerNorm': nn_LayerNorm,
-            #     'nn_Dropout': nn_Dropout,
-            #     'nn_ReLU': nn_ReLU,
-            #     'nn_Mish': nn_Mish,
-            #     'SpatialEmb': SpatialEmb,
-            #     'RandomShiftsAug': RandomShiftsAug,
-            #  })
-                        
-            # from model.diffusion.mlp_diffusion import DiffusionMLP
-            # self.model = tf.keras.layers.deserialize(
-            #     serialized_layer, custom_objects=get_custom_objects()
-            # )
-
 
             
-            # print("gradients = ", gradients)
             if epoch == 0:
                 print("self.model.trainable_variables = ", self.model.trainable_variables)
                 print("self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
 
             zip_gradients_params = zip(gradients, self.model.trainable_variables)
 
-            # for item in zip_gradients_params:
-            #     print("item = ", item)
-
-            # self.optimizer.apply_gradients(zip_gradients_params)
-
-            # do not use step
-            # self.optimizer.step(gradients)
             self.optimizer.apply_gradients(zip_gradients_params)
 
             loss_train_epoch.append(loss_train.numpy())
@@ -305,86 +210,12 @@ class TrainDiffusionAgent(PreTrainAgent):
             if epoch % (len(self.dataset_train) // self.batch_size) == 0:
                 self.epoch += 1
 
-            # if epoch == 0:
-            #     break
-
 
             # Log loss
             if epoch % self.log_freq == 0:
                 log.info(
                     f"{epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
                 )
-
-
-            # # Validate
-            # loss_val_epoch = []
-            # if self.dataloader_val is not None and self.epoch % self.val_freq == 0:
-            #     # self.model.eval()
-            #     for batch_val in self.dataloader_val:
-            #         # if self.dataset_val.device == "cpu":
-            #         #     batch_val = batch_to_device(batch_val)
-            #         # loss_val, infos_val = self.model.loss(*batch_val, training_flag=False)
-            #         loss_val, infos_val = self.model.loss(training_flag=False, *batch_val)
-            #         loss_val_epoch.append(loss_val.numpy())
-            #     self.model.train()
-
-            # loss_val = np.mean(loss_val_epoch) if len(loss_val_epoch) > 0 else None
-
-            # # Update lr scheduler
-            # self.lr_scheduler.step()
-
-
-                # if self.use_wandb:
-                #     if loss_val is not None:
-                #         wandb.log(
-                #             {"loss - val": loss_val}, step=self.epoch, commit=False
-                #         )
-                #     wandb.log(
-                #         {
-                #             "loss - train": loss_train,
-                #         },
-                #         step=self.epoch,
-                #         commit=True,
-                #     )
-
-
-            # print("self.model = ", self.model)
-
-            # print("self.model.network = ", self.model.network)
-
-            # print("before summary")
-
-            # # Print the summary
-            # self.model.network.summary()
-
-
-            # print("after summary")
-
-            # if epoch == 2:
-            #     break
-
-            # Increment epoch count
-            # self.epoch += 1
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -8,8 +8,6 @@ from util.torch_to_tf import torch_exp, torch_arange, torch_cat, torch_unsqueeze
 from util.torch_to_tf import nn_Identity, nn_Mish, nn_ReLU, nn_Sequential, nn_GroupNorm, nn_Conv1d, \
 nn_ConvTranspose1d, einops_layers_torch_Rearrange
 
-# from einops.layers.tensorflow import Rearrange
-
 
 from tensorflow.keras.saving import register_keras_serializable
 
@@ -19,8 +17,6 @@ from tensorflow.keras.saving import register_keras_serializable
 @register_keras_serializable(package="Custom")
 class SinusoidalPosEmb(tf.keras.layers.Layer):
     def __init__(self, dim, name = "SinusoidalPosEmb", **kwargs):
-
-        # print("modules.py: SinusoidalPosEmb.__init__()")
 
         super(SinusoidalPosEmb, self).__init__(name=name,**kwargs)
         self.dim = dim
@@ -38,68 +34,28 @@ class SinusoidalPosEmb(tf.keras.layers.Layer):
 
     def call(self, x):
 
-        # print("modules.py: SinusoidalPosEmb.call()")
-
 
         half_dim = int(self.dim // 2)
 
 
         emb = math.log(10000) / (half_dim - 1)
         
-        # emb = tf.constant(math.log(10000) / (half_dim - 1), dtype=tf.float32)
-
-        # print("1emb.shape = ", emb.shape)
-        # print("type(emb) = ", type(emb))
-        # print("number emb = ", emb)
-        # print("half_dim = ", half_dim)
         
         first_var = torch_arange(start = 0, end = half_dim, step=1)
 
         first_var = tf.cast(first_var, tf.float32)
 
-        # print("type(first_var) = ", type(first_var))
-        # print("first_var = ", first_var)
 
         second_var = first_var * -emb
 
-        # print("second_var = ", second_var)
 
         emb = torch_exp( second_var )
 
-        # print("SinusoidalPosEmb emb1 = ", emb)
 
-        # emb = tf.convert_to_tensor(emb, dtype=tf.float32)
-
-        # print("2emb.shape = ", emb.shape)
-        # print("type(emb) = ", type(emb))
-        # print("emb = ", emb)
-
-        # print("x = ", x)
-        
-        # x_float32 = tf.cast(x, tf.float32)
-
-
-        # print("x_float32[:, None] = ", x_float32[:, None])
-
-        # print("emb[None, :] = ", emb[None, :])
-
-        
         emb = tf.cast(x[:, None], tf.float32) * emb[None, :]
-        # emb = x[:, None].float() * emb[None, :]
-
-        # print("3emb.shape = ", emb.shape)
-        # print("type(emb) = ", type(emb))
-        # print("emb = ", emb)
-
-        # print("SinusoidalPosEmb emb2 = ", emb)
-
-        # print("sin(emb).shape = ", tf.sin(emb).shape)
-        # print("cos(emb).shape = ", tf.cos(emb).shape)
 
         emb = torch_cat([tf.sin(emb), tf.cos(emb)], dim=-1)
 
-        # print("4emb.shape = ", emb.shape)
-        # print("SinusoidalPosEmb emb = ", emb)
 
         return emb
 
@@ -141,7 +97,6 @@ class Upsample1d(tf.keras.layers.Layer):
         self.dim = dim
 
         super(Upsample1d, self).__init__()
-        # self.conv = tf.keras.layers.Conv1DTranspose(dim, 4, strides=2, padding="same")
         self.conv = nn_ConvTranspose1d(dim, dim, 4, 2, 1)
 
     def call(self, x):
@@ -211,10 +166,7 @@ class Conv1dBlock(tf.keras.layers.Layer):
             nn_Conv1d(
                 inp_channels, out_channels, kernel_size, padding=kernel_size // 2
             ),
-            # (lambda x: x.unsqueeze(2)) if n_groups is not None else nn_Identity(),
-            # (lambda x: torch_unsqueeze(x, 2)) if n_groups is not None else nn_Identity(),
             (
-                # Rearrange("batch channels horizon -> batch channels 1 horizon")
                 einops_layers_torch_Rearrange("batch channels horizon -> batch channels 1 horizon", name = "Conv1dBlock_Rearrange1")
                 if n_groups is not None
                 else nn_Identity()
@@ -224,10 +176,7 @@ class Conv1dBlock(tf.keras.layers.Layer):
                 if n_groups is not None
                 else nn_Identity()
             ),
-            # (lambda x: x.squeeze(2)) if n_groups is not None else nn_Identity(),
-            # (lambda x: torch_squeeze(x, 2)) if n_groups is not None else nn_Identity(),
             (
-                # Rearrange("batch channels 1 horizon -> batch channels horizon")
                 einops_layers_torch_Rearrange("batch channels 1 horizon -> batch channels horizon", name = "Conv1dBlock_Rearrange2")
                 if n_groups is not None
                 else nn_Identity()
@@ -240,17 +189,6 @@ class Conv1dBlock(tf.keras.layers.Layer):
     def call(self, x):
 
         print("modules.py: Conv1dBlock.call()")
-
-        # block0_result = self.block[0](x)
-        # # print("block0_result.shape = ", block0_result.shape)
-        # block1_result = self.block[1](block0_result)
-        # # print("block1_result.shape = ", block1_result.shape)
-        # block2_result = self.block[2](block1_result)
-        # # print("block2_result.shape = ", block2_result.shape)
-        # block3_result = self.block[3](block2_result)
-        # # print("block3_result.shape = ", block3_result.shape)
-        # block4_result = self.block[4](block3_result)
-        # # print("block4_result.shape = ", block4_result.shape)
 
         return self.block(x)
 

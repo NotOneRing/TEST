@@ -76,7 +76,6 @@ class VPGDiffusion(DiffusionModel):
         assert not (learn_eta and not self.use_ddim), "Cannot learn eta with DDPM."
 
         self.actor = actor
-        # self.critic = critic
 
         # Number of denoising steps to use with fine-tuned model. Thus denoising_step - ft_denoising_steps is the number of denoising steps to use with original model.
         self.ft_denoising_steps = ft_denoising_steps
@@ -100,7 +99,6 @@ class VPGDiffusion(DiffusionModel):
             self.eta = eta
             if not learn_eta:
                 for param in self.eta.trainable_variables:
-                    # param._trainable = False
                     torch_tensor_requires_grad_(param, False)
                     
 
@@ -129,7 +127,6 @@ class VPGDiffusion(DiffusionModel):
             self.output_weights(self.network)
 
 
-        # self.build_actor(self.actor)
         if "ViT" in METHOD_NAME:            
             self.build_actor_vision(self.actor)
         else:
@@ -143,12 +140,10 @@ class VPGDiffusion(DiffusionModel):
         
 
         # # Make a copy of the original model
-        # self.actor_ft = copy.deepcopy(self.actor)
         self.actor_ft = tf.keras.models.clone_model(self.actor)
 
 
 
-        # self.build_actor(self.actor_ft)
         if "ViT" in METHOD_NAME:            
             self.build_actor_vision(self.actor_ft)
         else:
@@ -157,7 +152,6 @@ class VPGDiffusion(DiffusionModel):
 
         self.actor_ft.set_weights(self.actor.get_weights())
 
-        # self.build_actor(self.actor_ft)
         if "ViT" in METHOD_NAME:            
             self.build_actor_vision(self.actor_ft)
         else:
@@ -166,11 +160,6 @@ class VPGDiffusion(DiffusionModel):
 
         if OUTPUT_VARIABLES:
             self.output_weights(self.actor_ft)
-
-
-        # self.load_pickle(network_path)
-
-
 
 
         logging.info("Cloned model for fine-tuning")
@@ -189,7 +178,6 @@ class VPGDiffusion(DiffusionModel):
 
         # Turn off gradients for original model
         for var in self.actor.trainable_variables:
-            # var._trainable = False
             torch_tensor_requires_grad_(var, False)
             
         logging.info("Turned off gradients of the pretrained network")
@@ -203,29 +191,14 @@ class VPGDiffusion(DiffusionModel):
         self.critic = critic
 
         if network_path is not None:
-            # # checkpoint = torch.load(
-            # #     network_path, map_location=self.device, weights_only=True
-            # # )
-            # checkpoint = tf.train.Checkpoint(model=self.network)
-
-            # latest_checkpoint = tf.train.latest_checkpoint(network_path)
-
+            
             print("self.network_path is not None")
 
             if 0:
-            # "ema" not in checkpoint:  # load trained RL model
-            #     # self.load_state_dict(checkpoint["model"], strict=False)
-
-            #     checkpoint.restore(latest_checkpoint)
-
-            #     logging.info("Loaded critic from %s", network_path)
-
+                
                 loadpath = network_path
 
                 print("loadpath = ", loadpath)
-
-                # self.model.load_weights(loadpath)
-                # self.ema_model.load_weights(loadpath.replace(".h5", "_ema.h5"))
 
 
 
@@ -237,7 +210,7 @@ class VPGDiffusion(DiffusionModel):
 
                 from tensorflow.keras.utils import get_custom_objects
 
-                # Register your custom class with Keras
+                # Register custom class with Keras
                 get_custom_objects().update({
                     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
                     'DiffusionMLP': DiffusionMLP,
@@ -257,8 +230,6 @@ class VPGDiffusion(DiffusionModel):
 
 
                 self.model = tf.keras.models.load_model(loadpath, custom_objects=get_custom_objects())
-                # self.ema_model = tf.keras.models.load_model(loadpath.replace(".h5", "_ema.h5"), custom_objects=get_custom_objects())
-                # self.ema_model = tf.keras.models.load_model(loadpath.replace(".keras", "_ema.keras"), custom_objects=get_custom_objects())
 
 
 
@@ -290,7 +261,6 @@ class VPGDiffusion(DiffusionModel):
             'min_logprob_denoising_std': self.min_logprob_denoising_std,
             'eta': self.eta if hasattr(self, 'eta') else None,
             'learn_eta': self.learn_eta,
-            # 'kwargs': {}  # You can include any additional arguments passed via kwargs
         })
         
         return config
@@ -307,7 +277,6 @@ class VPGDiffusion(DiffusionModel):
         min_logprob_denoising_std = config.pop("min_logprob_denoising_std", None)
         eta = config.pop("eta", None)
         learn_eta = config.pop("learn_eta", None)
-        # kwargs = config.pop("kwargs", None)
 
         parent_instance = super().from_config(config)
 
@@ -373,10 +342,8 @@ class VPGDiffusion(DiffusionModel):
             # update actor
             self.actor = self.actor_ft
 
-            # self.actor_ft = copy.deepcopy(self.actor)
             self.actor_ft = tf.keras.models.clone_model(self.actor)
 
-            # self.build_actor(self.actor_ft)
             if "ViT" in METHOD_NAME:            
                 self.build_actor_vision(self.actor_ft)
             else:
@@ -386,7 +353,6 @@ class VPGDiffusion(DiffusionModel):
             self.actor_ft.set_weights(self.actor.get_weights())
 
             for param in self.actor.trainable_variables:
-                # param._trainable = False
                 torch_tensor_requires_grad_(param, False)
             
             logging.info(
@@ -433,24 +399,13 @@ class VPGDiffusion(DiffusionModel):
 
 
         if self.use_ddim:
-            # ft_indices = torch.where(
-            #     index >= (self.ddim_steps - self.ft_denoising_steps)
-            # )[0]
-            # ft_indices = torch_where(index >= (self.ddim_steps - self.ft_denoising_steps))[0]
             ft_indices = torch_where(index >= (self.ddim_steps - self.ft_denoising_steps))
-            # [0]
-            # print("ft_indices = 1: ", ft_indices)
             ft_indices = ft_indices[0]
             
         else:
             
             ft_indices = torch_where(t < self.ft_denoising_steps)
-            # [0]
-            # print("ft_indices = 3: ", ft_indices)
             ft_indices = ft_indices[0]
-            # .numpy()
-            # print("ft_indices = 4: ", ft_indices)
-            # print("type(ft_indices) = ", type(ft_indices))
 
         # Use base policy to query expert model, e.g. for imitation loss
         actor = self.actor if use_base_policy else self.actor_ft
@@ -503,9 +458,7 @@ class VPGDiffusion(DiffusionModel):
 
 
         if self.denoised_clip_value is not None:
-            # torch_tensor_clamp_(x_recon_variable, -self.denoised_clip_value, self.denoised_clip_value)
             x_recon = torch_clamp(x_recon, -self.denoised_clip_value, self.denoised_clip_value)
-            # tf.clip_by_value(x_recon, -self.denoised_clip_value, self.denoised_clip_value)
 
 
             if self.use_ddim:
@@ -529,19 +482,15 @@ class VPGDiffusion(DiffusionModel):
                 etas = torch_unsqueeze(self.eta(cond), 1)
 
             sigma = etas * (1 - alpha_prev) / (1 - alpha) * (1 - alpha / alpha_prev) ** 0.5
-            # torch_tensor_clamp_(sigma, 1e-10, tf.float32.max)
 
             sigma = torch_clamp(sigma, 1e-10, tf.float32.max)
 
             temp_tensor = (1.0 - alpha_prev - sigma**2)
 
-            # dir_xt_coef = tf.sqrt( torch_tensor_clamp_(temp_tensor, 0, tf.float32.max) )
-            # torch_tensor_clamp_(temp_tensor, 0, tf.float32.max)
             temp_tensor = torch_clamp(temp_tensor, 0, tf.float32.max)
             
             dir_xt_coef = temp_tensor ** 0.5
-            
-            # mu = (tf.sqrt(alpha_prev) * x_recon) + dir_xt_coef * noise
+
             mu = (alpha_prev**0.5) * x_recon + dir_xt_coef * noise
 
             var = sigma ** 2
@@ -560,7 +509,6 @@ class VPGDiffusion(DiffusionModel):
 
             logvar = extract(self.ddpm_logvar_clipped, t, x.shape)
             etas = torch_ones_like(mu) # always one for DDPM
-            # .to(mu.device)  
 
         if OUTPUT_VARIABLES:
             print("VPGDiffusion: p_mean_var(): mu.shape = ", mu.shape)
@@ -572,8 +520,7 @@ class VPGDiffusion(DiffusionModel):
 
 
 
-    # override
-    # @torch.no_grad()
+
     @tf.function
     def call(
         self,
@@ -602,15 +549,11 @@ class VPGDiffusion(DiffusionModel):
 
             print("diffusion_vpg.py: VPGDiffusion.call()")
 
-            # device = self.betas.device
             sample_data = cond["state"] if "state" in cond else cond["rgb"]
             B = tf.shape(sample_data)[0]
 
             # Get updated minimum sampling denoising std
             min_sampling_denoising_std = self.get_min_sampling_denoising_std()
-
-            # Loop
-            # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
 
             if DEBUG or NP_RANDOM:
                 x = tf.convert_to_tensor( np.random.randn(B, self.horizon_steps, self.action_dim), dtype=tf.float32 )
@@ -676,21 +619,9 @@ class VPGDiffusion(DiffusionModel):
                     print("VPGDiffusion: call(): noise = ", noise)
 
 
-                # temp_noise_variable = tf.Variable(temp_noise)
-
-                # print("temp_noise = ", temp_noise)
-                # print("temp_noise_variable = ", temp_noise_variable)
-
-                # print("self.randn_clip_value = ", self.randn_clip_value)
-
                 noise = torch_clamp(
                     noise, -self.randn_clip_value, self.randn_clip_value
                 )
-
-                # noise = temp_noise_variable
-
-                # print("std = ", std)
-                # print("noise = ", noise)
 
 
                 x = mean + std * noise
@@ -749,10 +680,6 @@ class VPGDiffusion(DiffusionModel):
 
         # Repeat cond for denoising_steps, flatten batch and time dimensions
         cond = {
-            # key: cond[key]
-            # .unsqueeze(1)
-            # .repeat(1, self.ft_denoising_steps, *(1,) * (cond[key].ndim - 1))
-            # .flatten(start_dim=0, end_dim=1)
             key: torch_flatten(
                 torch_tensor_repeat(
                 torch_unsqueeze(cond[key], 1),
@@ -832,8 +759,6 @@ class VPGDiffusion(DiffusionModel):
 
 
         # Flatten first two dimensions
-        # chains_prev = chains_prev.reshape(-1, self.horizon_steps, self.action_dim)
-        # chains_next = chains_next.reshape(-1, self.horizon_steps, self.action_dim)
         chains_prev = torch_reshape(chains_prev, [-1, self.horizon_steps, self.action_dim])
         chains_next = torch_reshape(chains_next, [-1, self.horizon_steps, self.action_dim])
 
@@ -908,12 +833,6 @@ class VPGDiffusion(DiffusionModel):
         print("diffusion_vpg.py: VPGDiffusion.get_logprobs_subsample()")
 
 
-
-        # print("diffusion_ppo.py: VPGDiffusion.get_logprobs_subsample(): self.model.actor_ft.trainable_variables = ")
-        # for var in self.actor_ft.trainable_variables:
-        #     print(f"Variable: {var.name}, Trainable: {var.trainable}")
-
-
         # Sample t for batch dim, keep it 1-dim
         if self.use_ddim:
             t_single = self.ddim_t[-self.ft_denoising_steps :]
@@ -929,8 +848,6 @@ class VPGDiffusion(DiffusionModel):
         t_all = tf.gather( t_single, denoising_inds )
 
 
-        # t_all = t_single[denoising_inds]
-
 
         if OUTPUT_POSITIONS:
             print("diffusion_vpg.py: VPGDiffusion.get_logprobs_subsample(): 1")
@@ -941,7 +858,6 @@ class VPGDiffusion(DiffusionModel):
                 end=self.ddim_steps,
                 device=self.device,
             )  # only used for DDIM
-            # ddim_indices = ddim_indices_single[denoising_inds]
             ddim_indices = tf.gather(ddim_indices_single, denoising_inds)
         else:
             ddim_indices = None
@@ -967,7 +883,6 @@ class VPGDiffusion(DiffusionModel):
         # Get logprobs with gaussian
         log_prob = dist.log_prob(chains_next)
 
-        # print("VPGDiffusion: get_logprobs_subsample() log_prob = ", log_prob)
 
         if get_ent:
             return log_prob, eta
@@ -997,7 +912,6 @@ class VPGDiffusion(DiffusionModel):
         print("diffusion_vpg.py: VPGDiffusion.loss()")
 
         # Get advantage
-        # with tf.GradientTape() as tape:
         with torch_no_grad() as tape:
             value = torch_squeeze(self.critic(cond))  # (b,)
 
@@ -1005,8 +919,6 @@ class VPGDiffusion(DiffusionModel):
             print("diffusion_vpg.py: VPGDiffusion.loss() value = ", value)
 
 
-        # with torch.no_grad():
-        #     value = self.critic(cond).squeeze()
         advantage = reward - value
 
         # Get logprobs for denoising steps from T-1 to 0

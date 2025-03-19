@@ -157,20 +157,15 @@ class TrainDIPODiffusionAgent(TrainAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
                     samples = (
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
                         ).numpy()
-                        # .cpu()
-                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
 
@@ -255,22 +250,17 @@ class TrainDIPODiffusionAgent(TrainAgent):
                 for _ in range(num_batch):
                     inds = np.random.choice(len(obs_buffer), self.batch_size)
                     obs_b = torch_tensor_float( torch_from_numpy(obs_array[inds]) )
-                                            #    .float().to(self.device)
                     next_obs_b = (
                         torch_tensor_float( torch_from_numpy(next_obs_array[inds]) )
-                        # .float().to(self.device)
                     )
                     actions_b = (
                         torch_tensor_float( torch_from_numpy(action_array[inds]) )
-                        # .float().to(self.device)
                     )
                     rewards_b = (
                         torch_tensor_float( torch_from_numpy(reward_array[inds]) )
-                        # .float().to(self.device)
                     )
                     terminated_b = (
                         torch_tensor_float(  torch_from_numpy(terminated_array[inds]) )
-                        # .float().to(self.device)
                     )
 
                     with tf.GradientTape() as tape:
@@ -285,9 +275,6 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             self.gamma,
                         )
 
-                    # tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)                    
-                    # self.critic_optimizer.step(tf_gradients)
-
 
                     tf_critic_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)                        
                     zip_gradients_critic_params = zip(tf_critic_gradients, self.model.critic.trainable_variables)
@@ -301,23 +288,15 @@ class TrainDIPODiffusionAgent(TrainAgent):
                         inds = np.random.choice(len(obs_buffer), self.batch_size)
                         obs_b = (
                             torch_tensor_float( torch_from_numpy(obs_array[inds]) )
-                            # .to(self.device)
                         )
-                        # actions_b = (
-                        #     torch_tensor_float( torch_from_numpy(action_array[inds]) )
-                        #     # .to(self.device)
-                        # )
 
                         # # get Q-perturbed actions by optimizing
-                        # actions_flat = torch_reshape( actions_b, len(actions_b), -1)
                         
                         actions_b = tf.Variable(
                             torch_tensor_float( torch_from_numpy(action_array[inds]) )
-                            # .to(self.device)
                         )
 
                         # get Q-perturbed actions by optimizing
-                        # actions_flat = torch_reshape( actions_b, actions_b.shape[0], -1)
                         actions_flat = tf.Variable( torch_reshape( actions_b, actions_b.shape[0], -1) , trainable=True)
 
 
@@ -327,9 +306,7 @@ class TrainDIPODiffusionAgent(TrainAgent):
 
                         for _ in range(self.action_gradient_steps):
                             
-                            # # actions_flat.requires_grad_(True)
-                            # actions_flat = torch_tensor_requires_grad_(actions_flat, True)
-
+                            
                             with tf.GradientTape() as tape:
                                 
                                 print("self.model = ", self.model)
@@ -340,12 +317,8 @@ class TrainDIPODiffusionAgent(TrainAgent):
                                 )
                                 q_values = torch_min(q_values_1, other=q_values_2)
                                 action_opt_loss = - torch_sum(q_values)
-                            # .sum()
 
                             tf_gradients = tape.gradient(action_opt_loss, [actions_flat])
-
-                            # actions_optim.zero_grad()
-                            # action_opt_loss.backward(torch_ones_like(action_opt_loss))
 
 
 
@@ -366,21 +339,15 @@ class TrainDIPODiffusionAgent(TrainAgent):
                                 grads = tf_gradients,
                                 norm_type=2,
                             )
-                            # two into one
-                            # actions_optim.step(tf_gradients)
 
-                            # # actions_flat.requires_grad_(False)
-                            # torch_tensor_requires_grad_(actions_flat, False)
+
                             
                         actions_flat = torch_clamp(actions_flat, -1.0, 1.0)
 
                         guided_action = torch_reshape( actions_flat,
                             len(actions_flat), self.horizon_steps, self.action_dim
                         )
-                        # guided_action_np = torch_tensor_detach( guided_action.numpy()
-                        #                                     #    .detach()
-                        #                                     #    .cpu().numpy()
-                        #                                        )
+
                         guided_action_np = guided_action.numpy()
                         
 
@@ -391,30 +358,22 @@ class TrainDIPODiffusionAgent(TrainAgent):
                             # Update policy with collected trajectories
                             loss_actor = self.model.loss_ori(
                                 training,
-                                # guided_action.detach()
                                 torch_tensor_detach(guided_action),
                                 {"state": obs_b}
                             )
                         
-                        # tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
 
                         tf_actor_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)                        
                         zip_gradients_actor_params = zip(tf_actor_gradients, self.model.actor.trainable_variables)
 
-                        # self.actor_optimizer.zero_grad()
-                        # loss_actor.backward()
-
                         if self.max_grad_norm is not None:
                             torch_nn_utils_clip_grad_norm_and_step(
-                                # self.model.actor.parameters()
                                 self.model.actor.trainable_variables,
                                 self.actor_optimizer,
                                 self.max_grad_norm,
-                                # tf_gradients
                                 tf_actor_gradients
                             )
                         else:
-                            # self.actor_optimizer.step(tf_gradients)
                             self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
 
 
@@ -446,45 +405,19 @@ class TrainDIPODiffusionAgent(TrainAgent):
                 time = timer()
                 run_results[-1]["time"] = time
                 if eval_mode:
-                    # log.info(
-                    #     f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
-                    # )
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
+
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
-                    # log.info(
-                    #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss - critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f}"
-                    # )
+
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss - critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | t:{time:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
 
-                    # if self.use_wandb:
-                    #     wandb_log = {
-                    #         "total env step": cnt_train_step,
-                    #         "loss - critic": loss_critic,
-                    #         "avg episode reward - train": avg_episode_reward,
-                    #         "num episode - train": num_episode_finished,
-                    #     }
-                    #     # if type(loss_actor) == torch.Tensor:
-                    #     if isinstance(loss_actor, tf.tensor):
-                    #         wandb_log["loss - actor"] = loss_actor
-                    #     wandb.log(wandb_log, step=self.itr, commit=True)
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

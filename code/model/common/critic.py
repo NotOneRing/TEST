@@ -24,21 +24,13 @@ from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, 
 nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
 nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
 nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
-# from model.rl.gaussian_calql import CalQL_Gaussian
 from model.diffusion.unet import ResidualBlock1D, Unet1D
 from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
-# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
 from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
-# from model.diffusion.diffusion import DiffusionModel
 from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
 from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
 from model.common.modules import SpatialEmb, RandomShiftsAug
 from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-# from model.common.mlp_gmm import GMM_MLP
-# from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
-# from model.common.gaussian import  GaussianModel
-# from model.common.critic import CriticObs, CriticObsAct
-# from model.common.gmm import GMMModel
 
 
 cur_dict = {
@@ -67,20 +59,16 @@ cur_dict = {
 "nn_Identity": nn_Identity, 
 "nn_Tanh": nn_Tanh,
 #part2:
-# "CalQL_Gaussian": CalQL_Gaussian,
 "ResidualBlock1D": ResidualBlock1D,
 "Unet1D": Unet1D,
 "Conv1dBlock": Conv1dBlock, 
 "Upsample1d": Upsample1d, 
 "Downsample1d": Downsample1d, 
 "SinusoidalPosEmb": SinusoidalPosEmb,
-# "DiffusionMLP": DiffusionMLP, 
-# "VisionDiffusionMLP": VisionDiffusionMLP,
 "EtaStateAction": EtaStateAction, 
 "EtaState": EtaState, 
 "EtaAction": EtaAction, 
 "EtaFixed": EtaFixed,
-# "DiffusionModel": DiffusionModel,
 #part3:
 "VitEncoder": VitEncoder, 
 "PatchEmbed1": PatchEmbed1, 
@@ -96,13 +84,6 @@ cur_dict = {
 "MLP": MLP,
 "ResidualMLP": ResidualMLP, 
 "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-# "GMM_MLP": GMM_MLP,
-# "Gaussian_MLP": Gaussian_MLP, 
-# "Gaussian_VisionMLP": Gaussian_VisionMLP,
-# "GaussianModel": GaussianModel,
-# "CriticObs": CriticObs, 
-# "CriticObsAct": CriticObsAct,
-# "GMMModel": GMMModel
 }
 
 
@@ -154,7 +135,6 @@ class CriticObs(tf.keras.Model):
             B = tf.shape(cond["state"])[0]
 
             # flatten history
-            # state = tf.reshape(cond["state"], [B, -1])
             state = torch_tensor_view(cond["state"], [B, -1])
         else:
             state = cond
@@ -275,36 +255,10 @@ class CriticObsAct(tf.keras.Model):
     @classmethod
     def from_config(cls, config):
         print("DiffusionMLP: from_config()")
-
-        # from model.diffusion.mlp_diffusion import DiffusionMLP
-        # from model.diffusion.diffusion import DiffusionModel
-        # from model.common.mlp import MLP, ResidualMLP
-        # from model.diffusion.modules import SinusoidalPosEmb
-        # from model.common.modules import SpatialEmb, RandomShiftsAug
-        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish
-
         from tensorflow.keras.utils import get_custom_objects
 
-        # cur_dict = {
-        #     'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-        #     'DiffusionMLP': DiffusionMLP,
-        #     # 'VPGDiffusion': VPGDiffusion,
-        #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # Custom MLP layer
-        #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
-        #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
-        #     'nn_Linear': nn_Linear,
-        #     'nn_LayerNorm': nn_LayerNorm,
-        #     'nn_Dropout': nn_Dropout,
-        #     'nn_ReLU': nn_ReLU,
-        #     'nn_Mish': nn_Mish,
-        #     'SpatialEmb': SpatialEmb,
-        #     'RandomShiftsAug': RandomShiftsAug,
-        #  }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
-
-        # time_embedding = nn_Sequential.from_config( config.pop("time_embedding") )
         Q1 = tf.keras.layers.deserialize(config.pop("Q1") ,  custom_objects=get_custom_objects() )
         
         config_Q2 = config.pop("Q2")
@@ -332,20 +286,16 @@ class CriticObsAct(tf.keras.Model):
         B = tf.shape(cond["state"])[0]
 
         # flatten history
-        # state = tf.reshape(cond["state"], [B, -1])
         state = torch_tensor_view(cond["state"], [B, -1])
 
         # flatten action
-        # action = tf.reshape(action, [B, -1])
         action = torch_tensor_view(action, [B, -1])
 
-        # x = tf.concat([state, action], axis=-1)
         x = torch_cat((state, action), dim=-1)
         
         q1 = self.Q1(x)
         if hasattr(self, 'Q2'):
             q2 = self.Q2(x)
-            # return tf.squeeze(q1, axis=1), tf.squeeze(q2, axis=1)
             return torch_squeeze(q1, 1), torch_squeeze(q2, 1)
         else:
             return torch_squeeze(q1, 1)
@@ -606,7 +556,7 @@ class CriticObsAct_DACER(tf.keras.Model):
         from tensorflow.keras.utils import get_custom_objects
 
 
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
         Q1 = tf.keras.layers.deserialize(config.pop("Q1") ,  custom_objects=get_custom_objects() )

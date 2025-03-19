@@ -40,21 +40,11 @@ from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, 
 nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
 nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
 nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
-# from model.rl.gaussian_calql import CalQL_Gaussian
-# from model.diffusion.unet import ResidualBlock1D, Unet1D
 from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
-# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
 from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
-# from model.diffusion.diffusion import DiffusionModel
 from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
-# from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
 from model.common.modules import SpatialEmb, RandomShiftsAug
 from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-# from model.common.mlp_gmm import GMM_MLP
-# from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
-# from model.common.gaussian import  GaussianModel
-# from model.common.critic import CriticObs, CriticObsAct
-# from model.common.gmm import GMMModel
 
 
 cur_dict = {
@@ -83,42 +73,25 @@ cur_dict = {
 "nn_Identity": nn_Identity, 
 "nn_Tanh": nn_Tanh,
 #part2:
-# "CalQL_Gaussian": CalQL_Gaussian,
-# "ResidualBlock1D": ResidualBlock1D,
-# "Unet1D": Unet1D,
 "Conv1dBlock": Conv1dBlock, 
 "Upsample1d": Upsample1d, 
 "Downsample1d": Downsample1d, 
 "SinusoidalPosEmb": SinusoidalPosEmb,
-# "DiffusionMLP": DiffusionMLP, 
-# "VisionDiffusionMLP": VisionDiffusionMLP,
 "EtaStateAction": EtaStateAction, 
 "EtaState": EtaState, 
 "EtaAction": EtaAction, 
 "EtaFixed": EtaFixed,
-# "DiffusionModel": DiffusionModel,
 #part3:
 "VitEncoder": VitEncoder, 
 "PatchEmbed1": PatchEmbed1, 
 "PatchEmbed2": PatchEmbed2,
 "MultiHeadAttention": MultiHeadAttention, 
 "TransformerLayer": TransformerLayer, 
-# "MinVit": MinVit,
-# "Gaussian_Transformer": Gaussian_Transformer, 
-# "GMM_Transformer": GMM_Transformer, 
-# "Transformer": Transformer,
 "SpatialEmb": SpatialEmb,
 "RandomShiftsAug": RandomShiftsAug,
 "MLP": MLP,
 "ResidualMLP": ResidualMLP, 
 "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-# "GMM_MLP": GMM_MLP,
-# "Gaussian_MLP": Gaussian_MLP, 
-# "Gaussian_VisionMLP": Gaussian_VisionMLP,
-# "GaussianModel": GaussianModel,
-# "CriticObs": CriticObs, 
-# "CriticObsAct": CriticObsAct,
-# "GMMModel": GMMModel
 }
 
 
@@ -127,7 +100,6 @@ cur_dict = {
 
 
 
-# class ResidualBlock1D(nn.Module):
 class ResidualBlock1D(tf.keras.layers.Layer):
     def __init__(
         self,
@@ -208,25 +180,17 @@ class ResidualBlock1D(tf.keras.layers.Layer):
                     nn_Linear(cond_channels, cond_channels),
                     act,
                     nn_Linear(cond_channels, cond_channels),
-                    # Rearrange("batch t -> batch t 1"),
                     einops_layers_torch_Rearrange("batch t -> batch t 1", name = "ResidualBlock1D_Rearrange1"),
                 ])
             else:
                 self.cond_encoder = nn_Sequential([
                     act,
                     nn_Linear(cond_dim, cond_channels),
-                    # Rearrange("batch t -> batch t 1"),
                     einops_layers_torch_Rearrange("batch t -> batch t 1", name = "ResidualBlock1D_Rearrange2"),
                 ])
         else:
             self.cond_encoder = cond_encoder
 
-
-        # print("residual_conv: in_channels = ", in_channels)
-        # print("residual_conv: out_channels = ", out_channels)
-
-        # make sure dimensions compatible
-        # input is of in_channels dimension
 
         if residual_conv == None:
             # Residual Connection
@@ -263,7 +227,6 @@ class ResidualBlock1D(tf.keras.layers.Layer):
 
         embed = self.cond_encoder(cond)
         if self.cond_predict_scale:
-            # embed = embed.reshape(embed.shape[0], 2, self.out_channels, 1)
             embed = torch_reshape(embed, [embed.shape[0], 2, self.out_channels, 1])
             scale = embed[:, 0, ...]
             bias = embed[:, 1, ...]
@@ -345,10 +308,9 @@ class ResidualBlock1D(tf.keras.layers.Layer):
         cur_dict["Unet1D"] = Unet1D
 
 
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
-        # time_embedding = nn_Sequential.from_config( config.pop("time_embedding") )
         blocks = tf.keras.layers.deserialize(config.pop("blocks") ,  custom_objects=get_custom_objects() )
 
         cond_encoder = tf.keras.layers.deserialize(config.pop("cond_encoder"),  custom_objects=get_custom_objects() )
@@ -366,8 +328,6 @@ class ResidualBlock1D(tf.keras.layers.Layer):
 
 
 
-
-# class Unet1D(nn.Module):
 class Unet1D(tf.keras.Model):
         
     def __init__(
@@ -482,7 +442,7 @@ class Unet1D(tf.keras.Model):
        # Down Modules
         self.down_modules = []
         for ind, (dim_in, dim_out) in enumerate(in_out):
-            # print("len(in_out) - 1 = ", len(in_out) - 1)
+
             is_last = ind >= (len(in_out) - 1)
             self.down_modules.append(
                 nn_Sequential(
@@ -516,8 +476,6 @@ class Unet1D(tf.keras.Model):
 
         self.down_modules = nn_Sequential(self.down_modules)
 
-            # if not is_last:
-            #     self.down_modules[-1].append( Downsample1d(dim_out) )
 
 
        # Up Modules
@@ -556,9 +514,7 @@ class Unet1D(tf.keras.Model):
 
         self.up_modules = nn_Sequential(self.up_modules)
 
-            # if not is_last:
-            #     self.up_modules[-1].append( Upsample1d(dim_in) )
-            
+
         # Final Conv
         self.final_conv = nn_Sequential([
             Conv1dBlock(
@@ -611,28 +567,21 @@ class Unet1D(tf.keras.Model):
         if not tf.is_tensor(time):
             time = tf.convert_to_tensor([time], dtype=tf.int64)
         elif tf.is_tensor(time) and len(time.shape) == 0:
-            # time = tf.expand_dims(time, axis=0)
             time = time[None]
 
 
         # Broadcast to batch dimension
-        # time = tf.broadcast_to(time, [tf.shape(x)[0]])
         time = torch_tensor_expand(time, x.shape[0])
 
         global_feature = self.time_mlp(time)
         global_feature = torch_cat([global_feature, state], dim=-1)
 
 
-        # # print("x = ", x)
-        # # print("global_feature = ", global_feature)
-        # print("x.shape = ", x.shape)
-        # print("global_feature.shape = ", global_feature.shape)
-
 
         # encode local features
         h_local = []
         h = []
-        # for idx, (resnet, resnet2, downsample) in enumerate(self.down_modules):
+
         for idx in range(len(self.down_modules)):
             cur_down_modules = self.down_modules[idx]
             
@@ -641,10 +590,6 @@ class Unet1D(tf.keras.Model):
 
             resnet, resnet2, downsample = cur_down_modules.layers[0], cur_down_modules.layers[1], cur_down_modules.layers[2]
             
-            # print("idx = ", idx)
-            # print("resnet = ", resnet)
-            # print("resnet2 = ", resnet2)
-            # print("downsample = ", downsample)
 
             x = resnet(x, global_feature)
             if idx == 0 and len(h_local) > 0:
@@ -656,7 +601,6 @@ class Unet1D(tf.keras.Model):
         for mid_module in self.mid_modules:
             x = mid_module(x, global_feature)
 
-        # for idx, (resnet, resnet2, upsample) in enumerate(self.up_modules):
         for idx in range(len(self.up_modules)):
             cur_up_modules = self.up_modules[idx]
             resnet, resnet2, upsample = cur_up_modules.layers[0], cur_up_modules.layers[1], cur_up_modules.layers[2]
@@ -664,9 +608,6 @@ class Unet1D(tf.keras.Model):
             x = torch_cat([x, h.pop()], dim=1)  # Concatenate along channel dimension
 
             x = resnet(x, global_feature)
-
-            # print("len(self.up_modules) = ", len(self.up_modules))
-            # print("len(h_local) = ", len(h_local))
 
             if idx == len(self.up_modules) and len(h_local) > 0:
                 x = x + h_local[1]
@@ -685,7 +626,6 @@ class Unet1D(tf.keras.Model):
         if OUTPUT_FUNCTION_HEADER:
             print("Unet1D: get_config()")
 
-        # config = {}
         config = super(Unet1D, self).get_config()
 
 
@@ -756,7 +696,7 @@ class Unet1D(tf.keras.Model):
         cur_dict["ResidualBlock1D"] = ResidualBlock1D
         cur_dict["Unet1D"] = Unet1D
 
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
 

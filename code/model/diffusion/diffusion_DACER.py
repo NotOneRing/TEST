@@ -12,10 +12,6 @@ from model.diffusion.sampling import make_timesteps
 
 log = logging.getLogger(__name__)
 
-# from util.torch_to_tf import torch_mse_loss, torch_min, torch_mean
-
-# from util.torch_to_tf import torch_no_grad, torch_mean
-
 import tensorflow as tf
 
 
@@ -39,12 +35,8 @@ class DACER_Diffusion(DiffusionModel):
 
         # initialize doubel critic networks
         self.critic = critic
-        # .to(self.device)
 
         self.build_critic(self.critic)
-
-        # initialize double target networks
-        # self.target_critic = deepcopy(self.critic)
 
         self.target_critic = tf.keras.models.clone_model(self.critic)
         self.build_critic(self.target_critic)
@@ -200,8 +192,6 @@ class DACER_Diffusion(DiffusionModel):
         self.mean_q1_std = mean_q1_std
         self.mean_q2_std = mean_q2_std
 
-        # self.output_critic_once_flag = False
-
         return q1_loss, q2_loss
 
 
@@ -213,16 +203,10 @@ class DACER_Diffusion(DiffusionModel):
 
         print("diffusion_sac.py: SAC_Diffusion.loss_actor()")
 
-        # action = self.call(
-        #     obs,
-        #     deterministic=False
-        # )
         action = self.get_action(obs, alpha)
 
         print("loss_actor: action = ", action)
 
-
-        # print("loss_actor: action = ", action)
 
         current_q1, _, current_q2, _ = self.critic(obs, action)
 
@@ -235,9 +219,6 @@ class DACER_Diffusion(DiffusionModel):
         if self.output_actor_once_flag:
             print("loss_actor: tf.reduce_mean(loss_actor) = ", tf.reduce_mean(loss_actor) )
 
-        # print("loss_actor: loss_actor = ", loss_actor)
-
-        # self.output_actor_once_flag = False
 
         return torch_mean(loss_actor)
     
@@ -246,7 +227,6 @@ class DACER_Diffusion(DiffusionModel):
 
 
 
-    # @tf.function
     def call(self, cond, deterministic=False):
         """Modifying denoising schedule"""
 
@@ -259,35 +239,23 @@ class DACER_Diffusion(DiffusionModel):
 
             x = tf.random.normal( (B, self.horizon_steps, self.action_dim) )
 
-            # print("self.horizon_steps = ", self.horizon_steps)
-            # print("self.action_dim = ", self.action_dim)
 
             t_all = list(reversed(range(self.denoising_steps)))
             for i, t in enumerate(t_all):
                 t_b = make_timesteps(B, t)
                 
-                # print("t_b.shape = ", t_b.shape)
 
                 mean, logvar = self.p_mean_var(
                     x=x,
                     t=t_b,
-                    # cond=cond,
                     cond_state=cond['state'],
                 )
 
                 std = torch_exp(0.5 * logvar)
 
-                # # Determine noise level
-                # if deterministic and t == 0:
-                #     std = torch_zeros_like(std)
-                # elif deterministic:
-                #     std = torch_clip(std, 1e-3, float('inf'))
-                # else:
-                #     std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
 
                 # Add noise
                 noise = torch_randn_like(x)
-                # noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
                 x = mean + std * noise
 
                 # Clamp action at final step
@@ -302,14 +270,9 @@ class DACER_Diffusion(DiffusionModel):
         import numpy as np
         from sklearn.mixture import GaussianMixture
         total_entropy = []
-        # total_entropy_sum = []
-        # total_entropy_len = []
-        
 
         shape = actions.shape
         actions = actions.reshape(shape[0], shape[1], -1)
-
-        # print("estimate_entropy: actions.shape = ", actions.shape)
 
         for action in actions:
             gmm = GaussianMixture(n_components=num_components, covariance_type='full')
@@ -324,8 +287,6 @@ class DACER_Diffusion(DiffusionModel):
             entropy = -np.sum(weights * np.log(weights)) + np.sum(weights * np.array(entropies))
             total_entropy.append(entropy)
 
-        # final_entropy = sum(total_entropy) / len(total_entropy)
-        # return final_entropy
         total_entropy_sum = sum(total_entropy)
         total_entropy_len = len(total_entropy)
 
@@ -348,11 +309,6 @@ class DACER_Diffusion(DiffusionModel):
         actions = np.transpose(actions, new_order)
 
 
-        # print("actions = ", actions)
-        # print("actions.shape = ", actions.shape)
-        # print("type(actions) = ", type(actions))
-
-
         entropy_sum, entropy_len = self.estimate_entropy( actions )
         
         return entropy_sum, entropy_len
@@ -364,7 +320,6 @@ class DACER_Diffusion(DiffusionModel):
         print("diffusion_sac.py: SAC_Diffusion.loss_temperature()")
 
         self.num_samples = 200
-        # self.num_samples = 20
 
         prev_entropy = self.entropy if hasattr(self, 'entropy') else tf.float32(0.0)
 
@@ -373,21 +328,6 @@ class DACER_Diffusion(DiffusionModel):
             entropy_len_list = []
             B = obs['state'].shape[0]
 
-            # print("obs['state'].shape = ", obs['state'].shape)
-            # print( "type(obs['state']) = ", type(obs['state']) )
-
-            #one by one
-            # for i in range(B):
-            #     cur_obs = tf.gather(obs['state'], i, axis=0)
-            #     cur_obs = torch_unsqueeze(cur_obs, 0)
-            #     # print("cur_obs.shape = ", cur_obs.shape)
-            #     cur_obs = torch_squeeze(cur_obs, 1)
-            #     # print("cur_obs.shape = ", cur_obs.shape)
-            #     cur_obs_dict = {'state': cur_obs}
-
-            #     entropy_sum, entropy_len = self.cal_entropy(cur_obs_dict, alpha, self.num_samples)
-            #     entropy_sum_list.append(entropy_sum)
-            #     entropy_len_list.append(entropy_len)
 
             # parallel for batch dim
             cur_obs_dict = obs
@@ -406,8 +346,6 @@ class DACER_Diffusion(DiffusionModel):
 
         if self.output_alpha_once_flag:
             print("loss_alpha = ", loss_alpha)
-
-        # self.output_alpha_once_flag = False
 
         return loss_alpha
 
@@ -430,7 +368,6 @@ class DACER_Diffusion(DiffusionModel):
 
 
     def build_critic(self, critic, shape1=None, shape2=None):
-        # return
     
         print("build_critic: self.env_name = ", self.env_name)
 
@@ -438,10 +375,7 @@ class DACER_Diffusion(DiffusionModel):
             pass
         # Gym - hopper/walker2d/halfcheetah
         elif self.env_name == "hopper-medium-v2":
-            # hopper_medium
-            # item_actions_copy.shape =  
             shape1 = (128, 4, 3)
-            # cond_copy['state'].shape =  
             shape2 = (128, 1, 11)
         elif self.env_name == "kitchen-complete-v0":
             shape1 = (128, 4, 9)
@@ -457,7 +391,6 @@ class DACER_Diffusion(DiffusionModel):
             shape2 = (128, 1, 17)
         elif self.env_name == "halfcheetah-medium-v2":
             shape1 = (128, 4, 6)
-            # shape1 = (128, 1, 6)
             shape2 = (128, 1, 17)
         # Robomimic - lift/can/square/transport
         elif self.env_name == "lift":
@@ -465,10 +398,7 @@ class DACER_Diffusion(DiffusionModel):
             shape2 = (256, 1, 19)
 
         elif self.env_name == "can":
-            #can 
-            # item_actions_copy.shape =  
             shape1 = (256, 4, 7)
-            # cond_copy['state'].shape =  
             shape2 = (256, 1, 23)
 
         elif self.env_name == "square":
@@ -481,10 +411,7 @@ class DACER_Diffusion(DiffusionModel):
 
         # the same name "avoiding-m5" for D3IL with avoid_m1/m2/m3
         elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
-            #avoid_m1
-            # item_actions_copy.shape =  
             shape1 = (16, 4, 2)
-            # cond_copy['state'].shape =  
             shape2 = (16, 1, 4)
 
         # Furniture-Bench - one_leg/lamp/round_table_low/med
@@ -508,16 +435,7 @@ class DACER_Diffusion(DiffusionModel):
             shape2 = (256, 1, 44)
         
         else:
-            # #one_leg_low
-            # # item_actions_copy.shape =  
-            # shape1 = (256, 8, 10)
-            # # cond_copy['state'].shape =  
-            # shape2 = (256, 1, 58)
             raise RuntimeError("The build shape is not implemented for current dataset")
-
-
-        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
-        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
 
 
         if OUTPUT_VARIABLES:
@@ -535,14 +453,12 @@ class DACER_Diffusion(DiffusionModel):
 
 
         
-        # _ = self.loss_ori(param1, build_dict)
-        # all_one_build_result = 
         next_q1_mean, next_q1_std, next_q2_mean, next_q2_std = critic(
             build_dict,
             param1,
         )
-        # self.loss_ori_build(actor, training=False, x_start = param1, cond=build_dict)
-
+        
+        
         print("all_one_build_result next_q1_mean = ", sum(next_q1_mean))
         print("all_one_build_result next_q1_std = ", sum(next_q1_mean))
         print("all_one_build_result next_q2_mean = ", sum(next_q1_mean))
@@ -554,238 +470,6 @@ class DACER_Diffusion(DiffusionModel):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# def jax_lax_stop_gradient(tensor):
-#     return tf.stop_gradient(tensor)
-
-
-# def jnp_exp(input):
-#     return torch_exp(input)
-
-
-# def jnp_mean(input_tensor1, dim = None, keepdim = False):
-#     return torch_mean(input_tensor1, dim, keepdim)
-    
-
-# def jnp_maximum(input, dim = None, other = None):
-#     return torch_max(input, dim, other)
-
-
-# def jnp_minimum(input, dim = None, other = None):
-#     return torch_min(input, dim, other)
-
-
-# def jnp_clip(input, min = float('-inf'), max = float('inf'), out=None):
-#     return torch_clip(input, min, max, out)
-
-
-# def jnp_where(index_tensor, input_tensor = None, replace_value = None):
-#     return torch_where(index_tensor, input_tensor, replace_value)
-
-
-
-# def jnp_float32(input):
-#     output = tf.cast(input, tf.float32)
-#     return output
-
-
-
-# def jax_value_and_grad():
-#     pass
-
-
-
-# def jax_pure_callback():
-#     pass
-
-
-
-# def jax_lax_cond():
-#     pass
-
-
-
-# def optax_apply_updates():
-#     pass
-
-
-
-
-
-
-
-
-
-#         def stateless_update(
-#             key: jax.Array, state: DACERTrainState, data: Experience
-#         ) -> Tuple[DACERTrainState, Metric]:
-#             obs, action, reward, next_obs, done = data.obs, data.action, data.reward, data.next_obs, data.done
-#             q1_params, q2_params, target_q1_params, target_q2_params, policy_params, log_alpha = state.params
-#             q1_opt_state, q2_opt_state, policy_opt_state, log_alpha_opt_state = state.opt_state
-#             step, mean_q1_std, mean_q2_std = state.step, state.mean_q1_std, state.mean_q2_std
-#             next_eval_key, new_eval_key, new_q1_eval_key, new_q2_eval_key, log_alpha_key = jax.random.split(key, 5)
-
-#             reward *= self.reward_scale
-
-#             # compute target q
-#             next_action = self.agent.get_action(next_eval_key, (policy_params, log_alpha), next_obs)
-#             next_q1_mean, _, next_q1_sample = self.agent.q_evaluate(new_q1_eval_key, target_q1_params, next_obs, next_action)
-#             next_q2_mean, _, next_q2_sample = self.agent.q_evaluate(new_q2_eval_key, target_q2_params, next_obs, next_action)
-#             next_q_mean = jnp_minimum(next_q1_mean, next_q2_mean)
-#             next_q_sample = jnp_where(next_q1_mean < next_q2_mean, next_q1_sample, next_q2_sample)
-#             q_target = next_q_mean 
-#             q_target_sample = next_q_sample 
-#             q_backup = reward + (1 - done) * self.gamma * q_target
-#             q_backup_sample = reward + (1 - done) * self.gamma * q_target_sample
-
-#             # update q
-#             def q_loss_fn(q_params: hk.Params, mean_q_std: float) -> jax.Array:
-#                 q_mean, q_std = self.agent.q(q_params, obs, action)
-#                 new_mean_q_std = jnp_mean(q_std)
-#                 mean_q_std = jax_lax_stop_gradient(
-#                     (mean_q_std == -1.0) * new_mean_q_std +
-#                     (mean_q_std != -1.0) * (self.tau * new_mean_q_std + (1 - self.tau) * mean_q_std)
-#                 )
-#                 q_backup_bounded = jax_lax_stop_gradient(q_mean + jnp_clip(q_backup_sample - q_mean, -3 * mean_q_std, 3 * mean_q_std))
-#                 q_std_detach = jax_lax_stop_gradient(jnp_maximum(q_std, 0))
-#                 epsilon = 0.1
-#                 q_loss = -(mean_q_std ** 2 + epsilon) * jnp.mean(
-#                     q_mean * jax_lax_stop_gradient(q_backup - q_mean) / (q_std_detach ** 2 + epsilon) +
-#                     q_std * ((jax_lax_stop_gradient(q_mean) - q_backup_bounded) ** 2 - q_std_detach ** 2) / (q_std_detach ** 3 + epsilon)
-#                 )
-#                 return q_loss, (q_mean, q_std, mean_q_std)
-
-#             (q1_loss, (q1_mean, q1_std, mean_q1_std)), q1_grads = jax.value_and_grad(q_loss_fn, has_aux=True)(q1_params, mean_q1_std)
-#             (q2_loss, (q2_mean, q2_std, mean_q2_std)), q2_grads = jax.value_and_grad(q_loss_fn, has_aux=True)(q2_params, mean_q2_std)
-            
-#             def cal_entropy():
-#                 keys = jax.random.split(log_alpha_key, self.num_samples)
-#                 actions = jax.vmap(self.agent.get_action, in_axes=(0, None, None), out_axes=1)(keys, (policy_params, jax.lax.stop_gradient(log_alpha)), obs)
-#                 entropy = jax.pure_callback(estimate_entropy, jax.ShapeDtypeStruct((), jnp.float32), actions)
-#                 entropy = jax_lax_stop_gradient(entropy)
-#                 return entropy
-            
-#             prev_entropy = state.entropy if hasattr(state, 'entropy') else jnp_float32(0.0)
-            
-#             entropy = jax_lax_cond(
-#                 step % self.delay_alpha_update == 0,
-#                 cal_entropy,
-#                 lambda: prev_entropy
-#             )
-            
-#             # update policy
-#             def policy_loss_fn(policy_params) -> jax.Array:
-#                 new_action = self.agent.get_action(new_eval_key, (policy_params, log_alpha), obs)
-#                 q1_mean, _ = self.agent.q(q1_params, obs, new_action)
-#                 q2_mean, _ = self.agent.q(q2_params, obs, new_action)
-#                 q_mean = jnp_minimum(q1_mean, q2_mean)
-#                 policy_loss = jnp_mean(-q_mean) 
-#                 return policy_loss
-
-#             total_loss, policy_grads = jax.value_and_grad(policy_loss_fn)(policy_params)
-            
-#             # update alpha
-#             def log_alpha_loss_fn(log_alpha: jax.Array) -> jax.Array:
-#                 log_alpha_loss = -jnp.mean(log_alpha * (-entropy + self.agent.target_entropy))
-#                 return log_alpha_loss
-
-#             # update networks
-#             def param_update(optim, params, grads, opt_state):
-#                 update, new_opt_state = optim.update(grads, opt_state)
-#                 new_params = optax.apply_updates(params, update)
-#                 return new_params, new_opt_state
-
-#             def delay_param_update(optim, params, grads, opt_state):
-#                 return jax.lax.cond(
-#                     step % self.delay_update == 0,
-#                     lambda params, opt_state: param_update(optim, params, grads, opt_state),
-#                     lambda params, opt_state: (params, opt_state),
-#                     params, opt_state
-#                 )
-                
-#             def delay_alpha_param_update(optim, params, opt_state):
-#                 return jax.lax.cond(
-#                     step % self.delay_alpha_update == 0,
-#                     lambda params, opt_state: param_update(optim, params, jax.grad(log_alpha_loss_fn)(params), opt_state),
-#                     lambda params, opt_state: (params, opt_state),
-#                     params, opt_state
-#                 )
-                
-#             def delay_target_update(params, target_params, tau):
-#                 return jax.lax.cond(
-#                     step % self.delay_update == 0,
-#                     lambda target_params: optax.incremental_update(params, target_params, tau),
-#                     lambda target_params: target_params,
-#                     target_params
-#                 )
-
-#             q1_params, q1_opt_state = param_update(self.optim, q1_params, q1_grads, q1_opt_state)
-#             q2_params, q2_opt_state = param_update(self.optim, q2_params, q2_grads, q2_opt_state)
-#             policy_params, policy_opt_state = delay_param_update(self.optim, policy_params, policy_grads, policy_opt_state)
-#             log_alpha, log_alpha_opt_state = delay_alpha_param_update(self.alpha_optim, log_alpha, log_alpha_opt_state)
-
-#             target_q1_params = delay_target_update(q1_params, target_q1_params, self.tau)
-#             target_q2_params = delay_target_update(q2_params, target_q2_params, self.tau)
-
-#             state = DACERTrainState(
-#                 params=DACERParams(q1_params, q2_params, target_q1_params, target_q2_params, policy_params, log_alpha),
-#                 opt_state=DACEROptStates(q1=q1_opt_state, q2=q2_opt_state, policy=policy_opt_state, log_alpha=log_alpha_opt_state),
-#                 step=step + 1,
-#                 mean_q1_std=mean_q1_std,
-#                 mean_q2_std=mean_q2_std,
-#                 entropy=entropy,
-#             )
-
-            
-#             info = {
-#                 "q1_loss": q1_loss,
-#                 "q1_mean": jnp.mean(q1_mean),
-#                 "q1_std": jnp.mean(q1_std),
-#                 "q2_loss": q2_loss,
-#                 "q2_mean": jnp.mean(q2_mean),
-#                 "q2_std": jnp.mean(q2_std),
-#                 "policy_loss": total_loss,
-#                 "alpha": jnp.exp(log_alpha),
-#                 "mean_q1_std": mean_q1_std,
-#                 "mean_q2_std": mean_q2_std,
-#                 "entropy": entropy,
-#             }
-#             return state, info
-
-#         self._implement_common_behavior(stateless_update, self.agent.get_action, self.agent.get_deterministic_action)
-
-#     def get_policy_params(self):
-#         return (self.state.params.policy, self.state.params.log_alpha)
 
 
 

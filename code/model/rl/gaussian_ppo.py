@@ -100,14 +100,6 @@ class PPO_Gaussian(VPG_Gaussian):
 
         ratio = torch_exp(logratio)
 
-        # # get kl difference and whether value clipped
-        # with torch_no_grad() as tape:
-        #     approx_kl = tf.reduce_mean(
-        #         tf.boolean_mask((ratio - 1) - logratio, ~tf.is_nan((ratio - 1) - logratio))
-        #     )
-
-        #     clipfrac = tf.reduce_mean(tf.cast(tf.abs(ratio - 1.0) > self.clip_ploss_coef, tf.float32))
-
 
         # get kl difference and whether value clipped
         with torch_no_grad() as tape:

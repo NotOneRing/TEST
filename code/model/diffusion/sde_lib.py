@@ -7,8 +7,6 @@ From https://github.com/yang-song/score_sde_pytorch
 
 import abc
 
-# import torch
-
 import numpy as np
 
 
@@ -276,8 +274,6 @@ class VPSDE(SDE):
         print("sde_lib.py: VPSDE.discretize()")
 
         timestep = torch_tensor_long(t * (self.N - 1) / self.T)
-        # beta = self.discrete_betas.to(x.device)[timestep]
-        # alpha = self.alphas.to(x.device)[timestep]
         beta = self.discrete_betas[timestep]
         alpha = self.alphas[timestep]
 

@@ -18,24 +18,13 @@ from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, 
 nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
 nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
 nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
-# from model.rl.gaussian_calql import CalQL_Gaussian
 from model.diffusion.unet import ResidualBlock1D, Unet1D
 from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
-# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
-# from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
-# from model.diffusion.diffusion import DiffusionModel
 from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
 from model.common.transformer import GMM_Transformer, Transformer
-# Gaussian_Transformer, 
 from model.common.modules import SpatialEmb, RandomShiftsAug
 from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
 
-
-# from model.common.mlp_gmm import GMM_MLP
-# from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
-# from model.common.gaussian import  GaussianModel
-# from model.common.critic import CriticObs, CriticObsAct
-# from model.common.gmm import GMMModel
 
 
 cur_dict = {
@@ -64,20 +53,12 @@ cur_dict = {
 "nn_Identity": nn_Identity, 
 "nn_Tanh": nn_Tanh,
 #part2:
-# "CalQL_Gaussian": CalQL_Gaussian,
 "ResidualBlock1D": ResidualBlock1D,
 "Unet1D": Unet1D,
 "Conv1dBlock": Conv1dBlock, 
 "Upsample1d": Upsample1d, 
 "Downsample1d": Downsample1d, 
 "SinusoidalPosEmb": SinusoidalPosEmb,
-# # "DiffusionMLP": DiffusionMLP, 
-# # "VisionDiffusionMLP": VisionDiffusionMLP,
-# "EtaStateAction": EtaStateAction, 
-# "EtaState": EtaState, 
-# "EtaAction": EtaAction, 
-# "EtaFixed": EtaFixed,
-# # "DiffusionModel": DiffusionModel,
 #part3:
 "VitEncoder": VitEncoder, 
 "PatchEmbed1": PatchEmbed1, 
@@ -85,7 +66,6 @@ cur_dict = {
 "MultiHeadAttention": MultiHeadAttention, 
 "TransformerLayer": TransformerLayer, 
 "MinVit": MinVit,
-# "Gaussian_Transformer": Gaussian_Transformer, 
 "GMM_Transformer": GMM_Transformer, 
 "Transformer": Transformer,
 "SpatialEmb": SpatialEmb,
@@ -93,13 +73,6 @@ cur_dict = {
 "MLP": MLP,
 "ResidualMLP": ResidualMLP, 
 "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-# "GMM_MLP": GMM_MLP,
-# "Gaussian_MLP": Gaussian_MLP, 
-# "Gaussian_VisionMLP": Gaussian_VisionMLP,
-# "GaussianModel": GaussianModel,
-# "CriticObs": CriticObs, 
-# "CriticObsAct": CriticObsAct,
-# "GMMModel": GMMModel
 }
 
 class GMM_MLP(tf.keras.Model):
@@ -174,14 +147,6 @@ class GMM_MLP(tf.keras.Model):
             learn_fixed_std
         ):  # initialize to fixed_std, separate for each action and mode            
             # Learnable fixed_std
-            # self.logvar = self.add_weight(
-            #     shape=(action_dim * num_modes,),
-            #     initializer=tf.constant_initializer(
-            #         tf.math.log([fixed_std**2] * (action_dim * num_modes))
-            #     ),
-            #     trainable=True,
-            #     name="logvar",
-            # )
             self.logvar = nn_Parameter(
                 torch_log(
                     torch_tensor(
@@ -192,12 +157,6 @@ class GMM_MLP(tf.keras.Model):
             )
 
 
-        # self.logvar_min = tf.constant(
-        #     tf.math.log(std_min**2), dtype=tf.float32, name="logvar_min"
-        # )
-        # self.logvar_max = tf.constant(
-        #     tf.math.log(std_max**2), dtype=tf.float32, name="logvar_max"
-        # )
         self.logvar_min = nn_Parameter(
             torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
         )
@@ -228,7 +187,6 @@ class GMM_MLP(tf.keras.Model):
         if OUTPUT_FUNCTION_HEADER:
             print("GMM_MLP: get_config()")
 
-        # config = {}
         config = super(GMM_MLP, self).get_config()
 
 
@@ -277,7 +235,7 @@ class GMM_MLP(tf.keras.Model):
                 "mlp_logvar": tf.keras.layers.serialize(self.mlp_logvar),
             })
             
-        # print("self.mlp_mean = ", self.mlp_mean)
+
         config.update({
             "mlp_mean": tf.keras.layers.serialize(self.mlp_mean),
             "mlp_weights": tf.keras.layers.serialize(self.mlp_weights),
@@ -321,37 +279,22 @@ class GMM_MLP(tf.keras.Model):
 
         print("mlp_gmm.py: GMM_MLP.call()")
 
-        # B = len(cond["state"])
         B = cond["state"].shape[0]
-
-        # device = cond["state"].device
 
         # flatten history
         state = torch_tensor_view(cond["state"], [B, -1])
 
-        # print("GMM_MLP call(): state = ", state)
-
-        # print("GMM_MLP call(): self.mlp_mean = ", self.mlp_mean)
-
         # mlp
         out_mean = self.mlp_mean(state)
 
-        # if isinstance(self.mlp_mean, MLP):
-        #     for var in self.mlp_mean.moduleList.variables:
-        #         print(f"GMM_MLP.mlp_mean: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
-
-
-        # print("1: GMM_MLP: out_mean = ", out_mean)
 
         out_mean = torch_tanh(out_mean)
 
-        # print("2: GMM_MLP: out_mean = ", out_mean)
 
         out_mean = torch_tensor_view(
             out_mean, [B, self.num_modes, self.horizon_steps * self.action_dim]
         ) # tanh squashing in [-1, 1]
 
-        # print("3: GMM_MLP: out_mean = ", out_mean)
 
         if self.learn_fixed_std:
             out_logvar = torch_clamp(self.logvar, self.logvar_min, self.logvar_max)
@@ -367,53 +310,20 @@ class GMM_MLP(tf.keras.Model):
 
         else:
 
-            # print("self.mlp_logvar = ", self.mlp_logvar)
-            # for var in self.mlp_logvar.moduleList.variables:
-            #     print(f"GMM_MLP.mlp_logvar: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
-
             out_logvar = self.mlp_logvar(state)
-
-            # print("1: GMM_MLP: out_logvar = ", out_logvar)
-
 
             out_logvar = torch_tensor_view( out_logvar,
                 B, self.num_modes, self.horizon_steps * self.action_dim
             )
 
-            # print("2: GMM_MLP: out_logvar = ", out_logvar)
-
             out_logvar = torch_clamp(out_logvar, self.logvar_min, self.logvar_max)
 
-            # print("3: GMM_MLP: out_logvar = ", out_logvar)
-
             out_scale = torch_exp(0.5 * out_logvar)
-
-            # print("GMM_MLP: out_scale = ", out_scale)
-            # print("GMM_MLP: out_scale.shape = ", out_scale.shape)
-
-        # print("self.mlp_weights = ", self.mlp_weights)
-        # if isinstance(self.mlp_weights, MLP):
-        #     for var in self.mlp_weights.moduleList.variables:
-        #         print(f"GMM_MLP.mlp_weights: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
-
-
-
-
-
-        # print("self.mlp_weights = ", self.mlp_weights)
-        # for var in self.mlp_weights.moduleList.variables:
-        #     print(f"2:GMM_MLP.mlp_weights: Layer: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}, var: {var}")
 
 
         out_weights = self.mlp_weights(state)
 
-        # print("out_weights.shape = ", out_weights.shape)
-
         out_weights = torch_tensor_view(out_weights, [B, self.num_modes])
-
-        # print("4: GMM_MLP: out_mean = ", out_mean)
-        # print("4: GMM_MLP: out_mean.shape = ", out_mean.shape)
-
 
 
         return out_mean, out_scale, out_weights

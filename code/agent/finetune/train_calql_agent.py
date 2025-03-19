@@ -8,7 +8,6 @@ import os
 import pickle
 import numpy as np
 
-# import torch
 
 import logging
 import wandb
@@ -19,11 +18,6 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
-
-# from util.torch_to_tf import CosineAWR, torch_optim_Adam, torch_optim_AdamW
-
-# from util.torch_to_tf import torch_from_numpy, torch_tensor, torch_cat,\
-# torch_tensor_exp, torch_rand, torch_tensor_float, torch_no_grad, torch_tensor_item
 
 
 from util.torch_to_tf import *
@@ -50,7 +44,6 @@ class TrainCalQLAgent(TrainAgent):
         self.gamma = cfg.train.gamma
 
         self.actor_lr_scheduler = CosineAWR(
-            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -61,16 +54,13 @@ class TrainCalQLAgent(TrainAgent):
 
         # Optimizer
         self.actor_optimizer = torch_optim_AdamW(
-            # self.model.network.parameters(),
             self.model.network.trainable_variables,
-            # lr=cfg.train.actor_lr,
             lr=self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
         )
 
 
         self.critic_lr_scheduler = CosineAWR(
-            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -80,9 +70,7 @@ class TrainCalQLAgent(TrainAgent):
         )
 
         self.critic_optimizer = torch_optim_AdamW(
-            # self.model.critic.parameters(),
             self.model.critic.trainable_variables,
-            # lr=cfg.train.critic_lr,
             lr=self.critic_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
@@ -219,12 +207,9 @@ class TrainCalQLAgent(TrainAgent):
                 if self.itr < self.n_explore_steps:
                     action_venv = self.venv.action_space.sample()
                 else:
-                    # with torch.no_grad():
                     with torch_no_grad() as tape:
                         cond = {
                             "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                            # .float()
-                            # .to(self.device)
                         }
                         samples = (
                             self.model(
@@ -357,33 +342,21 @@ class TrainCalQLAgent(TrainAgent):
                     )
                     obs_b = (
                         torch_tensor_float( torch_from_numpy(obs_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
                     next_obs_b = (
                        torch_tensor_float( torch_from_numpy(next_obs_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
                     actions_b = (
                         torch_tensor_float( torch_from_numpy(action_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
                     rewards_b = (
                         torch_tensor_float( torch_from_numpy(reward_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
                     terminated_b = (
                         torch_tensor_float( torch_from_numpy(terminated_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
                     reward_to_go_b = (
                         torch_tensor_float( torch_from_numpy(reward_to_go_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
 
                     # Sample from ONLINE buffer
@@ -391,33 +364,21 @@ class TrainCalQLAgent(TrainAgent):
                         inds = np.random.choice(len(obs_buffer), self.batch_size // 2)
                         obs_b_on = (
                             torch_tensor_float( torch_from_numpy(obs_array[inds]) )
-                            # .float()
-                            # .to(self.device)
                         )
                         next_obs_b_on = (
                             torch_tensor_float( torch_from_numpy(next_obs_array[inds]) )
-                            # .float()
-                            # .to(self.device)
                         )
                         actions_b_on = (
                             torch_tensor_float( torch_from_numpy(actions_array[inds]) )
-                            # .float()
-                            # .to(self.device)
                         )
                         rewards_b_on = (
                             torch_tensor_float( torch_from_numpy(rewards_array[inds]) )
-                            # .float()
-                            # .to(self.device)
                         )
                         terminated_b_on = (
                             torch_tensor_float( torch_from_numpy(terminated_array[inds]) )
-                            # .float()
-                            # .to(self.device)
                         )
                         reward_to_go_b_on = (
                             torch_tensor_float( torch_from_numpy(reward_to_go_array[inds]) )
-                            # .float()
-                            # .to(self.device)
                         )
 
                         # merge offline and online data
@@ -440,14 +401,12 @@ class TrainCalQLAgent(TrainAgent):
                                 self.action_dim,
                             )
                         )
-                        # .to(self.device)
                         * 2
                         - 1
                     )  # scale to [-1, 1]
 
                     # Update critic
-                    # alpha = self.log_alpha.exp().item()
-                    alpha = torch_tensor_item( torch_tensor_exp( self.log_alpha ) )
+                    alpha = torch_tensor_item( torch_exp( self.log_alpha ) )
 
                     with tf.GradientTape() as tape:
 
@@ -463,8 +422,7 @@ class TrainCalQLAgent(TrainAgent):
                         )
                     tf_gradients = tape.gradient(loss_critic, self.model.critic.trainable_variables)
 
-                    # self.critic_optimizer.zero_grad()
-                    # loss_critic.backward()
+
                     self.critic_optimizer.step(tf_gradients)
 
                     # Update target critic
@@ -492,13 +450,12 @@ class TrainCalQLAgent(TrainAgent):
                             loss_alpha = self.model.loss_temperature(
                                 {"state": obs_b},
                                 # self.log_alpha.exp(),  # with grad
-                                torch_tensor_exp(self.log_alpha),
+                                torch_exp(self.log_alpha),
                                 self.target_entropy,
                             )
 
                         tf_gradients = tape.gradient(loss_alpha, [self.log_alpha])
-                        # self.log_alpha_optimizer.zero_grad()
-                        # loss_alpha.backward()
+
                         self.log_alpha_optimizer.step(tf_gradients)
 
             # Update lr
@@ -523,17 +480,7 @@ class TrainCalQLAgent(TrainAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
+                    
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
@@ -542,19 +489,7 @@ class TrainCalQLAgent(TrainAgent):
                         f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} "
                         f"| reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t:{time:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss - actor": loss_actor,
-                    #             "loss - critic": loss_critic,
-                    #             "entropy coeff": alpha,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
+                    
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

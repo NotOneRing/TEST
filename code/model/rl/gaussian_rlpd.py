@@ -5,9 +5,6 @@ Use ensemble of critics.
 
 """
 
-# import torch
-# import torch.nn as nn
-
 from util.torch_to_tf import torch_mean, torch_min, torch_randperm, torch_func_functional_call, torch_func_stack_module_state, torch_vmap
 
 from util.torch_to_tf import torch_no_grad, nn_ModuleList, nn_Sequential
@@ -39,27 +36,22 @@ class RLPD_Gaussian(GaussianModel):
         # initialize critic networks
         self.critic_networks = [
             deepcopy(critic)
-            # .to(self.device) 
             for _ in range(n_critics)
         ]
 
-        # self.critic_networks = nn_ModuleList(self.critic_networks)
         self.critic_networks = nn_Sequential(self.critic_networks)
 
         # initialize target networks
         self.target_networks = [
             deepcopy(critic)
-            # .to(self.device) 
             for _ in range(n_critics)
         ]
 
-        # self.target_networks = nn_ModuleList(self.target_networks)
         self.target_networks = nn_Sequential(self.target_networks)
 
         # Construct a "stateless" version of one of the models. It is "stateless" in the sense that the parameters are meta Tensors and do not have storage.
         base_model = deepcopy(self.critic_networks[0])
         self.base_model = base_model
-        # .to("meta")
 
         self.ensemble_params, self.ensemble_buffers = torch_func_stack_module_state(
             self.critic_networks
@@ -81,7 +73,7 @@ class RLPD_Gaussian(GaussianModel):
             sz = len(self.critic_networks)
         perm = torch_randperm(sz)
         ind = perm[:num_ind]
-        # .to(self.device)
+
         return ind
 
     def loss_critic(
@@ -99,7 +91,7 @@ class RLPD_Gaussian(GaussianModel):
 
         # get random critic index
         q1_ind, q2_ind = self.get_random_indices()
-        # with torch.no_grad():
+
         with torch_no_grad() as tape:
             next_actions, next_logprobs = self.call(
                 cond=next_obs,
@@ -120,9 +112,7 @@ class RLPD_Gaussian(GaussianModel):
                 )
 
         # # run all critics in batch
-        # current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
-        #     self.ensemble_params, self.ensemble_buffers, (obs, actions)
-        # )  # (n_critics, B)
+
         # run all critics in batch
         current_q = torch_vmap(self.critic_wrapper,  self.ensemble_params, self.ensemble_buffers, (obs, actions), in_dims=(0, 0, None) )  # (n_critics, B)
 
@@ -142,9 +132,7 @@ class RLPD_Gaussian(GaussianModel):
             get_logprob=True,
         )
         
-        # current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
-        #     self.ensemble_params, self.ensemble_buffers, (obs, action)
-        # )  # (n_critics, B)
+        
 
         current_q = torch_vmap(self.critic_wrapper, self.ensemble_params, self.ensemble_buffers, (obs, action), in_dims=(0, 0, None) )  # (n_critics, B)
 
@@ -156,7 +144,6 @@ class RLPD_Gaussian(GaussianModel):
 
         print("gaussian_rlpd.py: RLPD_Gaussian.loss_temperature()")
 
-        # with torch.no_grad():
 
         with torch_no_grad() as tape:
             _, logprob = self.call(

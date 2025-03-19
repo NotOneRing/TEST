@@ -9,9 +9,6 @@ import einops
 import numpy as np
 
 
-
-# import torch
-
 import tensorflow as tf
 
 
@@ -59,7 +56,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
             self.eta_update_interval = cfg.train.eta_update_interval
 
             self.eta_lr_scheduler = CosineAWR(
-                # self.eta_optimizer,
                 first_cycle_steps=cfg.train.eta_lr_scheduler.first_cycle_steps,
                 cycle_mult=1.0,
                 max_lr=cfg.train.eta_lr,
@@ -69,9 +65,7 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
             )
 
             self.eta_optimizer = torch_optim_AdamW(
-                # self.model.eta.parameters(),
                 self.model.eta.trainable_variables,
-                # lr=cfg.train.eta_lr,
                 lr = self.eta_lr_scheduler,
                 weight_decay=cfg.train.eta_weight_decay,
             )
@@ -108,17 +102,11 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                     )
 
             # Define train or eval - all envs restart
-            # eval_mode = self.itr % (self.val_freq // 5) == 0 and not self.force_train
-            # eval_mode = (self.itr == 2 or self.itr == 4 or self.itr == 6 or self.itr % (self.val_freq) == 0 and not self.force_train)
             eval_mode = self.itr % (self.val_freq) == 0 and not self.force_train
             
             
             print("eval_mode = ", eval_mode)
             
-            
-            
-            # self.model.eval() if eval_mode else self.model.train()
-
             if eval_mode:
                 training=False
             else:
@@ -175,24 +163,15 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
             # Collect a set of trajectories from env
             for step in range(self.n_steps):
 
-                # if DEBUG and step == 1:
-                #     return
-
                 if step % 10 == 0:
                     print(f"Processed step {step} of {self.n_steps}")
 
 
                 # Select action
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
-                    
-                    # Same as the torch version
-                    # print("prev_obs_venv['state'] = ", prev_obs_venv["state"])
 
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
 
 
@@ -216,13 +195,11 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                     # print("type(samples.chains) = ", type(samples.chains) )
 
                     output_venv = (
-                        # samples.trajectories.cpu().numpy()
                         samples.trajectories.numpy()
                     )  # n_env x horizon x act
 
 
                     chains_venv = (
-                        # samples.chains.cpu().numpy()
                         samples.chains.numpy()
                     )  # n_env x denoising x horizon x act
 
@@ -336,11 +313,9 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
 
             # Update models
             if not eval_mode:
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     obs_trajs["state"] = (
                         torch_tensor_float( torch_from_numpy(obs_trajs["state"]) )
-                        # .to(self.device)
                     )
 
                     # Calculate value and logprobs - split into batches to prevent out of memory
@@ -360,7 +335,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                         
                         print("type(self.model.critic) = ", type(self.model.critic))
 
-                        # values = self.model.critic(obs).cpu().numpy().flatten()
                         values = self.model.critic(obs).numpy().flatten()
                         
                         values_trajs = np.vstack(
@@ -368,7 +342,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                         )
                     chains_t = einops.rearrange(
                         torch_tensor_float( torch_from_numpy(chains_trajs) ),
-                        # .to(self.device),
                         "s e t h d -> (s e) t h d",
                     )
                     chains_ts = torch_split(chains_t, self.logprob_batch_size, dim=0)
@@ -382,8 +355,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                     )
                     
                     for obs, chains in zip(obs_ts, chains_ts):
-                        # print("obs = ", obs)
-                        # print("chains = ", chains)
                         if OUTPUT_VARIABLES:
                             print("obs = ", obs)
                             print("chains = ", chains)
@@ -394,7 +365,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                         if OUTPUT_VARIABLES:
                             print("type(logprobs) = ", type(logprobs) )
     
-                        # logprobs = logprobs.cpu().numpy()
                         logprobs = logprobs.numpy()
 
                         logprobs_trajs = np.vstack(
@@ -414,8 +384,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                     # bootstrap value with GAE if not terminal - apply reward scaling with constant if specified
                     obs_venv_ts = {
                         "state": torch_tensor_float( torch_from_numpy(obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
                     advantages_trajs = np.zeros_like(reward_trajs)
                     lastgaelam = 0
@@ -427,7 +395,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
     
                             nextvalues = (
                                 torch_reshape( temp_critic, 1, -1)
-                                # .cpu()
                                 .numpy()
                             )
                         else:
@@ -454,9 +421,7 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                     )
                 }
                 chains_k = einops.rearrange(
-                    torch_tensor_float( torch_tensor(chains_trajs
-                                                    #  , device=self.device
-                                                     ) ),
+                    torch_tensor_float( torch_tensor(chains_trajs ) ),
                     "s e t h d -> (s e) t h d",
                 )
                 returns_k = (
@@ -467,12 +432,9 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                 )
                 advantages_k = (
                     torch_reshape( torch_tensor_float( torch_tensor(advantages_trajs ) ), -1)
-                    # .float()
-                    # .reshape(-1)
                 )
 
                 logprobs_k = torch_tensor_float( torch_tensor(logprobs_trajs ) )
-                # , -1)
 
                 # Update policy and critic
                 total_steps = self.n_steps * self.n_envs * self.model.ft_denoising_steps
@@ -481,9 +443,7 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                     # for each epoch, go through all data in batches
                     flag_break = False
 
-                    inds_k = torch_randperm(total_steps
-                                            # , device=self.device
-                                            )
+                    inds_k = torch_randperm(total_steps)
 
                     print("inds_k = ", inds_k)
                     
@@ -517,26 +477,20 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
 
                         obs_b = {"state": temp_result}
 
-                        # obs_b = {"state": obs_k["state"][batch_inds_b]}
-
-
                         prev_b_indices = tf.stack([batch_inds_b, denoising_inds_b], axis=1)
-                        # chains_prev_b = chains_k[batch_inds_b, denoising_inds_b]
+
                         chains_prev_b = tf.gather_nd(chains_k, prev_b_indices)
 
                         next_b_indices = tf.stack([batch_inds_b, denoising_inds_b + 1], axis=1)
-                        # chains_next_b = chains_k[batch_inds_b, denoising_inds_b + 1]
+
                         chains_next_b = tf.gather_nd(chains_k, next_b_indices)
 
-                        # returns_b = returns_k[batch_inds_b]
-                        # values_b = values_k[batch_inds_b]
-                        # advantages_b = advantages_k[batch_inds_b]
                         returns_b = tf.gather(returns_k, batch_inds_b, axis=0)
                         values_b = tf.gather(values_k, batch_inds_b, axis=0)
                         advantages_b = tf.gather(advantages_k, batch_inds_b, axis=0)
 
                         logprobs_b_indices = tf.stack([batch_inds_b, denoising_inds_b], axis=1)
-                        # logprobs_b = logprobs_k[batch_inds_b, denoising_inds_b]
+
                         if OUTPUT_VARIABLES:
                             print("logprobs_k.shape = ", logprobs_k.shape)
                             print("logprobs_b_indices.shape = ", logprobs_b_indices.shape)
@@ -612,12 +566,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                                 is_used_in_loss = any(var is watched_var for watched_var in watched_vars)
                                 print(f"Variable: {var.name}, Used in loss computation: {is_used_in_loss}")
 
-                        # for var in self.model.actor_ft.trainable_variables:
-                        #     print(f"Variable: {var.name}, Used in loss computation: {var in tape.watched_variables()}")
-
-
-
-
 
                         tf_gradients_actor_ft = tape.gradient(loss, self.model.actor_ft.trainable_variables)                        
                         if OUTPUT_VARIABLES:
@@ -646,31 +594,22 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                             print("self.n_critic_warmup_itr = ", self.n_critic_warmup_itr)
 
                         # # update policy and critic
-                        # self.actor_optimizer.zero_grad()
-                        # self.critic_optimizer.zero_grad()
-                        # if self.learn_eta:
-                        #     self.eta_optimizer.zero_grad()
-                        # loss.backward()
                         if self.itr >= self.n_critic_warmup_itr:
                             if self.max_grad_norm is not None:
                                 torch_nn_utils_clip_grad_norm_and_step(
-                                    # self.model.actor_ft.parameters()
                                     self.model.actor_ft.trainable_variables,
                                     self.actor_optimizer,
                                     self.max_grad_norm,
                                     tf_gradients_actor_ft
                                 )
                             else:
-                                # self.actor_optimizer.step(tf_gradients_actor_ft)
                                 self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
 
 
                             if self.learn_eta and batch % self.eta_update_interval == 0:
-                                # self.eta_optimizer.step(tf_gradients_eta)
                                 self.eta_optimizer.apply_gradients(zip_gradients_eta_params)
 
                         
-                        # self.critic_optimizer.step(tf_gradients_critic)
                         self.critic_optimizer.apply_gradients(zip_gradients_critic_params)
 
 
@@ -690,14 +629,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                     if flag_break:
                         break
 
-                # Explained variation of future rewards using value function
-
-                # print("type(values_k) = ", type(values_k))
-                # print("type(returns_k) = ", type(returns_k))
-
-                # type(values_k) =  <class 'tensorflow.python.framework.ops.EagerTensor'>
-                # type(returns_k) =  <class 'tensorflow.python.framework.ops.EagerTensor'>
-                # y_pred, y_true = values_k.cpu().numpy(), returns_k.cpu().numpy()
                 y_pred, y_true = values_k.numpy(), returns_k.numpy()
 
                 var_y = np.var(y_true)
@@ -752,9 +683,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
             diffusion_min_sampling_std = self.model.get_min_sampling_denoising_std()
 
 
-
-            # print("self.model.__dict__ = ", self.model.__dict__)
-
             if OUTPUT_VARIABLES:
                 print("self.model.actor_ft = ", self.model.actor_ft)
                 print("self.model.critic = ", self.model.critic)
@@ -793,19 +721,6 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval {num_episode_finished:8.4f}"
                     )
 
-                    # print("num episode - eval = ", num_episode_finished)
-
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
@@ -819,35 +734,7 @@ class TrainSACPPODiffusionAgent(TrainPPOAgent):
                         f"| approx kl: {approx_kl:8.4f}, "
                         f"| ratio: {ratio:8.4f}, "
                         f"| clipfrac: {np.mean(clipfracs):8.4f}, "
-                        # f"| actor lr {self.actor_optimizer.param_groups[0]["lr"]:8.4f}, "
-                        # f"| critic lr {self.critic_optimizer.param_groups[0]["lr"]:8.4f} "
                     )
-                    # print("diffusion_min_sampling_std = ", diffusion_min_sampling_std)
-
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss": loss,
-                    #             "pg loss": pg_loss,
-                    #             "value loss": v_loss,
-                    #             "bc loss": bc_loss,
-                    #             "eta": eta,
-                    #             "approx kl": approx_kl,
-                    #             "ratio": ratio,
-                    #             "clipfrac": np.mean(clipfracs),
-                    #             "explained variance": explained_var,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #             "diffusion - min sampling std": diffusion_min_sampling_std,
-                    #             "actor lr": self.actor_optimizer.param_groups[0]["lr"],
-                    #             "critic lr": self.critic_optimizer.param_groups[0][
-                    #                 "lr"
-                    #             ],
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

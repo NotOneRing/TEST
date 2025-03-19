@@ -9,8 +9,6 @@ import pickle
 import numpy as np
 
 
-
-# import torch
 import tensorflow as tf
 
 
@@ -24,12 +22,6 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
-# from util.torch_to_tf import CosineAWR
-
-
-# from util.torch_to_tf import torch_no_grad, torch_optim_AdamW, \
-#     torch_tensor, torch_optim_Adam, torch_tensor_float, torch_from_numpy, \
-#     torch_cat, torch_exp, torch_tensor_item
 
 from util.torch_to_tf import *
 
@@ -53,7 +45,6 @@ class TrainRLPDAgent(TrainAgent):
         # Optimizer
 
         self.actor_lr_scheduler = CosineAWR(
-            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -63,16 +54,13 @@ class TrainRLPDAgent(TrainAgent):
         )
 
         self.actor_optimizer = torch_optim_AdamW(
-            # self.model.network.parameters(),
             self.model.network.trainable_variables,
-            # lr=cfg.train.actor_lr,
             lr = self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
         )
 
 
         self.critic_lr_scheduler = CosineAWR(
-            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -82,9 +70,7 @@ class TrainRLPDAgent(TrainAgent):
         )
 
         self.critic_optimizer = torch_optim_AdamW(
-            # self.model.ensemble_params.values(),  # https://github.com/pytorch/pytorch/issues/120581
             self.model.ensemble_params.trainable_variables,
-            # lr=cfg.train.critic_lr,
             lr = self.critic_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
@@ -111,7 +97,7 @@ class TrainRLPDAgent(TrainAgent):
         # Initialize temperature parameter for entropy
         init_temperature = cfg.train.init_temperature
         self.log_alpha = torch_tensor(np.log(init_temperature))
-        # .to(self.device)
+
         self.log_alpha.requires_grad = True
         self.target_entropy = cfg.train.target_entropy
         self.log_alpha_optimizer = torch_optim_Adam(
@@ -142,11 +128,7 @@ class TrainRLPDAgent(TrainAgent):
             actions, states_and_next, rewards, terminated = batch
             states = states_and_next["state"]
             next_states = states_and_next["next_state"]
-            # obs_buffer_off = states.cpu().numpy()
-            # next_obs_buffer_off = next_states.cpu().numpy()
-            # action_buffer_off = actions.cpu().numpy()
-            # reward_buffer_off = rewards.cpu().numpy().flatten()
-            # terminated_buffer_off = terminated.cpu().numpy().flatten()
+            
             obs_buffer_off = states.numpy()
             next_obs_buffer_off = next_states.numpy()
             action_buffer_off = actions.numpy()
@@ -182,7 +164,6 @@ class TrainRLPDAgent(TrainAgent):
                 self.n_steps if not eval_mode else int(1e5)
             )  # large number for eval mode
 
-            # self.model.eval() if eval_mode else self.model.train()
             if eval_mode:
                 training=False
             else:
@@ -206,20 +187,16 @@ class TrainRLPDAgent(TrainAgent):
                 if self.itr < self.n_explore_steps:
                     action_venv = self.venv.action_space.sample()
                 else:
-                    # with torch.no_grad():
+
                     with torch_no_grad() as tape:
                         cond = {
                             "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                            # .float()
-                            # .to(self.device)
                         }
                         samples = (
                             self.model(
                                 cond=cond,
                                 deterministic=eval_mode,
                             ).numpy()
-                            # .cpu()
-                            # .numpy()
                         )  # n_env x horizon x act
                     action_venv = samples[:, : self.act_steps]
 
@@ -302,55 +279,36 @@ class TrainRLPDAgent(TrainAgent):
                     inds = np.random.choice(len(obs_buffer_off), self.batch_size // 2)
                     obs_b_off = (
                         torch_tensor_float( torch_from_numpy(obs_buffer_off[inds]) )
-                        # .float().to(self.device)
                     )
                     next_obs_b_off = (
                         torch_tensor_float( torch_from_numpy(next_obs_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
                     actions_b_off = (
                         torch_tensor_float( torch_from_numpy(action_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
                     rewards_b_off = (
                         torch_tensor_float( torch_from_numpy(reward_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
                     terminated_b_off = (
                         torch_tensor_float( torch_from_numpy(terminated_buffer_off[inds]) )
-                        # .float()
-                        # .to(self.device)
                     )
 
                     # Sample from ONLINE buffer
                     inds = np.random.choice(len(obs_buffer), self.batch_size // 2)
                     obs_b_on = (
                         torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
                     next_obs_b_on = (
                         torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
                     actions_b_on = (
                         torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
                     rewards_b_on = (
                         torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
                     terminated_b_on = (
                         torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
 
                     # merge offline and online data
@@ -361,7 +319,6 @@ class TrainRLPDAgent(TrainAgent):
                     terminated_b = torch_cat([terminated_b_off, terminated_b_on], dim=0)
 
                     # Update critic
-                    # alpha = self.log_alpha.exp().item()
                     alpha = torch_tensor_item( torch_exp( self.log_alpha) )
 
 
@@ -442,24 +399,10 @@ class TrainRLPDAgent(TrainAgent):
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} \
                         | avg best reward {avg_best_reward:8.4f} | num episode - eval {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
                 else:
-                    # log.info(
-                    #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t:{time:8.4f}"
-                    # )
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} "
                         f"| loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} "
@@ -468,19 +411,7 @@ class TrainRLPDAgent(TrainAgent):
                         f"| num episode - train: {num_episode_finished:8.4f} "
                         f"| t:{time:8.4f} "
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss - actor": loss_actor,
-                    #             "loss - critic": loss_critic,
-                    #             "entropy coeff": alpha,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
+                    
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

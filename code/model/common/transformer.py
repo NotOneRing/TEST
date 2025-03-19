@@ -62,8 +62,6 @@ class Gaussian_Transformer(tf.keras.Model):
             logger.info("Using learned std")
         elif learn_fixed_std:  # learn logvar
             self.logvar = nn_Parameter(
-                # initial_value=np.log(fixed_std ** 2) * np.ones(action_dim, dtype=np.float32),
-                # trainable=True,
                 torch_log(torch_tensor( np.array([fixed_std**2 for _ in range(action_dim)]) )),
                 requires_grad=True,
             )
@@ -71,9 +69,6 @@ class Gaussian_Transformer(tf.keras.Model):
         else:
             logger.info(f"Using fixed std {fixed_std} without learning")
 
-
-        # self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
-        # self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
 
         self.logvar_min = nn_Parameter(
             torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
@@ -114,7 +109,6 @@ class Gaussian_Transformer(tf.keras.Model):
         out, _ = self.transformer(state)  # (B,horizon,output_dim)
 
         # # use the first half of the output as mean
-        # assert self.num_modes == 1, "self.num_modes != 1, the code is not congruent with the PyTorch Version!"
         out_mean = torch_tanh(out[:, :, : self.action_dim])
         out_mean = torch_tensor_view(out_mean, (B, self.horizon_steps * self.action_dim))
 
@@ -137,7 +131,6 @@ class Gaussian_Transformer(tf.keras.Model):
         return out_mean, out_scale
 
 
-# class GMM_Transformer(nn.Module):
 class GMM_Transformer(tf.keras.Model):
     def __init__(
         self,
@@ -171,10 +164,6 @@ class GMM_Transformer(tf.keras.Model):
         elif (
             learn_fixed_std
         ):  # initialize to fixed_std, separate for each action and mode, but same along horizon
-            # self.logvar = tf.Variable(
-            #     initial_value=np.log(fixed_std ** 2) * np.ones(num_modes * action_dim, dtype=np.float32),
-            #     trainable=True,
-            # )
             self.logvar = nn_Parameter(
                 torch_log(
                     torch_tensor(
@@ -187,8 +176,6 @@ class GMM_Transformer(tf.keras.Model):
         else:
             logger.info(f"Using fixed std {fixed_std} without learning")
 
-        # self.logvar_min = tf.Variable(np.log(std_min ** 2), trainable=False)
-        # self.logvar_max = tf.Variable(np.log(std_max ** 2), trainable=False)
         self.logvar_min = nn_Parameter(
             torch_log(torch_tensor( np.array( [std_min**2] ) )), requires_grad=False
         )
@@ -222,11 +209,9 @@ class GMM_Transformer(tf.keras.Model):
         B = len(cond["state"])
 
         # flatten history
-        # state = cond["state"].view(B, -1)
         state = torch_tensor_view( cond["state"], B, -1)
 
         # input to transformer
-        # state = state.unsqueeze(1)  # (B,1,cond_dim)
         state = torch_unsqueeze(state, 1)  # (B,1,cond_dim)
 
         out, out_prehead = self.transformer(
@@ -318,24 +303,6 @@ class Transformer(tf.keras.Model):
         self.model_layers.append(self.cond_obs_emb)
         self.model_layers.append(self.cond_pos_emb)
 
-        # if n_cond_layers > 0:
-        #     self.encoder = nn_TransformerEncoder(
-        #         n_layers=n_cond_layers,
-        #         d_model=n_emb,
-        #         nhead=n_head,
-        #         dim_feedforward=4 * n_emb,
-        #         dropout=p_drop_attn,
-        #         activation=activation,
-        #     )
-
-
-        # else:
-        #     # input dimension of n_emb
-        #     self.encoder = tf.keras.Sequential([
-        #         tf.keras.layers.Dense(4 * n_emb),
-        #         nn_Mish(),
-        #         tf.keras.layers.Dense(n_emb),
-        #     ])
 
         if n_cond_layers > 0:
             encoder_layer = nn_TransformerEncoderLayer(
@@ -393,27 +360,14 @@ class Transformer(tf.keras.Model):
             # torch.nn.Transformer uses additive mask as opposed to multiplicative mask in minGPT
             # therefore, the upper triangle should be -inf and others (including diag) should be 0.
             sz = horizon
-            # mask = (torch_triu(torch_ones(sz, sz)) == 1).transpose(0, 1)
             temp_tensor = (torch_triu(torch_ones(sz, sz)) == 1)
             mask = torch_tensor_transpose(temp_tensor, 0, 1)
-
-            # mask = (
-            #     torch_tensor_float( mask
-            #                     #    .float() 
-            #                        )
-            #     .masked_fill(mask == 0, float("-inf"))
-            #     .masked_fill(mask == 1, float(0.0))
-            # )
 
             temp = torch_tensor_float( mask )
             temp = torch_tensor_masked_fill(temp, mask==0, float("-inf"))
             temp = torch_tensor_masked_fill(temp, mask==1, float(0.0))
-            mask = ( temp                
-                # .masked_fill(mask == 0, float("-inf"))
-                # .masked_fill(mask == 1, float(0.0))
-            )
+            mask = ( temp )
 
-            # self.register_buffer("mask", mask)
             torch_register_buffer(self, "mask", mask)
 
 
@@ -427,12 +381,8 @@ class Transformer(tf.keras.Model):
             temp = torch_tensor_float( mask )
             temp = torch_tensor_masked_fill(temp, mask==0, float("-inf"))
             temp = torch_tensor_masked_fill(temp, mask==1, float(0.0))
-            mask = ( temp                
-                # .masked_fill(mask == 0, float("-inf"))
-                # .masked_fill(mask == 1, float(0.0))
-            )
+            mask = ( temp )
 
-            # self.register_buffer("memory_mask", mask)
             torch_register_buffer(self, "memory_mask", mask)
 
         else:
@@ -446,9 +396,6 @@ class Transformer(tf.keras.Model):
         # constants
         self.T_cond = T_cond
         self.horizon = horizon
-
-        # # init
-        # self.apply(self._init_weights)
 
         for layer in self.model_layers:
             self._init_weights(layer)
@@ -470,7 +417,6 @@ class Transformer(tf.keras.Model):
         )
 
         if isinstance(module, (nn_Linear, nn_Embedding)):
-            # torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
             torch_nn_init_normal_(module.kernel, mean=0.0, std=0.02)
             if isinstance(module, nn_Linear) and module.bias is not None:
                 torch_nn_init_zeros_(module.bias)
@@ -492,14 +438,12 @@ class Transformer(tf.keras.Model):
                     torch_nn_init_zeros_(bias)
         elif isinstance(module, nn_LayerNorm):
             torch_nn_init_zeros_(module.bias)
-            # torch.nn.init.ones_(module.weight)
             torch_nn_init_ones_(module.kernel)
         elif isinstance(module, Transformer):
             torch_nn_init_normal_(module.pos_emb, mean=0.0, std=0.02)
             if module.cond_obs_emb is not None:
                 torch_nn_init_normal_(module.cond_pos_emb, mean=0.0, std=0.02)
         elif isinstance(module, ignore_types):
-            # no param
             pass
         else:
             raise RuntimeError("Unaccounted module {}".format(module))
@@ -507,7 +451,6 @@ class Transformer(tf.keras.Model):
     def call(
         self,
         cond
-        # : torch.Tensor
         ,
         **kwargs,
     ):
@@ -534,9 +477,7 @@ class Transformer(tf.keras.Model):
             :, : self.horizon, :
         ]  # each position maps to a (learnable) vector
 
-        # position_embeddings = position_embeddings.expand(
-        #     cond.shape[0], self.horizon, -1
-        # )  # repeat for batch dimension
+
         position_embeddings = torch_tensor_expand( position_embeddings,
             cond.shape[0], self.horizon, -1
         )  # repeat for batch dimension

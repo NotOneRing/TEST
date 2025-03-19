@@ -24,7 +24,6 @@ def expectile_loss(diff, expectile=0.8):
     print("diffusion_idql.py: expectile_loss()")
 
     weight = torch_where(diff > 0, expectile, (1 - expectile))
-    # weight = tf.where(diff > 0, expectile, (1 - expectile))
 
     return weight * (diff**2)
 
@@ -46,7 +45,6 @@ class IDQLDiffusion(RWRDiffusion):
         self.target_q = copy.deepcopy(critic_q)
         self.critic_v = critic_v
 
-        # assign actor
         self.actor = self.network
 
     # ---------- RL training ----------#
@@ -114,7 +112,6 @@ class IDQLDiffusion(RWRDiffusion):
             target_param.assign(target_param * (1.0 - tau) + source_param * tau)
 
 
-    # override
     def p_losses(
         self,
         x_start,
@@ -131,8 +128,6 @@ class IDQLDiffusion(RWRDiffusion):
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
 
         # Predict
-        # x_recon = self.network(x_noisy, t, cond=cond)
-        print("self.network = ", self.network)
 
         x_recon = self.network( [x_noisy, t, cond['state']], training=training)
 
@@ -167,12 +162,6 @@ class IDQLDiffusion(RWRDiffusion):
             cond_shape_repeat_dims = tuple(1 for _ in cond["state"].shape)
             B, T, D = cond["state"].shape
             S = num_sample
-
-            # cond_repeat = cond["state"][None].repeat(num_sample, *cond_shape_repeat_dims)
-
-            # cond_repeat = tf.tile(cond["state"][None], [num_sample] + [1] * len(cond["state"].shape))
-
-            # cond_repeat = tf.reshape(cond_repeat, [-1, T, D])  # [B*S, T, D]
 
             cond_repeat = torch_tensor_repeat( cond["state"][None], num_sample, *cond_shape_repeat_dims)
 
@@ -225,15 +214,10 @@ class IDQLDiffusion(RWRDiffusion):
                 assert len( tau_weights.shape.as_list() ) >= 2, "tau_weights.shape.as_list() should be at least 2"
 
                 # select a sample from DP probabilistically -- sample index per batch and compile
-                # sample_indices = tf.random.categorical(tau_weights.T, 1)  # [B, 1]
                 
                 sample_indices = torch_multinomial(tf.transpose(tau_weights), 1)  # [B, 1]
                 
                 # dummy dimension @ dim 0 for batched indexing
-                # sample_indices = tf.expand_dims(sample_indices, 0)  # [1, B, 1]
-                # sample_indices = tf.expand_dims(sample_indices, -1)  # [1, B, 1, 1]
-
-                # sample_indices = tf.tile(sample_indices, [S, 1, H, A])
                 sample_indices = sample_indices[None, :, None]  # [1, B, 1, 1]
                 sample_indices = torch_tensor_repeat(sample_indices, S, 1, H, A)
 

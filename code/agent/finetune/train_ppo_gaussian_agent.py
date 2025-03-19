@@ -8,9 +8,6 @@ import pickle
 import einops
 import numpy as np
 
-
-
-# import torch
 import tensorflow as tf
 
 
@@ -60,8 +57,6 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
             
-            # self.model.eval() if eval_mode else self.model.train()
-
             if eval_mode:
                 training = False
             else:
@@ -106,19 +101,15 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                     print(f"Processed step {step} of {self.n_steps}")
 
                 # Select action
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
                     samples = self.model(
                         cond=cond,
                         deterministic=eval_mode,
                         training = training
                     )
-                    # output_venv = samples.cpu().numpy()
                     output_venv = samples.numpy()
 
                 action_venv = output_venv[:, : self.act_steps]
@@ -193,7 +184,6 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
 
             # Update models
             if not eval_mode:
-                # with torch.no_grad():
                 with torch_no_grad() as tape:
                     obs_trajs["state"] = (
                         torch_tensor_float( torch_from_numpy(obs_trajs["state"]) )
@@ -213,7 +203,6 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                         obs_ts[i]["state"] = obs_t
                     values_trajs = np.empty((0, self.n_envs))
                     for obs in obs_ts:
-                        # values = self.model.critic(obs).cpu().numpy().flatten()
                         values = self.model.critic(obs).numpy().flatten()
 
                         values_trajs = np.vstack(
@@ -222,7 +211,6 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                     
                     samples_t = einops.rearrange(
                         torch_tensor_float( torch_from_numpy(samples_trajs) ),
-                        #    .float().to(self.device),
                         "s e h d -> (s e) h d",
                     )
 
@@ -230,7 +218,6 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                     logprobs_trajs = np.empty((0))
                     for obs_t, samples_t in zip(obs_ts, samples_ts):
                         logprobs = (
-                            # self.model.get_logprobs(obs_t, samples_t)[0].cpu().numpy()
                             self.model.get_logprobs(obs_t, samples_t)[0].numpy()
                         )
                         logprobs_trajs = np.concatenate(
@@ -250,19 +237,13 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                     # bootstrap value with GAE if not terminal - apply reward scaling with constant if specified
                     obs_venv_ts = {
                         "state": torch_tensor_float( torch_from_numpy(obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
                     advantages_trajs = np.zeros_like(reward_trajs)
                     lastgaelam = 0
                     for t in reversed(range(self.n_steps)):
                         if t == self.n_steps - 1:
                             nextvalues = (
-                                # self.model.critic(obs_venv_ts)
-                                # .reshape(1, -1)
                                 torch_reshape( self.model.critic(obs_venv_ts), 1, -1).numpy()
-                                # .cpu()
-                                # .numpy()
                             )
                         else:
                             nextvalues = values_trajs[t + 1]
@@ -316,17 +297,8 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                         end = start + self.batch_size
                         inds_b = inds_k[start:end]  # b for batch
                         
-
-                        # obs_b = {"state": obs_k["state"][inds_b]}
                         temp_result = tf.gather(obs_k["state"], inds_b, axis=0)
                         obs_b = {"state": temp_result}
-
-
-                        # samples_b = samples_k[inds_b]
-                        # returns_b = returns_k[inds_b]
-                        # values_b = values_k[inds_b]
-                        # advantages_b = advantages_k[inds_b]
-                        # logprobs_b = logprobs_k[inds_b]
 
                         samples_b = tf.gather(samples_k, inds_b, axis=0)
                         returns_b = tf.gather(returns_k, inds_b, axis=0)
@@ -374,9 +346,6 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
 
 
                         # # update policy and critic
-                        # self.actor_optimizer.zero_grad()
-                        # self.critic_optimizer.zero_grad()
-                        # loss.backward()
                         if self.itr >= self.n_critic_warmup_itr:
                             if self.max_grad_norm is not None:
                                 torch_nn_utils_clip_grad_norm_and_step(
@@ -387,8 +356,6 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                                 )
                             else:
                                 self.actor_optimizer.apply_gradients(zip_tf_gradients_actor_ft)
-                        #         self.actor_optimizer.step(tf_gradients_actor_ft)
-                        # self.critic_optimizer.step(tf_gradients_critic)
 
                         self.critic_optimizer.apply_gradients(zip_tf_gradients_critic)
 
@@ -456,17 +423,7 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
+                    
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
@@ -480,25 +437,7 @@ class TrainPPOGaussianAgent(TrainPPOAgent):
                         f"| clipfrac:{np.mean(clipfracs):8.4f} | explained variance:{explained_var:8.4f} "
                         f"| num episode - train: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss": loss,
-                    #             "pg loss": pg_loss,
-                    #             "value loss": v_loss,
-                    #             "entropy": -entropy_loss,
-                    #             "std": std,
-                    #             "approx kl": approx_kl,
-                    #             "ratio": ratio,
-                    #             "clipfrac": np.mean(clipfracs),
-                    #             "explained variance": explained_var,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
+                    
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

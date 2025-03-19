@@ -12,10 +12,6 @@ from model.diffusion.sampling import make_timesteps
 
 log = logging.getLogger(__name__)
 
-# from util.torch_to_tf import torch_mse_loss, torch_min, torch_mean
-
-# from util.torch_to_tf import torch_no_grad, torch_mean
-
 import tensorflow as tf
 
 
@@ -39,27 +35,6 @@ def is_broadcastable(src, dst):
 
 
 
-
-# class DistributionalQNet2(tf.keras.Model):
-#     def __init__(self, 
-#     activation = "ReLU",
-#     output_activation = "Identity",
-#     hidden_sizes = [256, 256, 256],
-#     name: str = None):
-#         self.hidden_sizes = hidden_sizes
-#         self.activation_type = activation_type
-#         self.out_activation = out_activation
-
-#         dim_list = list(*self.hidden_sizes) + [2]
-
-#         self.mlp =  MLP(dim_list = dim_list, activation_type=self.activation, out_activation_type=self.output_activation)
-
-#     def call(self, obs, act):
-#         inputs = torch_cat((obs, act), dim=-1)
-#         output = self.mlp(inputs)
-#         value_mean = output[..., 0]
-#         value_std = tf.math.softplus(output[..., 1])
-#         return value_mean, value_std
 
 
 
@@ -85,7 +60,6 @@ class DACER_SinusoidalPosEmb(tf.keras.layers.Layer):
 
 
     def call(self, t, theta: int = 10000, batch_shape = None):
-    # (t, *, dim: int, theta: int = 10000, batch_shape = None):
         print("diffusion_DACER_ORIGINAL.py: ", "scaled_sinusoidal_encoding")
         
         assert self.dim % 2 == 0
@@ -193,7 +167,6 @@ class DACER_Original_Diffusion(DiffusionModel):
 
         # initialize doubel critic networks
         self.critic = critic
-        # .to(self.device)
 
         self.build_actor(self.critic)
 
@@ -249,7 +222,6 @@ class DACER_Original_Diffusion(DiffusionModel):
 
         self.reward_scale = 0.2
 
-        # with torch_no_grad() as tape:
 
         next_actions = self.get_action(next_obs, alpha)
 
@@ -295,8 +267,7 @@ class DACER_Original_Diffusion(DiffusionModel):
                 int(mean_q_std != -1.0) * (self.tau * new_mean_q_std + (1 - self.tau) * mean_q_std)
             )
             q_backup_bounded = tf.stop_gradient(q_mean + tf.clip_by_value(q_backup_sample - q_mean, -3 * mean_q_std, 3 * mean_q_std))
-            # print("q_std = ", q_std)
-            # print("type(q_std) = ", type(q_std))
+
             q_std_detach = tf.stop_gradient( torch_max(q_std, other = 0.0))
             epsilon = 0.1
             q_loss = -(mean_q_std ** 2 + epsilon) * tf.reduce_mean(
@@ -324,23 +295,14 @@ class DACER_Original_Diffusion(DiffusionModel):
 
         print("diffusion_DACER_ORIGINAL.py: diffusion_DACER_ORIGINAL.loss_actor()")
 
-        # action = self.call(
-        #     obs,
-        #     deterministic=False
-        # )
+
         action = self.get_action(obs, alpha)
 
 
-        # print("loss_actor: action = ", action)
-
         current_q1, _, current_q2, _ = self.critic(obs, action)
-
-        # print("loss_actor: current_q1 = ", current_q1)
-        # print("loss_actor: current_q2 = ", current_q2)
 
         loss_actor = -torch_min(current_q1, current_q2)
 
-        # print("loss_actor: loss_actor = ", loss_actor)
 
         return torch_mean(loss_actor)
     
@@ -362,35 +324,22 @@ class DACER_Original_Diffusion(DiffusionModel):
 
             x = tf.random.normal( (B, self.horizon_steps, self.action_dim) )
 
-            # print("self.horizon_steps = ", self.horizon_steps)
-            # print("self.action_dim = ", self.action_dim)
-
             t_all = list(reversed(range(self.denoising_steps)))
             for i, t in enumerate(t_all):
                 t_b = make_timesteps(B, t)
                 
-                # print("t_b.shape = ", t_b.shape)
 
                 mean, logvar = self.p_mean_var(
                     x=x,
                     t=t_b,
-                    # cond=cond,
                     cond_state=cond['state'],
                 )
 
                 std = torch_exp(0.5 * logvar)
 
-                # # Determine noise level
-                # if deterministic and t == 0:
-                #     std = torch_zeros_like(std)
-                # elif deterministic:
-                #     std = torch_clip(std, 1e-3, float('inf'))
-                # else:
-                #     std = torch_clip(std, self.min_sampling_denoising_std, float('inf'))
 
                 # Add noise
                 noise = torch_randn_like(x)
-                # noise = torch_clamp(noise, -self.randn_clip_value, self.randn_clip_value)
                 x = mean + std * noise
 
                 # Clamp action at final step
@@ -405,14 +354,10 @@ class DACER_Original_Diffusion(DiffusionModel):
         import numpy as np
         from sklearn.mixture import GaussianMixture
         total_entropy = []
-        # total_entropy_sum = []
-        # total_entropy_len = []
         
 
         shape = actions.shape
         actions = actions.reshape(shape[0], shape[1], -1)
-
-        # print("estimate_entropy: actions.shape = ", actions.shape)
 
         for action in actions:
             gmm = GaussianMixture(n_components=num_components, covariance_type='full')
@@ -427,8 +372,6 @@ class DACER_Original_Diffusion(DiffusionModel):
             entropy = -np.sum(weights * np.log(weights)) + np.sum(weights * np.array(entropies))
             total_entropy.append(entropy)
 
-        # final_entropy = sum(total_entropy) / len(total_entropy)
-        # return final_entropy
         total_entropy_sum = sum(total_entropy)
         total_entropy_len = len(total_entropy)
 
@@ -449,11 +392,6 @@ class DACER_Original_Diffusion(DiffusionModel):
         actions = np.transpose(actions, new_order)
 
 
-        # print("actions = ", actions)
-        # print("actions.shape = ", actions.shape)
-        # print("type(actions) = ", type(actions))
-
-
         entropy_sum, entropy_len = self.estimate_entropy( actions )
         
         return entropy_sum, entropy_len
@@ -465,7 +403,6 @@ class DACER_Original_Diffusion(DiffusionModel):
         print("diffusion_DACER_ORIGINAL.py: diffusion_DACER_ORIGINAL.loss_temperature()")
 
         self.num_samples = 200
-        # self.num_samples = 20
 
         prev_entropy = self.entropy if hasattr(self, 'entropy') else tf.float32(0.0)
 
@@ -474,21 +411,6 @@ class DACER_Original_Diffusion(DiffusionModel):
             entropy_len_list = []
             B = obs['state'].shape[0]
 
-            # print("obs['state'].shape = ", obs['state'].shape)
-            # print( "type(obs['state']) = ", type(obs['state']) )
-
-            #one by one
-            # for i in range(B):
-            #     cur_obs = tf.gather(obs['state'], i, axis=0)
-            #     cur_obs = torch_unsqueeze(cur_obs, 0)
-            #     # print("cur_obs.shape = ", cur_obs.shape)
-            #     cur_obs = torch_squeeze(cur_obs, 1)
-            #     # print("cur_obs.shape = ", cur_obs.shape)
-            #     cur_obs_dict = {'state': cur_obs}
-
-            #     entropy_sum, entropy_len = self.cal_entropy(cur_obs_dict, alpha, self.num_samples)
-            #     entropy_sum_list.append(entropy_sum)
-            #     entropy_len_list.append(entropy_len)
 
             # parallel for batch dim
             cur_obs_dict = obs

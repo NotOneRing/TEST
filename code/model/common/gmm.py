@@ -4,7 +4,6 @@ GMM policy parameterization.
 """
 
 import tensorflow as tf
-# import tensorflow_probability as tfp
 
 import logging
 
@@ -27,21 +26,15 @@ from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, 
 nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
 nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
 nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
-# from model.rl.gaussian_calql import CalQL_Gaussian
 from model.diffusion.unet import ResidualBlock1D, Unet1D
 from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
-# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
 from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
-# from model.diffusion.diffusion import DiffusionModel
 from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
 from model.common.transformer import GMM_Transformer, Transformer
 from model.common.modules import SpatialEmb, RandomShiftsAug
 from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
 from model.common.mlp_gmm import GMM_MLP
-# from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
-# from model.common.gaussian import  GaussianModel
 from model.common.critic import CriticObs, CriticObsAct
-# from model.common.gmm import GMMModel
 
 
 cur_dict = {
@@ -70,20 +63,16 @@ cur_dict = {
 "nn_Identity": nn_Identity, 
 "nn_Tanh": nn_Tanh,
 #part2:
-# "CalQL_Gaussian": CalQL_Gaussian,
 "ResidualBlock1D": ResidualBlock1D,
 "Unet1D": Unet1D,
 "Conv1dBlock": Conv1dBlock, 
 "Upsample1d": Upsample1d, 
 "Downsample1d": Downsample1d, 
 "SinusoidalPosEmb": SinusoidalPosEmb,
-# "DiffusionMLP": DiffusionMLP, 
-# "VisionDiffusionMLP": VisionDiffusionMLP,
 "EtaStateAction": EtaStateAction, 
 "EtaState": EtaState, 
 "EtaAction": EtaAction, 
 "EtaFixed": EtaFixed,
-# "DiffusionModel": DiffusionModel,
 #part3:
 "VitEncoder": VitEncoder, 
 "PatchEmbed1": PatchEmbed1, 
@@ -91,7 +80,6 @@ cur_dict = {
 "MultiHeadAttention": MultiHeadAttention, 
 "TransformerLayer": TransformerLayer, 
 "MinVit": MinVit,
-# "Gaussian_Transformer": Gaussian_Transformer, 
 "GMM_Transformer": GMM_Transformer, 
 "Transformer": Transformer,
 "SpatialEmb": SpatialEmb,
@@ -100,12 +88,8 @@ cur_dict = {
 "ResidualMLP": ResidualMLP, 
 "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
 "GMM_MLP": GMM_MLP,
-# "Gaussian_MLP": Gaussian_MLP, 
-# "Gaussian_VisionMLP": Gaussian_VisionMLP,
-# "GaussianModel": GaussianModel,
 "CriticObs": CriticObs, 
 "CriticObsAct": CriticObsAct,
-# "GMMModel": GMMModel
 }
 
 
@@ -138,14 +122,7 @@ class GMMModel(tf.keras.Model):
         self.network_path = network_path
         self.device = device
 
-        # if network_path is not None:
-        #     print("self = ", self)
-        #     print("self.network = ", self.network)
-        #     print("checkpoint = ", checkpoint)
-            
-        #     checkpoint = tf.train.Checkpoint(model=self)
-        #     checkpoint.restore(network_path).expect_partial()
-        #     logging.info("Loaded actor from %s", network_path)
+
         if self.network_path is not None:
             print("self.network_path is not None")
             loadpath = network_path
@@ -157,26 +134,13 @@ class GMMModel(tf.keras.Model):
             else:
                 loadpath = network_path.replace('.pt', '.keras')
 
-            # from model.common.mlp_gaussian import Gaussian_MLP
-            # from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-            # from model.diffusion.modules import SinusoidalPosEmb
-            # from model.common.modules import SpatialEmb, RandomShiftsAug
-            # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, nn_Dropout, nn_ReLU, nn_Mish, nn_Identity
-
-            # from model.diffusion.unet import Downsample1d, ResidualBlock1D, Conv1dBlock, Unet1D
-
-            # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_Mish, nn_ReLU,\
-            # nn_Conv1d, nn_Identity, einops_layers_torch_Rearrange
-
 
             from tensorflow.keras.utils import get_custom_objects
 
-            # Register your custom class with Keras
+            # Register custom class with Keras
             get_custom_objects().update(cur_dict)
 
 
-
-            # self = tf.keras.models.load_model(loadpath,  custom_objects=get_custom_objects() )
 
             final_load_path = loadpath.replace(".keras", "_network.keras")
             print("final_load_path = ", final_load_path)
@@ -209,7 +173,6 @@ class GMMModel(tf.keras.Model):
     def get_config(self):
         config = super(GMMModel, self).get_config()
 
-        # config = {}
 
         if OUTPUT_FUNCTION_HEADER:
             print("get_config: gmm.py:GMMModel.get_config()")
@@ -271,46 +234,13 @@ class GMMModel(tf.keras.Model):
     def from_config(cls, config):
         """Creates the layer from its config."""
 
-        # from model.common.mlp_gaussian import Gaussian_MLP
-
-        # # from model.diffusion.diffusion import DiffusionModel
-        # from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-        # from model.diffusion.modules import SinusoidalPosEmb
-        # from model.common.modules import SpatialEmb, RandomShiftsAug
-        # from util.torch_to_tf import nn_Sequential, nn_Linear, nn_LayerNorm, \
-        #     nn_Dropout, nn_ReLU, nn_Mish, nn_Identity, nn_Conv1d, nn_ConvTranspose1d
-
-        # from model.diffusion.unet import Unet1D, ResidualBlock1D
-
 
         from tensorflow.keras.utils import get_custom_objects
 
-        # cur_dict = {
-        #     # 'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
-        #     'Gaussian_MLP': Gaussian_MLP,
-        #     # 'VPGDiffusion': VPGDiffusion,
-        #     'SinusoidalPosEmb': SinusoidalPosEmb,   
-        #     'MLP': MLP,                            # Custom MLP layer
-        #     'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
-        #     'nn_Sequential': nn_Sequential,        # Custom Sequential class
-        #     "nn_Identity": nn_Identity,
-        #     'nn_Linear': nn_Linear,
-        #     'nn_LayerNorm': nn_LayerNorm,
-        #     'nn_Dropout': nn_Dropout,
-        #     'nn_ReLU': nn_ReLU,
-        #     'nn_Mish': nn_Mish,
-        #     'SpatialEmb': SpatialEmb,
-        #     'RandomShiftsAug': RandomShiftsAug,
-        #     "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-        #     "Unet1D": Unet1D,
-        #     "ResidualBlock1D": ResidualBlock1D,
-        #     "nn_Conv1d": nn_Conv1d,
-        #     "nn_ConvTranspose1d": nn_ConvTranspose1d
-        #  }
-        # Register your custom class with Keras
+
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
-        # print('get_custom_objects() = ', get_custom_objects())
 
         network = config.pop("network")
 
@@ -329,11 +259,6 @@ class GMMModel(tf.keras.Model):
         else:
             raise RuntimeError("name not recognized")
 
-
-        # if name in cur_dict:
-        #     cur_dict[name].from_config(network)
-        # else:
-        #     raise RuntimeError("name not recognized")
 
 
         result = cls(
@@ -459,11 +384,7 @@ class GMMModel(tf.keras.Model):
         """
 
         print("gmm.py: GMMModel.forward_train()")
-        # print("self.network = ", self.network)
         means, scales, logits = self.network(cond, training=training)
-
-
-        # print("forward_train: logits = ", logits)
 
 
         if deterministic:
@@ -473,7 +394,6 @@ class GMMModel(tf.keras.Model):
         # mixture components - make sure that `batch_shape` for the distribution is equal to (batch_size, num_modes) since MixtureSameFamily expects this shape
         # Each mode has mean vector of dim T*D
 
-        # component_distribution = tfp.distributions.Normal(loc=means, scale=scales)
         component_distribution = Normal(means, scales)
 
         component_distribution = Independent(component_distribution, 1)
@@ -530,7 +450,7 @@ class GMMModel(tf.keras.Model):
         """
 
         print("gmm.py: GMMModel.forward_train()")
-        # print("network = ", network)
+
         means, scales, logits = network(cond, training=training)
         if deterministic:
             # low-noise for all Gaussian dists
@@ -585,13 +505,9 @@ class GMMModel(tf.keras.Model):
             deterministic=deterministic,
         )
 
-        # print("type(dist) = ", type(dist))
-        # print("dist = ", dist)
 
         sampled_action = dist.sample()
 
-        # print("sampled_action = ", sampled_action)
-        # print("sampled_action.shape = ", sampled_action.shape)
 
         sampled_action = torch_tensor_view(sampled_action, [B, T, -1])
         return sampled_action
@@ -620,31 +536,10 @@ class GMMModel(tf.keras.Model):
             params_dict = pickle.load(file)
 
 
-
-        # print loaded content
-
         if OUTPUT_VARIABLES:
             print("params_dict = ", params_dict)
 
-        # # Square
-        # 'network.logvar_min'
-        # 'network.logvar_max'
-        # 'network.mlp_mean.layers.0.weight'
-        # 'network.mlp_mean.layers.0.bias'
-        # 'network.mlp_mean.layers.1.l1.weight'
-        # 'network.mlp_mean.layers.1.l1.bias'
-        # 'network.mlp_mean.layers.1.l2.weight'
-        # 'network.mlp_mean.layers.1.l2.bias'
-        # 'network.mlp_mean.layers.2.weight'
-        # 'network.mlp_mean.layers.2.bias'
-        # 'network.mlp_weights.layers.0.weight'
-        # 'network.mlp_weights.layers.0.bias'
-        # 'network.mlp_weights.layers.1.l1.weight'
-        # 'network.mlp_weights.layers.1.l1.bias'
-        # 'network.mlp_weights.layers.1.l2.weight'
-        # 'network.mlp_weights.layers.1.l2.bias'
-        # 'network.mlp_weights.layers.2.weight'
-        # 'network.mlp_weights.layers.2.bias'
+
 
         self.logvar_min = nn_Parameter(
             torch_tensor(params_dict['network.logvar_min']), requires_grad=False
@@ -706,7 +601,6 @@ class GMMModel(tf.keras.Model):
 
 
     def build_actor(self, actor, shape1=None, shape2=None):
-        # return
     
         print("build_actor: self.env_name = ", self.env_name)
 
@@ -714,10 +608,7 @@ class GMMModel(tf.keras.Model):
             pass
         # Gym - hopper/walker2d/halfcheetah
         elif self.env_name == "hopper-medium-v2":
-            # hopper_medium
-            # item_actions_copy.shape =  
             shape1 = (128, 4, 3)
-            # cond_copy['state'].shape =  
             shape2 = (128, 1, 11)
         elif self.env_name == "kitchen-complete-v0":
             shape1 = (128, 4, 9)
@@ -740,10 +631,7 @@ class GMMModel(tf.keras.Model):
             shape2 = (256, 1, 19)
 
         elif self.env_name == "can":
-            #can 
-            # item_actions_copy.shape =  
             shape1 = (256, 4, 7)
-            # cond_copy['state'].shape =  
             shape2 = (256, 1, 23)
 
         elif self.env_name == "square":
@@ -756,10 +644,7 @@ class GMMModel(tf.keras.Model):
 
         # the same name "avoiding-m5" for D3IL with avoid_m1/m2/m3
         elif self.env_name == "avoiding-m5" or self.env_name == "avoid":
-            #avoid_m1
-            # item_actions_copy.shape =  
             shape1 = (16, 4, 2)
-            # cond_copy['state'].shape =  
             shape2 = (16, 1, 4)
 
         # Furniture-Bench - one_leg/lamp/round_table_low/med
@@ -783,16 +668,7 @@ class GMMModel(tf.keras.Model):
             shape2 = (256, 1, 44)
         
         else:
-            # #one_leg_low
-            # # item_actions_copy.shape =  
-            # shape1 = (256, 8, 10)
-            # # cond_copy['state'].shape =  
-            # shape2 = (256, 1, 58)
             raise RuntimeError("The build shape is not implemented for current dataset")
-
-
-        # param1 = tf.constant(np.random.randn(*shape1).astype(np.float32))
-        # param2 = tf.constant(np.random.randn(*shape2).astype(np.float32))
 
 
         if OUTPUT_VARIABLES:
@@ -809,8 +685,6 @@ class GMMModel(tf.keras.Model):
         build_dict = {'state': param2}
 
 
-        
-        # _ = self.loss_ori(param1, build_dict)
         all_one_build_result = self.loss_ori_build(actor, training=False, true_action = param1, cond=build_dict)
 
         print("all_one_build_result = ", all_one_build_result)

@@ -19,13 +19,6 @@ import math
 
 import tensorflow as tf
 
-# from util.torch_to_tf import torch_quantile
-# # import tensorflow_probability as tfp
-
-# from util.torch_to_tf import torch_no_grad, torch_tensor_item
-
-# from util.torch_to_tf import torch_clamp, torch_exp, torch_mean, torch_max, torch_tensor_float, torch_abs, torch_tensor, torch_std, torch_tensor_view
-
 from util.torch_to_tf import *
 
 from model.diffusion.diffusion import DiffusionModel, Sample
@@ -80,13 +73,6 @@ class SAC_PPODiffusion(VPGDiffusion):
         self.clip_advantage_upper_quantile = clip_advantage_upper_quantile
 
 
-        # self.build_critic(self.critic)
-
-        # self.target_critic = tf.keras.models.clone_model(self.critic)
-        # self.build_critic(self.target_critic)
-        # self.target_critic.set_weights(self.critic.get_weights())
-
-
         self.clip_entropy = kwargs.get("clip_entropy", None)
 
         self.lambda_alpha_entropy = kwargs.get("lambda_alpha_entropy", 10000)
@@ -99,7 +85,6 @@ class SAC_PPODiffusion(VPGDiffusion):
 
         self.step_count = 0
 
-        # self.delay_alpha_update = 10000
         self.delay_alpha_update = 50
 
         self.delay_update = 2
@@ -225,8 +210,6 @@ class SAC_PPODiffusion(VPGDiffusion):
         shape = actions.shape
         actions = actions.reshape(shape[0], shape[1], -1)
 
-        # print("estimate_entropy: actions.shape = ", actions.shape)
-
         for action in actions:
             gmm = GaussianMixture(n_components=num_components, covariance_type='full')
             gmm.fit(action)
@@ -240,8 +223,7 @@ class SAC_PPODiffusion(VPGDiffusion):
             entropy = -np.sum(weights * np.log(weights)) + np.sum(weights * np.array(entropies))
             total_entropy.append(entropy)
 
-        # final_entropy = sum(total_entropy) / len(total_entropy)
-        # return final_entropy
+
         total_entropy_sum = sum(total_entropy)
         total_entropy_len = len(total_entropy)
 
@@ -251,80 +233,6 @@ class SAC_PPODiffusion(VPGDiffusion):
 
 
 
-
-    # def estimate_entropy(self, actions, num_components=3):
-    #     import numpy as np
-    #     from sklearn.mixture import GaussianMixture
-    #     import tensorflow_probability as tfp
-
-    #     total_entropy = []
-
-    #     actions_np = actions.numpy()
-    #     shape = actions_np.shape
-
-    #     # reshaped_actions = tf.reshape(actions, (shape[0], -1))
-
-    #     actions_np = actions_np.reshape(shape[0], -1)
-
-    #     # for action in actions_np:
-    #     action = actions_np
-    #     means_list = []
-    #     covariances_list = []
-
-    #     gmm = GaussianMixture(n_components=num_components, covariance_type='full')
-    #     gmm.fit(action)
-    #     weights = gmm.weights_
-
-    #     entropies = []
-    #     for i in range(gmm.n_components):
-    #         means_list.append(gmm.means_[i])
-    #         covariances_list.append(gmm.covariances_[i])
-
-    #         cov_matrix = gmm.covariances_[i]
-    #         d = cov_matrix.shape[0]
-    #         entropy = 0.5 * d * (1 + np.log(2 * np.pi)) + 0.5 * np.linalg.slogdet(cov_matrix)[1]
-    #         entropies.append(entropy)
-
-    #     entropy = -np.sum(weights * np.log(weights)) + np.sum(weights * np.array(entropies))
-    #     total_entropy.append(entropy)
-
-    #     # log_prob = torch_zeros_like(reshaped_actions)
-
-    #     # print("reshaped_actions.shape = ", reshaped_actions.shape)
-    #     # print("log_prob.shape = ", log_prob.shape)
-    #     # print("weights = ", weights)
-
-    #     # for k in range(num_components):
-    #     #     tf_means = tf.convert_to_tensor(means_list[k], dtype=tf.float32)
-    #     #     tf_covariances = tf.convert_to_tensor(covariances_list[k], dtype=tf.float32)
-    #     #     # dist = tfp.distributions.MultivariateNormalFullCovariance(loc = tf_means, covariance_matrix = tf_covariances)
-
-    #     #     print("tf_means.shape = ", tf_means.shape)
-    #     #     print("tf_covariances.shape = ", tf_covariances.shape)
-
-    #     #     dist = tfp.distributions.MultivariateNormalTriL(
-    #     #         loc=tf_means,
-    #     #         scale_tril=tf.linalg.cholesky(tf_covariances)
-    #     #     )
-
-    #     #     cur_log_probs = dist.log_prob(reshaped_actions)
-    #     #     log_prob += weights[k] * cur_log_probs
-
-
-
-
-    #     total_entropy_sum = sum(total_entropy)
-    #     total_entropy_len = len(total_entropy)
-
-    #     # log_prob = log_prob.reshape(shape)
-
-    #     print("estimate_entropy(): total_entropy_sum = ", total_entropy_sum)
-    #     # print("estimate_entropy(): log_prob = ", log_prob)
-        
-
-
-    #     return total_entropy_sum, total_entropy_len
-    # # , log_prob
 
 
 
@@ -337,7 +245,6 @@ class SAC_PPODiffusion(VPGDiffusion):
         chains_prev,
         chains_next,
         denoising_inds,
-        # get_ent: bool = False,
         get_ent: bool = True,
         use_base_policy: bool = False,
     ):
@@ -360,13 +267,6 @@ class SAC_PPODiffusion(VPGDiffusion):
 
         print("diffusion_vpg.py: VPGDiffusion.get_logprobs_subsample()")
 
-
-
-        # print("diffusion_ppo.py: VPGDiffusion.get_logprobs_subsample(): self.model.actor_ft.trainable_variables = ")
-        # for var in self.actor_ft.trainable_variables:
-        #     print(f"Variable: {var.name}, Trainable: {var.trainable}")
-
-
         # Sample t for batch dim, keep it 1-dim
         if self.use_ddim:
             t_single = self.ddim_t[-self.ft_denoising_steps :]
@@ -382,8 +282,6 @@ class SAC_PPODiffusion(VPGDiffusion):
         t_all = tf.gather( t_single, denoising_inds )
 
 
-        # t_all = t_single[denoising_inds]
-
 
         if OUTPUT_POSITIONS:
             print("diffusion_vpg.py: VPGDiffusion.get_logprobs_subsample(): 1")
@@ -394,7 +292,6 @@ class SAC_PPODiffusion(VPGDiffusion):
                 end=self.ddim_steps,
                 device=self.device,
             )  # only used for DDIM
-            # ddim_indices = ddim_indices_single[denoising_inds]
             ddim_indices = tf.gather(ddim_indices_single, denoising_inds)
         else:
             ddim_indices = None
@@ -412,14 +309,6 @@ class SAC_PPODiffusion(VPGDiffusion):
             use_base_policy=use_base_policy,
         )
 
-        # std = torch_exp(0.5 * logvar)
-        # std = torch_clip(std, self.min_logprob_denoising_std, tf.float32.max)
-
-        # dist = Normal(next_mean, std)
-
-        # # Get logprobs with gaussian
-        # log_prob = dist.log_prob(chains_next)
-
         min_sampling_denoising_std = self.get_min_sampling_denoising_std()
 
 
@@ -427,16 +316,8 @@ class SAC_PPODiffusion(VPGDiffusion):
 
         # Determine noise level
         if self.use_ddim:
-            # if deterministic:
-            #     std = torch_zeros_like(std)
-            # else:
             std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
         else:
-            # if deterministic and t == 0:
-            #     std = torch_zeros_like(std)
-            # elif deterministic:  # still keep the original noise
-            #     std = torch_clip(std, 1e-3, tf.float32.max)
-            # else:  # use higher minimum noise
             std = torch_clip(std, min_sampling_denoising_std, tf.float32.max)
         
 
@@ -450,32 +331,13 @@ class SAC_PPODiffusion(VPGDiffusion):
             print("VPGDiffusion: call(): noise = ", noise)
 
 
-        # temp_noise_variable = tf.Variable(temp_noise)
-
-        # print("temp_noise = ", temp_noise)
-        # print("temp_noise_variable = ", temp_noise_variable)
-
-        # print("self.randn_clip_value = ", self.randn_clip_value)
-
         noise = torch_clamp(
             noise, -self.randn_clip_value, self.randn_clip_value
         )
 
-        # noise = temp_noise_variable
-
-        # print("std = ", std)
-        # print("noise = ", noise)
-
 
         chains_prev_next = mean + std * noise
 
-        # # clamp action at final step
-        # if self.final_action_clip_value is not None and i == len(t_all) - 1:
-        #     chains_prev_next = torch_clamp(chains_prev_next, -self.final_action_clip_value, self.final_action_clip_value)
-
-
-
-        # total_entropy_sum, total_entropy_len, log_prob = self.estimate_entropy(chains_prev_next)
 
         import time
 
@@ -505,7 +367,6 @@ class SAC_PPODiffusion(VPGDiffusion):
 
 
         if get_ent:
-            # return log_prob, eta
             return log_prob, entropy
 
         return log_prob

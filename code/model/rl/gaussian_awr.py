@@ -9,6 +9,7 @@ from model.rl.gaussian_rwr import RWR_Gaussian
 
 log = logging.getLogger(__name__)
 
+from util.torch_to_tf import *
 
 class AWR_Gaussian(RWR_Gaussian):
 

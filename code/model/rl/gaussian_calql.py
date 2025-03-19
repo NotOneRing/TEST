@@ -47,21 +47,6 @@ class CalQL_Gaussian(GaussianModel):
         self.critic = critic
         self.target_critic = deepcopy(critic)
         
-        # # Load pre-trained checkpoint - note we are also loading the pre-trained critic here
-        # if network_path is not None:
-        #     checkpoint = torch.load(
-        #         network_path,
-        #         map_location=self.device,
-        #         weights_only=True,
-        #     )
-
-        #     self.load_state_dict(
-        #         checkpoint["model"],
-        #         strict=True,
-        #     )
-
-        #     log.info("Loaded actor from %s", network_path)
-
         # Load pretrained weights if specified
         if network_path is not None:
             print("network_path = ", network_path)
@@ -97,12 +82,11 @@ class CalQL_Gaussian(GaussianModel):
 
         print("gaussian_calql.py: CalQL_Gaussian.loss_critic()")
 
-        # B = len(actions)
         B = actions.shape[0]
 
         # Get initial TD loss
         q_data1, q_data2 = self.critic(obs, actions)
-        # with torch.no_grad():
+
         # repeat for action samples
         with torch_no_grad() as tape:
             next_obs_repeated = {"state": torch_repeat_interleave( next_obs["state"],
@@ -119,8 +103,6 @@ class CalQL_Gaussian(GaussianModel):
             next_q = torch_min(next_q1, other=next_q2)
 
             # Reshape the next_q to match the number of samples
-            # next_q = next_q.view(B, self.cql_n_actions)  # (B, n_sample)
-            # next_logprobs = next_logprobs.view(B, self.cql_n_actions)  # (B, n_sample)
             next_q = torch_tensor_view(next_q, B, self.cql_n_actions)  # (B, n_sample)
             next_logprobs = torch_tensor_view( next_logprobs, B, self.cql_n_actions)  # (B, n_sample)
 
@@ -196,7 +178,6 @@ class CalQL_Gaussian(GaussianModel):
             max=self.cql_clip_diff_max,
         )
         )
-        # .mean()
         cql_qf2_diff = torch_mean(
         torch_clamp(
             cql_qf2_ood - q_data2,
@@ -204,7 +185,6 @@ class CalQL_Gaussian(GaussianModel):
             max=self.cql_clip_diff_max,
         )
         )
-        # .mean()
         cql_min_qf1_loss = cql_qf1_diff * self.cql_min_q_weight
         cql_min_qf2_loss = cql_qf2_diff * self.cql_min_q_weight
 
@@ -241,7 +221,6 @@ class CalQL_Gaussian(GaussianModel):
 
         print("gaussian_calql.py: CalQL_Gaussian.loss_temperature()")
 
-        # with torch.no_grad():
         with torch_no_grad() as tape:
             _, logprob = self.call(
                 obs,

@@ -31,11 +31,10 @@ class SAC_Gaussian(GaussianModel):
 
         # initialize doubel critic networks
         self.critic = critic
-        # .to(self.device)
 
         # initialize double target networks
         self.target_critic = deepcopy(self.critic)
-        # .to(self.device)
+
 
         self.actor = self.network
 
@@ -54,7 +53,6 @@ class SAC_Gaussian(GaussianModel):
 
         print("gaussian_sac.py: SAC_Gaussian.loss_critic()")
 
-        # with torch.no_grad():
         with torch_no_grad() as tape:
             next_actions, next_logprobs = self.call(
                 cond=next_obs,
@@ -98,7 +96,7 @@ class SAC_Gaussian(GaussianModel):
 
         print("gaussian_sac.py: SAC_Gaussian.loss_temperature()")
 
-        # with torch.no_grad():
+
         with torch_no_grad() as tape:
             _, logprob = self.call(
                 obs,

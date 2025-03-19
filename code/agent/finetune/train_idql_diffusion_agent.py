@@ -10,7 +10,6 @@ import pickle
 import einops
 import numpy as np
 
-# import torch
 
 import logging
 import wandb
@@ -21,7 +20,6 @@ from util.timer import Timer
 from collections import deque
 from agent.finetune.train_agent import TrainAgent
 
-# from util.scheduler import CosineAnnealingWarmupRestarts
 
 from util.torch_to_tf import CosineAWR, torch_optim_Adam, torch_optim_AdamW,\
 torch_from_numpy, torch_tensor_float, torch_tensor_detach, torch_nn_utils_clip_grad_norm_and_step, \
@@ -46,7 +44,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
 
         # Optimizer
         self.actor_lr_scheduler = CosineAWR(
-            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -56,9 +53,7 @@ class TrainIDQLDiffusionAgent(TrainAgent):
         )
 
         self.actor_optimizer = torch_optim_AdamW(
-            # self.model.actor.parameters(),
             self.model.actor.trainable_variables,
-            # lr=cfg.train.actor_lr,
             lr = self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
         )
@@ -66,7 +61,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
 
 
         self.critic_v_lr_scheduler = CosineAWR(
-            # self.critic_v_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -75,7 +69,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
             gamma=1.0,
         )
         self.critic_q_lr_scheduler = CosineAWR(
-            # self.critic_q_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -85,16 +78,12 @@ class TrainIDQLDiffusionAgent(TrainAgent):
         )
 
         self.critic_q_optimizer = torch_optim_AdamW(
-            # self.model.critic_q.parameters(),
             self.model.critic_q.trainable_variables,
-            # lr=cfg.train.critic_lr,
             lr = self.critic_q_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
         self.critic_v_optimizer = torch_optim_AdamW(
-            # self.model.critic_v.parameters(),
             self.model.critic_v.trainable_variables,
-            # lr=cfg.train.critic_lr,
             lr = self.critic_v_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
@@ -148,7 +137,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
 
             # Define train or eval - all envs restart
             eval_mode = self.itr % self.val_freq == 0 and not self.force_train
-            # self.model.eval() if eval_mode else self.model.train()
 
             if eval_mode:
                 training=False
@@ -177,8 +165,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                 with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
                     samples = (
                         self.model(
@@ -187,8 +173,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                             num_sample=self.num_sample,
                             use_expectile_exploration=self.use_expectile_exploration,
                         ).numpy()
-                        # .cpu()
-                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
 
@@ -289,22 +273,17 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                     # Sample batch
                     inds = np.random.choice(len(obs_trajs), self.batch_size)
                     obs_b = torch_tensor_float( torch_from_numpy(obs_trajs[inds]) )
-                    # .float().to(self.device)
                     next_obs_b = (
                         torch_tensor_float( torch_from_numpy(next_obs_trajs[inds]) )
-                    # .float().to(self.device)
                     )
                     actions_b = (
                         torch_tensor_float( torch_from_numpy(action_trajs[inds]) )
-                        # .float().to(self.device)
                     )
                     reward_b = (
                         torch_tensor_float( torch_from_numpy(reward_trajs[inds]) )
-                        # .float().to(self.device)
                     )
                     terminated_b = (
                         torch_tensor_float( torch_from_numpy(terminated_trajs[inds]) )
-                        # .float().to(self.device)
                     )
 
 
@@ -314,9 +293,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                         critic_loss_v = self.model.loss_critic_v(
                             {"state": obs_b}, actions_b
                         )
-                    # tf_gradients = tape.gradient(critic_loss_v, self.model.critic_v.trainable_variables)
-
-                    # self.critic_v_optimizer.step(tf_gradients)
 
                     tf_critic_v_gradients = tape.gradient(critic_loss_v, self.model.critic_v.trainable_variables)                        
                     zip_gradients_critic_v_params = zip(tf_critic_v_gradients, self.model.critic_v.trainable_variables)
@@ -335,11 +311,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                             terminated_b,
                             self.gamma,
                         )
-                    # tf_gradients = tape.gradient(critic_loss_q, self.model.critic_q.trainable_variables)
-            
-                    # # self.critic_q_optimizer.zero_grad()
-                    # # critic_loss_q.backward()
-                    # self.critic_q_optimizer.step(critic_loss_q)
 
 
                     tf_critic_q_gradients = tape.gradient(critic_loss_q, self.model.critic_q.trainable_variables)                        
@@ -362,9 +333,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                             {"state": obs_b}
                         )
 
-                    # self.actor_optimizer.zero_grad()
-                    # loss_actor.backward()
-                    # tf_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)
 
                     tf_actor_gradients = tape.gradient(loss_actor, self.model.actor.trainable_variables)                        
                     zip_gradients_actor_params = zip(tf_actor_gradients, self.model.actor.trainable_variables)
@@ -373,15 +341,12 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                     if self.itr >= self.n_critic_warmup_itr:
                         if self.max_grad_norm is not None:
                             torch_nn_utils_clip_grad_norm_and_step(
-                                # self.model.actor.parameters()
                                 self.model.actor.trainable_variables,
                                 self.actor_optimizer,
                                 self.max_grad_norm,
-                                # tf_gradients
                                 tf_actor_gradients
                             )
                         else:
-                            # self.actor_optimizer.step(tf_gradients)
                             self.actor_optimizer.apply_gradients(zip_gradients_actor_params)
 
             # Update lr
@@ -407,17 +372,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
@@ -425,18 +379,6 @@ class TrainIDQLDiffusionAgent(TrainAgent):
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss - actor": loss_actor,
-                    #             "loss - critic": loss_critic,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)

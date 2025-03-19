@@ -40,7 +40,6 @@ class EvalDiffusionAgent(EvalAgent):
                 )
 
         # Reset env before iteration starts
-        # self.model.eval()
 
         training = False
 
@@ -75,12 +74,8 @@ class EvalDiffusionAgent(EvalAgent):
                 print(f"Processed step {step} of {self.n_steps}")
 
             # Select action
-            # with torch.no_grad():
             with torch_no_grad() as tape:
                 cond = {
-                    # "state": torch.from_numpy(prev_obs_venv["state"])
-                    # .float()
-                    # .to(self.device)
                 "state": tf.Variable(prev_obs_venv["state"], dtype=tf.float32)
                 }
 
@@ -94,10 +89,7 @@ class EvalDiffusionAgent(EvalAgent):
 
                     print("type(cond['state']) = ", type(cond["state"]))
 
-                # samples = self.model(cond=cond
-                #                     #  , deterministic=True
-                #                     )
-                # print("cond['state'] = ", cond['state'])
+
 
                 samples = self.model( cond_state = cond['state'], training=False)
                 
@@ -106,7 +98,6 @@ class EvalDiffusionAgent(EvalAgent):
 
 
                 output_venv = (
-                    # samples.trajectories.cpu().numpy()
                     samples.trajectories.numpy()
                 )  # n_env x horizon x act
 
@@ -132,9 +123,6 @@ class EvalDiffusionAgent(EvalAgent):
 
             # update for next step
             prev_obs_venv = obs_venv
-
-            # if step == 0:
-            #     break
 
 
 

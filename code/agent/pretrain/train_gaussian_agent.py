@@ -21,7 +21,6 @@ from copy import deepcopy
 from util.config import DEBUG, TEST_LOAD_PRETRAIN, OUTPUT_VARIABLES, METHOD_NAME
 
 
-# RUN_FUNCTION_TEST_SAVE_LOAD = True
 RUN_FUNCTION_TEST_SAVE_LOAD = False
 
 
@@ -33,21 +32,14 @@ from util.torch_to_tf import nn_TransformerEncoder, nn_TransformerEncoderLayer, 
 nn_TransformerDecoderLayer, einops_layers_torch_Rearrange, nn_GroupNorm, nn_ConvTranspose1d, nn_Conv2d, nn_Conv1d, \
 nn_MultiheadAttention, nn_LayerNorm, nn_Embedding, nn_ModuleList, nn_Sequential, \
 nn_Linear, nn_Dropout, nn_ReLU, nn_GELU, nn_ELU, nn_Mish, nn_Softplus, nn_Identity, nn_Tanh
-# from model.rl.gaussian_calql import CalQL_Gaussian
 from model.diffusion.unet import ResidualBlock1D, Unet1D
 from model.diffusion.modules import Conv1dBlock, Upsample1d, Downsample1d, SinusoidalPosEmb
-# from model.diffusion.mlp_diffusion import DiffusionMLP, VisionDiffusionMLP
-# from model.diffusion.eta import EtaStateAction, EtaState, EtaAction, EtaFixed
-# from model.diffusion.diffusion import DiffusionModel
 from model.common.vit import VitEncoder, PatchEmbed1, PatchEmbed2, MultiHeadAttention, TransformerLayer, MinVit
 from model.common.transformer import Gaussian_Transformer, GMM_Transformer, Transformer
 from model.common.modules import SpatialEmb, RandomShiftsAug
 from model.common.mlp import MLP, ResidualMLP, TwoLayerPreActivationResNetLinear
-# from model.common.mlp_gmm import GMM_MLP
 from model.common.mlp_gaussian import Gaussian_MLP, Gaussian_VisionMLP
-# from model.common.gaussian import  GaussianModel
-# from model.common.critic import CriticObs, CriticObsAct
-# from model.common.gmm import GMMModel
+
 
 
 cur_dict = {
@@ -76,20 +68,12 @@ cur_dict = {
 "nn_Identity": nn_Identity, 
 "nn_Tanh": nn_Tanh,
 #part2:
-# "CalQL_Gaussian": CalQL_Gaussian,
 "ResidualBlock1D": ResidualBlock1D,
 "Unet1D": Unet1D,
 "Conv1dBlock": Conv1dBlock, 
 "Upsample1d": Upsample1d, 
 "Downsample1d": Downsample1d, 
 "SinusoidalPosEmb": SinusoidalPosEmb,
-# "DiffusionMLP": DiffusionMLP, 
-# # "VisionDiffusionMLP": VisionDiffusionMLP,
-# "EtaStateAction": EtaStateAction, 
-# "EtaState": EtaState, 
-# "EtaAction": EtaAction, 
-# "EtaFixed": EtaFixed,
-# # "DiffusionModel": DiffusionModel,
 #part3:
 "VitEncoder": VitEncoder, 
 "PatchEmbed1": PatchEmbed1, 
@@ -105,13 +89,8 @@ cur_dict = {
 "MLP": MLP,
 "ResidualMLP": ResidualMLP, 
 "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
-# "GMM_MLP": GMM_MLP,
 "Gaussian_MLP": Gaussian_MLP, 
 "Gaussian_VisionMLP": Gaussian_VisionMLP,
-# # "GaussianModel": GaussianModel,
-# "CriticObs": CriticObs, 
-# "CriticObsAct": CriticObsAct,
-# # "GMMModel": GMMModel
 }
 
 
@@ -126,9 +105,6 @@ class TrainGaussianAgent(PreTrainAgent):
 
         if DEBUG and TEST_LOAD_PRETRAIN:
             self.base_policy_path = cfg.get("base_policy_path", None)
-
-        # self.model.batch_size = self.batch_size
-
 
         # Entropy bonus - not used right now since using fixed_std
         self.ent_coef = cfg.train.get("ent_coef", 0)
@@ -146,29 +122,8 @@ class TrainGaussianAgent(PreTrainAgent):
         with tf.GradientTape() as tape:
             print("self.model = ", self.model)
 
-            # model_config = self.model.get_config()
-            
-            # print("model_config = ", model_config)
-
-            # print("train_diffusion_agent.py: run() 4-1")
-
-            # self.ema_model = deepcopy(self.model)
-            # self.ema_model = tf.keras.models.clone_model(self.model)
 
             self.ema_model = tf.keras.models.clone_model(self.model)
-            # self.ema_model.network = tf.keras.models.clone_model(self.model.network)
-
-
-            # print("Self.model trainable weights:")
-            # for weight in self.model.trainable_weights:
-            #     print(weight.name, weight.shape)
-
-            # print("\nSelf.ema_model trainable weights:")
-            # for weight in self.ema_model.trainable_weights:
-            #     print(weight.name, weight.shape)
-
-
-            # print("train_diffusion_agent.py: run() 4-2")
 
             if DEBUG:
                 self.ema_model.loss_ori_t = None
@@ -178,36 +133,13 @@ class TrainGaussianAgent(PreTrainAgent):
                 self.ema_model.call_x = None
                 self.ema_model.q_sample_noise = None
 
-            # print("self.ema_model = ", self.ema_model)
-
 
             loss_train_ema = self.ema_model.loss_ori(
                 training_flag, 
                 item_actions_copy, cond_copy, ent_coef)
 
-            # print("item_actions_copy.shape = ", item_actions_copy.shape)
-            # print("cond_copy['state'].shape = ", cond_copy['state'].shape)
-
-
-            # print("loss_train_ema.numpy() = ", loss_train_ema.numpy())
-
-
-            # print("self.model.trainable_variables = ", self.model.trainable_variables)
-            # print("self.ema_model.trainable_variables = ", self.ema_model.trainable_variables)
-
-            # print("self.model.trainable_variables count = ", len(self.model.trainable_variables))
-            # print("self.ema_model.trainable_variables count = ", len(self.ema_model.trainable_variables))
-
-            # print("self.model.weights count:", len(self.model.get_weights()))
-            # print("self.ema_model.weights count:", len(self.ema_model.get_weights()))
-
 
             self.reset_parameters()
-
-            # if DEBUG:
-            #     self.take_out_epoch0_weights()
-
-
 
 
 
@@ -235,7 +167,6 @@ class TrainGaussianAgent(PreTrainAgent):
 
         mlp_weights = tf.keras.models.load_model(savepath,  custom_objects=get_custom_objects() )
 
-        # MLP: call() x.shape =  (16, 4)
         
         print("mlp_weights = ", mlp_weights)
         for var in mlp_weights.moduleList.variables:
@@ -380,7 +311,6 @@ class TrainGaussianAgent(PreTrainAgent):
         for _ in range(self.n_epochs):
             print("epoch = ", _)
             flag = True
-            # train
 
             training_flag = True
             
@@ -406,20 +336,11 @@ class TrainGaussianAgent(PreTrainAgent):
 
 
                 if flag:
-                    # print("batch_train = ", batch_train)
                     flag = False
 
 
-                # if self.dataset_train.device == "cpu":
-                #     batch_train = batch_to_device(batch_train)
-
                 # self.model.train()
                 training_flag = True
-                # loss_train = self.model.loss_ori(*batch_train)
-                # loss_train.backward()
-
-                # if epoch == 0:
-                #     self.build_model(cur_actions, cond)
 
                 with tf.GradientTape() as tape:
                     training_flag=True
@@ -443,21 +364,11 @@ class TrainGaussianAgent(PreTrainAgent):
                 
 
                 if DEBUG and TEST_LOAD_PRETRAIN and epoch == 0:
-                    # self.debug_gmm_save_load()
-                    # self.debug_gmm_mlp_save_load()
-                    # self.debug_gmm_load_iter()
                     self.debug_gaussian_img_save_load()
                     break
 
-                # print("loss_train = ", loss_train)
-                # print("loss_train_epoch = ", loss_train_epoch)
-
                 loss_train_epoch.append( torch_tensor_item( loss_train ) )
                 ent_train_epoch.append( torch_tensor_item(infos_train["entropy"]) )
-
-
-                # self.optimizer.step()
-                # self.optimizer.zero_grad()
 
                 gradients = tape.gradient(loss_train, self.model.trainable_variables)
                 zip_gradients_params = zip(gradients, self.model.trainable_variables)
@@ -479,12 +390,8 @@ class TrainGaussianAgent(PreTrainAgent):
             # validate
             loss_val_epoch = []
             if self.dataloader_val is not None and self.epoch % self.val_freq == 0:
-                # self.model.eval()
                 training_flag = False
                 for batch_val in self.dataloader_val:
-                    # if self.dataset_val.device == "cpu":
-                    #     batch_val = batch_to_device(batch_val)
-                    # loss_val, infos_val = self.model.loss(*batch_val)
                     cur_actions = batch_val['actions']
                     cond['state'] = batch_val["states"]
     
@@ -497,7 +404,6 @@ class TrainGaussianAgent(PreTrainAgent):
                         )
                     
                     loss_val_epoch.append( torch_tensor_item(loss_val) )
-                # self.model.train()
                 training_flag = True
             loss_val = np.mean(loss_val_epoch) if len(loss_val_epoch) > 0 else None
 
@@ -520,182 +426,8 @@ class TrainGaussianAgent(PreTrainAgent):
                     f"{self.epoch}: train loss {loss_train:8.4f} | {infos_str} | t:{timer():8.4f}"
                 )
 
-                # log.info(
-                #     f"{self.epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
-                # )
-                # if self.use_wandb:
-                #     if loss_val is not None:
-                #         wandb.log(
-                #             {"loss - val": loss_val}, step=self.epoch, commit=False
-                #         )
-                #     wandb.log(
-                #         {
-                #             "loss - train": loss_train,
-                #             "entropy - train": ent_train,
-                #         },
-                #         step=self.epoch,
-                #         commit=True,
-                #     )
-
             # count
             self.epoch += 1
-
-
-
-
-
-
-    # def run(self):
-
-    #     print("train_diffusion_agent.py: TrainDiffusionAgent.run()")
-
-    #     timer = Timer()
-    #     self.epoch = 1
-    #     cnt_batch = 0
-
-    #     print("self.n_epochs = ", self.n_epochs)
-
-
-    #     data_before_generator = {
-    #         "actions": [],
-    #         "states": [],
-    #         "rewards": [],
-    #         "next_states": [],
-    #         "rgb": [],
-    #     }
-
-
-
-    #     print("self.batch_size = ", self.batch_size)
-
-    #     print("self.n_epochs = ", self.n_epochs)
-
-    #     print("len(self.dataset_train = ", len(self.dataset_train))
-
-    #     print("self.save_model_freq = ", self.save_model_freq)
-        
-    #     print("len(self.dataset_train) // self.batch_size) = ", len(self.dataset_train) // self.batch_size)
-
-    #     print("(self.save_model_freq * (len(self.dataset_train) // self.batch_size)) = ", (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) )
-
-    #     print("(self.n_epochs * (len(self.dataset_train) // self.batch_size)) = ", (self.n_epochs * (len(self.dataset_train) // self.batch_size) ) )
-
-    #     for i in range(len(self.dataset_train)):
-    #         if DEBUG:
-    #             if i == self.batch_size * 10:
-    #                 break
-
-    #         batch_train = self.dataset_train[i]
-    #         # actions = batch_train.actions
-    #         # conditions = batch_train.conditions
-    #         # conditions = batch_train['conditions']
-
-    #         actions = batch_train['actions']
-    #         data_before_generator['actions'].append(actions)
-    #         # states = batch_train['states']
-    #         # data_before_generator['states'].append(states)
-
-    #         if "states" in batch_train:
-    #             data_before_generator['states'].append(batch_train['states'])
-    #         else:
-    #             data_before_generator['states'].append(None)
-
-    #         if "rgb" in batch_train:
-    #             data_before_generator['rgb'].append(batch_train['rgb'])
-    #         else:
-    #             data_before_generator['rgb'].append(None)
-
-    #         if "rewards" in batch_train:
-    #             data_before_generator['rewards'].append(batch_train['rewards'])
-    #         else:
-    #             data_before_generator['rewards'].append(None)
-
-    #         if "next_states" in batch_train:
-    #             data_before_generator['next_states'].append(batch_train['next_states'])
-    #         else:
-    #             data_before_generator['next_states'].append(None)
-
-    #     # construct Dataset
-    #     dataset = tf.data.Dataset.from_tensor_slices(data_before_generator)
-
-    #     buffer_size = len(data_before_generator)
-    #     dataset = dataset.shuffle(buffer_size=buffer_size, seed=self.seed)
-
-        
-    #     if DEBUG:
-    #         self.n_epochs = 2
-
-    #     dataset = dataset.batch(
-    #         self.batch_size, drop_remainder=True
-    #     ).repeat(self.n_epochs)
-
-    
-
-    #     loss_train_epoch = []
-
-    #     for epoch, item in enumerate(dataset):
-
-
-
-    #         print( f"Epoch {epoch + 1}" )
-
-    #         # continue
-            
-    #         # # Train
-    #         # print(item)
-    #         # print("State:", item["states"].numpy())
-    #         # print("Action:", item["actions"].numpy())
-
-    #         cond = {}
-    #         cond['state'] = item["states"]
-
-
-
-    #         with tf.GradientTape() as tape:
-    #             # Assuming loss is computed as a callable loss function
-    #             # loss_train = self.model.loss(*batch_train, training_flag=True)
-    #             # loss_train = self.model.loss(training_flag=True, *batch_train)
-    #             training_flag=True
-    #             loss_train = self.model.loss(training_flag, item['actions'], cond)
-
-    #         print("self.model.get_config() = ", self.model.get_config())
-
-    #         # # self.ema_model = deepcopy(self.model)
-
-    #         if epoch == 0:
-    #             self.ema_model = tf.keras.models.clone_model(self.model)
-    #             self.ema_model.set_weights(self.model.get_weights())
-
-    #         gradients = tape.gradient(loss_train, self.model.trainable_variables)
-    #         self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
-
-    #         loss_train_epoch.append(loss_train.numpy())
-
-    #         print("loss_train.numpy() = ", loss_train.numpy())
-
-    #         # Update ema
-    #         if cnt_batch % self.update_ema_freq == 0:
-    #             self.step_ema()
-    #         cnt_batch += 1
-
-    #         loss_train = np.mean(loss_train_epoch)
-
-
-    #         # # Save model
-    #         if epoch % (self.save_model_freq * (len(self.dataset_train) // self.batch_size) ) == 0 or epoch == (self.n_epochs * (len(self.dataset_train) // self.batch_size) - 1 ):
-    #             self.save_model()
-
-    #         if DEBUG:
-    #             self.save_model()
-
-    #         # Log loss
-    #         if epoch % self.log_freq == 0:
-    #             log.info(
-    #                 f"{epoch}: train loss {loss_train:8.4f} | t:{timer():8.4f}"
-    #             )
-
-
-
 
 
 

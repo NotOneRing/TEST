@@ -36,16 +36,8 @@ class EtaFixed(tf.keras.Model):
         self.max = max_eta
 
         # # Initialize eta_logit such that eta = base_eta
-        # self.eta_logit = tf.Variable(
-        #     tf.math.atanh(2 * (base_eta - min_eta) / (max_eta - min_eta) - 1),
-        #     trainable=True,
-        #     dtype=tf.float32,
-        # )
-
         self.eta_logit = nn_Parameter(  torch_atanh(torch_tensor( np.array([2 * (base_eta - min_eta) / (max_eta - min_eta) - 1]) ) ) )
-        # self.eta_logit.data = torch.atanh(
-        #     torch.tensor([2 * (base_eta - min_eta) / (max_eta - min_eta) - 1])
-        # )
+
 
 
     def call(self, cond):
@@ -60,7 +52,7 @@ class EtaFixed(tf.keras.Model):
         eta_normalized = torch_tanh(self.eta_logit)
         # Map to [min, max] from [-1, 1]
         eta = 0.5 * (eta_normalized + 1) * (self.max - self.min) + self.min
-        # return tf.fill([batch_size, 1], eta)
+
         return torch_full( (B, 1), torch_tensor_item(eta) )
 
 
@@ -79,13 +71,6 @@ class EtaAction(tf.keras.Model):
         print("eta.py: EtaAction.__init__()")
 
         super().__init__()
-        # initialize such that eta = base_eta
-
-        # self.eta_logit = tf.Variable(
-        #     tf.math.atanh(2 * (base_eta - min_eta) / (max_eta - min_eta) - 1),
-        #     trainable=True,
-        #     dtype=tf.float32,
-        # )
 
         self.eta_logit = nn_Parameter( torch_ones(action_dim)
             * torch_atanh(
@@ -107,7 +92,6 @@ class EtaAction(tf.keras.Model):
 
         # Map to [min, max] from [-1, 1]
         eta = 0.5 * (eta_normalized + 1) * (self.max - self.min) + self.min
-        # return tf.tile(eta, [batch_size, 1])
         return torch_tensor_repeat(eta, [B, 1])
 
 
@@ -138,11 +122,6 @@ class EtaState(tf.keras.Model):
             out_activation_type=out_activation_type,
         )
 
-        # # initialize such that mlp(x) = 0
-        # for m in self.mlp_res.modules():
-        #     if isinstance(m, torch.nn.Linear):
-        #         torch.nn.init.xavier_normal_(m.weight, gain=gain)
-        #         m.bias.data.fill_(0)
 
         _ = self.mlp_res(tf.constant(np.random.randn(1, input_dim).astype(np.float32)))
 
@@ -150,21 +129,8 @@ class EtaState(tf.keras.Model):
         # Initialize weights of the MLP to ensure mlp(x) = 0
         for layer in self.mlp_res.layers:
             if isinstance(layer, nn_Linear):
-                # initializer = tf.keras.initializers.GlorotNormal(gain=gain)
-                # layer.kernel_initializer = initializer
-                # layer.bias_initializer = tf.keras.initializers.Zeros()
                 torch_nn_init_xavier_normal_(layer.kernel, gain=gain)
                 torch_nn_init_zeros_(layer.bias)  # Use the same initializer
-
-                # torch_nn_init_xavier_normal_(layer.weight, gain=gain)
-
-
-    # torch_weights = torch_layer.weight.detach().numpy().T  # Transpose weights for TensorFlow
-    # torch_bias = torch_layer.bias.detach().numpy()
-
-    # torch_nn_init_normal_(tf_layer.kernel, mean=0.0, std=0.1)  # Use the same initializer
-    # tf_layer.kernel.assign(torch_weights)
-    # tf_layer.bias.assign(torch_bias)
 
 
 
@@ -217,14 +183,6 @@ class EtaStateAction(tf.keras.Model):
             activation_type=activation_type,
             out_activation_type=out_activation_type,
         )
-
-
-        # # Initialize weights of the MLP to ensure mlp(x) = 0
-        # for layer in self.mlp_res.layers:
-        #     if isinstance(layer, tf.keras.layers.Dense):
-        #         initializer = tf.keras.initializers.GlorotNormal(gain=gain)
-        #         layer.kernel_initializer = initializer
-        #         layer.bias_initializer = tf.keras.initializers.Zeros()
 
 
         _ = self.mlp_res(tf.constant(np.random.randn(1, input_dim).astype(np.float32)))

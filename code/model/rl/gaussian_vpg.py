@@ -29,14 +29,6 @@ class VPG_Gaussian(GaussianModel):
 
         # Value function for obs - simple MLP
         self.critic = critic
-        # .to(self.device)
-
-        # # Re-name network to actor
-        # self.actor_ft = actor
-
-        # # # Save a copy of original actor
-        # # self.actor = deepcopy(actor)
-
 
 
         # Re-name network to actor
@@ -52,7 +44,6 @@ class VPG_Gaussian(GaussianModel):
         
         self.actor = tf.keras.models.clone_model(self.actor_ft)
 
-        # self.build_actor(self.actor)
         if "ViT" in METHOD_NAME:            
             self.build_actor_vision(self.actor)
         else:
@@ -62,12 +53,6 @@ class VPG_Gaussian(GaussianModel):
         self.actor.set_weights(self.actor_ft.get_weights())
 
 
-
-
-
-        # for param in self.actor.parameters():
-        #     param.requires_grad = False
-
         for layer in self.actor._layers:
             layer.trainable = False
 
@@ -75,8 +60,7 @@ class VPG_Gaussian(GaussianModel):
 
     # ---------- Sampling ----------#
 
-    # @torch.no_grad()
-    # @tf.function
+
     def call(
         self,
         cond,
@@ -121,7 +105,7 @@ class VPG_Gaussian(GaussianModel):
 
         # Compute entropy and standard deviation
         entropy = torch_mean(dist.entropy())
-        # std = torch_mean(dist.stddev())
+
         std = torch_mean(dist.scale)
 
         return log_prob, entropy, std

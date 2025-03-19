@@ -17,16 +17,10 @@ from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 
-# Batch = namedtuple("Batch", "actions conditions")
-# Transition = namedtuple("Transition", "actions conditions rewards dones")
-# TransitionWithReturn = namedtuple(
-#     "Transition", "actions conditions rewards dones reward_to_gos"
-# )
 
 from util.torch_to_tf import torch_stack
 
 
-# class StitchedSequenceDataset(tf.data.Dataset):
 class StitchedSequenceDataset:
     """
     Load stitched trajectories of states/actions/images, and 1-D array of traj_lengths, from npz or pkl file.
@@ -92,19 +86,6 @@ class StitchedSequenceDataset:
 
 
 
-    # def __iter__(self):
-    #     # for idx in range(len(self)):
-    #     #     yield self[idx]
-
-    #     for idx in range(len(self)):
-    #         sample = self[idx]
-    #         assert sample[0].shape == (self.horizon_steps, self.actions.shape[-1]), \
-    #             f"Action shape mismatch: {sample[0].shape} != {(self.horizon_steps, self.actions.shape[-1])}"
-    #         assert sample[1]["state"].shape == (self.cond_steps, self.states.shape[-1]), \
-    #             f"State shape mismatch: {sample[1]['state'].shape} != {(self.cond_steps, self.states.shape[-1])}"
-    #         yield sample
-
-
     def __getitem__(self, idx):
         """
         repeat states/images if using history observation at the beginning of the episode
@@ -131,13 +112,10 @@ class StitchedSequenceDataset:
         
         returned_dict = {"states": states}
 
-        # print("after returned dict")
 
         # If images are used, adjust the start index by subtracting the steps prior to the start
         if self.use_img:
-            # raise NotImplementedError("use_img: dimension check is not implemented now.")
             
-            # print("images.shape = ", images.shape)
             images = self.images[(start - num_before_start) : end]
 
             # Stack the images in reverse order of time, so that the most recent image is at the last
@@ -149,18 +127,11 @@ class StitchedSequenceDataset:
             )
 
             # Add images to the condition dictionary
-            # conditions["rgb"] = images
-
             returned_dict['rgb'] = images
 
         # Create a batch of actions and conditions
-        # batch = Batch(actions, conditions)
         returned_dict['actions'] = actions
 
-        # print("type(batch) = ", type(batch))
-        # print("batch = ", batch)
-
-        # return batch
         return returned_dict
 
 
@@ -206,36 +177,8 @@ class StitchedSequenceDataset:
         return None
 
 
-    # @property
-    # def element_spec(self):
-    #     # Define the TensorSpec of action
-    #     action_spec = tf.TensorSpec(
-    #         shape=(self.horizon_steps, self.actions.shape[-1]),
-    #         dtype=self.actions.dtype,
-    #     )
-
-    #     # Define the TensorSpec of state
-    #     state_spec = tf.TensorSpec(
-    #         shape=(self.cond_steps, self.states.shape[-1]),
-    #         dtype=self.states.dtype,
-    #     )
-
-    # Define the structure of the specifications dictionary
-    #     spec = {"state": state_spec}
-    #     if self.use_img:
-    #         img_spec = tf.TensorSpec(
-    #             shape=(self.img_cond_steps,) + self.images.shape[1:],
-    #             dtype=self.images.dtype,
-    #         )
-    #         spec["rgb"] = img_spec
-    # Return TensorSpecs for (action, batch_inputs)
-    #     return (action_spec, spec)
 
 
-
-
-
-# class StitchedSequenceQLearningDataset(tf.data.Dataset):
 class StitchedSequenceQLearningDataset:
     def __init__(self, dataset_path, horizon_steps=64, cond_steps=1, img_cond_steps=1, max_n_episodes=10000, use_img=False, device="/GPU:0"):
         print("sequence.py: StitchedSequenceQLearningDataset.__init__()")
@@ -264,9 +207,6 @@ class StitchedSequenceQLearningDataset:
         # Set up indices for sampling
         self.indices = self.make_indices(traj_lengths, horizon_steps)
 
-        # for key, value in dataset:
-        #     print("dataset_key = ", key)
-        #     print("dataset_value = ", value)
 
         print("type(dataset) = ", type(dataset))
         print("dataset = ", dataset)
@@ -319,7 +259,6 @@ class StitchedSequenceQLearningDataset:
         
         conditions = {"state": states}
         if self.use_img:
-            # raise NotImplementedError("use_img is not implemented now.")
 
             images = self.images[(start - num_before_start):end]
             images = torch_stack([images[max(num_before_start - t, 0)] for t in reversed(range(self.img_cond_steps))])
@@ -335,8 +274,6 @@ class StitchedSequenceQLearningDataset:
         returned_dict["next_states"] = next_states
         returned_dict['conditions'] = conditions
 
-        # batch = (actions, rewards, next_states, conditions)
-        # return batch
         return returned_dict
 
 

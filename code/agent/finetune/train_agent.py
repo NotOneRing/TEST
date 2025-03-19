@@ -33,18 +33,8 @@ class TrainAgent:
         self.seed = cfg.get("seed", 42)
         random.seed(self.seed)
         np.random.seed(self.seed)
-        # torch.manual_seed(self.seed)
         tf.random.set_seed(self.seed)
 
-        # # Wandb
-        # self.use_wandb = cfg.wandb is not None
-        # if cfg.wandb is not None:
-        #     wandb.init(
-        #         entity=cfg.wandb.entity,
-        #         project=cfg.wandb.project,
-        #         name=cfg.wandb.run,
-        #         config=OmegaConf.to_container(cfg, resolve=True),
-        #     )
 
         if OUTPUT_POSITIONS:
             print("before cgf.env")
@@ -500,27 +490,6 @@ class TrainAgent:
 
 
 
-        # critic_savepath = savepath.replace(".keras", "_critic.keras")
-        # print("critic_savepath = ", critic_savepath)
-        # print(f"Saved model to {critic_savepath}")
-        # tf.keras.models.save_model(self.model.critic, critic_savepath)
-
-
-        # actor_ft_savepath = savepath.replace(".keras", "_actor_ft.keras")
-        # print("actor_ft_savepath = ", actor_ft_savepath)
-        # print(f"Saved model to {actor_ft_savepath}")
-        # tf.keras.models.save_model(self.model.actor_ft, actor_ft_savepath)
-
-
-
-        # actor_savepath = savepath.replace(".keras", "_actor.keras")
-        # print("actor_savepath = ", actor_savepath)
-        # print(f"Saved model to {actor_savepath}")
-        # tf.keras.models.save_model(self.model.actor, actor_savepath)
-
-
-
-
 
 
 
@@ -637,29 +606,6 @@ class TrainAgent:
         tf.keras.models.save_model(self.model.target_critic.Q2, target_critic_q2_savepath)
 
 
-
-
-
-
-
-
-
-    # def save_model(self):
-    #     """
-    #     saves model to disk; no ema
-    #     """
-
-    #     print("train_agent.py: TrainAgent.save_model()")
-
-    #     data = {
-    #         "itr": self.itr,
-    #         "model": self.model.state_dict(),
-    #     }
-    #     savepath = os.path.join(self.checkpoint_dir, f"state_{self.itr}.pt")
-    #     torch.save(data, savepath)
-    #     log.info(f"Saved model to {savepath}")
-
-
     def load(self, itr):
         """
         Loads model from disk.
@@ -685,7 +631,6 @@ class TrainAgent:
         cur_dict = {
             'DiffusionModel': DiffusionModel,  # Register the custom DiffusionModel class
             'DiffusionMLP': DiffusionMLP,
-            # 'VPGDiffusion': VPGDiffusion,
             'SinusoidalPosEmb': SinusoidalPosEmb,  
             'MLP': MLP,                            # Custom MLP layer
             'ResidualMLP': ResidualMLP,            # Custom ResidualMLP layer
@@ -700,7 +645,7 @@ class TrainAgent:
             'RandomShiftsAug': RandomShiftsAug,
             "TwoLayerPreActivationResNetLinear": TwoLayerPreActivationResNetLinear,
          }
-        # Register your custom class with Keras
+        # Register custom class with Keras
         get_custom_objects().update(cur_dict)
 
 
@@ -712,18 +657,6 @@ class TrainAgent:
         self.model.eta = tf.keras.models.load_model(loadpath.replace(".keras", "_eta.keras") ,  custom_objects=get_custom_objects() )
 
 
-    # def load(self, itr):
-    #     """
-    #     loads model from disk
-    #     """
-
-    #     print("train_agent.py: TrainAgent.load()")
-
-    #     loadpath = os.path.join(self.checkpoint_dir, f"state_{itr}.pt")
-    #     data = torch.load(loadpath, weights_only=True)
-
-    #     self.itr = data["itr"]
-    #     self.model.load_state_dict(data["model"])
 
     def reset_env_all(self, verbose=False, options_venv=None, **kwargs):
         

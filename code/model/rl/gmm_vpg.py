@@ -18,8 +18,6 @@ class VPG_GMM(GMMModel):
 
         super().__init__(network=actor, **kwargs)
 
-        # # Re-name network to actor
-        # self.actor_ft = actor
 
         # Re-name network to actor
         self.actor_ft = self.network
@@ -27,11 +25,10 @@ class VPG_GMM(GMMModel):
 
         # Value function for obs - simple MLP
         self.critic = critic
-        # .to(self.device)
+
 
     # ---------- Sampling ----------#
 
-    # @torch.no_grad()
     @tf.function
     def call(self, cond, deterministic=False):
         print("gmm_vpg.py: VPG_GMM.call()")
@@ -52,7 +49,6 @@ class VPG_GMM(GMMModel):
 
         print("gmm_vpg.py: VPG_GMM.get_logprobs()")
 
-        # B = len(actions)
         B = actions.shape[0]
         dist, entropy, std = self.forward_train(
             training,

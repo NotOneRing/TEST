@@ -6,8 +6,6 @@ QSM (Q-Score Matching) for diffusion policy.
 import logging
 import copy
 
-# import torch
-# import torch.nn.functional as F
 
 import tensorflow as tf
 
@@ -65,7 +63,7 @@ class QSMDiffusion(RWRDiffusion):
         # Compute Q values for noisy actions
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(x_noisy)
-            # tape.watch(x_noisy)
+
             current_q1, current_q2 = self.critic_q(obs, x_noisy, training=True)
             q1_sum = torch_sum(current_q1)
             q2_sum = torch_sum(current_q2)
@@ -75,13 +73,8 @@ class QSMDiffusion(RWRDiffusion):
         gradient_q1 = tape.gradient(q1_sum, x_noisy)
         gradient_q2 = tape.gradient(q2_sum, x_noisy)
         gradient_q = torch_tensor_detach( torch_mean(torch_stack((gradient_q1, gradient_q2), dim=0), dim=0) )
-        # # Compute dQ/da|a=noise_actions
-        # gradient_q1 = torch.autograd.grad(current_q1.sum(), x_noisy)[0]
-        # gradient_q2 = torch.autograd.grad(current_q2.sum(), x_noisy)[0]
-        # gradient_q = torch.stack((gradient_q1, gradient_q2), 0).mean(0).detach()
 
         # Predict noise from noisy actions
-        # x_recon = self.network([x_noisy, t, obs], training=True)
         x_recon = self.network([x_noisy, t, obs['state']], training=True)
 
         # Loss with mask - align predicted noise with critic gradient of noisy actions
@@ -94,7 +87,6 @@ class QSMDiffusion(RWRDiffusion):
         print("diffusion_qsm.py: QSMDiffusion.loss_critic()")
 
         # get current Q-function
-        # current_q1, current_q2 = self.critic_q([obs, actions], training=True)
         current_q1, current_q2 = self.critic_q(obs, actions, training=True)
 
         # get next Q-function - with noise, same as QSM https://github.com/Alescontrela/score_matching_rl/blob/f02a21969b17e322eb229ceb2b0f5a9111b1b968/jaxrl5/agents/score_matching/score_matching_learner.py#L193

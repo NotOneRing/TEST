@@ -7,7 +7,7 @@ Does not support image observations right now.
 import os
 import pickle
 import numpy as np
-# import torch
+
 
 import tensorflow as tf
 
@@ -23,8 +23,7 @@ log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
 
-# from util.torch_to_tf import torch_tensor, torch_from_numpy, torch_tensor_float, torch_exp
-# from util.torch_to_tf import torch_no_grad, torch_optim_Adam, torch_exp, torch_tensor_item, torch_tensor_requires_grad_
+
 
 from util.torch_to_tf import *
 
@@ -43,26 +42,8 @@ class TrainOriginalDacerAgent(TrainAgent):
 
 
 
-        # # Optimizer
-        # self.actor_optimizer = torch_optim_Adam(
-        #     self.model.actor.trainable_variables,
-        #     lr=cfg.train.actor_lr,
-        # )
-
-        # self.critic1_optimizer = torch_optim_Adam(
-        #     self.model.critic.Q1.trainable_variables,
-        #     lr=cfg.train.critic_lr,
-        # )
-
-        # self.critic2_optimizer = torch_optim_Adam(
-        #     self.model.critic.Q2.trainable_variables,
-        #     lr=cfg.train.critic_lr,
-        # )
-
-
         # Optimizer
         self.actor_lr_scheduler = CosineAWR(
-            # self.actor_optimizer,
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -71,7 +52,6 @@ class TrainOriginalDacerAgent(TrainAgent):
             gamma=1.0,
         )
         self.critic_q1_lr_scheduler = CosineAWR(
-            # self.critic_v_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -80,7 +60,6 @@ class TrainOriginalDacerAgent(TrainAgent):
             gamma=1.0,
         )
         self.critic_q2_lr_scheduler = CosineAWR(
-            # self.critic_q_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -237,7 +216,6 @@ class TrainOriginalDacerAgent(TrainAgent):
 
             # Collect a set of trajectories from env
             print("Different 5 removed: cnt_episode = 0")
-            # cnt_episode = 0
 
             print("Different 6 changed: for step in range(n_steps)")
             # for step in range(n_steps):
@@ -246,13 +224,8 @@ class TrainOriginalDacerAgent(TrainAgent):
                 time1 = time.time()
 
                 print("Different 7 changed: if self.itr < self.n_explore_steps")
-                # # Select action
-                # if self.itr < self.n_explore_steps:
-                #     print("branch1: self.itr < self.n_explore_steps")
-                #     action_venv = self.venv.action_space.sample()
-                # else:
-                #     print("branch2: self.itr >= self.n_explore_steps")
-                #     # with torch.no_grad():
+
+
                 with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
@@ -289,19 +262,7 @@ class TrainOriginalDacerAgent(TrainAgent):
 
 
                 print("Different 8 changed: add to buffer")
-                # # add to buffer in train mode
-                # if not eval_mode:
-                #     for i in range(self.n_envs):
-                #         obs_buffer.append(prev_obs_venv["state"][i])
-                #         if "final_obs" in info_venv[i]:  # truncated
-                #             next_obs_buffer.append(info_venv[i]["final_obs"]["state"])
-                #         else:  # first obs in new episode
-                #             next_obs_buffer.append(obs_venv["state"][i])
-                #         action_buffer.append(action_venv[i])
-                #     reward_buffer.extend(
-                #         (reward_venv * self.scale_reward_factor).tolist()
-                #     )
-                #     terminated_buffer.extend(terminated_venv.tolist())
+                
                 if not eval_mode:
                     obs_venv_copy = obs_venv.copy()
                     for i in range(self.n_envs):
@@ -325,10 +286,6 @@ class TrainOriginalDacerAgent(TrainAgent):
 
 
                 print("Different 9 changed: remove cnt_episode")
-                # # check if enough eval episodes are done
-                # cnt_episode += np.sum(done_venv)
-                # if eval_mode and cnt_episode >= self.n_eval_episode:
-                #     break
 
             # Summarize episode reward --- this needs to be handled differently depending on whether the environment is reset after each iteration. Only count episodes that finish within the iteration.
             episodes_start_end = []
@@ -370,41 +327,7 @@ class TrainOriginalDacerAgent(TrainAgent):
                 success_rate = 0
 
             print("Different 10 changed: update models condition")
-            # # Update models
-            # if (
-            #     not eval_mode
-            #     and self.itr > self.n_explore_steps
-            #     and self.itr % self.critic_update_freq == 0
-            # ):
-            #     inds = np.random.choice(len(obs_buffer), self.batch_size, replace=False)
-            #     obs_b = (
-            #         torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
-            #         # .float()
-            #         # .to(self.device)
-            #     )
-            #     next_obs_b = (
-            #         torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
-            #         # .float()
-            #         # .to(self.device)
-            #     )
-            #     actions_b = (
-            #         torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
-            #         # .float()
-            #         # .to(self.device)
-            #     )
-            #     rewards_b = (
-            #         torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
-            #         # .float()
-            #         # .to(self.device)
-            #     )
-            #     terminated_b = (
-            #         torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
-            #         # .float()
-            #         # .to(self.device)
-            #     )
 
-            #     # Update critic
-            #     # alpha = self.log_alpha.exp().item()
             if not eval_mode:
                 num_batch = int(
                     self.n_steps * self.n_envs / self.batch_size * self.replay_ratio
@@ -495,22 +418,8 @@ class TrainOriginalDacerAgent(TrainAgent):
 
                         tf_gradients_actor = tape.gradient(loss_actor, self.model.actor.trainable_variables)
 
-                        # print("tf_gradients_actor = ", tf_gradients_actor)
 
                         zip_tf_gradients_actor_params = zip(tf_gradients_actor, self.model.actor.trainable_variables)
-
-
-                        # print grad check
-                        # for grad, var in zip_tf_gradients_actor_params:
-                        #     if grad is None:
-                        #         print(f"Gradient for {var} is None")
-                        #     else:
-                        #         print(f"Gradient for {var}: {grad}")
-
-
-                        # zipped_gradients_list = list(zip_tf_gradients_actor_params)
-
-                        # assert len(zipped_gradients_list) > 0, "No gradients provided"
 
                         self.actor_optimizer.apply_gradients(zip_tf_gradients_actor_params)
 
@@ -552,22 +461,6 @@ class TrainOriginalDacerAgent(TrainAgent):
                     self.model.step=self.model.step + 1
 
 
-
-
-                # # Delay update actor
-                # loss_actor = 0
-                # # if self.itr % self.actor_update_freq == 0:
-                # #     for _ in range(2):
-
-
-
-
-
-            # # Save model
-            # if self.itr % self.save_model_freq == 0 or self.itr == self.n_train_itr - 1:
-            #     self.save_model_dacer()
-
-
             print("Different 11 changed: update lr scheduler")
             # Update lr
             self.actor_lr_scheduler.step()
@@ -602,61 +495,5 @@ class TrainOriginalDacerAgent(TrainAgent):
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
             self.itr += 1
-
-
-            # if self.itr % self.log_freq == 0:
-            #     time = timer()
-            #     if eval_mode:
-            #         log.info(
-            #             f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f}"
-            #         )
-            #         # if self.use_wandb:
-            #         #     wandb.log(
-            #         #         {
-            #         #             "success rate - eval": success_rate,
-            #         #             "avg episode reward - eval": avg_episode_reward,
-            #         #             "avg best reward - eval": avg_best_reward,
-            #         #             "num episode - eval": num_episode_finished,
-            #         #         },
-            #         #         step=self.itr,
-            #         #         commit=False,
-            #         #     )
-            #         run_results[-1]["eval_success_rate"] = success_rate
-            #         run_results[-1]["eval_episode_reward"] = avg_episode_reward
-            #         run_results[-1]["eval_best_reward"] = avg_best_reward
-            #     else:
-            #         # log.info(
-            #         #     f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | alpha {alpha:8.4f} | t {time:8.4f}"
-            #         # )
-            #         log.info(
-            #             f"{self.itr}: step {cnt_train_step:8d} "
-            #             f"| loss actor {loss_actor:8.4f} |"
-            #             f"| loss critic1 {loss_critic1:8.4f} | loss critic2 {loss_critic2:8.4f} "
-            #             f"| entropy coeff: {alpha:8.4f} "
-            #             f"| reward {avg_episode_reward:8.4f} "
-            #             f"| num episode - train: {num_episode_finished:8.4f} "
-            #             f"| t:{time:8.4f}"
-            #         )
-
-            #         # if self.use_wandb:
-            #         #     wandb_log_dict = {
-            #         #         "total env step": cnt_train_step,
-            #         #         "loss - critic": loss_critic,
-            #         #         "entropy coeff": alpha,
-            #         #         "avg episode reward - train": avg_episode_reward,
-            #         #         "num episode - train":' num_episode_finished,
-            #         #     }
-            #         #     if loss_actor is not None:
-            #         #         wandb_log_dict["loss - actor"] = loss_actor
-            #         #     wandb.log(
-            #         #         wandb_log_dict,
-            #         #         step=self.itr,
-            #         #         commit=True,
-            #         #     )
-            #         run_results[-1]["train_episode_reward"] = avg_episode_reward
-            #     with open(self.result_path, "wb") as f:
-            #         pickle.dump(run_results, f)
-            # self.itr += 1
-
 
 

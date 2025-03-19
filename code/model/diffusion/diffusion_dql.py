@@ -46,15 +46,6 @@ class DQLDiffusion(DiffusionModel):
         self.critic_target = copy.deepcopy(self.critic)
 
 
-        # self.build_actor(self.critic)
-
-        # self.critic_target = tf.keras.models.clone_model(self.critic)
-
-        # self.critic_target.set_weights(self.critic.get_weights())
-
-        # self.build_actor(self.critic_target)
-
-
 
         # reassign actor
         self.actor = self.network
@@ -143,16 +134,9 @@ class DQLDiffusion(DiffusionModel):
 
             print("diffusion_dql.py: DQLDiffusion.call()")
 
-            # device = self.betas.device
-            # B = len(cond["state"])
             B = tf.shape(cond["state"])[0]
 
-            # Loop
-            # x = tf.random.normal([B, self.horizon_steps, self.action_dim], dtype=tf.float32)
-
-            x = torch_randn((B, self.horizon_steps, self.action_dim)
-                            # , device=device
-                            )
+            x = torch_randn( (B, self.horizon_steps, self.action_dim) )
 
             t_all = list(reversed(range(self.denoising_steps)))
             for i, t in enumerate(t_all):
@@ -160,7 +144,6 @@ class DQLDiffusion(DiffusionModel):
                 mean, logvar = self.p_mean_var(
                     x=x,
                     t=t_b,
-                    # cond=cond,
                     cond_state=cond['state'],
                 )
                 std = torch_exp(0.5 * logvar)
@@ -195,11 +178,9 @@ class DQLDiffusion(DiffusionModel):
 
         print("diffusion_dql.py: DQLDiffusion.forward_train()")
 
-        # device = self.betas.device
         B = tf.shape(cond["state"])[0]
 
         # Loop
-        # x = torch.randn((B, self.horizon_steps, self.action_dim), device=device)
         x = torch_randn([B, self.horizon_steps, self.action_dim] )
 
         t_all = list(reversed(range(self.denoising_steps)))
@@ -208,7 +189,6 @@ class DQLDiffusion(DiffusionModel):
             mean, logvar = self.p_mean_var(
                 x=x,
                 t=t_b,
-                # cond=cond,
                 cond_state=cond['state'],
             )
             std = torch_exp(0.5 * logvar)

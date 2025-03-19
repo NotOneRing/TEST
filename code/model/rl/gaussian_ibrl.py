@@ -52,13 +52,12 @@ class IBRL_Gaussian(GaussianModel):
         self.critic_networks = [
             deepcopy(critic) for _ in range(n_critics)
         ]
-        # self.critic_networks = nn.ModuleList(self.critic_networks)
 
         # initialize target networks
         self.target_networks = [
             deepcopy(critic) for _ in range(n_critics)
         ]
-        # self.target_networks = nn.ModuleList(self.target_networks)
+
 
         # Construct a "stateless" version of one of the models. It is "stateless" in the sense that the parameters are meta Tensors and do not have storage.
         base_model = deepcopy(self.critic_networks[0])
@@ -82,9 +81,6 @@ class IBRL_Gaussian(GaussianModel):
 
         print("gaussian_ibrl.py: IBRL_Gaussian.critic_wrapper()")
 
-        # return torch.func.functional_call(self.base_model, (params, buffers), data)
-        print("params = ", params)
-        print("buffers = ", buffers)
 
         return torch_func_functional_call(self.base_model, (params, buffers), data)
 
@@ -101,7 +97,7 @@ class IBRL_Gaussian(GaussianModel):
         perm = tf.random.shuffle(tf.range(sz))
 
         ind = perm[:num_ind]
-        # .to(self.device)
+
         return ind
 
     def loss_critic(
@@ -119,7 +115,6 @@ class IBRL_Gaussian(GaussianModel):
         # get random critic index
         q1_ind, q2_ind = self.get_random_indices()
 
-        # with tf.GradientTape(persistent=True) as tape:
         with torch_no_grad() as tape:
             next_actions_bc = super().call(
                 cond=next_obs,
@@ -160,9 +155,6 @@ class IBRL_Gaussian(GaussianModel):
 
 
         # # run all critics in batch
-        # current_q = torch_vmap( self.critic_wrapper, in_dims=(0, 0, None) )(
-        #     self.ensemble_params, self.ensemble_buffers, (obs, actions)
-        # )  # (n_critics, B)
 
         current_q = tf.stack(current_q_list, axis=0)  # Shape: (n_critics, batch_size)
 
@@ -183,15 +175,9 @@ class IBRL_Gaussian(GaussianModel):
             reparameterize=True,
         )  # use online policy only, also IBRL does not use tanh squashing
         
-        # current_q = torch_vmap(self.critic_wrapper, in_dims=(0, 0, None))(
-        #     self.ensemble_params, self.ensemble_buffers, (obs, action)
-        # )  # (n_critics, B)
 
         current_q = torch_vmap(self.critic_wrapper, self.ensemble_params, self.ensemble_buffers, (obs, action), in_dims=(0, 0, None) )  # (n_critics, B)
 
-        # current_q = current_q.min(
-        #     dim=0
-        # ).values  # unlike RLPD, IBRL uses the min Q value for actor update
 
         current_q = torch_min( current_q, dim=0 ).values  # unlike RLPD, IBRL uses the min Q value for actor update
         

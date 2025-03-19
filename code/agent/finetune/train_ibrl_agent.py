@@ -8,8 +8,6 @@ import os
 import pickle
 import numpy as np
 
-# import torch
-
 import logging
 import wandb
 import hydra
@@ -18,9 +16,6 @@ from collections import deque
 log = logging.getLogger(__name__)
 from util.timer import Timer
 from agent.finetune.train_agent import TrainAgent
-
-# from util.torch_to_tf import CosineAWR, torch_optim_AdamW,\
-# torch_from_numpy, torch_tensor_float, torch_no_grad
 
 from util.torch_to_tf import *
 
@@ -46,8 +41,6 @@ class TrainIBRLAgent(TrainAgent):
 
         
         self.actor_lr_scheduler = CosineAWR(
-            # self.actor_optimizer,
-
             first_cycle_steps=cfg.train.actor_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.actor_lr,
@@ -59,16 +52,13 @@ class TrainIBRLAgent(TrainAgent):
 
         # Optimizer
         self.actor_optimizer = torch_optim_AdamW(
-            # self.model.network.parameters(),
             self.model.network.trainable_variables,
-            # lr=cfg.train.actor_lr,
             lr = self.actor_lr_scheduler,
             weight_decay=cfg.train.actor_weight_decay,
         )
 
 
         self.critic_lr_scheduler = CosineAWR(
-            # self.critic_optimizer,
             first_cycle_steps=cfg.train.critic_lr_scheduler.first_cycle_steps,
             cycle_mult=1.0,
             max_lr=cfg.train.critic_lr,
@@ -78,9 +68,7 @@ class TrainIBRLAgent(TrainAgent):
         )
 
         self.critic_optimizer = torch_optim_AdamW(
-            # self.model.ensemble_params.values(),  # https://github.com/pytorch/pytorch/issues/120581
             self.model.ensemble_params.trainable_variables,
-            # lr=cfg.train.critic_lr,
             lr = self.critic_lr_scheduler,
             weight_decay=cfg.train.critic_weight_decay,
         )
@@ -128,12 +116,7 @@ class TrainIBRLAgent(TrainAgent):
             states = states_and_next["state"]
             next_states = states_and_next["next_state"]
             
-            # obs_buffer.extend(states.cpu().numpy())
-            # next_obs_buffer.extend(next_states.cpu().numpy())
-            # action_buffer.extend(actions.cpu().numpy())
-            # reward_buffer.extend(rewards.cpu().numpy().flatten())
-            # terminated_buffer.extend(terminated.cpu().numpy().flatten())
-
+            
             obs_buffer.extend(states.numpy())
             next_obs_buffer.extend(next_states.numpy())
             action_buffer.extend(actions.numpy())
@@ -174,8 +157,6 @@ class TrainIBRLAgent(TrainAgent):
 
 
 
-            # self.model.eval() if eval_mode else self.model.train()
-
             if eval_mode:
                 training=False 
             else:
@@ -205,16 +186,12 @@ class TrainIBRLAgent(TrainAgent):
                 with torch_no_grad() as tape:
                     cond = {
                         "state": torch_tensor_float( torch_from_numpy(prev_obs_venv["state"]) )
-                        # .float()
-                        # .to(self.device)
                     }
                     samples = (
                         self.model(
                             cond=cond,
                             deterministic=eval_mode,
                         ).numpy()
-                        # .cpu()
-                        # .numpy()
                     )  # n_env x horizon x act
                 action_venv = samples[:, : self.act_steps]
 
@@ -303,28 +280,18 @@ class TrainIBRLAgent(TrainAgent):
                     inds = np.random.choice(len(obs_buffer), self.batch_size)
                     obs_b = (
                         torch_tensor_float( torch_from_numpy(np.array([obs_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
                     next_obs_b = (
                         torch_tensor_float( torch_from_numpy(np.array([next_obs_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
                     actions_b = (
                         torch_tensor_float( torch_from_numpy(np.array([action_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
                     rewards_b = (
                         torch_tensor_float( torch_from_numpy(np.array([reward_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
                     terminated_b = (
                         torch_tensor_float( torch_from_numpy(np.array([terminated_buffer[i] for i in inds])) )
-                        # .float()
-                        # .to(self.device)
                     )
 
                     with tf.GradientTape() as tape:
@@ -337,8 +304,7 @@ class TrainIBRLAgent(TrainAgent):
                             terminated_b,
                             self.gamma,
                         )
-                    # self.critic_optimizer.zero_grad()
-                    # loss_critic.backward()
+                        
                     tf_gradients = tape.gradient(loss_critic, self.model.ensemble_params.trainable_variables)
                     self.critic_optimizer.step(tf_gradients)
 
@@ -351,8 +317,7 @@ class TrainIBRLAgent(TrainAgent):
                     loss_actor = self.model.loss_actor(
                         {"state": obs_b},
                     )
-                # self.actor_optimizer.zero_grad()
-                # loss_actor.backward()
+
                 tf_gradients = tape.gradient(loss_actor, self.model.network.trainable_variables)
                 self.actor_optimizer.step(tf_gradients)
 
@@ -382,17 +347,7 @@ class TrainIBRLAgent(TrainAgent):
                     log.info(
                         f"eval: success rate {success_rate:8.4f} | avg episode reward {avg_episode_reward:8.4f} | avg best reward {avg_best_reward:8.4f} | num episode - eval: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "success rate - eval": success_rate,
-                    #             "avg episode reward - eval": avg_episode_reward,
-                    #             "avg best reward - eval": avg_best_reward,
-                    #             "num episode - eval": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=False,
-                    #     )
+                    
                     run_results[-1]["eval_success_rate"] = success_rate
                     run_results[-1]["eval_episode_reward"] = avg_episode_reward
                     run_results[-1]["eval_best_reward"] = avg_best_reward
@@ -400,18 +355,7 @@ class TrainIBRLAgent(TrainAgent):
                     log.info(
                         f"{self.itr}: step {cnt_train_step:8d} | loss actor {loss_actor:8.4f} | loss critic {loss_critic:8.4f} | reward {avg_episode_reward:8.4f} | num episode - train: {num_episode_finished:8.4f}"
                     )
-                    # if self.use_wandb:
-                    #     wandb.log(
-                    #         {
-                    #             "total env step": cnt_train_step,
-                    #             "loss - actor": loss_actor,
-                    #             "loss - critic": loss_critic,
-                    #             "avg episode reward - train": avg_episode_reward,
-                    #             "num episode - train": num_episode_finished,
-                    #         },
-                    #         step=self.itr,
-                    #         commit=True,
-                    #     )
+                    
                     run_results[-1]["train_episode_reward"] = avg_episode_reward
                 with open(self.result_path, "wb") as f:
                     pickle.dump(run_results, f)
